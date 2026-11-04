@@ -1,4 +1,6 @@
+import hashlib
 from collections import Counter
+import json
 
 from fastapi.testclient import TestClient
 
@@ -56,6 +58,13 @@ def test_batch_run_executes_all_45_agents_independently(monkeypatch, tmp_path) -
     assert len({call[0] for call in calls}) == 45
     assert len({call[1] for call in calls}) == 1
     assert {call[2] for call in calls} == {1}
+
+    case_response = client.get(f"/api/runs/{run_id}/case")
+    assert case_response.status_code == 200
+    case_snapshot = case_response.json()
+    assert json.loads(case_snapshot["case_snapshot_json"])["scenario_title"] == "Synthetic HN batch test"
+    assert hashlib.sha256(case_snapshot["case_snapshot_json"].encode("utf-8")).hexdigest() == case_snapshot["case_snapshot_sha256"]
+    assert case_snapshot["case"]["primary_site"] == "Oropharynx"
 
     results_response = client.get(f"/api/runs/{run_id}/results")
     assert results_response.status_code == 200
