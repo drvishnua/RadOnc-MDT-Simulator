@@ -60,6 +60,12 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Validate launcher Node compatibility logic
+        shell: powershell
+        run: |
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:GITHUB_WORKSPACE "scripts/test-launcher.ps1")
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Install dependencies
         working-directory: frontend
         shell: powershell
