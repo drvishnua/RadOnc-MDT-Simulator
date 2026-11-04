@@ -34,6 +34,28 @@ type ValidationResult = {
   note: string;
 };
 
+type SyntheticCasePayload = {
+  scenario_title: string;
+  case_summary: string;
+  age_years: number | null;
+  primary_site: string | null;
+  histology: string | null;
+};
+
+type AgentAssessmentResult = {
+  agent_id: string;
+  round_number: number;
+  perspective_summary: string;
+  discussion_options: string[];
+  unknowns: string[];
+  evidence_gaps: string[];
+  uncertainty_notes: string[];
+  confidence: number;
+  evidence_claims: unknown[];
+  safety_boundary: string;
+  not_a_treatment_instruction: boolean;
+};
+
 const emptyForm = {
   scenario_title: "Synthetic head-and-neck case",
   case_summary: "",
@@ -49,8 +71,12 @@ function App() {
   const [connectionState, setConnectionState] = useState<"loading" | "connected" | "unavailable">("loading");
   const [form, setForm] = useState(emptyForm);
   const [validation, setValidation] = useState<ValidationResult | null>(null);
+  const [validatedCase, setValidatedCase] = useState<SyntheticCasePayload | null>(null);
   const [validationError, setValidationError] = useState("");
   const [validating, setValidating] = useState(false);
+  const [agentAssessment, setAgentAssessment] = useState<AgentAssessmentResult | null>(null);
+  const [assessmentError, setAssessmentError] = useState("");
+  const [assessing, setAssessing] = useState(false);
   const [agentFilter, setAgentFilter] = useState("All perspectives");
 
   async function refreshStatus() {
@@ -101,7 +127,7 @@ function App() {
     setValidationError("");
     setValidating(true);
 
-    const payload = {
+    const payload: SyntheticCasePayload = {
       scenario_title: form.scenario_title,
       case_summary: form.case_summary,
       age_years: form.age_years.trim() === "" ? null : Number(form.age_years),
@@ -123,6 +149,9 @@ function App() {
         throw new Error(details);
       }
       setValidation(body as ValidationResult);
+      setValidatedCase(payload);
+      setAgentAssessment(null);
+      setAssessmentError("");
     } catch (error) {
       setValidationError(error instanceof Error ? error.message : "Unable to reach the local API.");
     } finally {
@@ -130,8 +159,35 @@ function App() {
     }
   }
 
+  async function runAgentAssessment() {
+    if (!validatedCase) return;
+    setAssessing(true);
+    setAssessmentError("");
+    setAgentAssessment(null);
+    try {
+      const response = await fetch(API_BASE + "/api/agents/RO-01/assess", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ case: validatedCase, round_number: 1 })
+      });
+      const body = await response.json();
+      if (!response.ok) {
+        throw new Error(typeof body.detail === "string" ? body.detail : "The local model could not produce a valid assessment.");
+      }
+      setAgentAssessment(body as AgentAssessmentResult);
+    } catch (error) {
+      setAssessmentError(error instanceof Error ? error.message : "Unable to complete the local assessment.");
+    } finally {
+      setAssessing(false);
+    }
+  }
+
   function updateField(field: keyof typeof emptyForm, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
+    setValidation(null);
+    setValidatedCase(null);
+    setAgentAssessment(null);
+    setAssessmentError("");
   }
 
   return (
@@ -293,6 +349,61 @@ function App() {
                   <ul>{validation.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>
                 )}
                 <p className="result-footnote">Full MDT simulation is not implemented yet.</p>
+              </div>
+            )}
+            {validation && validatedCase && (
+              <div className="assessment-launch">
+                <div>
+                  <strong>Try one local agent</strong>
+                  <p>Run the guideline-focused Radiation Oncology perspective (RO-01) on this synthetic case using Ollama on this laptop.</p>
+                </div>
+                <button
+                  className="button button-secondary"
+                  type="button"
+                  onClick={() => void runAgentAssessment()}
+                  disabled={assessing || !runtime?.reachable}
+                >
+                  {assessing ? "Generating locally…" : "Run RO-01 assessment"}
+                  <span aria-hidden="true">→</span>
+                </button>
+              </div>
+            )}
+            {assessmentError && (
+              <div className="result-card result-error" role="alert">
+                <strong>Local assessment failed</strong>
+                <p>{assessmentError}</p>
+              </div>
+            )}
+            {agentAssessment && (
+              <div className="result-card result-success agent-assessment" role="status">
+                <div className="assessment-header">
+                  <strong>RO-01 · Guideline-focused Radiation Oncologist</strong>
+                  <span>Round {agentAssessment.round_number}</span>
+                </div>
+                <p>{agentAssessment.perspective_summary}</p>
+                {agentAssessment.discussion_options.length > 0 && (
+                  <>
+                    <strong>Topics for MDT discussion</strong>
+                    <ul>{agentAssessment.discussion_options.map((item, index) => <li key={index}>{item}</li>)}</ul>
+                  </>
+                )}
+                {agentAssessment.unknowns.length > 0 && (
+                  <>
+                    <strong>Unknowns identified</strong>
+                    <ul>{agentAssessment.unknowns.map((item, index) => <li key={index}>{item}</li>)}</ul>
+                  </>
+                )}
+                {agentAssessment.evidence_gaps.length > 0 && (
+                  <>
+                    <strong>Evidence gaps</strong>
+                    <ul>{agentAssessment.evidence_gaps.map((item, index) => <li key={index}>{item}</li>)}</ul>
+                  </>
+                )}
+                <p className="result-footnote">
+                  Model self-reported confidence: {Math.round(agentAssessment.confidence * 100)}%.
+                  Evidence claims accepted: {agentAssessment.evidence_claims.length}.
+                  No evidence retrieval is connected yet; this is not a treatment recommendation.
+                </p>
               </div>
             )}
             {validationError && (
