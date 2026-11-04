@@ -138,7 +138,7 @@ def test_round_cannot_start_before_all_45_independent_assessments(monkeypatch, t
 def test_round_three_cannot_start_until_round_two_is_complete(monkeypatch, tmp_path):
     run_id = _create_complete_round1(monkeypatch, tmp_path)
     response = client.post(f"/api/runs/{run_id}/rounds/3")
-    assert response.status_code == 404
+    assert response.status_code == 409
 
 
 def test_final_report_not_found_before_chair_synthesis(monkeypatch, tmp_path):
