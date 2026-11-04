@@ -45,6 +45,9 @@ type SyntheticCasePayload = {
 type AgentAssessmentResult = {
   agent_id: string;
   round_number: number;
+  position: "supports" | "opposes" | "conditional" | "insufficient_information";
+  provisional_conclusion: string;
+  preferred_educational_option: string;
   perspective_summary: string;
   discussion_options: string[];
   unknowns: string[];
@@ -572,6 +575,12 @@ function App() {
                   <strong>RO-01 · Guideline-focused Radiation Oncologist</strong>
                   <span>Round {agentAssessment.round_number}</span>
                 </div>
+                <div className="assessment-conclusion">
+                  <strong>Provisional conclusion · {agentAssessment.position.replaceAll("_", " ")}</strong>
+                  <p>{agentAssessment.provisional_conclusion}</p>
+                  <strong>Preferred educational option</strong>
+                  <p>{agentAssessment.preferred_educational_option}</p>
+                </div>
                 <p>{agentAssessment.perspective_summary}</p>
                 {agentAssessment.discussion_options.length > 0 && (
                   <>
@@ -680,6 +689,12 @@ function App() {
                         </summary>
                         {item.assessment ? (
                           <div className="batch-agent-body">
+                            <div className="assessment-conclusion">
+                              <strong>Provisional conclusion · {item.assessment.position.replaceAll("_", " ")}</strong>
+                              <p>{item.assessment.provisional_conclusion}</p>
+                              <strong>Preferred educational option</strong>
+                              <p>{item.assessment.preferred_educational_option}</p>
+                            </div>
                             <p>{item.assessment.perspective_summary}</p>
                             {item.assessment.discussion_options.length > 0 && (
                               <>
