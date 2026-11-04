@@ -891,7 +891,6 @@ function App() {
                   const isPreviousComplete = roundNumber === 2
                     ? batchRun.status === "completed" && batchRun.completed_count === 45 && batchRun.failed_count === 0
                     : roundSummaries[roundNumber - 1]?.status === "completed";
-                  const isActive = summary?.status === "queued" || summary?.status === "running";
                   const isRetryable = summary?.status === "completed_with_errors";
                   const title = roundNumber === 2 ? "MDT debate" : roundNumber === 3 ? "Adversarial review" : "MDT Chair synthesis";
                   const description = roundNumber === 2
