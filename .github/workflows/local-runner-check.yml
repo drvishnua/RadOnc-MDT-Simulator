@@ -21,7 +21,7 @@ jobs:
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 6
     steps:
-      - name: Inspect Ollama server, installed models, and inference
+      - name: Inspect Ollama server, installed models, inference, and GPU allocation
         shell: powershell
         run: |
           $ErrorActionPreference = "Continue"
@@ -51,15 +51,22 @@ jobs:
             exit 0
           }
           $model = $models[0].name
-          Write-Host "=== INFERENCE TEST ==="
+          Write-Host "=== INFERENCE TEST (THINKING DISABLED) ==="
           Write-Host "Testing already-installed model: $model"
           try {
-            $body = @{ model = $model; prompt = "Reply with exactly: RADONC_LOCAL_INFERENCE_OK"; stream = $false; options = @{ num_predict = 32 } } | ConvertTo-Json -Depth 5
+            $body = @{ model = $model; prompt = "Reply with exactly: RADONC_LOCAL_INFERENCE_OK"; stream = $false; think = $false; options = @{ num_predict = 48 } } | ConvertTo-Json -Depth 5
             $result = Invoke-RestMethod -Uri "$base/api/generate" -Method Post -ContentType "application/json" -Body $body -TimeoutSec 180
+            $responseText = [string]$result.response
+            $thinkingText = [string]$result.thinking
             Write-Host "INFERENCE_COMPLETED"
-            Write-Host "MODEL_RESPONSE=$($result.response)"
+            Write-Host "USER_RESPONSE_LENGTH=$($responseText.Length)"
+            Write-Host "THINKING_LENGTH=$($thinkingText.Length)"
+            Write-Host "MODEL_RESPONSE=$responseText"
             Write-Host "TOTAL_DURATION_NS=$($result.total_duration)"
             Write-Host "LOAD_DURATION_NS=$($result.load_duration)"
+            if ([string]::IsNullOrWhiteSpace($responseText)) {
+              Write-Host "INFERENCE_WARNING=Empty user-facing response; inspect API response fields."
+            }
             Write-Host "=== OLLAMA PROCESSOR ALLOCATION ==="
             ollama ps
           } catch {
