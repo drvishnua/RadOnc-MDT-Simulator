@@ -19,7 +19,7 @@ Last updated: 2026-11-05
 | Frontend | Round controls, progress, per-role results and Chair report view | TypeScript/Vite build |
 | Prompt size | JSON Schema passed via Ollama structured-output format; duplicated schema removed from prompt text | Code review and CI |
 | Concurrency | Default remains 1 | Two-request laptop benchmark: 0.86× versus sequential |
-| Context | 2K/4K selection based on estimated prompt plus output | Added; production-shaped 2K/4K benchmark pending |
+| Context | Fixed 4K for reliable structured output | 2K optimization deferred; live structured-output benchmark did not return valid JSON |
 
 ## Current API
 
