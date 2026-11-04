@@ -42,6 +42,8 @@ class RoundContribution(StrictModel):
 
 class FinalReportDraft(StrictModel):
     report_title: str = Field(min_length=5, max_length=180)
+    overall_position: Position
+    chair_conclusion: str = Field(min_length=30, max_length=1500)
     overall_educational_synthesis: str = Field(min_length=50, max_length=5000)
     consensus_points: list[str] = Field(default_factory=list, max_length=15)
     unresolved_disagreements: list[str] = Field(default_factory=list, max_length=15)
@@ -59,6 +61,8 @@ class FinalMDTReport(StrictModel):
     run_id: str
     round_number: Literal[4] = 4
     report_title: str
+    overall_position: Position
+    chair_conclusion: str
     overall_educational_synthesis: str
     consensus_points: list[str]
     unresolved_disagreements: list[str]
