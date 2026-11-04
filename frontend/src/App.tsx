@@ -56,6 +56,31 @@ type AgentAssessmentResult = {
   not_a_treatment_instruction: boolean;
 };
 
+type BatchRunSummary = {
+  run_id: string;
+  status: "queued" | "running" | "completed" | "completed_with_errors";
+  total_agents: number;
+  completed_count: number;
+  failed_count: number;
+  queued_count: number;
+  running_count: number;
+  finished_count: number;
+  progress_percent: number;
+  current_agent_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type BatchAgentResult = {
+  agent_id: string;
+  agent_name: string;
+  category_label: string;
+  status: "queued" | "running" | "completed" | "failed";
+  assessment: AgentAssessmentResult | null;
+  error_message: string | null;
+  duration_seconds: number | null;
+};
+
 const emptyForm = {
   scenario_title: "Synthetic head-and-neck case",
   case_summary: "",
@@ -77,6 +102,11 @@ function App() {
   const [agentAssessment, setAgentAssessment] = useState<AgentAssessmentResult | null>(null);
   const [assessmentError, setAssessmentError] = useState("");
   const [assessing, setAssessing] = useState(false);
+  const [batchRun, setBatchRun] = useState<BatchRunSummary | null>(null);
+  const [batchResults, setBatchResults] = useState<BatchAgentResult[]>([]);
+  const [batchError, setBatchError] = useState("");
+  const [batchStarting, setBatchStarting] = useState(false);
+  const [batchResuming, setBatchResuming] = useState(false);
   const [agentFilter, setAgentFilter] = useState("All perspectives");
 
   async function refreshStatus() {
@@ -182,12 +212,110 @@ function App() {
     }
   }
 
+  async function refreshBatchRun(runId: string) {
+    try {
+      const [runResponse, resultsResponse] = await Promise.all([
+        fetch(API_BASE + "/api/runs/" + runId),
+        fetch(API_BASE + "/api/runs/" + runId + "/results")
+      ]);
+      if (!runResponse.ok || !resultsResponse.ok) {
+        throw new Error("Unable to refresh the 45-agent run.");
+      }
+      const runData = (await runResponse.json()) as BatchRunSummary;
+      const resultsData = (await resultsResponse.json()) as { results: BatchAgentResult[] };
+      setBatchRun(runData);
+      setBatchResults(resultsData.results);
+    } catch (error) {
+      setBatchError(error instanceof Error ? error.message : "Unable to refresh batch progress.");
+    }
+  }
+
+  useEffect(() => {
+    if (!batchRun || batchRun.status === "completed" || batchRun.status === "completed_with_errors") {
+      return;
+    }
+    const runId = batchRun.run_id;
+    const timer = window.setInterval(() => {
+      void refreshBatchRun(runId);
+    }, 2500);
+    return () => window.clearInterval(timer);
+  }, [batchRun?.run_id, batchRun?.status]);
+
+  async function startAllAgents() {
+    if (!validatedCase) return;
+    setBatchStarting(true);
+    setBatchError("");
+    setBatchRun(null);
+    setBatchResults([]);
+    try {
+      const response = await fetch(API_BASE + "/api/runs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ case: validatedCase })
+      });
+      const body = await response.json();
+      if (!response.ok) {
+        throw new Error(typeof body.detail === "string" ? body.detail : "Unable to start the 45-agent run.");
+      }
+      setBatchRun(body as BatchRunSummary);
+      await refreshBatchRun((body as BatchRunSummary).run_id);
+    } catch (error) {
+      setBatchError(error instanceof Error ? error.message : "Unable to start the 45-agent run.");
+    } finally {
+      setBatchStarting(false);
+    }
+  }
+
+  async function resumeAllAgents() {
+    if (!batchRun) return;
+    setBatchResuming(true);
+    setBatchError("");
+    try {
+      const response = await fetch(API_BASE + "/api/runs/" + batchRun.run_id + "/resume", {
+        method: "POST"
+      });
+      const body = await response.json();
+      if (!response.ok) {
+        throw new Error(typeof body.detail === "string" ? body.detail : "Unable to resume the run.");
+      }
+      setBatchRun(body as BatchRunSummary);
+      await refreshBatchRun(batchRun.run_id);
+    } catch (error) {
+      setBatchError(error instanceof Error ? error.message : "Unable to resume the run.");
+    } finally {
+      setBatchResuming(false);
+    }
+  }
+
+  function downloadBatchResults() {
+    if (!batchRun || batchResults.length === 0) return;
+    const exportData = {
+      simulator: "RadOnc MDT Simulator",
+      mode: "independent_educational_assessments",
+      run: batchRun,
+      results: batchResults,
+      notice: "Synthetic educational simulation only. Evidence retrieval is not connected; no clinical decision support is provided."
+    };
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "radonc-mdt-" + batchRun.run_id + "-independent-assessments.json";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
   function updateField(field: keyof typeof emptyForm, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
     setValidation(null);
     setValidatedCase(null);
     setAgentAssessment(null);
     setAssessmentError("");
+    setBatchRun(null);
+    setBatchResults([]);
+    setBatchError("");
   }
 
   return (
@@ -405,6 +533,122 @@ function App() {
                   No evidence retrieval is connected yet; this is not a treatment recommendation.
                 </p>
               </div>
+            )}
+            {validation && validatedCase && (
+              <section className="batch-run-panel">
+                <div className="batch-heading">
+                  <div>
+                    <p className="eyebrow">03 / INDEPENDENT ASSESSMENTS</p>
+                    <h3>Run all 45 MDT perspectives</h3>
+                  </div>
+                  <span className="count-chip">45 REQUIRED</span>
+                </div>
+                <p className="panel-intro">
+                  Each agent receives only the original synthetic case and its own role profile. Agents do not see one another's assessments. Results are saved locally as they finish.
+                </p>
+                <div className="batch-actions">
+                  <button
+                    className="button button-primary"
+                    type="button"
+                    onClick={() => void startAllAgents()}
+                    disabled={batchStarting || batchResuming || assessing || !runtime?.reachable || (batchRun !== null && ["queued", "running"].includes(batchRun.status))}
+                  >
+                    {batchStarting ? "Starting…" : "Run all 45 agents"}
+                    <span aria-hidden="true">→</span>
+                  </button>
+                  {batchRun && batchResults.length > 0 && (
+                    <button className="button button-quiet" type="button" onClick={downloadBatchResults}>
+                      Export JSON
+                    </button>
+                  )}
+                  {batchRun?.status === "completed_with_errors" && (
+                    <button
+                      className="button button-secondary"
+                      type="button"
+                      onClick={() => void resumeAllAgents()}
+                      disabled={batchResuming || batchStarting}
+                    >
+                      {batchResuming ? "Resuming…" : "Retry failed agents"}
+                    </button>
+                  )}
+                </div>
+                {batchRun && (
+                  <div className="batch-status" aria-live="polite">
+                    <div className="batch-status-top">
+                      <strong>
+                        {batchRun.status === "queued" ? "Queued" :
+                          batchRun.status === "running" ? "Running independently" :
+                          batchRun.status === "completed" ? "All 45 assessments completed" :
+                          "Completed with some errors"}
+                      </strong>
+                      <span>{batchRun.finished_count} / {batchRun.total_agents} finished</span>
+                    </div>
+                    <div className="batch-progress-track">
+                      <div className="batch-progress-fill" style={{ width: batchRun.progress_percent + "%" }} />
+                    </div>
+                    <div className="batch-counts">
+                      <span className="count-complete">{batchRun.completed_count} completed</span>
+                      <span className="count-failed">{batchRun.failed_count} failed</span>
+                      <span>{batchRun.queued_count + batchRun.running_count} remaining</span>
+                      {batchRun.current_agent_id && <span>Now: {batchRun.current_agent_id}</span>}
+                    </div>
+                    {batchRun.status === "running" && (
+                      <p className="batch-estimate-note">This runs locally and sequentially. It may take several minutes. Keep the dashboard, backend and laptop running until it finishes.</p>
+                    )}
+                  </div>
+                )}
+                {batchError && <div className="result-card result-error" role="alert">{batchError}</div>}
+                {batchResults.length > 0 && (
+                  <div className="batch-results">
+                    <div className="batch-results-title">
+                      <strong>Agent results</strong>
+                      <span>{batchResults.length} records saved locally</span>
+                    </div>
+                    {batchResults.map((item) => (
+                      <details className={"batch-agent-result status-" + item.status} key={item.agent_id}>
+                        <summary>
+                          <span className="agent-id">{item.agent_id}</span>
+                          <strong>{item.agent_name}</strong>
+                          <span className={"agent-status status-text-" + item.status}>{item.status}</span>
+                          {item.duration_seconds !== null && <span className="agent-duration">{item.duration_seconds.toFixed(1)}s</span>}
+                        </summary>
+                        {item.assessment ? (
+                          <div className="batch-agent-body">
+                            <p>{item.assessment.perspective_summary}</p>
+                            {item.assessment.discussion_options.length > 0 && (
+                              <>
+                                <strong>Discussion topics</strong>
+                                <ul>{item.assessment.discussion_options.map((option, index) => <li key={index}>{option}</li>)}</ul>
+                              </>
+                            )}
+                            {item.assessment.unknowns.length > 0 && (
+                              <>
+                                <strong>Unknowns</strong>
+                                <ul>{item.assessment.unknowns.map((unknown, index) => <li key={index}>{unknown}</li>)}</ul>
+                              </>
+                            )}
+                            {item.assessment.evidence_gaps.length > 0 && (
+                              <>
+                                <strong>Evidence gaps</strong>
+                                <ul>{item.assessment.evidence_gaps.map((gap, index) => <li key={index}>{gap}</li>)}</ul>
+                              </>
+                            )}
+                            <p className="result-footnote">
+                              Model self-reported confidence: {Math.round(item.assessment.confidence * 100)}%.
+                              Evidence claims accepted: {item.assessment.evidence_claims.length}.
+                            </p>
+                          </div>
+                        ) : item.error_message ? (
+                          <div className="batch-agent-body"><p className="error-text">{item.error_message}</p></div>
+                        ) : (
+                          <div className="batch-agent-body"><p>Waiting for this independent assessment.</p></div>
+                        )}
+                      </details>
+                    ))}
+                  </div>
+                )}
+                <p className="result-footnote">All outputs are simulated educational perspectives, not clinician opinions or treatment instructions. No evidence retrieval is connected yet.</p>
+              </section>
             )}
             {validationError && (
               <div className="result-card result-error" role="alert">
