@@ -126,6 +126,9 @@ def test_single_agent_assessment_endpoint_uses_local_generation(monkeypatch) -> 
         return AgentAssessment(
             agent_id="RO-01",
             round_number=round_number,
+            position="conditional",
+            provisional_conclusion="A provisional educational conclusion is conditional because important case details remain unknown.",
+            preferred_educational_option="No option can be preferred until the outstanding details are clarified.",
             perspective_summary="A mocked educational assessment for endpoint testing.",
             confidence=0.5,
             evidence_gaps=["No evidence retrieval is connected in this test."],
