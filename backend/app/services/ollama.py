@@ -93,7 +93,7 @@ async def generate_agent_assessment(
         "model": OLLAMA_MODEL,
         "system": system_prompt,
         "prompt": prompt,
-        "format": "json",
+        "format": schema,
         "stream": False,
         "think": False,
         "keep_alive": "30m",
