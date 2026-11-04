@@ -52,17 +52,23 @@ class EvidenceClaim(StrictModel):
     sources: list[EvidenceSource] = Field(min_length=1, max_length=12)
 
 
+Position = Literal["supports", "opposes", "conditional", "insufficient_information"]
+
+
 class AgentDraft(StrictModel):
     """Model-generated content only; identity and safety fields are added by the server."""
 
-    perspective_summary: str = Field(min_length=10, max_length=5000)
-    case_facts: list[str] = Field(default_factory=list, max_length=40)
-    assumptions: list[str] = Field(default_factory=list, max_length=40)
-    unknowns: list[str] = Field(default_factory=list, max_length=40)
-    discussion_options: list[str] = Field(default_factory=list, max_length=20)
-    evidence_gaps: list[str] = Field(default_factory=list, max_length=30)
-    uncertainty_notes: list[str] = Field(default_factory=list, max_length=30)
-    disagreement_notes: list[str] = Field(default_factory=list, max_length=30)
+    position: Position
+    provisional_conclusion: str = Field(min_length=20, max_length=1200)
+    preferred_educational_option: str = Field(min_length=5, max_length=800)
+    perspective_summary: str = Field(min_length=10, max_length=3000)
+    case_facts: list[str] = Field(default_factory=list, max_length=25)
+    assumptions: list[str] = Field(default_factory=list, max_length=20)
+    unknowns: list[str] = Field(default_factory=list, max_length=20)
+    discussion_options: list[str] = Field(default_factory=list, max_length=12)
+    evidence_gaps: list[str] = Field(default_factory=list, max_length=15)
+    uncertainty_notes: list[str] = Field(default_factory=list, max_length=15)
+    disagreement_notes: list[str] = Field(default_factory=list, max_length=15)
     confidence: float = Field(ge=0.0, le=1.0)
 
 
@@ -71,15 +77,18 @@ class AgentAssessment(StrictModel):
 
     agent_id: str = Field(pattern=r"^[A-Z]{2}-[0-9]{2}$")
     round_number: int = Field(ge=1, le=4)
-    perspective_summary: str = Field(min_length=10, max_length=5000)
-    case_facts: list[str] = Field(default_factory=list, max_length=40)
-    assumptions: list[str] = Field(default_factory=list, max_length=40)
-    unknowns: list[str] = Field(default_factory=list, max_length=40)
-    discussion_options: list[str] = Field(default_factory=list, max_length=20)
+    position: Position
+    provisional_conclusion: str = Field(min_length=20, max_length=1200)
+    preferred_educational_option: str = Field(min_length=5, max_length=800)
+    perspective_summary: str = Field(min_length=10, max_length=3000)
+    case_facts: list[str] = Field(default_factory=list, max_length=25)
+    assumptions: list[str] = Field(default_factory=list, max_length=20)
+    unknowns: list[str] = Field(default_factory=list, max_length=20)
+    discussion_options: list[str] = Field(default_factory=list, max_length=12)
     evidence_claims: list[EvidenceClaim] = Field(default_factory=list, max_length=30)
-    evidence_gaps: list[str] = Field(default_factory=list, max_length=30)
-    uncertainty_notes: list[str] = Field(default_factory=list, max_length=30)
-    disagreement_notes: list[str] = Field(default_factory=list, max_length=30)
+    evidence_gaps: list[str] = Field(default_factory=list, max_length=15)
+    uncertainty_notes: list[str] = Field(default_factory=list, max_length=15)
+    disagreement_notes: list[str] = Field(default_factory=list, max_length=15)
     confidence: float = Field(ge=0.0, le=1.0)
     safety_boundary: Literal["educational_simulation_only"] = "educational_simulation_only"
     not_a_treatment_instruction: Literal[True] = True
