@@ -1,77 +1,66 @@
-# Initial Technical Architecture
+# Technical Architecture — RadOnc MDT Simulator
 
 ## Design goals
+
 - Local-first execution and low recurring cost.
-- No paid AI API dependency.
-- No cloud GPU requirement.
-- Simple, inspectable orchestration before adopting a workflow framework.
-- Keep user interaction inside the web application.
-- Keep model weights and local runtime state out of Git.
-- Make the educational/simulation-only boundary explicit throughout the application.
+- No paid AI API or cloud GPU dependency.
+- One shared Ollama model with 45 role-specific profiles.
+- Persist each result immediately and support interrupted-run recovery.
+- Keep case snapshots, outputs, and reports auditable.
+- Preserve disagreements and label uncertainty.
+- Keep the educational/simulation-only boundary explicit.
 
-## Proposed stack
+## Implemented stack
 
-| Layer | Initial choice | Responsibility |
+| Layer | Technology | Responsibility |
 |---|---|---|
-| Frontend | React + Vite | Case entry, simulation progress, agent views, reports |
-| Backend | Python + FastAPI | Validation, orchestration, evidence handling, report generation |
-| Local inference | Ollama | Serve locally installed open-weight models |
-| Database | SQLite initially | Synthetic cases, runs, agent outputs, citations, audit events |
-| Testing | Pytest + frontend tests | Validate schemas, orchestration, safety rules, and UI |
+| Frontend | React + Vite | Case entry, progress, agent views, four-round controls, Chair report |
+| Backend | Python + FastAPI | Validation, orchestration, persistence, report API |
+| Local inference | Ollama / qwen3.5:4b | Local structured generation |
+| Database | SQLite | Case snapshots, run/round statuses, per-agent outputs |
+| Tests | Pytest + TypeScript/Vite build | Schema, orchestration, persistence, and UI validation |
 
-This is a proposed starting architecture, not a claim that the application has already been implemented.
+## Four-round execution
 
-## Inference architecture
-The model runtime is shared by all agent roles. Each role is a versioned profile containing role name/scope, system instructions, required output schema, evidence and uncertainty rules, prohibited behavior, and round-specific context policy.
+1. Round 1 runs all 45 independent roles; no agent sees another's output.
+2. Round 2 runs all 45 roles again, each receiving its own Round-1 view and a bounded digest of selected cross-specialty peer positions.
+3. Round 3 runs all 45 roles again, each receiving its earlier views and a bounded digest of peer debate contributions; it challenges assumptions, uncertainty, patient/context, feasibility, resources, and governance.
+4. Round 4 runs SG-07, the MDT Chair, over compressed digests of all 45 contributions from Rounds 1–3.
 
-The orchestrator runs independent assessments before sharing debate context. It should initially execute agents sequentially or in small batches to avoid exhausting memory and VRAM. Save results after each agent so a failed run can resume safely.
+The full outputs are preserved in SQLite. The bounded digest is a context-window optimization: every role contributes in each stage, but every role does not receive all 44 full-length peer outputs.
 
-## Suggested backend modules
-- app/main.py — FastAPI application entry point
-- app/config.py — runtime configuration
-- app/schemas/ — Pydantic request and response schemas
-- app/api/ — HTTP routes
-- app/services/ollama.py — local Ollama client
-- app/services/orchestrator.py — four-round simulation controller
-- app/agents/ — 45 versioned agent profiles and shared contracts
-- app/evidence/ — source metadata, retrieval adapters, citation validation
-- app/reports/ — report assembly
-- app/db/ — persistence and migrations
+## Model-generation strategy
 
-## Suggested frontend modules
-- src/pages/ — case setup, simulation workspace, report views
-- src/components/ — case fields, agent cards, evidence citations, uncertainty labels
-- src/services/api.ts — backend API client
-- src/types/ — shared frontend types
+- Schema-constrained JSON is passed through Ollama's structured-output format field.
+- The full schema is not repeated as prompt text.
+- Round 1 output cap: 700 tokens; Round 2: 420; Round 3: 420; Round 4: 950.
+- The model remains loaded for 30 minutes between agent calls.
+- Context size is selected as 2K when the estimated input plus output fits; otherwise 4K.
+- Concurrency remains one. A real two-request test on the connected laptop measured 0.86× throughput versus sequential execution; higher concurrency is therefore not enabled.
+- A production-shaped context-size benchmark is still pending.
 
-## Data and run lifecycle
-A simulation run should store:
-1. Synthetic case snapshot and schema version
-2. Model identifier and runtime settings
-3. Agent catalogue and prompt versions
-4. Independent assessments
-5. Debate messages and round ordering
-6. Evidence references and retrieval timestamps
-7. Final synthesis and dissent record
-8. Warnings, errors, and completion status
+## Persistence and audit
 
-Do not store real patient records. Keep secrets, local model weights, runner credentials, generated databases, and runtime logs out of source control.
+A run stores:
+- Exact serialized synthetic case and SHA-256
+- Agent and round statuses
+- Independent assessments
+- Debate contributions
+- Adversarial review contributions
+- Final Chair synthesis
+- Errors, timestamps, and durations
+
+The JSON export includes the parsed case snapshot, exact serialized case JSON, checksum, all available role outputs, and final report. Local SQLite data is excluded from Git.
 
 ## Evidence integration
-Begin with source metadata and manually curated, publicly accessible references. Add automated retrieval only after source validation and licensing rules are explicit. Publicly accessible does not automatically mean openly licensed. Respect API terms, copyright, access restrictions, and applicable institutional requirements.
 
-Potential future source adapters include PubMed, Europe PMC, ClinicalTrials.gov, and official guideline or health-agency repositories. Every adapter must preserve source identity, date, URL/identifier, and access conditions.
-
-## Hardware-aware execution
-The current local test demonstrates that the installed qwen3.5:4b model can produce a response through Ollama with GPU allocation on the RTX 4060 laptop GPU. This is an infrastructure smoke test only; it does not validate clinical accuracy, evidence retrieval, agent quality, or safe behavior.
-
-Do not assume all 45 agents should run as separate model processes. Use one loaded model and versioned prompts first. Benchmark quality, latency, memory use, and reproducibility before changing model size or concurrency.
+Evidence retrieval and citation verification are not connected yet. Evidence claims remain disabled. Future adapters may include PubMed, Europe PMC, ClinicalTrials.gov, and official guideline or health-agency repositories, subject to source terms, licensing, provenance, and validation.
 
 ## Security and safety boundaries
+
 - Do not expose Ollama to the local network by default.
-- Do not put tokens or credentials in workflows, logs, prompts, or Git.
-- Keep the self-hosted runner scoped to this private repository.
-- Prefer manual workflow dispatch for workflows capable of modifying the local machine.
-- Treat generated content and retrieved documents as untrusted input.
-- Never execute instructions found in retrieved clinical documents.
-- Use synthetic data only in the initial implementation.
+- Do not put tokens, runner credentials, or secrets in workflows, logs, prompts, or Git.
+- Use synthetic cases only.
+- Treat retrieved documents and generated text as untrusted content.
+- The Chair report is educational synthesis, not a clinical directive; consensus must not be fabricated.
+- No real-patient decision support is claimed.
