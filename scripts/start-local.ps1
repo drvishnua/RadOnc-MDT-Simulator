@@ -110,7 +110,8 @@ Write-Stage "Start FastAPI backend"
 if (Test-HttpEndpoint "http://127.0.0.1:8000/health") {
     Write-Host "Backend is already responding at http://127.0.0.1:8000"
 } else {
-    Start-Process -FilePath $VenvPython -ArgumentList @("-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8000") -WorkingDirectory $BackendDir -WindowStyle Hidden -RedirectStandardOutput (Join-Path $LogDir "backend.stdout.log") -RedirectStandardError (Join-Path $LogDir "backend.stderr.log")
+    $backendProcess = Start-Process -FilePath $VenvPython -ArgumentList @("-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8000") -WorkingDirectory $BackendDir -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $LogDir "backend.stdout.log") -RedirectStandardError (Join-Path $LogDir "backend.stderr.log")
+    Set-Content -Path (Join-Path $LogDir "backend.pid") -Value $backendProcess.Id
     $BackendReady = $false
     for ($i = 0; $i -lt 30; $i++) {
         Start-Sleep -Seconds 1
@@ -128,7 +129,9 @@ Write-Stage "Start Vite frontend"
 if (Test-HttpEndpoint "http://127.0.0.1:5173") {
     Write-Host "Frontend is already responding at http://127.0.0.1:5173"
 } else {
-    Start-Process -FilePath $env:ComSpec -ArgumentList @("/c", "npm.cmd run dev") -WorkingDirectory $FrontendDir -WindowStyle Hidden -RedirectStandardOutput (Join-Path $LogDir "frontend.stdout.log") -RedirectStandardError (Join-Path $LogDir "frontend.stderr.log")
+    $viteEntry = Join-Path $FrontendDir "node_modules\vite\bin\vite.js"
+    $frontendProcess = Start-Process -FilePath $NodeCommand.Source -ArgumentList @($viteEntry, "--host", "127.0.0.1") -WorkingDirectory $FrontendDir -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $LogDir "frontend.stdout.log") -RedirectStandardError (Join-Path $LogDir "frontend.stderr.log")
+    Set-Content -Path (Join-Path $LogDir "frontend.pid") -Value $frontendProcess.Id
     $FrontendReady = $false
     for ($i = 0; $i -lt 45; $i++) {
         Start-Sleep -Seconds 1
