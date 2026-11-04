@@ -130,18 +130,35 @@ if (Test-HttpEndpoint "http://127.0.0.1:5173") {
     Write-Host "Frontend is already responding at http://127.0.0.1:5173"
 } else {
     $viteEntry = Join-Path $FrontendDir "node_modules\vite\bin\vite.js"
-    $frontendProcess = Start-Process -FilePath $NodeCommand.Source -ArgumentList @($viteEntry, "--host", "127.0.0.1") -WorkingDirectory $FrontendDir -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $LogDir "frontend.stdout.log") -RedirectStandardError (Join-Path $LogDir "frontend.stderr.log")
+    if (-not (Test-Path $viteEntry)) {
+        throw "Vite entry point was not found at $viteEntry. Check the frontend dependency installation."
+    }
+
+    # Quote the Vite entry path: the research folder contains spaces (for example, "Post MD").
+    $viteArguments = "`"$viteEntry`" --host 127.0.0.1 --port 5173 --strictPort"
+    $frontendProcess = Start-Process -FilePath $NodeCommand.Source -ArgumentList $viteArguments -WorkingDirectory $FrontendDir -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $LogDir "frontend.stdout.log") -RedirectStandardError (Join-Path $LogDir "frontend.stderr.log")
     Set-Content -Path (Join-Path $LogDir "frontend.pid") -Value $frontendProcess.Id
     $FrontendReady = $false
     for ($i = 0; $i -lt 45; $i++) {
         Start-Sleep -Seconds 1
+        $frontendProcess.Refresh()
+        if ($frontendProcess.HasExited) {
+            $frontendError = ""
+            $frontendLog = Join-Path $LogDir "frontend.stderr.log"
+            if (Test-Path $frontendLog) {
+                $frontendError = (Get-Content $frontendLog -Tail 30) -join [Environment]::NewLine
+            }
+            throw "Vite exited before becoming ready (exit code $($frontendProcess.ExitCode)). $frontendError"
+        }
         if (Test-HttpEndpoint "http://127.0.0.1:5173") {
             $FrontendReady = $true
             break
         }
     }
     if (-not $FrontendReady) {
-        throw "Frontend did not start. Check .local-logs/frontend.stderr.log."
+        $frontendLog = Join-Path $LogDir "frontend.stderr.log"
+        $frontendError = if (Test-Path $frontendLog) { (Get-Content $frontendLog -Tail 30) -join [Environment]::NewLine } else { "No Vite stderr log was created." }
+        throw "Frontend did not start within 45 seconds. $frontendError"
     }
 }
 
