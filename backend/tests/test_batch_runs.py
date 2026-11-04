@@ -42,7 +42,8 @@ def test_batch_run_executes_all_45_agents_independently(monkeypatch, tmp_path) -
     response = client.post("/api/runs", json={"case": _case_payload()})
 
     assert response.status_code == 200
-    run = response.json()
+    run_id = response.json()["run_id"]
+    run = client.get(f"/api/runs/{run_id}").json()
     assert run["status"] == "completed"
     assert run["total_agents"] == 45
     assert run["completed_count"] == 45
@@ -53,7 +54,7 @@ def test_batch_run_executes_all_45_agents_independently(monkeypatch, tmp_path) -
     assert len({call[1] for call in calls}) == 1
     assert {call[2] for call in calls} == {1}
 
-    results_response = client.get(f"/api/runs/{run['run_id']}/results")
+    results_response = client.get(f"/api/runs/{run_id}/results")
     assert results_response.status_code == 200
     results = results_response.json()["results"]
     assert len(results) == 45
@@ -77,16 +78,17 @@ def test_batch_continues_after_failure_and_resume_runs_only_failed_agent(monkeyp
     response = client.post("/api/runs", json={"case": _case_payload()})
 
     assert response.status_code == 200
-    run = response.json()
+    run_id = response.json()["run_id"]
+    run = client.get(f"/api/runs/{run_id}").json()
     assert run["status"] == "completed_with_errors"
     assert run["completed_count"] == 44
     assert run["failed_count"] == 1
     assert calls["RO-01"] == 1
     assert all(calls[p["agent_id"]] == 1 for p in AGENT_PROFILES if p["agent_id"] != "RO-01")
 
-    resume_response = client.post(f"/api/runs/{run['run_id']}/resume")
+    resume_response = client.post(f"/api/runs/{run_id}/resume")
     assert resume_response.status_code == 200
-    resumed = resume_response.json()
+    resumed = client.get(f"/api/runs/{run_id}").json()
     assert resumed["status"] == "completed"
     assert resumed["completed_count"] == 45
     assert resumed["failed_count"] == 0
