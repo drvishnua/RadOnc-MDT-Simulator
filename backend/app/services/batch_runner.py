@@ -2,17 +2,17 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import time
 
 from app.agents.catalog import AGENT_PROFILES
 from app.schemas import SyntheticCase
 from app.services import run_store
+from app.services.execution_lock import MODEL_EXECUTION_LOCK
 from app.services.ollama import AgentGenerationError, generate_agent_assessment
 
 logger = logging.getLogger("radonc.batch")
-_batch_lock = asyncio.Lock()
+_batch_lock = MODEL_EXECUTION_LOCK
 MAX_SCHEMA_ATTEMPTS = 2
 
 
