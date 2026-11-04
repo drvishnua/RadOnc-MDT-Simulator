@@ -102,6 +102,7 @@ def get_case(run_id: str) -> SyntheticCase:
 
 
 def get_run(run_id: str) -> dict[str, Any]:
+    initialize_database()
     with _connect() as db:
         row = db.execute(
             "SELECT * FROM simulation_runs WHERE run_id = ?", (run_id,)
@@ -144,6 +145,7 @@ def get_run(run_id: str) -> dict[str, Any]:
 
 
 def list_results(run_id: str) -> list[dict[str, Any]]:
+    initialize_database()
     with _connect() as db:
         exists = db.execute(
             "SELECT 1 FROM simulation_runs WHERE run_id = ?", (run_id,)
