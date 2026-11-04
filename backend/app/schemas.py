@@ -55,3 +55,8 @@ class CaseValidationResult(StrictModel):
     note: str = (
         "Schema validation only. This is not clinical validation or a treatment recommendation."
     )
+
+
+class AgentAssessmentRequest(StrictModel):
+    case: SyntheticCase
+    round_number: int = Field(default=1, ge=1, le=4)
