@@ -259,3 +259,33 @@ textarea { resize: vertical; min-height: 110px; line-height: 1.55; }
   .batch-agent-result summary strong { flex: 1 1 calc(100% - 65px); }
   .batch-agent-body { padding-left: 12px; }
 }
+
+
+.mdt-rounds-panel {
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid rgba(117, 211, 191, .28);
+  border-radius: 11px;
+  background: rgba(12, 25, 40, .42);
+}
+.mdt-rounds-panel > .batch-heading h3 { margin: 0; color: #eaf4f2; font: 700 17px "Segoe UI", sans-serif; }
+.round-stage { margin-top: 16px; padding-top: 15px; border-top: 1px solid var(--line); }
+.round-stage-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.round-stage-heading > div { min-width: 0; }
+.round-stage-heading strong { display: block; margin-top: 4px; color: #dce8f4; font-size: 13px; }
+.round-stage-heading p { margin: 5px 0 0; color: #94a6ba; font-size: 10px; line-height: 1.55; }
+.round-number { color: #82d6c1; font: 10px "Cascadia Code", monospace; letter-spacing: .12em; }
+.round-state { flex: 0 0 auto; padding: 4px 7px; border: 1px solid var(--line); border-radius: 6px; color: #93a7bb; font: 9px "Cascadia Code", monospace; text-transform: uppercase; }
+.round-state.state-completed { color: #8bdcc3; border-color: rgba(139,220,195,.35); }
+.round-state.state-completed_with_errors { color: #edb279; border-color: rgba(237,178,121,.35); }
+.round-state.state-running, .round-state.state-queued { color: #e8d18f; }
+.round-agent-list { margin-top: 12px; max-height: 520px; overflow: auto; border-top: 1px solid var(--line); }
+.final-mdt-report { margin-top: 18px; padding: 16px; border: 1px solid rgba(117,211,191,.32); border-radius: 9px; background: rgba(30,53,65,.34); }
+.final-mdt-report h4 { margin: 4px 0 8px; color: #e8f3f0; font-size: 16px; }
+.final-mdt-report .assessment-conclusion { margin-bottom: 14px; }
+.final-mdt-report .assessment-conclusion p { color: #c2d1df; line-height: 1.65; }
+.report-section { padding: 11px 0; border-top: 1px solid var(--line); color: #b9c8d8; font-size: 10px; line-height: 1.6; }
+.report-section strong { display: block; color: #d8e7ee; font-size: 11px; }
+.report-section ul { margin: 6px 0 0; padding-left: 18px; }
+.report-section li { padding: 2px 0; }
+.report-section p { margin: 6px 0 0; }
