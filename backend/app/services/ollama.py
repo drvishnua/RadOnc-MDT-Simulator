@@ -101,6 +101,7 @@ async def generate_agent_assessment(
         "format": "json",
         "stream": False,
         "think": False,
+        "keep_alive": "30m",
         "options": {
             "temperature": 0.1,
             "num_predict": 1100,
