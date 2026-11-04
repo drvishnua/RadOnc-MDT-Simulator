@@ -169,3 +169,31 @@ textarea { resize: vertical; min-height: 110px; line-height: 1.55; }
   .button-primary { width: 100%; }
   .footer { flex-direction: column; line-height: 1.6; }
 }
+
+
+.assessment-launch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-top: 16px;
+  padding: 15px;
+  border: 1px solid rgba(117, 211, 191, .24);
+  border-radius: 10px;
+  background: rgba(36, 82, 75, .17);
+}
+.assessment-launch strong { color: #c9f0e4; font-size: 12px; }
+.assessment-launch p { margin: 5px 0 0; color: #94adab; font-size: 10px; line-height: 1.5; }
+.button-secondary {
+  flex: 0 0 auto;
+  color: #c4eee2;
+  border-color: rgba(117, 211, 191, .35);
+  background: rgba(117, 211, 191, .12);
+}
+.button-secondary:hover:not(:disabled) { background: rgba(117, 211, 191, .2); }
+.agent-assessment { margin-top: 14px; }
+.agent-assessment > strong { display: block; margin-top: 12px; }
+.assessment-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.assessment-header span { color: #8fbdaf; font: 10px "Cascadia Code", monospace; }
+.agent-assessment ul { margin: 7px 0 4px; }
+.agent-assessment li { padding: 2px 0; }
