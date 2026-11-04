@@ -82,11 +82,11 @@ async def generate_agent_assessment(
         f"Role: {profile['name']}\nRole mandate: {profile['mandate']}\n"
         f"Round: {round_number}\nSynthetic case JSON:\n"
         + json.dumps(case_payload, ensure_ascii=False, separators=(",", ":"))
-        + "\nReturn exactly one JSON object matching this schema. Required: position "
-        "(supports/opposes/conditional/insufficient_information), a defensible provisional "
-        "conclusion, and the preferred educational option or explicit reason no option can "
-        "yet be preferred. Do not add keys. Schema:\n"
-        + json.dumps(schema, ensure_ascii=False, separators=(",", ":"))
+        + "\nReturn one concise JSON object. Required fields: position "
+        "(supports/opposes/conditional/insufficient_information), provisional_conclusion, "
+        "preferred_educational_option, perspective_summary, case_facts, assumptions, unknowns, "
+        "discussion_options, evidence_gaps, uncertainty_notes, disagreement_notes, confidence. "
+        "Do not add keys or markdown. The response format is schema-enforced."
     )
 
     request_body: dict[str, Any] = {
