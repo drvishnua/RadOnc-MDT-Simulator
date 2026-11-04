@@ -89,14 +89,41 @@ const emptyForm = {
   histology: ""
 };
 
+function readSavedCase(): SyntheticCasePayload | null {
+  try {
+    const saved = window.localStorage.getItem("radonc-mdt-last-case");
+    return saved ? (JSON.parse(saved) as SyntheticCasePayload) : null;
+  } catch {
+    return null;
+  }
+}
+
 function App() {
   const [health, setHealth] = useState<Health | null>(null);
   const [runtime, setRuntime] = useState<Runtime | null>(null);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [connectionState, setConnectionState] = useState<"loading" | "connected" | "unavailable">("loading");
-  const [form, setForm] = useState(emptyForm);
-  const [validation, setValidation] = useState<ValidationResult | null>(null);
-  const [validatedCase, setValidatedCase] = useState<SyntheticCasePayload | null>(null);
+  const [form, setForm] = useState(() => {
+    const saved = readSavedCase();
+    return saved ? {
+      scenario_title: saved.scenario_title,
+      case_summary: saved.case_summary,
+      age_years: saved.age_years === null ? "" : String(saved.age_years),
+      primary_site: saved.primary_site ?? "",
+      histology: saved.histology ?? ""
+    } : emptyForm;
+  });
+  const [validation, setValidation] = useState<ValidationResult | null>(() => (
+    readSavedCase()
+      ? {
+          valid: true,
+          mode: "synthetic_educational_case",
+          warnings: [],
+          note: "This synthetic case was previously validated in this browser."
+        }
+      : null
+  ));
+  const [validatedCase, setValidatedCase] = useState<SyntheticCasePayload | null>(() => readSavedCase());
   const [validationError, setValidationError] = useState("");
   const [validating, setValidating] = useState(false);
   const [agentAssessment, setAgentAssessment] = useState<AgentAssessmentResult | null>(null);
@@ -218,6 +245,18 @@ function App() {
       setAssessing(false);
     }
   }
+
+  useEffect(() => {
+    try {
+      if (validatedCase) {
+        window.localStorage.setItem("radonc-mdt-last-case", JSON.stringify(validatedCase));
+      } else {
+        window.localStorage.removeItem("radonc-mdt-last-case");
+      }
+    } catch {
+      // Case and run data remain persisted by the local backend once a batch starts.
+    }
+  }, [validatedCase]);
 
   async function refreshBatchRun(runId: string) {
     try {
