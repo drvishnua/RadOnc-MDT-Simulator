@@ -126,11 +126,13 @@ async def get_independent_batch(run_id: str) -> dict[str, object]:
 async def get_run_case_snapshot(run_id: str) -> dict[str, object]:
     """Return the exact synthetic case snapshot saved when this run was created."""
     try:
+        case_json = run_store.get_case_json(run_id)
         case = run_store.get_case(run_id)
         summary = run_store.get_run(run_id)
         return {
             "run_id": run_id,
             "case_snapshot_sha256": summary["case_snapshot_sha256"],
+            "case_snapshot_json": case_json,
             "case": case.model_dump(exclude_none=True),
         }
     except KeyError as exc:
