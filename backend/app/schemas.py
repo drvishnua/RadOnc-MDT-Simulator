@@ -60,3 +60,7 @@ class CaseValidationResult(StrictModel):
 class AgentAssessmentRequest(StrictModel):
     case: SyntheticCase
     round_number: int = Field(default=1, ge=1, le=4)
+
+
+class BatchRunRequest(StrictModel):
+    case: SyntheticCase
