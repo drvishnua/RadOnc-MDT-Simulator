@@ -35,7 +35,7 @@ The full outputs are preserved in SQLite. The bounded digest is a context-window
 - The full schema is not repeated as prompt text.
 - Round 1 output cap: 700 tokens; Round 2: 420; Round 3: 420; Round 4: 950.
 - The model remains loaded for 30 minutes between agent calls.
-- Context size is selected as 2K when the estimated input plus output fits; otherwise 4K.
+- Context remains fixed at 4K until a production-shaped live benchmark validates both speed and structured-output correctness.
 - Concurrency remains one. A real two-request test on the connected laptop measured 0.86× throughput versus sequential execution; higher concurrency is therefore not enabled.
 - A production-shaped context-size benchmark is still pending.
 
