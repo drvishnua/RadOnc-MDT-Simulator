@@ -178,22 +178,34 @@ async def generate_chair_report(
     round3_views: list[dict],
 ) -> FinalMDTReport:
     def digest(items: list[dict], round_key: str) -> list[dict]:
+        """Keep the chair prompt under the laptop's 4K context budget."""
         output = []
         for item in items:
             result = item.get("assessment") if round_key == "round1" else item.get("result")
             if not result:
                 continue
-            output.append({
-                "agent": item["agent_id"],
-                "role": item["agent_name"],
-                "position": result.get("position"),
-                "conclusion": _compact(result.get("provisional_conclusion", ""), 80),
-                "dissent_or_risk": _compact(
-                    (result.get("response_to_other_perspectives", "") if round_key != "round1"
-                     else result.get("preferred_educational_option", "")),
-                    65,
-                ),
-            })
+            if round_key == "round1":
+                entry = {
+                    "agent": item["agent_id"],
+                    "position": result.get("position"),
+                    "view": _compact(result.get("provisional_conclusion", ""), 25),
+                }
+            elif round_key == "round2":
+                entry = {
+                    "agent": item["agent_id"],
+                    "position": result.get("position"),
+                    "view": _compact(result.get("provisional_conclusion", ""), 25),
+                    "challenge": _compact(
+                        (result.get("substantive_challenges") or [""])[0], 25
+                    ),
+                }
+            else:
+                entry = {
+                    "agent": item["agent_id"],
+                    "risk": _compact(" ".join(result.get("risk_flags", [])[:2]), 25),
+                    "unknown": _compact(" ".join(result.get("remaining_unknowns", [])[:2]), 20),
+                }
+            output.append(entry)
         return output
 
     prompt = (
