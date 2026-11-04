@@ -45,6 +45,8 @@ jobs:
           if ($copyCode -ge 8) {
             throw "Robocopy failed with exit code $copyCode."
           }
+          # Robocopy codes 0-7 indicate success or successful copy differences.
+          $global:LASTEXITCODE = 0
 
           $requiredFiles = @(
             "backend\app\main.py",
