@@ -1,0 +1,87 @@
+name: Live Four-Round Synthetic Validation
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/four-round-mdt-and-performance
+    paths:
+      - "backend/scripts/live_four_round_validation.py"
+      - ".github/workflows/live-four-round-validation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-four-round-validation
+  cancel-in-progress: false
+
+jobs:
+  live-validation:
+    name: Run four rounds on local Ollama and RTX 4060
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 120
+    env:
+      OLLAMA_MODEL: qwen3.5:4b
+      RADONC_AGENT_CONCURRENCY: "1"
+    steps:
+      - name: Check out development branch
+        uses: actions/checkout@v4
+
+      - name: Select installed Python 3.11 or newer
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+          $selected = $null
+          foreach ($version in @("3.13", "3.12", "3.11")) {
+            $candidate = & py "-$version" -c "import sys; print(sys.executable)" 2>$null
+            if ($LASTEXITCODE -eq 0 -and $candidate) {
+              $selected = [string]($candidate | Select-Object -Last 1)
+              break
+            }
+          }
+          if (-not $selected) {
+            $candidate = & python -c "import sys; print(sys.executable)" 2>$null
+            if ($LASTEXITCODE -eq 0 -and $candidate) {
+              $selected = [string]($candidate | Select-Object -Last 1)
+            }
+          }
+          if (-not $selected) { throw "Python 3.11+ not found." }
+          $versionText = & $selected -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"
+          if ([version]$versionText -lt [version]"3.11") { throw "Python 3.11+ required; found $versionText" }
+          "PYTHON_EXE=$selected" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "Selected Python $versionText at $selected"
+
+      - name: Install backend dependencies
+        working-directory: backend
+        shell: powershell
+        run: |
+          & $env:PYTHON_EXE -m pip install -r requirements.txt
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Verify Ollama and GPU before starting
+        shell: powershell
+        run: |
+          Write-Host "=== OLLAMA ==="
+          & $env:PYTHON_EXE -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:11434/api/version', timeout=5).read().decode())"
+          if ($LASTEXITCODE -ne 0) { throw "Ollama is not reachable on localhost." }
+          Write-Host "=== NVIDIA GPU ==="
+          nvidia-smi
+          Write-Host "=== RUN MODE ==="
+          Write-Host "Model: $env:OLLAMA_MODEL"
+          Write-Host "Concurrency: $env:RADONC_AGENT_CONCURRENCY"
+
+      - name: Execute all four rounds with the live local model
+        shell: powershell
+        run: |
+          & $env:PYTHON_EXE (Join-Path $env:GITHUB_WORKSPACE "backend/scripts/live_four_round_validation.py")
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload run, case snapshot, results and timing artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: radonc-live-four-round-validation
+          path: backend/validation_artifacts/live_four_round_validation.json
+          if-no-files-found: warn
+          retention-days: 14
