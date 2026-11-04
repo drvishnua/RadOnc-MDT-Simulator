@@ -115,3 +115,63 @@ def test_cors_does_not_allow_arbitrary_origins() -> None:
     )
     assert response.status_code == 400
     assert "access-control-allow-origin" not in response.headers
+
+
+def test_single_agent_assessment_endpoint_uses_local_generation(monkeypatch) -> None:
+    from app.agent_schemas import AgentAssessment
+
+    async def fake_generate(profile, case, round_number):
+        assert profile["agent_id"] == "RO-01"
+        assert case.scenario_title == "Synthetic test case"
+        return AgentAssessment(
+            agent_id="RO-01",
+            round_number=round_number,
+            perspective_summary="A mocked educational assessment for endpoint testing.",
+            confidence=0.5,
+            evidence_gaps=["No evidence retrieval is connected in this test."],
+        )
+
+    monkeypatch.setattr("app.main.generate_agent_assessment", fake_generate)
+    response = client.post(
+        "/api/agents/RO-01/assess",
+        json={
+            "round_number": 1,
+            "case": {
+                "scenario_title": "Synthetic test case",
+                "case_summary": "A fictional case for API endpoint testing only.",
+            },
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["agent_id"] == "RO-01"
+    assert response.json()["not_a_treatment_instruction"] is True
+    assert response.json()["evidence_claims"] == []
+
+
+def test_single_agent_assessment_rejects_unknown_profile() -> None:
+    response = client.post(
+        "/api/agents/XX-99/assess",
+        json={
+            "round_number": 1,
+            "case": {
+                "scenario_title": "Synthetic test case",
+                "case_summary": "A fictional case for API endpoint testing only.",
+            },
+        },
+    )
+    assert response.status_code == 404
+
+
+def test_single_agent_assessment_rejects_identifying_case_fields() -> None:
+    response = client.post(
+        "/api/agents/RO-01/assess",
+        json={
+            "round_number": 1,
+            "case": {
+                "scenario_title": "Synthetic test case",
+                "case_summary": "A fictional case for API endpoint testing only.",
+                "patient_name": "Must be rejected",
+            },
+        },
+    )
+    assert response.status_code == 422
