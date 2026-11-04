@@ -8,7 +8,7 @@ from typing import TypeVar
 import httpx
 from pydantic import BaseModel, ValidationError
 
-from app.agent_schemas import AgentGenerationError, OllamaUnavailable
+from app.services.ollama import AgentGenerationError, OllamaUnavailable
 from app.config import OLLAMA_BASE_URL, OLLAMA_MODEL
 from app.round_schemas import (
     FinalReportDraft,
