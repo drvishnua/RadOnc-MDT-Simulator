@@ -2,7 +2,7 @@
 
 A local-first, AI-assisted educational simulator for multidisciplinary oncology case discussions.
 
-> **Status: Planning and infrastructure validation.** The product specification, 45-agent catalogue, initial architecture, repository safeguards, and local runner diagnostics are in place. The clinical simulation application itself has not yet been implemented or clinically validated.
+> **Status: Backend foundation implemented; simulation engine and frontend are not yet implemented.** The product specification, 45-agent catalogue, initial architecture, local runner, Ollama integration check, strict synthetic-case API, and backend test workflow are in place.
 
 ## Purpose
 
@@ -22,20 +22,31 @@ See:
 - [Product specification](docs/PRODUCT_SPEC.md)
 - [45-agent catalogue](docs/AGENT_CATALOGUE.md)
 - [Initial technical architecture](docs/ARCHITECTURE.md)
+- [Backend setup and endpoints](backend/README.md)
+
+## Current implementation
+
+The initial FastAPI backend is available under the backend directory:
+
+- GET /health — application health and educational-only mode.
+- GET /api/runtime — read-only Ollama reachability and installed-model status.
+- POST /api/cases/validate — strict synthetic-case schema validation only.
+
+The API rejects unapproved extra case fields, uses no patient-name or medical-record-number fields, and returns warnings for missing scenario details. This is schema validation, not clinical validation.
+
+The four-round orchestrator, evidence retrieval, agent execution, report generation, database persistence, and React interface remain future work.
 
 ## Current technical direction
 
-| Layer | Planned technology |
-|---|---|
-| Frontend | React + Vite |
-| Backend | Python + FastAPI |
-| Local model runtime | Ollama |
-| Initial database | SQLite |
-| Tests | Pytest and frontend tests |
+| Layer | Technology | Status |
+|---|---|---|
+| Frontend | React + Vite | Planned |
+| Backend | Python + FastAPI | Foundation implemented |
+| Local model runtime | Ollama | Connected and smoke-tested |
+| Initial database | SQLite | Planned |
+| Backend tests | Pytest | Five tests passing |
 
-These are the selected starting technologies, not a claim that the application stack is already implemented.
-
-## Infrastructure validation
+## Infrastructure and test validation
 
 The GitHub self-hosted Windows runner has successfully executed jobs on the development laptop. A local Ollama smoke test verified:
 
@@ -44,7 +55,9 @@ The GitHub self-hosted Windows runner has successfully executed jobs on the deve
 - Test prompt returned: RADONC_LOCAL_INFERENCE_OK
 - Ollama reported the model allocated **100% to GPU** on the NVIDIA RTX 4060
 
-This confirms local execution and GPU allocation only. It does **not** validate oncology knowledge, evidence retrieval, agent quality, or clinical safety.
+The backend CI workflow installed dependencies on the laptop and completed **5 tests successfully** using the laptop's existing Python 3.14 installation.
+
+These checks validate infrastructure, basic API behavior, and schema rules only. They do **not** validate oncology knowledge, evidence retrieval, agent quality, or clinical safety.
 
 ## Safety and data boundaries
 
@@ -59,11 +72,11 @@ This project is for **research and education only**.
 
 ## Development roadmap
 
-1. Define case, agent, evidence, and report schemas.
-2. Implement the local Ollama client and test its response handling.
-3. Implement resumable four-round orchestration for all 45 agent profiles.
-4. Add evidence-source metadata and citation validation.
-5. Add structured reporting and auditability.
+1. Define agent output, evidence citation, and report schemas.
+2. Implement versioned profiles for all 45 agents.
+3. Implement resumable four-round orchestration with preserved independent assessments and dissent.
+4. Add evidence-source adapters and citation validation.
+5. Add structured report generation and auditability.
 6. Build the React interface and local setup workflow.
 7. Evaluate reliability, reproducibility, bias, evidence handling, and safety using synthetic cases.
 
