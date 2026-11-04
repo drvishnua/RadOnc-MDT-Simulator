@@ -14,6 +14,9 @@ def _fake_assessment(profile, case, round_number):
     return AgentAssessment(
         agent_id=profile["agent_id"],
         round_number=round_number,
+        position="conditional",
+        provisional_conclusion="A provisional educational conclusion is conditional because important case details remain unknown.",
+        preferred_educational_option="No option can be preferred until the outstanding details are clarified.",
         perspective_summary=f"Independent educational assessment from {profile['name']} for a synthetic case.",
         confidence=0.5,
         evidence_gaps=["No evidence retrieval source is connected in this test."],
@@ -60,6 +63,7 @@ def test_batch_run_executes_all_45_agents_independently(monkeypatch, tmp_path) -
     assert len(results) == 45
     assert all(item["status"] == "completed" for item in results)
     assert all(item["assessment"]["not_a_treatment_instruction"] is True for item in results)
+    assert all(item["assessment"]["provisional_conclusion"] for item in results)
 
 
 def test_batch_continues_after_failure_and_resume_runs_only_failed_agent(monkeypatch, tmp_path) -> None:
