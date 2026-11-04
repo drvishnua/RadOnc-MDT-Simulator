@@ -1,9 +1,10 @@
-"""Initial API surface: health, local runtime status, and synthetic case validation."""
+"""Initial API surface: runtime, agents, and synthetic case validation."""
 
 from __future__ import annotations
 
 from fastapi import FastAPI
 
+from app.agents.catalog import AGENT_PROFILES, EXPECTED_AGENT_COUNT
 from app.config import APP_NAME, APP_VERSION
 from app.schemas import CaseValidationResult, SyntheticCase
 from app.services.ollama import get_ollama_status
@@ -30,6 +31,16 @@ async def health() -> dict[str, str]:
 @app.get("/api/runtime")
 async def runtime_status() -> dict[str, object]:
     return {"ollama": await get_ollama_status()}
+
+
+@app.get("/api/agents")
+async def list_agents() -> dict[str, object]:
+    return {
+        "expected_agent_count": EXPECTED_AGENT_COUNT,
+        "returned_agent_count": len(AGENT_PROFILES),
+        "all_roles_required": True,
+        "agents": AGENT_PROFILES,
+    }
 
 
 @app.post("/api/cases/validate", response_model=CaseValidationResult)
