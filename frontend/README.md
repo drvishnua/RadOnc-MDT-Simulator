@@ -23,6 +23,9 @@ The frontend calls the local FastAPI backend. The API CORS allowlist is restrict
 
 - Shows backend and Ollama connection status.
 - Loads and filters the 45-role catalogue.
-- Submits a synthetic case to the schema validation endpoint.
+- Validates synthetic case structure.
+- Runs one RO-01 sample assessment using the local Ollama model after case validation.
 
-The full four-round MDT simulation, agent execution, evidence retrieval, and report generation are not implemented yet.
+The one-agent call is an educational prototype. It does not run the other 44 agents, retrieve evidence, create consensus, or generate a full MDT report. Evidence claims remain disabled until source retrieval and citation validation are implemented.
+
+Use synthetic cases only.
