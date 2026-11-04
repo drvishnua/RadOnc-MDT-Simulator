@@ -13,6 +13,7 @@ from app.config import APP_NAME, APP_VERSION
 from app.schemas import AgentAssessmentRequest, BatchRunRequest, CaseValidationResult, SyntheticCase
 from app.services import run_store
 from app.services.batch_runner import batch_is_running, run_independent_assessments, validate_resume_state
+from app.services.mdt_rounds import prepare_round_resume, round_is_running, run_mdt_round
 from app.services.ollama import (
     AgentGenerationError,
     OllamaUnavailable,
@@ -148,6 +149,74 @@ async def resume_independent_batch(
     updated = validate_resume_state(run_id)
     background_tasks.add_task(run_independent_assessments, run_id)
     return updated
+
+
+@app.post("/api/runs/{run_id}/rounds/{round_number}")
+async def start_mdt_round(
+    run_id: str,
+    round_number: int,
+    background_tasks: BackgroundTasks,
+) -> dict[str, object]:
+    if round_is_running() or batch_is_running():
+        raise HTTPException(status_code=409, detail="Another local model run is already active.")
+    try:
+        summary = run_store.create_round_job(run_id, round_number)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Simulation run or preceding round not found.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    background_tasks.add_task(run_mdt_round, run_id, round_number)
+    return summary
+
+
+@app.get("/api/runs/{run_id}/rounds/{round_number}")
+async def get_mdt_round(run_id: str, round_number: int) -> dict[str, object]:
+    try:
+        return run_store.get_round_summary(run_id, round_number)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="MDT round not found.") from exc
+
+
+@app.get("/api/runs/{run_id}/rounds/{round_number}/results")
+async def get_mdt_round_results(run_id: str, round_number: int) -> dict[str, object]:
+    try:
+        return {
+            "run_id": run_id,
+            "round_number": round_number,
+            "results": run_store.list_round_results(run_id, round_number),
+        }
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="MDT round not found.") from exc
+
+
+@app.post("/api/runs/{run_id}/rounds/{round_number}/resume")
+async def resume_mdt_round(
+    run_id: str,
+    round_number: int,
+    background_tasks: BackgroundTasks,
+) -> dict[str, object]:
+    if round_is_running() or batch_is_running():
+        raise HTTPException(status_code=409, detail="Another local model run is already active.")
+    try:
+        summary = run_store.get_round_summary(run_id, round_number)
+        if summary["status"] == "completed":
+            raise HTTPException(status_code=409, detail="This round is already complete.")
+        updated = prepare_round_resume(run_id, round_number)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="MDT round not found.") from exc
+    background_tasks.add_task(run_mdt_round, run_id, round_number)
+    return updated
+
+
+@app.get("/api/runs/{run_id}/report")
+async def get_final_mdt_report(run_id: str) -> dict[str, object]:
+    try:
+        report = run_store.get_final_report(run_id)
+        if report is None:
+            raise HTTPException(status_code=404, detail="Final Chair synthesis is not available yet.")
+        return report
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Simulation run not found.") from exc
 
 
 @app.post("/api/cases/validate", response_model=CaseValidationResult)
