@@ -33,11 +33,9 @@ The one-agent endpoint is a prototype. It validates output shape and enforces ed
 
 The self-hosted runner and local model store remain at the project root. GitHub synchronizes source code into the separate Source subfolder, without deleting or overwriting the runner or AI_Models directories.
 
-Run the local application from Source with:
+Run the local application by double-clicking Start-RadOnc-MDT.cmd inside Source. Stop the FastAPI and Vite processes with Stop-RadOnc-MDT.cmd.
 
-    powershell -ExecutionPolicy Bypass -File .\scripts\start-local.ps1
-
-The launcher prepares the Python environment, checks/starts Ollama if needed, starts FastAPI and Vite on localhost, and opens the dashboard.
+The launcher prepares the Python environment, reuses the runner's cached Node.js when available, checks/starts Ollama if needed, starts FastAPI and Vite on localhost, and opens the dashboard. Ollama is left running when the stop command is used so other local tools can continue using it.
 
 ## Not implemented yet
 
