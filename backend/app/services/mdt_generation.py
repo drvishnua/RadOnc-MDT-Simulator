@@ -107,7 +107,7 @@ async def generate_debate_contribution(
         + json.dumps(own, ensure_ascii=False, separators=(",", ":"))
         + "\nSELECTED PEER POSITIONS (compressed for local context limits):\n"
         + json.dumps(peers, ensure_ascii=False, separators=(",", ":"))
-        + "\\nReturn a concise response with specific agreements, disagreements, and any reason for changing or retaining your position. The output format is schema-enforced."
+        + "\nReturn a concise response with specific agreements, disagreements, and any reason for changing or retaining your position. The output format is schema-enforced."
     )
     draft = await _generate_structured(prompt, RoundContributionDraft, 420)
     return RoundContribution(
@@ -156,7 +156,7 @@ async def generate_adversarial_contribution(
         + json.dumps(own, ensure_ascii=False, separators=(",", ":"))
         + "\nSELECTED DEBATE VIEW DIGEST:\n"
         + json.dumps(peers, ensure_ascii=False, separators=(",", ":"))
-        + "\\nReturn concise findings only. List concrete risks and remaining unknowns; do not invent source-backed conclusions. The output format is schema-enforced."
+        + "\nReturn concise findings only. List concrete risks and remaining unknowns; do not invent source-backed conclusions. The output format is schema-enforced."
     )
     draft = await _generate_structured(prompt, RoundContributionDraft, 420)
     return RoundContribution(
@@ -218,9 +218,9 @@ async def generate_chair_report(
         + json.dumps(digest(round2_views, "round2"), ensure_ascii=False, separators=(",", ":"))
         + "\nROUND 3 ADVERSARIAL REVIEW:\n"
         + json.dumps(digest(round3_views, "round3"), ensure_ascii=False, separators=(",", ":"))
-        + "\\nReturn a balanced synthesis. Set consensus_status to consensus, qualified_consensus, no_consensus, or insufficient_information. "
+        + "\nReturn a balanced synthesis. Set consensus_status to consensus, qualified_consensus, no_consensus, or insufficient_information. "
         "chair_conclusion must be a clear 2-4 sentence conclusion stating what the simulated MDT has and has not resolved, and why. "
-        "If there is no clear agreement, use conditional or insufficient_information and explain why. "
+        "If there is no clear agreement, use no_consensus or insufficient_information and explain why. "
         "If views conflict, name the conflict and what information would be required to resolve it. Never fabricate a majority count. "
         "The output format is schema-enforced."
     )
