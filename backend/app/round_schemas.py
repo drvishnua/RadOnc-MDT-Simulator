@@ -1,0 +1,75 @@
+"""Schemas for MDT debate, adversarial review, and chair synthesis."""
+
+from __future__ import annotations
+
+from typing import Literal
+
+from pydantic import Field
+
+from app.schemas import StrictModel
+
+
+Position = Literal["supports", "opposes", "conditional", "insufficient_information"]
+
+
+class RoundContributionDraft(StrictModel):
+    position: Position
+    provisional_conclusion: str = Field(min_length=20, max_length=900)
+    response_to_other_perspectives: str = Field(min_length=20, max_length=1600)
+    agreements: list[str] = Field(default_factory=list, max_length=8)
+    substantive_challenges: list[str] = Field(default_factory=list, max_length=8)
+    position_changes: list[str] = Field(default_factory=list, max_length=5)
+    remaining_unknowns: list[str] = Field(default_factory=list, max_length=8)
+    risk_flags: list[str] = Field(default_factory=list, max_length=8)
+    confidence: float = Field(ge=0.0, le=1.0)
+
+
+class RoundContribution(StrictModel):
+    agent_id: str = Field(pattern=r"^[A-Z]{2}-[0-9]{2}$")
+    round_number: Literal[2, 3]
+    position: Position
+    provisional_conclusion: str = Field(min_length=20, max_length=900)
+    response_to_other_perspectives: str = Field(min_length=20, max_length=1600)
+    agreements: list[str] = Field(default_factory=list, max_length=8)
+    substantive_challenges: list[str] = Field(default_factory=list, max_length=8)
+    position_changes: list[str] = Field(default_factory=list, max_length=5)
+    remaining_unknowns: list[str] = Field(default_factory=list, max_length=8)
+    risk_flags: list[str] = Field(default_factory=list, max_length=8)
+    confidence: float = Field(ge=0.0, le=1.0)
+    safety_boundary: Literal["educational_simulation_only"] = "educational_simulation_only"
+    not_a_treatment_instruction: Literal[True] = True
+
+
+class FinalReportDraft(StrictModel):
+    report_title: str = Field(min_length=5, max_length=180)
+    overall_educational_synthesis: str = Field(min_length=50, max_length=5000)
+    consensus_points: list[str] = Field(default_factory=list, max_length=15)
+    unresolved_disagreements: list[str] = Field(default_factory=list, max_length=15)
+    minority_and_dissenting_views: list[str] = Field(default_factory=list, max_length=15)
+    major_uncertainties: list[str] = Field(default_factory=list, max_length=20)
+    missing_information_before_real_world_review: list[str] = Field(default_factory=list, max_length=20)
+    patient_and_family_considerations: list[str] = Field(default_factory=list, max_length=15)
+    feasibility_and_resource_considerations: list[str] = Field(default_factory=list, max_length=15)
+    governance_and_safeguarding_considerations: list[str] = Field(default_factory=list, max_length=15)
+    evidence_limitations: list[str] = Field(default_factory=list, max_length=15)
+    chair_reflection: str = Field(min_length=30, max_length=1800)
+
+
+class FinalMDTReport(StrictModel):
+    run_id: str
+    round_number: Literal[4] = 4
+    report_title: str
+    overall_educational_synthesis: str
+    consensus_points: list[str]
+    unresolved_disagreements: list[str]
+    minority_and_dissenting_views: list[str]
+    major_uncertainties: list[str]
+    missing_information_before_real_world_review: list[str]
+    patient_and_family_considerations: list[str]
+    feasibility_and_resource_considerations: list[str]
+    governance_and_safeguarding_considerations: list[str]
+    evidence_limitations: list[str]
+    chair_reflection: str
+    evidence_retrieval_connected: Literal[False] = False
+    safety_boundary: Literal["educational_simulation_only"] = "educational_simulation_only"
+    not_a_treatment_instruction: Literal[True] = True
