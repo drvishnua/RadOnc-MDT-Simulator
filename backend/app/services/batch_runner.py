@@ -9,14 +9,35 @@ import time
 from app.agents.catalog import AGENT_PROFILES
 from app.schemas import SyntheticCase
 from app.services import run_store
-from app.services.ollama import generate_agent_assessment
+from app.services.ollama import AgentGenerationError, generate_agent_assessment
 
 logger = logging.getLogger("radonc.batch")
 _batch_lock = asyncio.Lock()
+MAX_SCHEMA_ATTEMPTS = 2
 
 
 def batch_is_running() -> bool:
     return _batch_lock.locked()
+
+
+async def _generate_with_schema_retry(profile, case: SyntheticCase):
+    """Retry one malformed/empty structured response without rerunning other agents."""
+    for attempt in range(1, MAX_SCHEMA_ATTEMPTS + 1):
+        try:
+            return await generate_agent_assessment(
+                profile=profile,
+                case=case,
+                round_number=1,
+            )
+        except AgentGenerationError:
+            if attempt >= MAX_SCHEMA_ATTEMPTS:
+                raise
+            logger.warning(
+                "Retrying malformed structured output for %s (attempt %s/%s)",
+                profile["agent_id"],
+                attempt + 1,
+                MAX_SCHEMA_ATTEMPTS,
+            )
 
 
 async def run_independent_assessments(run_id: str) -> None:
@@ -39,19 +60,14 @@ async def run_independent_assessments(run_id: str) -> None:
                 run_store.mark_agent_running(run_id, profile["agent_id"])
                 try:
                     # Each agent receives only the original case and its own role profile.
-                    # No other agent's assessment or debate text is passed to this call.
-                    assessment = await generate_agent_assessment(
-                        profile=profile,
-                        case=case,
-                        round_number=1,
-                    )
+                    assessment = await _generate_with_schema_retry(profile, case)
                     run_store.save_agent_success(
                         run_id=run_id,
                         agent_id=profile["agent_id"],
                         assessment_json=assessment.model_dump_json(),
                         duration_seconds=time.perf_counter() - started,
                     )
-                except Exception as exc:  # Continue to the next role if one agent fails.
+                except Exception as exc:
                     logger.exception(
                         "Independent assessment failed for run %s agent %s",
                         run_id,
