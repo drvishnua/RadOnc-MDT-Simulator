@@ -61,7 +61,7 @@ class FinalMDTReport(StrictModel):
     run_id: str
     round_number: Literal[4] = 4
     report_title: str
-    overall_position: Position
+    consensus_status: Literal["consensus", "qualified_consensus", "no_consensus", "insufficient_information"]
     chair_conclusion: str
     overall_educational_synthesis: str
     consensus_points: list[str]
