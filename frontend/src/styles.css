@@ -197,3 +197,65 @@ textarea { resize: vertical; min-height: 110px; line-height: 1.55; }
 .assessment-header span { color: #8fbdaf; font: 10px "Cascadia Code", monospace; }
 .agent-assessment ul { margin: 7px 0 4px; }
 .agent-assessment li { padding: 2px 0; }
+
+
+.batch-run-panel {
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid rgba(117, 211, 191, .24);
+  border-radius: 11px;
+  background: rgba(12, 25, 40, .48);
+}
+.batch-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.batch-heading .eyebrow { margin-bottom: 7px; }
+.batch-heading h3 { margin: 0; color: #eaf4f2; font: 700 17px "Segoe UI", sans-serif; }
+.batch-actions { display: flex; flex-wrap: wrap; gap: 9px; align-items: center; }
+.batch-status { margin-top: 16px; padding: 14px; border: 1px solid var(--line); border-radius: 9px; background: rgba(255,255,255,.025); }
+.batch-status-top, .batch-counts, .batch-results-title {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 9px;
+}
+.batch-status-top strong { color: #d8efe7; font-size: 12px; }
+.batch-status-top span, .batch-results-title span { color: #8fa1b7; font: 10px "Cascadia Code", monospace; }
+.batch-progress-track { height: 9px; margin: 12px 0 9px; overflow: hidden; border-radius: 99px; background: rgba(255,255,255,.08); }
+.batch-progress-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, #4caa9a, #9ce3ce); transition: width .3s ease; }
+.batch-counts { justify-content: flex-start; color: #9aabc0; font-size: 10px; }
+.batch-counts span { padding-right: 10px; border-right: 1px solid var(--line); }
+.batch-counts span:last-child { border-right: 0; }
+.count-complete { color: #91ddc4; }
+.count-failed, .error-text { color: #ef9a95; }
+.batch-estimate-note { margin: 9px 0 0; color: #94a6ba; font-size: 10px; line-height: 1.5; }
+.batch-results { margin-top: 16px; border-top: 1px solid var(--line); }
+.batch-results-title { padding: 13px 1px 8px; }
+.batch-results-title strong { color: #dce8f4; font-size: 12px; }
+.batch-agent-result { border-top: 1px solid var(--line); }
+.batch-agent-result summary {
+  display: flex; align-items: center; gap: 10px; padding: 11px 2px;
+  cursor: pointer; list-style: none;
+}
+.batch-agent-result summary::-webkit-details-marker { display: none; }
+.batch-agent-result summary::after { content: "+"; margin-left: auto; color: #8395aa; font-size: 15px; }
+.batch-agent-result[open] summary::after { content: "−"; }
+.batch-agent-result summary strong { min-width: 0; color: #dce6f1; font-size: 10px; font-weight: 600; }
+.agent-status { margin-left: auto; font: 9px "Cascadia Code", monospace; text-transform: uppercase; }
+.agent-duration { color: #7d91a7; font: 9px "Cascadia Code", monospace; }
+.status-text-completed { color: #82d6bb; }
+.status-text-failed { color: #ee9792; }
+.status-text-running { color: #efd08a; }
+.status-text-queued { color: #8294ab; }
+.status-completed .agent-id { color: #82d6bb; }
+.status-failed .agent-id { color: #ee9792; }
+.status-running .agent-id { color: #efd08a; }
+.batch-agent-body { padding: 0 8px 13px 58px; color: #aebdce; font-size: 10px; line-height: 1.6; }
+.batch-agent-body p { margin: 3px 0 8px; }
+.batch-agent-body strong { display: block; margin-top: 9px; color: #cfe0eb; font-size: 10px; }
+.batch-agent-body ul { margin: 5px 0; padding-left: 17px; }
+.batch-agent-body li { padding: 2px 0; }
+@media (max-width: 620px) {
+  .assessment-launch { align-items: flex-start; flex-direction: column; }
+  .batch-heading { flex-direction: column; }
+  .batch-actions { align-items: stretch; flex-direction: column; }
+  .batch-actions .button { width: 100%; }
+  .batch-agent-result summary { flex-wrap: wrap; }
+  .batch-agent-result summary strong { flex: 1 1 calc(100% - 65px); }
+  .batch-agent-body { padding-left: 12px; }
+}
