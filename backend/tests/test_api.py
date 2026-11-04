@@ -1,7 +1,8 @@
+from collections import Counter
+
 from fastapi.testclient import TestClient
 
 from app.main import app
-
 
 client = TestClient(app)
 
@@ -68,3 +69,25 @@ def test_runtime_endpoint_returns_ollama_status(monkeypatch) -> None:
     response = client.get("/api/runtime")
     assert response.status_code == 200
     assert response.json()["ollama"]["reachable"] is True
+
+
+def test_agent_endpoint_returns_all_45_unique_profiles() -> None:
+    response = client.get("/api/agents")
+    assert response.status_code == 200
+    body = response.json()
+    agents = body["agents"]
+    assert body["expected_agent_count"] == 45
+    assert body["returned_agent_count"] == 45
+    assert body["all_roles_required"] is True
+    assert len({agent["agent_id"] for agent in agents}) == 45
+
+    category_counts = Counter(agent["category"] for agent in agents)
+    assert category_counts == {
+        "radiation_oncology": 9,
+        "medical_oncology": 8,
+        "surgical_oncology": 8,
+        "diagnostic_supportive": 3,
+        "patient_perspective": 6,
+        "system_governance": 8,
+        "family_social_vulnerability": 3,
+    }
