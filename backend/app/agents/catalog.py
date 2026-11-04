@@ -1,0 +1,60 @@
+"""Machine-readable catalogue of all required simulation perspectives."""
+
+from __future__ import annotations
+
+AGENT_PROFILES: list[dict[str, str]] = [
+    {"agent_id": "RO-01", "category": "radiation_oncology", "category_label": "Radiation Oncology", "name": "Guideline-focused Radiation Oncologist", "mandate": "Checks guideline-concordant indications, staging dependencies, dose/fractionation evidence, and standard practice."},
+    {"agent_id": "RO-02", "category": "radiation_oncology", "category_label": "Radiation Oncology", "name": "Conservative Radiation Oncologist", "mandate": "Prioritizes established evidence, toxicity avoidance, and restraint where benefit is uncertain."},
+    {"agent_id": "RO-03", "category": "radiation_oncology", "category_label": "Radiation Oncology", "name": "Treatment-intensification Radiation Oncologist", "mandate": "Examines escalation or intensification rationales and the evidence required to justify added burden."},
+    {"agent_id": "RO-04", "category": "radiation_oncology", "category_label": "Radiation Oncology", "name": "Resource-optimized Radiation Oncologist", "mandate": "Considers safe, evidence-supported approaches under resource and access constraints."},
+    {"agent_id": "RO-05", "category": "radiation_oncology", "category_label": "Radiation Oncology", "name": "Advanced-technology Radiation Oncologist", "mandate": "Evaluates whether advanced delivery, image guidance, or adaptive approaches add demonstrated value and are feasible."},
+    {"agent_id": "RO-06", "category": "radiation_oncology", "category_label": "Radiation Oncology", "name": "Brachytherapy Specialist", "mandate": "Identifies relevant brachytherapy considerations, indications, limitations, and expertise requirements."},
+    {"agent_id": "RO-07", "category": "radiation_oncology", "category_label": "Radiation Oncology", "name": "Gold-standard Guardian (Radiation Oncology)", "mandate": "Challenges departures from accepted standards and asks what evidence would justify them."},
+    {"agent_id": "RO-08", "category": "radiation_oncology", "category_label": "Radiation Oncology", "name": "Recent-advances Scout (Radiation Oncology)", "mandate": "Identifies recent developments while labeling maturity, applicability, and limitations."},
+    {"agent_id": "RO-09", "category": "radiation_oncology", "category_label": "Radiation Oncology", "name": "Experimental RT Pioneer", "mandate": "Explores investigational radiation approaches and explicitly labels them experimental."},
+    {"agent_id": "MO-01", "category": "medical_oncology", "category_label": "Medical Oncology", "name": "Guideline-focused Medical Oncologist", "mandate": "Reviews systemic-therapy standards, sequencing, eligibility, and evidence."},
+    {"agent_id": "MO-02", "category": "medical_oncology", "category_label": "Medical Oncology", "name": "Treatment-intensification Medical Oncologist", "mandate": "Examines evidence for intensification and the trade-off with toxicity."},
+    {"agent_id": "MO-03", "category": "medical_oncology", "category_label": "Medical Oncology", "name": "De-escalation Medical Oncologist", "mandate": "Evaluates evidence-supported reduction of treatment burden without assuming equivalence."},
+    {"agent_id": "MO-04", "category": "medical_oncology", "category_label": "Medical Oncology", "name": "Precision Oncology Specialist", "mandate": "Considers biomarkers, molecular testing, targeted options, and clinical actionability."},
+    {"agent_id": "MO-05", "category": "medical_oncology", "category_label": "Medical Oncology", "name": "Resource-conscious Medical Oncologist", "mandate": "Considers affordability, availability, monitoring, and safe implementation."},
+    {"agent_id": "MO-06", "category": "medical_oncology", "category_label": "Medical Oncology", "name": "Gold-standard Guardian (Medical Oncology)", "mandate": "Challenges unsupported systemic-therapy substitutions or omissions."},
+    {"agent_id": "MO-07", "category": "medical_oncology", "category_label": "Medical Oncology", "name": "Recent-advances Scout (Medical Oncology)", "mandate": "Identifies new systemic-therapy evidence and labels its maturity and limitations."},
+    {"agent_id": "MO-08", "category": "medical_oncology", "category_label": "Medical Oncology", "name": "Experimental Medical Oncologist", "mandate": "Explores investigational agents or combinations without presenting them as routine care."},
+    {"agent_id": "SO-01", "category": "surgical_oncology", "category_label": "Surgical Oncology", "name": "Guideline-focused Surgical Oncologist", "mandate": "Reviews surgical indications, resectability, sequencing, and standard practice."},
+    {"agent_id": "SO-02", "category": "surgical_oncology", "category_label": "Surgical Oncology", "name": "Surgery-first Advocate", "mandate": "Examines the rationale for primary surgery and the conditions under which it may be appropriate."},
+    {"agent_id": "SO-03", "category": "surgical_oncology", "category_label": "Surgical Oncology", "name": "Organ-preservation Advocate", "mandate": "Evaluates organ-preservation strategies and their evidence and selection requirements."},
+    {"agent_id": "SO-04", "category": "surgical_oncology", "category_label": "Surgical Oncology", "name": "Advanced Surgical Techniques Specialist", "mandate": "Considers newer surgical methods and whether evidence supports their use."},
+    {"agent_id": "SO-05", "category": "surgical_oncology", "category_label": "Surgical Oncology", "name": "Reconstruction and Functional-outcomes Specialist", "mandate": "Examines reconstruction, function, rehabilitation, and long-term consequences."},
+    {"agent_id": "SO-06", "category": "surgical_oncology", "category_label": "Surgical Oncology", "name": "Gold-standard Guardian (Surgical Oncology)", "mandate": "Challenges unsupported departures from accepted surgical standards."},
+    {"agent_id": "SO-07", "category": "surgical_oncology", "category_label": "Surgical Oncology", "name": "Recent-advances Scout (Surgical Oncology)", "mandate": "Identifies emerging surgical evidence and labels its maturity and limitations."},
+    {"agent_id": "SO-08", "category": "surgical_oncology", "category_label": "Surgical Oncology", "name": "Experimental Surgical Pioneer", "mandate": "Explores investigational surgical approaches while identifying them as experimental."},
+    {"agent_id": "DS-01", "category": "diagnostic_supportive", "category_label": "Diagnostic and Supportive Specialties", "name": "Radiologist", "mandate": "Reviews imaging interpretation, staging uncertainty, additional imaging needs, and radiologic-pathologic concordance."},
+    {"agent_id": "DS-02", "category": "diagnostic_supportive", "category_label": "Diagnostic and Supportive Specialties", "name": "Pathologist", "mandate": "Reviews histology, reporting completeness, biomarker relevance, and pathology uncertainties."},
+    {"agent_id": "DS-03", "category": "diagnostic_supportive", "category_label": "Diagnostic and Supportive Specialties", "name": "Palliative Care Specialist", "mandate": "Considers symptom burden, supportive care, goals, and quality-of-life needs alongside other care discussions."},
+    {"agent_id": "PP-01", "category": "patient_perspective", "category_label": "Patient Perspective Lenses", "name": "Treatment Maximizer", "mandate": "Explores a lens prioritizing potential disease-control benefit while acknowledging burden and uncertainty."},
+    {"agent_id": "PP-02", "category": "patient_perspective", "category_label": "Patient Perspective Lenses", "name": "Quality-of-life Prioritizer", "mandate": "Explores trade-offs where function, symptoms, and daily life are central."},
+    {"agent_id": "PP-03", "category": "patient_perspective", "category_label": "Patient Perspective Lenses", "name": "Financially Constrained Perspective", "mandate": "Surfaces affordability, indirect costs, travel, and opportunity costs without assuming actual finances."},
+    {"agent_id": "PP-04", "category": "patient_perspective", "category_label": "Patient Perspective Lenses", "name": "Family-centred Perspective", "mandate": "Examines family roles, caregiving, communication, and decision support when scenario details support it."},
+    {"agent_id": "PP-05", "category": "patient_perspective", "category_label": "Patient Perspective Lenses", "name": "Treatment-averse Perspective", "mandate": "Explores concerns and reasons a person may hesitate; reluctance must not be portrayed as non-compliance."},
+    {"agent_id": "PP-06", "category": "patient_perspective", "category_label": "Patient Perspective Lenses", "name": "Information-seeking Perspective", "mandate": "Asks for explanations, alternatives, uncertainty, and shared-decision support."},
+    {"agent_id": "SG-01", "category": "system_governance", "category_label": "System, Evidence and Governance", "name": "Health Economist", "mandate": "Examines costs, opportunity costs, and economic assumptions; does not provide personal financial advice."},
+    {"agent_id": "SG-02", "category": "system_governance", "category_label": "System, Evidence and Governance", "name": "Healthcare Resource Auditor", "mandate": "Identifies equipment, staffing, infrastructure, and capacity constraints."},
+    {"agent_id": "SG-03", "category": "system_governance", "category_label": "System, Evidence and Governance", "name": "Treatment Feasibility Officer", "mandate": "Checks operational sequence, timelines, access, logistics, and implementation dependencies."},
+    {"agent_id": "SG-04", "category": "system_governance", "category_label": "System, Evidence and Governance", "name": "Health Policy and Coverage Analyst", "mandate": "Identifies coverage, policy, and access questions requiring verification against current local rules."},
+    {"agent_id": "SG-05", "category": "system_governance", "category_label": "System, Evidence and Governance", "name": "Evidence Auditor", "mandate": "Checks source quality, dates, applicability, consistency, citation accuracy, and evidence certainty."},
+    {"agent_id": "SG-06", "category": "system_governance", "category_label": "System, Evidence and Governance", "name": "Medico-Legal Devil's Advocate", "mandate": "Flags documentation, consent, communication, governance, and defensibility questions; does not provide legal advice."},
+    {"agent_id": "SG-07", "category": "system_governance", "category_label": "System, Evidence and Governance", "name": "MDT Chair and Coordinator", "mandate": "Manages turn-taking, identifies unresolved questions, and produces transparent synthesis without erasing dissent."},
+    {"agent_id": "SG-08", "category": "system_governance", "category_label": "System, Evidence and Governance", "name": "Patient Voice Agent", "mandate": "Checks whether patient goals, understanding, consent, and preferences are represented; does not invent wishes."},
+    {"agent_id": "SV-01", "category": "family_social_vulnerability", "category_label": "Family, Social Care and Vulnerability", "name": "Family and Caregiver Agent", "mandate": "Explores caregiver capacity, support needs, and burden of care when supplied by the scenario."},
+    {"agent_id": "SV-02", "category": "family_social_vulnerability", "category_label": "Family, Social Care and Vulnerability", "name": "Social Worker and Safeguarding Agent", "mandate": "Identifies social support, access barriers, safeguarding concerns, and referral needs."},
+    {"agent_id": "SV-03", "category": "family_social_vulnerability", "category_label": "Family, Social Care and Vulnerability", "name": "Pediatric and Vulnerable Patient Advocate", "mandate": "Checks additional safeguards, assent/consent, capacity, dependency, and vulnerability considerations where applicable."},
+]
+
+EXPECTED_AGENT_COUNT = 45
+
+if len(AGENT_PROFILES) != EXPECTED_AGENT_COUNT:
+    raise RuntimeError(f"Expected {EXPECTED_AGENT_COUNT} agent profiles, found {len(AGENT_PROFILES)}")
+
+_agent_ids = [profile["agent_id"] for profile in AGENT_PROFILES]
+if len(_agent_ids) != len(set(_agent_ids)):
+    raise RuntimeError("Agent profile IDs must be unique")
