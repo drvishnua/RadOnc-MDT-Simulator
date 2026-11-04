@@ -122,6 +122,21 @@ async def get_independent_batch(run_id: str) -> dict[str, object]:
         raise HTTPException(status_code=404, detail="Simulation run not found.") from exc
 
 
+@app.get("/api/runs/{run_id}/case")
+async def get_run_case_snapshot(run_id: str) -> dict[str, object]:
+    """Return the exact synthetic case snapshot saved when this run was created."""
+    try:
+        case = run_store.get_case(run_id)
+        summary = run_store.get_run(run_id)
+        return {
+            "run_id": run_id,
+            "case_snapshot_sha256": summary["case_snapshot_sha256"],
+            "case": case.model_dump(exclude_none=True),
+        }
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Simulation run not found.") from exc
+
+
 @app.get("/api/runs/{run_id}/results")
 async def get_independent_batch_results(run_id: str) -> dict[str, object]:
     try:
