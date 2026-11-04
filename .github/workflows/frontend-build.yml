@@ -8,6 +8,8 @@ on:
     paths:
       - "frontend/**"
       - "scripts/**"
+      - "Start-RadOnc-MDT.cmd"
+      - "Stop-RadOnc-MDT.cmd"
       - ".github/workflows/frontend-build.yml"
 
 permissions:
@@ -31,16 +33,27 @@ jobs:
         run: |
           $tokens = $null
           $errors = $null
-          [System.Management.Automation.Language.Parser]::ParseFile(
-            (Join-Path $env:GITHUB_WORKSPACE "scripts/start-local.ps1"),
-            [ref]$tokens,
-            [ref]$errors
-          ) | Out-Null
-          if ($errors.Count -gt 0) {
-            $errors | ForEach-Object { Write-Error $_.Message }
-            exit 1
+          $scripts = @("scripts/start-local.ps1", "scripts/stop-local.ps1")
+          foreach ($script in $scripts) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              (Join-Path $env:GITHUB_WORKSPACE $script),
+              [ref]$tokens,
+              [ref]$errors
+            ) | Out-Null
+            if ($errors.Count -gt 0) {
+              $errors | ForEach-Object { Write-Error ($script + ": " + $_.Message) }
+              exit 1
+            }
           }
-          Write-Host "Local launcher PowerShell syntax is valid."
+          if (-not (Test-Path (Join-Path $env:GITHUB_WORKSPACE "Start-RadOnc-MDT.cmd"))) {
+            throw "Start command wrapper is missing."
+          }
+          if (-not (Test-Path (Join-Path $env:GITHUB_WORKSPACE "Stop-RadOnc-MDT.cmd"))) {
+            throw "Stop command wrapper is missing."
+          }
+          Write-Host "Start/stop PowerShell scripts and command wrappers are present and valid."
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
