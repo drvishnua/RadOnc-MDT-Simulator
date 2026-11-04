@@ -30,6 +30,9 @@ async def _generate_structured(prompt: str, schema_type: type[T], max_tokens: in
         "No evidence retrieval is connected. Explicitly preserve uncertainty and disagreement. "
         "Be concise and return only a JSON object that validates against the supplied schema."
     )
+    estimated_input_tokens = (len(system) + len(prompt)) // 3
+    required_context = estimated_input_tokens + max_tokens + 128
+    num_ctx = 2048 if required_context <= 2048 else 4096
     request_body = {
         "model": OLLAMA_MODEL,
         "system": system,
@@ -41,7 +44,7 @@ async def _generate_structured(prompt: str, schema_type: type[T], max_tokens: in
         "options": {
             "temperature": 0.1,
             "num_predict": max_tokens,
-            "num_ctx": 4096,
+            "num_ctx": num_ctx,
         },
     }
     try:
