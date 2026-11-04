@@ -238,12 +238,22 @@ function App() {
   }
 
   useEffect(() => {
-    if (batchRun) {
-      window.localStorage.setItem("radonc-mdt-active-batch", JSON.stringify(batchRun));
-    } else {
-      window.localStorage.removeItem("radonc-mdt-active-batch");
+    try {
+      if (batchRun) {
+        window.localStorage.setItem("radonc-mdt-active-batch", JSON.stringify(batchRun));
+      } else {
+        window.localStorage.removeItem("radonc-mdt-active-batch");
+      }
+    } catch {
+      // The run remains persisted on the local backend even if browser storage is unavailable.
     }
   }, [batchRun]);
+
+  useEffect(() => {
+    if (batchRun) {
+      void refreshBatchRun(batchRun.run_id);
+    }
+  }, []);
 
   useEffect(() => {
     if (!batchRun || batchRun.status === "completed" || batchRun.status === "completed_with_errors") {
