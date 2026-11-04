@@ -61,7 +61,7 @@ Tests:
 
 RADONC_AGENT_CONCURRENCY is bounded to 1 or 2 and defaults to 1. The live two-request benchmark on the connected RTX 4060 laptop measured 0.86× throughput compared with sequential execution; therefore the default remains 1. Do not raise it without a new measured improvement.
 
-Prompts pass JSON Schema through Ollama's structured-output format field instead of duplicating the full schema in prompt text. The request context is selected from 2K or 4K based on an input-size estimate and the maximum output budget.
+Prompts pass JSON Schema through Ollama's structured-output format field instead of duplicating the full schema in prompt text. Context remains fixed at 4K; a 2K setting will only be enabled after a reliable live structured-output benchmark.
 
 ## Persistence
 
