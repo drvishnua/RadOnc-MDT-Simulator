@@ -1,0 +1,41 @@
+# Local GitHub self-hosted runner: includes registration credentials and working files
+actions-runner/
+
+# Locally stored model weights
+AI_Models/
+models/
+*.gguf
+*.safetensors
+*.bin
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+.env
+.env.*
+
+# Node / frontend
+node_modules/
+dist/
+build/
+.vite/
+
+# Local databases and runtime state
+*.sqlite
+*.sqlite3
+*.db
+*.log
+.tmp/
+temp/
+
+# Editor / operating system
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini
