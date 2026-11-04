@@ -504,6 +504,7 @@ function App() {
         mode: "four_round_educational_mdt_simulation",
         run: batchRun,
         case_snapshot: caseSnapshot.case,
+        case_snapshot_json: caseSnapshot.case_snapshot_json,
         case_snapshot_sha256: caseSnapshot.case_snapshot_sha256,
         independent_assessments: batchResults,
         debate: roundResults[2] ?? [],
