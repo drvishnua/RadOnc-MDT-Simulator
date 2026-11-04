@@ -84,6 +84,60 @@ type BatchAgentResult = {
   duration_seconds: number | null;
 };
 
+type RoundSummary = {
+  run_id: string;
+  round_number: number;
+  status: "queued" | "running" | "completed" | "completed_with_errors";
+  total_agents: number;
+  completed_count: number;
+  failed_count: number;
+  queued_count: number;
+  running_count: number;
+  finished_count: number;
+  progress_percent: number;
+  current_agent_id: string | null;
+  updated_at: string;
+};
+
+type RoundAgentResult = {
+  agent_id: string;
+  agent_name: string;
+  category_label: string;
+  status: "queued" | "running" | "completed" | "failed";
+  result: {
+    position: string;
+    provisional_conclusion: string;
+    response_to_other_perspectives: string;
+    agreements: string[];
+    substantive_challenges: string[];
+    position_changes: string[];
+    remaining_unknowns: string[];
+    risk_flags: string[];
+    confidence: number;
+  } | null;
+  error_message: string | null;
+  duration_seconds: number | null;
+};
+
+type FinalMDTReport = {
+  run_id: string;
+  round_number: 4;
+  report_title: string;
+  overall_educational_synthesis: string;
+  consensus_points: string[];
+  unresolved_disagreements: string[];
+  minority_and_dissenting_views: string[];
+  major_uncertainties: string[];
+  missing_information_before_real_world_review: string[];
+  patient_and_family_considerations: string[];
+  feasibility_and_resource_considerations: string[];
+  governance_and_safeguarding_considerations: string[];
+  evidence_limitations: string[];
+  chair_reflection: string;
+  evidence_retrieval_connected: false;
+  not_a_treatment_instruction: true;
+};
+
 const emptyForm = {
   scenario_title: "Synthetic head-and-neck case",
   case_summary: "",
@@ -144,6 +198,11 @@ function App() {
   const [batchError, setBatchError] = useState("");
   const [batchStarting, setBatchStarting] = useState(false);
   const [batchResuming, setBatchResuming] = useState(false);
+  const [roundSummaries, setRoundSummaries] = useState<Record<number, RoundSummary | null>>({});
+  const [roundResults, setRoundResults] = useState<Record<number, RoundAgentResult[]>>({});
+  const [finalReport, setFinalReport] = useState<FinalMDTReport | null>(null);
+  const [roundActionBusy, setRoundActionBusy] = useState<number | null>(null);
+  const [roundError, setRoundError] = useState("");
   const [agentFilter, setAgentFilter] = useState("All perspectives");
 
   async function refreshStatus() {
@@ -261,6 +320,82 @@ function App() {
     }
   }, [validatedCase]);
 
+  async function refreshMdtRound(roundNumber: number, runId = batchRun?.run_id) {
+    if (!runId) return;
+    try {
+      const [summaryResponse, resultResponse] = await Promise.all([
+        fetch(API_BASE + "/api/runs/" + runId + "/rounds/" + roundNumber),
+        fetch(API_BASE + "/api/runs/" + runId + "/rounds/" + roundNumber + "/results")
+      ]);
+      if (summaryResponse.status === 404) {
+        setRoundSummaries((current) => ({ ...current, [roundNumber]: null }));
+        setRoundResults((current) => ({ ...current, [roundNumber]: [] }));
+        return;
+      }
+      if (!summaryResponse.ok || !resultResponse.ok) {
+        throw new Error("Unable to refresh Round " + roundNumber + ".");
+      }
+      const summary = (await summaryResponse.json()) as RoundSummary;
+      const body = (await resultResponse.json()) as { results: RoundAgentResult[] };
+      setRoundSummaries((current) => ({ ...current, [roundNumber]: summary }));
+      setRoundResults((current) => ({ ...current, [roundNumber]: body.results }));
+      if (roundNumber === 4 && summary.status === "completed") {
+        const reportResponse = await fetch(API_BASE + "/api/runs/" + runId + "/report");
+        if (reportResponse.ok) setFinalReport((await reportResponse.json()) as FinalMDTReport);
+      }
+    } catch (error) {
+      setRoundError(error instanceof Error ? error.message : "Unable to refresh MDT round.");
+    }
+  }
+
+  async function startMdtRound(roundNumber: number, resume = false) {
+    if (!batchRun) return;
+    setRoundActionBusy(roundNumber);
+    setRoundError("");
+    try {
+      const suffix = resume ? "/resume" : "";
+      const response = await fetch(
+        API_BASE + "/api/runs/" + batchRun.run_id + "/rounds/" + roundNumber + suffix,
+        { method: "POST" }
+      );
+      const body = await response.json();
+      if (!response.ok) {
+        throw new Error(typeof body.detail === "string" ? body.detail : "Unable to start Round " + roundNumber + ".");
+      }
+      setRoundSummaries((current) => ({ ...current, [roundNumber]: body as RoundSummary }));
+      await refreshMdtRound(roundNumber, batchRun.run_id);
+    } catch (error) {
+      setRoundError(error instanceof Error ? error.message : "Unable to start MDT round.");
+    } finally {
+      setRoundActionBusy(null);
+    }
+  }
+
+  useEffect(() => {
+    if (batchRun?.status === "completed") {
+      void refreshMdtRound(2, batchRun.run_id);
+      void refreshMdtRound(3, batchRun.run_id);
+      void refreshMdtRound(4, batchRun.run_id);
+    }
+  }, [batchRun?.run_id, batchRun?.status]);
+
+  useEffect(() => {
+    if (!batchRun) return;
+    const active = Object.values(roundSummaries).some(
+      (summary) => summary?.status === "queued" || summary?.status === "running"
+    );
+    if (!active) return;
+    const timer = window.setInterval(() => {
+      for (const roundNumber of [2, 3, 4]) {
+        const summary = roundSummaries[roundNumber];
+        if (summary?.status === "queued" || summary?.status === "running") {
+          void refreshMdtRound(roundNumber, batchRun.run_id);
+        }
+      }
+    }, 2500);
+    return () => window.clearInterval(timer);
+  }, [batchRun?.run_id, roundSummaries]);
+
   async function refreshBatchRun(runId: string) {
     try {
       const [runResponse, resultsResponse] = await Promise.all([
@@ -358,9 +493,13 @@ function App() {
     if (!batchRun || batchResults.length === 0) return;
     const exportData = {
       simulator: "RadOnc MDT Simulator",
-      mode: "independent_educational_assessments",
+      mode: "four_round_educational_mdt_simulation",
       run: batchRun,
-      results: batchResults,
+      independent_assessments: batchResults,
+      debate: roundResults[2] ?? [],
+      adversarial_review: roundResults[3] ?? [],
+      chair_synthesis: finalReport,
+      round_status: roundSummaries,
       notice: "Synthetic educational simulation only. Evidence retrieval is not connected; no clinical decision support is provided."
     };
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
@@ -383,6 +522,10 @@ function App() {
     setBatchRun(null);
     setBatchResults([]);
     setBatchError("");
+    setRoundSummaries({});
+    setRoundResults({});
+    setFinalReport(null);
+    setRoundError("");
   }
 
   return (
@@ -729,6 +872,141 @@ function App() {
                   </div>
                 )}
                 <p className="result-footnote">All outputs are simulated educational perspectives, not clinician opinions or treatment instructions. No evidence retrieval is connected yet.</p>
+              </section>
+            )}
+            {batchRun?.status === "completed" && (
+              <section className="mdt-rounds-panel">
+                <div className="batch-heading">
+                  <div>
+                    <p className="eyebrow">04 / MDT DISCUSSION</p>
+                    <h3>Four-round MDT workflow</h3>
+                  </div>
+                  <span className="count-chip">45 ROLES</span>
+                </div>
+                <p className="panel-intro">The debate and review stages ask each role to respond independently to a compact digest of other perspectives. Round 4 produces a chair synthesis that retains dissent and states the evidence limitations.</p>
+                {[2, 3, 4].map((roundNumber) => {
+                  const summary = roundSummaries[roundNumber];
+                  const isPreviousComplete = roundNumber === 2
+                    ? batchRun.status === "completed" && batchRun.completed_count === 45 && batchRun.failed_count === 0
+                    : roundSummaries[roundNumber - 1]?.status === "completed";
+                  const isActive = summary?.status === "queued" || summary?.status === "running";
+                  const isRetryable = summary?.status === "completed_with_errors";
+                  const title = roundNumber === 2 ? "MDT debate" : roundNumber === 3 ? "Adversarial review" : "MDT Chair synthesis";
+                  const description = roundNumber === 2
+                    ? "All 45 roles respond to selected peer positions, state agreements and challenges, and explain any change in position."
+                    : roundNumber === 3
+                    ? "All 45 roles challenge unsupported assumptions, evidence gaps, patient-context issues, feasibility and governance risks."
+                    : "The MDT Chair assembles consensus, unresolved disagreements, minority views, uncertainties and missing information.";
+                  const results = roundResults[roundNumber] ?? [];
+                  return (
+                    <div className="round-stage" key={roundNumber}>
+                      <div className="round-stage-heading">
+                        <div>
+                          <span className="round-number">ROUND {roundNumber}</span>
+                          <strong>{title}</strong>
+                          <p>{description}</p>
+                        </div>
+                        {summary && <span className={"round-state state-" + summary.status}>{summary.status.replaceAll("_", " ")}</span>}
+                      </div>
+                      {!summary && (
+                        <button
+                          className="button button-secondary"
+                          type="button"
+                          disabled={!isPreviousComplete || roundActionBusy !== null}
+                          onClick={() => void startMdtRound(roundNumber)}
+                        >
+                          {roundActionBusy === roundNumber ? "Starting…" : roundNumber === 4 ? "Generate final MDT report" : "Start Round " + roundNumber}
+                          <span aria-hidden="true">→</span>
+                        </button>
+                      )}
+                      {summary && (
+                        <>
+                          <div className="batch-status">
+                            <div className="batch-status-top">
+                              <strong>{summary.status === "completed" ? "Stage completed" : summary.status === "completed_with_errors" ? "Completed with errors" : "Stage running"}</strong>
+                              <span>{summary.finished_count} / {summary.total_agents} finished</span>
+                            </div>
+                            <div className="batch-progress-track">
+                              <div className="batch-progress-fill" style={{ width: summary.progress_percent + "%" }} />
+                            </div>
+                            <div className="batch-counts">
+                              <span className="count-complete">{summary.completed_count} completed</span>
+                              <span className="count-failed">{summary.failed_count} failed</span>
+                              <span>{summary.queued_count + summary.running_count} remaining</span>
+                              {summary.current_agent_id && <span>Now: {summary.current_agent_id}</span>}
+                            </div>
+                          </div>
+                          {(isRetryable || (summary.status === "running" && Date.now() - Date.parse(summary.updated_at) > 120000)) && (
+                            <button
+                              className="button button-secondary"
+                              type="button"
+                              disabled={roundActionBusy !== null}
+                              onClick={() => void startMdtRound(roundNumber, true)}
+                            >
+                              {roundActionBusy === roundNumber ? "Resuming…" : "Resume failed/interrupted work"}
+                            </button>
+                          )}
+                          {roundNumber !== 4 && results.length > 0 && (
+                            <div className="round-agent-list">
+                              {results.map((item) => (
+                                <details className={"batch-agent-result status-" + item.status} key={item.agent_id}>
+                                  <summary>
+                                    <span className="agent-id">{item.agent_id}</span>
+                                    <strong>{item.agent_name}</strong>
+                                    <span className={"agent-status status-text-" + item.status}>{item.status}</span>
+                                  </summary>
+                                  {item.result && (
+                                    <div className="batch-agent-body">
+                                      <strong>Position · {item.result.position.replaceAll("_", " ")}</strong>
+                                      <p>{item.result.provisional_conclusion}</p>
+                                      <strong>Response to other perspectives</strong>
+                                      <p>{item.result.response_to_other_perspectives}</p>
+                                      {item.result.agreements.length > 0 && <><strong>Agreements</strong><ul>{item.result.agreements.map((value, index) => <li key={index}>{value}</li>)}</ul></>}
+                                      {item.result.substantive_challenges.length > 0 && <><strong>Challenges</strong><ul>{item.result.substantive_challenges.map((value, index) => <li key={index}>{value}</li>)}</ul></>}
+                                      {item.result.risk_flags.length > 0 && <><strong>Risk flags</strong><ul>{item.result.risk_flags.map((value, index) => <li key={index}>{value}</li>)}</ul></>}
+                                    </div>
+                                  )}
+                                  {item.error_message && <div className="batch-agent-body"><p className="error-text">{item.error_message}</p></div>}
+                                </details>
+                              ))}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+                {roundError && <div className="result-card result-error" role="alert">{roundError}</div>}
+                {finalReport && (
+                  <div className="final-mdt-report">
+                    <div className="assessment-conclusion">
+                      <p className="eyebrow">ROUND 4 · CHAIR SYNTHESIS</p>
+                      <h4>{finalReport.report_title}</h4>
+                      <p>{finalReport.overall_educational_synthesis}</p>
+                    </div>
+                    {([
+                      ["Consensus", finalReport.consensus_points],
+                      ["Unresolved disagreements", finalReport.unresolved_disagreements],
+                      ["Minority and dissenting views", finalReport.minority_and_dissenting_views],
+                      ["Major uncertainties", finalReport.major_uncertainties],
+                      ["Missing information before real-world review", finalReport.missing_information_before_real_world_review],
+                      ["Patient and family considerations", finalReport.patient_and_family_considerations],
+                      ["Feasibility and resource considerations", finalReport.feasibility_and_resource_considerations],
+                      ["Governance and safeguarding considerations", finalReport.governance_and_safeguarding_considerations],
+                      ["Evidence limitations", finalReport.evidence_limitations]
+                    ] as [string, string[]][]).map(([heading, items]) => (
+                      <div className="report-section" key={heading}>
+                        <strong>{heading}</strong>
+                        {items.length > 0 ? <ul>{items.map((item, index) => <li key={index}>{item}</li>)}</ul> : <p>None recorded in this simulation.</p>}
+                      </div>
+                    ))}
+                    <div className="report-section">
+                      <strong>Chair reflection</strong>
+                      <p>{finalReport.chair_reflection}</p>
+                    </div>
+                    <p className="result-footnote">Evidence retrieval is not connected. This report is an educational synthesis, not a clinical recommendation or treatment instruction.</p>
+                  </div>
+                )}
               </section>
             )}
             {validationError && (
