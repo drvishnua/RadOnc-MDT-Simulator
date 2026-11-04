@@ -1,0 +1,45 @@
+name: Frontend Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend-build.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-build
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Install frontend dependencies and build
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        working-directory: frontend
+        shell: powershell
+        run: |
+          npm install --no-audit --no-fund
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Type-check and build
+        working-directory: frontend
+        shell: powershell
+        run: |
+          npm run build
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
