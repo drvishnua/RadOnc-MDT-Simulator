@@ -356,13 +356,19 @@ def create_round_job(run_id: str, round_number: int) -> dict[str, Any]:
         total = len(AGENT_PROFILES)
         profiles = AGENT_PROFILES
     elif round_number == 3:
-        previous = get_round_summary(run_id, 2)
+        try:
+            previous = get_round_summary(run_id, 2)
+        except KeyError as exc:
+            raise ValueError("Round 2 must be completed before Round 3.") from exc
         if previous["status"] != "completed":
             raise ValueError("Round 2 must be completed before Round 3.")
         total = len(AGENT_PROFILES)
         profiles = AGENT_PROFILES
     else:
-        previous = get_round_summary(run_id, 3)
+        try:
+            previous = get_round_summary(run_id, 3)
+        except KeyError as exc:
+            raise ValueError("Round 3 must be completed before Round 4.") from exc
         if previous["status"] != "completed":
             raise ValueError("Round 3 must be completed before Round 4.")
         total = 1
@@ -376,8 +382,10 @@ def create_round_job(run_id: str, round_number: int) -> dict[str, Any]:
             "SELECT status FROM round_runs WHERE run_id = ? AND round_number = ?",
             (run_id, round_number),
         ).fetchone()
-        if existing and existing["status"] in {"queued", "running", "completed"}:
-            raise ValueError(f"Round {round_number} already exists with status {existing['status']}.")
+        if existing:
+            raise ValueError(
+                f"Round {round_number} already exists with status {existing['status']}; use its resume endpoint if it has errors."
+            )
         db.execute(
             """
             INSERT INTO round_runs
