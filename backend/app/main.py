@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -15,6 +17,8 @@ from app.services.ollama import (
     generate_agent_assessment,
     get_ollama_status,
 )
+
+logger = logging.getLogger("radonc.agent")
 
 app = FastAPI(
     title=APP_NAME,
@@ -88,6 +92,7 @@ async def assess_with_agent(
             detail="The local Ollama service is unavailable.",
         ) from exc
     except AgentGenerationError as exc:
+        logger.warning("Agent generation rejected for %s: %s", agent_id, exc)
         raise HTTPException(
             status_code=502,
             detail="The local model output did not meet the required educational assessment schema.",
