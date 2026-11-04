@@ -102,7 +102,14 @@ function App() {
   const [agentAssessment, setAgentAssessment] = useState<AgentAssessmentResult | null>(null);
   const [assessmentError, setAssessmentError] = useState("");
   const [assessing, setAssessing] = useState(false);
-  const [batchRun, setBatchRun] = useState<BatchRunSummary | null>(null);
+  const [batchRun, setBatchRun] = useState<BatchRunSummary | null>(() => {
+    try {
+      const saved = window.localStorage.getItem("radonc-mdt-active-batch");
+      return saved ? (JSON.parse(saved) as BatchRunSummary) : null;
+    } catch {
+      return null;
+    }
+  });
   const [batchResults, setBatchResults] = useState<BatchAgentResult[]>([]);
   const [batchError, setBatchError] = useState("");
   const [batchStarting, setBatchStarting] = useState(false);
@@ -229,6 +236,14 @@ function App() {
       setBatchError(error instanceof Error ? error.message : "Unable to refresh batch progress.");
     }
   }
+
+  useEffect(() => {
+    if (batchRun) {
+      window.localStorage.setItem("radonc-mdt-active-batch", JSON.stringify(batchRun));
+    } else {
+      window.localStorage.removeItem("radonc-mdt-active-batch");
+    }
+  }, [batchRun]);
 
   useEffect(() => {
     if (!batchRun || batchRun.status === "completed" || batchRun.status === "completed_with_errors") {
@@ -561,14 +576,16 @@ function App() {
                       Export JSON
                     </button>
                   )}
-                  {batchRun?.status === "completed_with_errors" && (
+                  {(batchRun?.status === "completed_with_errors" ||
+                    (batchRun?.status === "running" && Date.now() - Date.parse(batchRun.updated_at) > 120000) ||
+                    (batchRun?.status === "queued" && Date.now() - Date.parse(batchRun.updated_at) > 120000)) && (
                     <button
                       className="button button-secondary"
                       type="button"
                       onClick={() => void resumeAllAgents()}
                       disabled={batchResuming || batchStarting}
                     >
-                      {batchResuming ? "Resuming…" : "Retry failed agents"}
+                      {batchResuming ? "Resuming…" : batchRun.status === "completed_with_errors" ? "Retry failed agents" : "Recover interrupted run"}
                     </button>
                   )}
                 </div>
