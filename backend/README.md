@@ -5,11 +5,12 @@ FastAPI backend for the local RadOnc MDT Simulator.
 ## Requirements
 
 - Python 3.11 or newer
-- Ollama installed locally for agent inference
+- Ollama installed locally
+- Configured local model (default: qwen3.5:4b)
 
-## Setup (Windows PowerShell)
+## Setup
 
-From the repository root:
+From the repository root in PowerShell:
 
     cd backend
     py -3 -m venv .venv
@@ -17,41 +18,55 @@ From the repository root:
     python -m pip install --upgrade pip
     pip install -r requirements.txt
 
-## Run the API
+Run:
 
     uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 
-Open the API documentation at http://127.0.0.1:8000/docs.
+API docs: http://127.0.0.1:8000/docs
 
-## Test
+Tests:
 
     pytest
 
 ## Endpoints
 
-- GET /health — application health and education-only mode
-- GET /api/runtime — read-only Ollama reachability and installed-model status
-- GET /api/agents — catalogue of all 45 role profiles
-- POST /api/cases/validate — strict synthetic-case schema validation
-- POST /api/agents/{agent_id}/assess — one local model-generated educational assessment
-- POST /api/runs — queue all 45 independent first-round assessments
-- GET /api/runs/{run_id} — persisted progress, counts, and current agent
-- GET /api/runs/{run_id}/results — saved agent results and errors
-- POST /api/runs/{run_id}/resume — retry failed or interrupted assessments
+- GET /health — application mode and health
+- GET /api/runtime — Ollama reachability and installed model
+- GET /api/agents — all 45 role profiles
+- POST /api/cases/validate — synthetic case schema validation
+- POST /api/agents/{agent_id}/assess — one Round-1 assessment
+- POST /api/runs — create and start a Round-1 batch
+- GET /api/runs/{run_id} — Round-1 progress
+- GET /api/runs/{run_id}/case — exact saved case object, serialized JSON, and SHA-256 checksum
+- GET /api/runs/{run_id}/results — Round-1 results
+- POST /api/runs/{run_id}/resume — retry failed/interrupted Round-1 agents
+- POST /api/runs/{run_id}/rounds/{round_number} — start Round 2, 3, or 4 when prerequisites are complete
+- GET /api/runs/{run_id}/rounds/{round_number} — round progress
+- GET /api/runs/{run_id}/rounds/{round_number}/results — per-role round contributions
+- POST /api/runs/{run_id}/rounds/{round_number}/resume — resume failed/interrupted round work
+- GET /api/runs/{run_id}/report — final Chair report (available after Round 4)
 
-## Batch-run behavior
+## Round execution
 
-- Runs all 45 profiles sequentially against the same synthetic case.
-- Every agent receives only the original case and its own role profile. Other agents' outputs are not included in its prompt.
-- Saves each completed result to SQLite immediately.
-- Continues to the next agent if an individual assessment fails.
-- A retry skips completed agents and retries failed/interrupted ones.
-- Only one batch is actively executed at a time by the local backend.
+- Rounds 1–3 execute all 45 configured roles separately.
+- Each role's Round-1 assessment is isolated from other roles' outputs.
+- Round 2 supplies a bounded cross-specialty digest of selected peer positions, not every full peer response, to keep the local context size controlled.
+- Round 3 supplies the agent's earlier positions plus a bounded digest of peer debate contributions.
+- Round 4 runs SG-07, the MDT Chair, over compressed digests of all stored Round-1, Round-2, and Round-3 outputs.
+- Each result is persisted immediately in SQLite. A failed role does not stop the remaining roles.
+- Malformed structured output is retried once for that role. Failed/interrupted work can be resumed without rerunning completed roles.
+- A shared execution lock prevents overlapping model-generation stages.
 
-The default local database is backend/data/simulation_runs.sqlite3. It is excluded from Git. Do not delete this file while a run is active or before exporting results.
+## Runtime and performance
 
-## Evidence boundary and safety
+RADONC_AGENT_CONCURRENCY is bounded to 1 or 2 and defaults to 1. The live two-request benchmark on the connected RTX 4060 laptop measured 0.86× throughput compared with sequential execution; therefore the default remains 1. Do not raise it without a new measured improvement.
 
-The initial agent generator does not retrieve external evidence. Evidence claims are deliberately disallowed until a traceable retrieval layer is connected, so model-generated citations cannot be mistaken for verified sources.
+Prompts pass JSON Schema through Ollama's structured-output format field instead of duplicating the full schema in prompt text. The request context is selected from 2K or 4K based on an input-size estimate and the maximum output budget.
 
-Use synthetic cases only. Extra identifying case fields such as patient_name are rejected by the schema. The simulator is not clinical validation or treatment advice; it must not be used for real-patient decisions.
+## Persistence
+
+SQLite database: backend/data/simulation_runs.sqlite3. It stores the case snapshot, hash, round status, and individual outputs. The local database is excluded from Git. Do not delete it while work is active or before exporting results.
+
+## Evidence and safety
+
+No evidence retrieval or citation verification is connected. Evidence claims are disabled; do not interpret model-generated text as sourced clinical evidence. Use synthetic cases only. The application is for research/education, not patient-care decisions.
