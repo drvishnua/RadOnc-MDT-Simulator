@@ -4,13 +4,15 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.agent_schemas import AgentAssessment
 from app.agents.catalog import AGENT_PROFILES, EXPECTED_AGENT_COUNT
 from app.config import APP_NAME, APP_VERSION
-from app.schemas import AgentAssessmentRequest, CaseValidationResult, SyntheticCase
+from app.schemas import AgentAssessmentRequest, BatchRunRequest, CaseValidationResult, SyntheticCase
+from app.services import run_store
+from app.services.batch_runner import batch_is_running, run_independent_assessments, validate_resume_state
 from app.services.ollama import (
     AgentGenerationError,
     OllamaUnavailable,
@@ -97,6 +99,55 @@ async def assess_with_agent(
             status_code=502,
             detail="The local model output did not meet the required educational assessment schema.",
         ) from exc
+
+
+@app.post("/api/runs")
+async def create_independent_batch(
+    request: BatchRunRequest,
+    background_tasks: BackgroundTasks,
+) -> dict[str, object]:
+    """Queue all 45 independent first-round assessments and return immediately."""
+    run_store.initialize_database()
+    record = run_store.create_run(request.case)
+    background_tasks.add_task(run_independent_assessments, record["run_id"])
+    return record
+
+
+@app.get("/api/runs/{run_id}")
+async def get_independent_batch(run_id: str) -> dict[str, object]:
+    try:
+        return run_store.get_run(run_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Simulation run not found.") from exc
+
+
+@app.get("/api/runs/{run_id}/results")
+async def get_independent_batch_results(run_id: str) -> dict[str, object]:
+    try:
+        return {"run_id": run_id, "results": run_store.list_results(run_id)}
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Simulation run not found.") from exc
+
+
+@app.post("/api/runs/{run_id}/resume")
+async def resume_independent_batch(
+    run_id: str,
+    background_tasks: BackgroundTasks,
+) -> dict[str, object]:
+    """Resume failed/interrupted agents while preserving already completed outputs."""
+    try:
+        summary = run_store.get_run(run_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Simulation run not found.") from exc
+
+    if batch_is_running():
+        raise HTTPException(status_code=409, detail="Another 45-agent batch is currently running.")
+    if summary["status"] == "completed":
+        raise HTTPException(status_code=409, detail="All 45 agents have already completed.")
+
+    updated = validate_resume_state(run_id)
+    background_tasks.add_task(run_independent_assessments, run_id)
+    return updated
 
 
 @app.post("/api/cases/validate", response_model=CaseValidationResult)
