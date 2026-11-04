@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.agents.catalog import AGENT_PROFILES, EXPECTED_AGENT_COUNT
 from app.config import APP_NAME, APP_VERSION
@@ -15,6 +16,20 @@ app = FastAPI(
     description=(
         "Educational simulation backend. Synthetic cases only; not clinical decision support."
     ),
+)
+
+# Allow only the local Vite development/preview origins. Do not expose the API to arbitrary sites.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://127.0.0.1:5173",
+        "http://localhost:5173",
+        "http://127.0.0.1:4173",
+        "http://localhost:4173",
+    ],
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
 )
 
 
