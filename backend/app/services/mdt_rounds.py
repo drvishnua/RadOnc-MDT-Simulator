@@ -211,3 +211,7 @@ def prepare_round_resume(run_id: str, round_number: int) -> dict[str, object]:
     if summary["status"] in {"queued", "running", "completed_with_errors"}:
         run_store.reset_failed_round_agents(run_id, round_number)
     return run_store.get_round_summary(run_id, round_number)
+
+
+def round_is_running() -> bool:
+    return MODEL_EXECUTION_LOCK.locked()
