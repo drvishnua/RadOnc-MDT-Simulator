@@ -49,7 +49,7 @@ All outputs are persisted by role and round. A single malformed structured respo
 
 - Two-at-once inference was measured on the laptop and produced 0.86× the throughput of sequential execution. The project therefore keeps RADONC_AGENT_CONCURRENCY=1.
 - Ollama structured-output schema is passed in the API format field, avoiding repeated schema text in every prompt.
-- Context requests select 2K when estimated input plus output fits; otherwise 4K. A production-shaped 2K-versus-4K benchmark is pending.
+- Context remains fixed at 4K. A 2K optimization is deferred because the live structured-output benchmark did not return valid JSON.
 - R1 output cap is 700 tokens; Round 2 and 3 caps are 420 each; Round 4 cap is 950.
 
 ## Not implemented / not validated yet
