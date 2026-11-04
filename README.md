@@ -56,7 +56,7 @@ See the backend and frontend READMEs for setup and details.
 
 The target laptop uses Ollama with qwen3.5:4b and an 8 GB RTX 4060. The orchestrator defaults to **one active generation at a time**. A real two-request benchmark on the connected laptop measured 0.86× throughput relative to sequential execution, so two-at-once execution was not enabled.
 
-The model is kept warm during a run. Prompts use Ollama's schema-constrained output rather than duplicating the full JSON schema in prompt text. Context is selected conservatively (2K for short prompts where estimated input plus output fits; otherwise 4K). A production-shaped 2K/4K comparison is being validated separately.
+The model is kept warm during a run. Prompts use Ollama's schema-constrained output rather than duplicating the full JSON schema in prompt text. Context remains fixed at 4K until a production-shaped live benchmark can validate both speed and structured-output correctness.
 
 ## Evidence boundary
 
