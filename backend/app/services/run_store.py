@@ -101,14 +101,19 @@ def create_run(case: SyntheticCase) -> dict[str, Any]:
     return get_run(run_id)
 
 
-def get_case(run_id: str) -> SyntheticCase:
+def get_case_json(run_id: str) -> str:
+    """Return the exact serialized case snapshot captured when the run was created."""
     with _connect() as db:
         row = db.execute(
             "SELECT case_json FROM simulation_runs WHERE run_id = ?", (run_id,)
         ).fetchone()
     if row is None:
         raise KeyError(run_id)
-    return SyntheticCase.model_validate_json(row["case_json"])
+    return str(row["case_json"])
+
+
+def get_case(run_id: str) -> SyntheticCase:
+    return SyntheticCase.model_validate_json(get_case_json(run_id))
 
 
 def get_run(run_id: str) -> dict[str, Any]:
