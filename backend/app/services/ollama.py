@@ -89,10 +89,6 @@ async def generate_agent_assessment(
         "Do not add keys or markdown. The response format is schema-enforced."
     )
 
-    estimated_input_tokens = (len(system_prompt) + len(prompt)) // 3
-    required_context = estimated_input_tokens + 700 + 128
-    num_ctx = 2048 if required_context <= 2048 else 4096
-
     request_body: dict[str, Any] = {
         "model": OLLAMA_MODEL,
         "system": system_prompt,
@@ -104,7 +100,7 @@ async def generate_agent_assessment(
         "options": {
             "temperature": 0.1,
             "num_predict": 700,
-            "num_ctx": num_ctx,
+            "num_ctx": 4096,
         },
     }
 
