@@ -72,6 +72,7 @@ type BatchRunSummary = {
   current_agent_id: string | null;
   created_at: string;
   updated_at: string;
+  case_snapshot_sha256: string;
 };
 
 type BatchAgentResult = {
@@ -491,28 +492,38 @@ function App() {
     }
   }
 
-  function downloadBatchResults() {
+  async function downloadBatchResults() {
     if (!batchRun || batchResults.length === 0) return;
-    const exportData = {
-      simulator: "RadOnc MDT Simulator",
-      mode: "four_round_educational_mdt_simulation",
-      run: batchRun,
-      independent_assessments: batchResults,
-      debate: roundResults[2] ?? [],
-      adversarial_review: roundResults[3] ?? [],
-      chair_synthesis: finalReport,
-      round_status: roundSummaries,
-      notice: "Synthetic educational simulation only. Evidence retrieval is not connected; no clinical decision support is provided."
-    };
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "radonc-mdt-" + batchRun.run_id + "-independent-assessments.json";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+    setBatchError("");
+    try {
+      const caseResponse = await fetch(API_BASE + "/api/runs/" + batchRun.run_id + "/case");
+      if (!caseResponse.ok) throw new Error("The saved case snapshot could not be retrieved.");
+      const caseSnapshot = await caseResponse.json();
+      const exportData = {
+        simulator: "RadOnc MDT Simulator",
+        mode: "four_round_educational_mdt_simulation",
+        run: batchRun,
+        case_snapshot: caseSnapshot.case,
+        case_snapshot_sha256: caseSnapshot.case_snapshot_sha256,
+        independent_assessments: batchResults,
+        debate: roundResults[2] ?? [],
+        adversarial_review: roundResults[3] ?? [],
+        chair_synthesis: finalReport,
+        round_status: roundSummaries,
+        notice: "Synthetic educational simulation only. Evidence retrieval is not connected; no clinical decision support is provided."
+      };
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "radonc-mdt-" + batchRun.run_id + "-simulation-export.json";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      setBatchError(error instanceof Error ? error.message : "Could not export the simulation.");
+    }
   }
 
   function updateField(field: keyof typeof emptyForm, value: string) {
