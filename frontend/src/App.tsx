@@ -553,7 +553,7 @@ function App() {
                   className="button button-secondary"
                   type="button"
                   onClick={() => void runAgentAssessment()}
-                  disabled={assessing || !runtime?.reachable}
+                  disabled={assessing || !runtime?.reachable || (batchRun !== null && ["queued", "running"].includes(batchRun.status))}
                 >
                   {assessing ? "Generating locally…" : "Run RO-01 assessment"}
                   <span aria-hidden="true">→</span>
