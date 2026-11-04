@@ -41,11 +41,29 @@ Write-Host "Python $PythonVersion : $PythonPath"
 
 $NodeCommand = Get-Command node -ErrorAction SilentlyContinue
 $NpmCommand = Get-Command npm.cmd -ErrorAction SilentlyContinue
+
+# Reuse the Node.js 22 tool cache installed by the self-hosted GitHub runner if needed.
+if (-not $NodeCommand -or -not $NpmCommand) {
+    $runnerNodeCache = Join-Path (Split-Path -Parent $RepoRoot) "actions-runner\_work\_tool\node"
+    if (Test-Path $runnerNodeCache) {
+        $nodeCandidates = Get-ChildItem $runnerNodeCache -Directory | Sort-Object Name -Descending
+        foreach ($candidate in $nodeCandidates) {
+            $candidateBin = Join-Path $candidate.FullName "x64"
+            if ((Test-Path (Join-Path $candidateBin "node.exe")) -and (Test-Path (Join-Path $candidateBin "npm.cmd"))) {
+                $env:PATH = $candidateBin + ";" + $env:PATH
+                $NodeCommand = Get-Command node -ErrorAction SilentlyContinue
+                $NpmCommand = Get-Command npm.cmd -ErrorAction SilentlyContinue
+                if ($NodeCommand -and $NpmCommand) { break }
+            }
+        }
+    }
+}
+
 if (-not $NodeCommand -or -not $NpmCommand) {
     throw "Node.js 20.19+ (or 22.12+) and npm are required. Install Node.js 22, reopen PowerShell, and rerun this script."
 }
-Write-Host (& node --version)
-Write-Host (& npm.cmd --version)
+Write-Host (& $NodeCommand.Source --version)
+Write-Host (& $NpmCommand.Source --version)
 
 Write-Stage "Prepare backend environment"
 $VenvPython = Join-Path $BackendDir ".venv\Scripts\python.exe"
