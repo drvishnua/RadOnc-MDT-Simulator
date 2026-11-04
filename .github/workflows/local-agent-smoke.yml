@@ -1,0 +1,111 @@
+name: Local Agent Inference Smoke Test
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/local-agent-smoke.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: local-agent-smoke
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: Run one synthetic RO-01 assessment through local Ollama
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Prepare Python backend
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+          $pythonExe = [string](& py -3 -c "import sys; print(sys.executable)")
+          $venv = Join-Path $env:GITHUB_WORKSPACE "backend\.venv"
+          if (-not (Test-Path (Join-Path $venv "Scripts\python.exe"))) {
+            & $pythonExe -m venv $venv
+          }
+          $venvPython = Join-Path $venv "Scripts\python.exe"
+          & $venvPython -m pip install --disable-pip-version-check -r (Join-Path $env:GITHUB_WORKSPACE "backend\requirements.txt")
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "BACKEND_PYTHON=$venvPython" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Run local model assessment and validate output
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+          if (-not (Test-Path "$env:RUNNER_TEMP")) { throw "Runner temp folder is unavailable." }
+
+          $ollamaVersion = Invoke-RestMethod -Uri "http://127.0.0.1:11434/api/version" -TimeoutSec 5
+          Write-Host "Ollama reachable: $($ollamaVersion.version)"
+
+          $logOut = Join-Path $env:RUNNER_TEMP "radonc-api.stdout.log"
+          $logErr = Join-Path $env:RUNNER_TEMP "radonc-api.stderr.log"
+          $server = Start-Process -FilePath $env:BACKEND_PYTHON -ArgumentList @(
+            "-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8001"
+          ) -WorkingDirectory (Join-Path $env:GITHUB_WORKSPACE "backend") -WindowStyle Hidden -PassThru -RedirectStandardOutput $logOut -RedirectStandardError $logErr
+
+          try {
+            $ready = $false
+            for ($i = 0; $i -lt 30; $i++) {
+              Start-Sleep -Seconds 1
+              try {
+                $health = Invoke-RestMethod -Uri "http://127.0.0.1:8001/health" -TimeoutSec 2
+                if ($health.status -eq "ok") { $ready = $true; break }
+              } catch {}
+            }
+            if (-not $ready) { throw "Local FastAPI smoke-test server did not start." }
+
+            $payload = @{
+              round_number = 1
+              case = @{
+                scenario_title = "Synthetic oropharyngeal software smoke-test case"
+                case_summary = "Fictional educational test data only. This case is created solely to verify the local agent-generation pipeline and contains no real patient information."
+                age_years = 58
+                primary_site = "Oropharynx"
+                histology = "Squamous cell carcinoma"
+                known_unknowns = @(
+                  "No real imaging report supplied",
+                  "No real pathology report supplied",
+                  "No real treatment history supplied"
+                )
+              }
+            } | ConvertTo-Json -Depth 12
+
+            Write-Host "Submitting synthetic case to RO-01..."
+            $assessment = Invoke-RestMethod -Uri "http://127.0.0.1:8001/api/agents/RO-01/assess" -Method Post -ContentType "application/json" -Body $payload -TimeoutSec 300
+
+            if ($assessment.agent_id -ne "RO-01") { throw "Incorrect agent identifier returned." }
+            if ($assessment.round_number -ne 1) { throw "Incorrect round number returned." }
+            if ($assessment.not_a_treatment_instruction -ne $true) { throw "Safety marker missing." }
+            if ($assessment.evidence_claims.Count -ne 0) { throw "Evidence claim returned without a retrieval source." }
+            if ([string]::IsNullOrWhiteSpace($assessment.perspective_summary)) { throw "Agent summary is empty." }
+
+            Write-Host "LOCAL_AGENT_INFERENCE_OK"
+            Write-Host "Agent: $($assessment.agent_id)"
+            Write-Host "Round: $($assessment.round_number)"
+            Write-Host "Confidence field: $($assessment.confidence)"
+            Write-Host "Discussion options: $($assessment.discussion_options.Count)"
+            Write-Host "Evidence claims: $($assessment.evidence_claims.Count) (correctly empty without retrieval)"
+            Write-Host "Assessment summary: $($assessment.perspective_summary)"
+            Write-Host "=== OLLAMA PROCESSOR ALLOCATION ==="
+            ollama ps
+            Write-Host "=== NVIDIA GPU SNAPSHOT ==="
+            nvidia-smi
+          } catch {
+            Write-Host "Agent smoke test failed: $($_.Exception.Message)"
+            if (Test-Path $logErr) { Get-Content $logErr -Tail 80 }
+            throw
+          } finally {
+            if ($server -and -not $server.HasExited) {
+              Stop-Process -Id $server.Id -Force -ErrorAction SilentlyContinue
+            }
+          }
