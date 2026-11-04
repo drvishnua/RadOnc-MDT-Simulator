@@ -218,8 +218,8 @@ async def generate_chair_report(
         + json.dumps(digest(round2_views, "round2"), ensure_ascii=False, separators=(",", ":"))
         + "\nROUND 3 ADVERSARIAL REVIEW:\n"
         + json.dumps(digest(round3_views, "round3"), ensure_ascii=False, separators=(",", ":"))
-        + "\\nReturn a balanced synthesis. Set overall_position to supports, opposes, conditional, or insufficient_information. "
-        "chair_conclusion must be a clear 2-4 sentence conclusion stating the simulated MDT's overall educational position and why. "
+        + "\\nReturn a balanced synthesis. Set consensus_status to consensus, qualified_consensus, no_consensus, or insufficient_information. "
+        "chair_conclusion must be a clear 2-4 sentence conclusion stating what the simulated MDT has and has not resolved, and why. "
         "If there is no clear agreement, use conditional or insufficient_information and explain why. "
         "If views conflict, name the conflict and what information would be required to resolve it. Never fabricate a majority count. "
         "The output format is schema-enforced."
