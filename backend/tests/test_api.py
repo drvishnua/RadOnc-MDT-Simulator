@@ -91,3 +91,27 @@ def test_agent_endpoint_returns_all_45_unique_profiles() -> None:
         "system_governance": 8,
         "family_social_vulnerability": 3,
     }
+
+
+def test_cors_allows_local_vite_origin() -> None:
+    response = client.options(
+        "/api/agents",
+        headers={
+            "Origin": "http://127.0.0.1:5173",
+            "Access-Control-Request-Method": "GET",
+        },
+    )
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://127.0.0.1:5173"
+
+
+def test_cors_does_not_allow_arbitrary_origins() -> None:
+    response = client.options(
+        "/api/agents",
+        headers={
+            "Origin": "https://example.invalid",
+            "Access-Control-Request-Method": "GET",
+        },
+    )
+    assert response.status_code == 400
+    assert "access-control-allow-origin" not in response.headers
