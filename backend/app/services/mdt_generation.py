@@ -107,9 +107,7 @@ async def generate_debate_contribution(
         + json.dumps(own, ensure_ascii=False, separators=(",", ":"))
         + "\nSELECTED PEER POSITIONS (compressed for local context limits):\n"
         + json.dumps(peers, ensure_ascii=False, separators=(",", ":"))
-        + "\nReturn only schema fields. Provisional conclusion should be 2-3 sentences; "
-        "response_to_other_perspectives should be 2-4 concise sentences.\nSCHEMA:\n"
-        + json.dumps(RoundContributionDraft.model_json_schema(), separators=(",", ":"))
+        + "Return a concise response with specific agreements, disagreements, and any reason for changing or retaining your position. The output format is schema-enforced."
     )
     draft = await _generate_structured(prompt, RoundContributionDraft, 420)
     return RoundContribution(
@@ -158,9 +156,7 @@ async def generate_adversarial_contribution(
         + json.dumps(own, ensure_ascii=False, separators=(",", ":"))
         + "\nSELECTED DEBATE VIEW DIGEST:\n"
         + json.dumps(peers, ensure_ascii=False, separators=(",", ":"))
-        + "\nReturn concise findings only. List concrete risks and remaining unknowns; do not "
-        "invent source-backed conclusions.\nSCHEMA:\n"
-        + json.dumps(RoundContributionDraft.model_json_schema(), separators=(",", ":"))
+        + "Return concise findings only. List concrete risks and remaining unknowns; do not invent source-backed conclusions. The output format is schema-enforced."
     )
     draft = await _generate_structured(prompt, RoundContributionDraft, 420)
     return RoundContribution(
@@ -222,9 +218,7 @@ async def generate_chair_report(
         + json.dumps(digest(round2_views, "round2"), ensure_ascii=False, separators=(",", ":"))
         + "\nROUND 3 ADVERSARIAL REVIEW:\n"
         + json.dumps(digest(round3_views, "round3"), ensure_ascii=False, separators=(",", ":"))
-        + "\nReturn a balanced synthesis. If views conflict, name the conflict and what information "
-        "would be required to resolve it. Never fabricate a majority count.\nSCHEMA:\n"
-        + json.dumps(FinalReportDraft.model_json_schema(), separators=(",", ":"))
+        + "Return a balanced synthesis. If views conflict, name the conflict and what information would be required to resolve it. Never fabricate a majority count. The output format is schema-enforced."
     )
     draft = await _generate_structured(prompt, FinalReportDraft, 950)
     return FinalMDTReport(run_id=run_id, **draft.model_dump())
