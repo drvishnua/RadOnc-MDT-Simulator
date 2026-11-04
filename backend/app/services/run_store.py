@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import sqlite3
 import uuid
@@ -148,6 +149,7 @@ def get_run(run_id: str) -> dict[str, Any]:
         "current_agent_id": row["current_agent_id"],
         "created_at": row["created_at"],
         "updated_at": row["updated_at"],
+        "case_snapshot_sha256": hashlib.sha256(row["case_json"].encode("utf-8")).hexdigest(),
         "all_agents_required": True,
         "independent_assessments": True,
     }
