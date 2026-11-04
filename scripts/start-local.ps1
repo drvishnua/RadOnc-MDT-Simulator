@@ -110,7 +110,7 @@ Write-Stage "Start Vite frontend"
 if (Test-HttpEndpoint "http://127.0.0.1:5173") {
     Write-Host "Frontend is already responding at http://127.0.0.1:5173"
 } else {
-    Start-Process -FilePath $NpmCommand.Source -ArgumentList @("run", "dev") -WorkingDirectory $FrontendDir -WindowStyle Hidden -RedirectStandardOutput (Join-Path $LogDir "frontend.stdout.log") -RedirectStandardError (Join-Path $LogDir "frontend.stderr.log")
+    Start-Process -FilePath $env:ComSpec -ArgumentList @("/c", "npm.cmd run dev") -WorkingDirectory $FrontendDir -WindowStyle Hidden -RedirectStandardOutput (Join-Path $LogDir "frontend.stdout.log") -RedirectStandardError (Join-Path $LogDir "frontend.stderr.log")
     $FrontendReady = $false
     for ($i = 0; $i -lt 45; $i++) {
         Start-Sleep -Seconds 1
