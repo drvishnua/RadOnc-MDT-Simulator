@@ -41,29 +41,58 @@ Write-Host "Python $PythonVersion : $PythonPath"
 
 $NodeCommand = Get-Command node -ErrorAction SilentlyContinue
 $NpmCommand = Get-Command npm.cmd -ErrorAction SilentlyContinue
+$NodeExecutable = if ($NodeCommand) { $NodeCommand.Source } else { $null }
+$NpmExecutable = if ($NpmCommand) { $NpmCommand.Source } else { $null }
 
-# Reuse the Node.js 22 tool cache installed by the self-hosted GitHub runner if needed.
-if (-not $NodeCommand -or -not $NpmCommand) {
-    $runnerNodeCache = Join-Path (Split-Path -Parent $RepoRoot) "actions-runner\_work\_tool\node"
-    if (Test-Path $runnerNodeCache) {
-        $nodeCandidates = Get-ChildItem $runnerNodeCache -Directory | Sort-Object Name -Descending
-        foreach ($candidate in $nodeCandidates) {
-            $candidateBin = Join-Path $candidate.FullName "x64"
-            if ((Test-Path (Join-Path $candidateBin "node.exe")) -and (Test-Path (Join-Path $candidateBin "npm.cmd"))) {
-                $env:PATH = $candidateBin + ";" + $env:PATH
-                $NodeCommand = Get-Command node -ErrorAction SilentlyContinue
-                $NpmCommand = Get-Command npm.cmd -ErrorAction SilentlyContinue
-                if ($NodeCommand -and $NpmCommand) { break }
-            }
-        }
+function Test-SupportedNode([string]$Executable) {
+    if (-not $Executable -or -not (Test-Path $Executable)) { return $false }
+    try {
+        $versionText = (& $Executable --version 2>$null).Trim()
+        $version = [version]$versionText.TrimStart("v")
+        return (($version -ge [version]"20.19.0" -and $version.Major -eq 20) -or ($version -ge [version]"22.12.0" -and $version.Major -eq 22) -or $version.Major -gt 22)
+    } catch {
+        return $false
     }
 }
 
-if (-not $NodeCommand -or -not $NpmCommand) {
-    throw "Node.js 20.19+ (or 22.12+) and npm are required. Install Node.js 22, reopen PowerShell, and rerun this script."
+# Vite 7 needs Node 20.19+ or 22.12+. Prefer the runner's cached Node 22
+# whenever the Node already on Windows PATH is too old.
+if (-not (Test-SupportedNode $NodeExecutable)) {
+    $runnerNodeCache = Join-Path (Split-Path -Parent $RepoRoot) "actions-runner\_work\_tool\node"
+    $selectedNodeBin = $null
+
+    if (Test-Path $runnerNodeCache) {
+        $nodeCandidates = Get-ChildItem $runnerNodeCache -Directory |
+            Sort-Object { try { [version]$_.Name } catch { [version]"0.0" } } -Descending
+
+        foreach ($candidate in $nodeCandidates) {
+            $candidateBin = Join-Path $candidate.FullName "x64"
+            $candidateNode = Join-Path $candidateBin "node.exe"
+            $candidateNpm = Join-Path $candidateBin "npm.cmd"
+
+            if ((Test-SupportedNode $candidateNode) -and (Test-Path $candidateNpm)) {
+                $selectedNodeBin = $candidateBin
+                $NodeExecutable = $candidateNode
+                $NpmExecutable = $candidateNpm
+                break
+            }
+        }
+    }
+
+    if ($selectedNodeBin) {
+        # Put the supported cached Node first for child processes launched by npm.
+        $env:PATH = $selectedNodeBin + ";" + $env:PATH
+    } else {
+        throw "Unsupported Node.js version '$(& $NodeExecutable --version 2>$null)'. Vite 7 requires Node 20.19+ or 22.12+. No compatible cached Node.js was found under actions-runner\_work\_tool\node."
+    }
+} elseif (-not $NpmExecutable) {
+    throw "Node.js is supported, but npm.cmd was not found. Install/repair the matching Node.js distribution."
 }
-Write-Host (& $NodeCommand.Source --version)
-Write-Host (& $NpmCommand.Source --version)
+
+Write-Host "Using Node: $NodeExecutable"
+Write-Host (& $NodeExecutable --version)
+Write-Host "Using npm: $NpmExecutable"
+Write-Host (& $NpmExecutable --version)
 
 Write-Stage "Prepare backend environment"
 $VenvPython = Join-Path $BackendDir ".venv\Scripts\python.exe"
@@ -82,7 +111,7 @@ if (-not (Test-Path (Join-Path $FrontendDir "node_modules"))) {
     Write-Host "Installing frontend dependencies..."
     Push-Location $FrontendDir
     try {
-        & npm.cmd install --no-audit --no-fund
+        & $NpmExecutable install --no-audit --no-fund
         if ($LASTEXITCODE -ne 0) { throw "Frontend dependency installation failed." }
     } finally {
         Pop-Location
@@ -136,7 +165,7 @@ if (Test-HttpEndpoint "http://127.0.0.1:5173") {
 
     # Quote the Vite entry path: the research folder contains spaces (for example, "Post MD").
     $viteArguments = "`"$viteEntry`" --host 127.0.0.1 --port 5173 --strictPort"
-    $frontendProcess = Start-Process -FilePath $NodeCommand.Source -ArgumentList $viteArguments -WorkingDirectory $FrontendDir -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $LogDir "frontend.stdout.log") -RedirectStandardError (Join-Path $LogDir "frontend.stderr.log")
+    $frontendProcess = Start-Process -FilePath $NodeExecutable -ArgumentList $viteArguments -WorkingDirectory $FrontendDir -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $LogDir "frontend.stdout.log") -RedirectStandardError (Join-Path $LogDir "frontend.stderr.log")
     Set-Content -Path (Join-Path $LogDir "frontend.pid") -Value $frontendProcess.Id
     $FrontendReady = $false
     for ($i = 0; $i -lt 45; $i++) {
