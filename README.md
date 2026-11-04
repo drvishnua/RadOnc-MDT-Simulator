@@ -2,103 +2,79 @@
 
 A local-first, AI-assisted educational simulator for multidisciplinary oncology case discussions.
 
-> **Status: 45-agent independent assessment workflow implemented and CI-tested.** The first four-round MDT debate, evidence retrieval, and final report synthesis are not implemented yet.
+> **Current milestone:** 45 independent assessments, 45-agent debate, 45-agent adversarial review, and MDT Chair synthesis are implemented in the development branch and covered by automated orchestration tests. Full four-round execution using 45 live local model calls per stage has not yet been completed end-to-end.
 
 ## Purpose
 
-The initial release focuses on **synthetic head-and-neck cancer cases**. It helps trainees and educators explore how clinical specialties, patient perspectives, evidence quality, resources, feasibility, ethics, and uncertainty shape an MDT discussion.
+The initial scenario set focuses on synthetic head-and-neck cancer cases. The simulator helps trainees and educators explore specialty perspectives, patient context, uncertainty, disagreement, feasibility, resources, and governance. It is not a clinical decision-support system.
 
-The simulator is designed to preserve independent opinions, meaningful disagreement, evidence limitations, and missing information rather than forcing artificial consensus.
+## 45 configured perspectives
 
-## Core design
+All 45 configured role profiles are required in each of Rounds 1–3. Round 4 uses the MDT Chair role to synthesize the stored views. The agents are role prompts using one shared Ollama model, not 45 separately loaded models.
 
-- **45 configured perspectives** spanning radiation oncology, medical oncology, surgical oncology, diagnostic/supportive specialties, patient lenses, evidence, resources, feasibility, governance, and safeguarding.
-- **Independent first-round assessments:** every agent receives the same synthetic case and only its own role profile; no other agent's assessment is passed into its prompt.
-- **Four simulation rounds planned:** independent assessments, MDT discussion, adversarial review, and chair synthesis.
-- **Evidence-aware outputs planned:** distinguish established standard-of-care, emerging evidence, and investigational approaches.
-- **Local-first inference:** one shared Ollama model with role-specific profiles; no separate model process for every agent is required.
+## Four-round workflow
 
-See:
-- [Product specification](docs/PRODUCT_SPEC.md)
-- [45-agent catalogue](docs/AGENT_CATALOGUE.md)
-- [Initial technical architecture](docs/ARCHITECTURE.md)
-- [Backend setup and endpoints](backend/README.md)
-- [Frontend setup and capabilities](frontend/README.md)
-- [Implementation status](docs/IMPLEMENTATION_STATUS.md)
+1. **Round 1 — Independent assessments:** Each role receives the saved synthetic case and its own role profile. No other agent's output is included. Each must state a position, provisional conclusion, and preferred educational option or explain why none can yet be preferred.
+2. **Round 2 — MDT debate:** Each role receives its own Round-1 view and a bounded, cross-specialty digest of selected peer positions. It records agreements, substantive challenges, and any change in position. The full independent views remain preserved.
+3. **Round 3 — Adversarial review:** All roles identify unsupported assumptions, uncertainty, missing information, patient/context concerns, feasibility issues, risks, and governance questions.
+4. **Round 4 — Chair synthesis:** The MDT Chair produces a structured educational report with an explicit consensus status and conclusion, consensus points, unresolved disagreements, minority views, uncertainties, missing information, patient/family issues, feasibility, governance, and evidence limitations.
 
-## Current implementation
+The system does not invent a majority or force consensus. The Chair report is an educational synthesis, not a treatment directive.
 
-### Backend API
+## Dashboard capabilities
 
-- GET /health — application health and education-only mode.
-- GET /api/runtime — local Ollama reachability and installed-model status.
-- GET /api/agents — all 45 role profiles.
-- POST /api/cases/validate — strict synthetic-case schema validation.
-- POST /api/agents/{agent_id}/assess — one local, schema-validated agent assessment.
-- POST /api/runs — queue a sequential run of all 45 independent assessments.
-- GET /api/runs/{run_id} — progress and run status.
-- GET /api/runs/{run_id}/results — saved per-agent results.
-- POST /api/runs/{run_id}/resume — retry failed or interrupted agents while retaining completed results.
+- Synthetic case validation and 45-role directory.
+- Sequential local Ollama execution with progress and per-agent outputs.
+- Automatic single retry for malformed structured output, without rerunning successful agents.
+- Resume failed/interrupted work while retaining completed results.
+- Separate Start/Resume controls and progress for Rounds 2–4.
+- Expandable role contributions and a final Chair report.
+- JSON export of all available rounds, including the exact saved case JSON and its SHA-256 checksum.
+- Run and case recovery after browser refresh.
 
-### 45-agent batch workflow
+## API overview
 
-The browser dashboard now provides:
-- A **Run all 45 agents** button after case validation.
-- Sequential local Ollama execution.
-- Live progress, completed/failed/remaining counts, and current agent ID.
-- Per-agent expandable results.
-- Continuation when an individual agent fails.
-- Retry of failed agents without rerunning successful ones.
-- JSON export of saved independent assessments.
-- Browser refresh recovery for the active run and synthetic case.
+- GET /health
+- GET /api/runtime
+- GET /api/agents
+- POST /api/cases/validate
+- POST /api/agents/{agent_id}/assess
+- POST /api/runs
+- GET /api/runs/{run_id}
+- GET /api/runs/{run_id}/case
+- GET /api/runs/{run_id}/results
+- POST /api/runs/{run_id}/resume
+- POST /api/runs/{run_id}/rounds/{2|3|4}
+- GET /api/runs/{run_id}/rounds/{round_number}
+- GET /api/runs/{run_id}/rounds/{round_number}/results
+- POST /api/runs/{run_id}/rounds/{round_number}/resume
+- GET /api/runs/{run_id}/report
 
-Run records and agent results are stored locally in SQLite under the backend data folder. The model is kept loaded during a batch to reduce repeated loading. Execution is sequential to avoid competing model calls on the laptop GPU.
+See the backend and frontend READMEs for setup and details.
 
-The batch API and resume behavior are covered by automated tests. **The complete 45-agent batch has not yet been run against a real case in the browser.**
+## Local inference and runtime
 
-## Current technical direction
+The target laptop uses Ollama with qwen3.5:4b and an 8 GB RTX 4060. The orchestrator defaults to **one active generation at a time**. A real two-request benchmark on the connected laptop measured 0.86× throughput relative to sequential execution, so two-at-once execution was not enabled.
 
-| Layer | Technology | Status |
-|---|---|---|
-| Frontend | React + Vite | Dashboard and batch controls implemented |
-| Backend | Python + FastAPI | Implemented |
-| Local model runtime | Ollama / qwen3.5:4b | Connected; local inference verified |
-| Initial database | SQLite | Batch-run persistence implemented |
-| Backend tests | Pytest | 17 tests passing |
-| Frontend build | TypeScript + Vite | Production build passing |
+The model is kept warm during a run. Prompts use Ollama's schema-constrained output rather than duplicating the full JSON schema in prompt text. Context is selected conservatively (2K for short prompts where estimated input plus output fits; otherwise 4K). A production-shaped 2K/4K comparison is being validated separately.
 
 ## Evidence boundary
 
-Evidence retrieval and citation verification are **not connected yet**. The model is instructed not to invent references, and the server rejects evidence claims until a traceable retrieval source is integrated. The absence of citations must not be mistaken for verified clinical evidence.
+Evidence retrieval and citation verification are not connected yet. Evidence claims remain disabled. The model must not invent guidelines, trials, statistics, identifiers, or citations. Lack of citations must not be mistaken for verified evidence.
 
 ## Safety and data boundaries
 
-This project is for **research and education only**.
-
-- It is not a medical device or a clinically validated decision-support system.
-- Do not use outputs as diagnosis, prescriptions, radiotherapy dose instructions, treatment plans, or as a substitute for a qualified MDT.
-- Use synthetic cases only. Do not enter identifiable patient information.
-- AI-generated content may be incomplete or inaccurate. Material clinical claims require traceable sources and critical review.
-- Economic, policy, and medico-legal perspectives are issue-spotting aids, not professional advice.
-- Patient personas are discussion lenses, not demographic stereotypes or facts about an individual.
-
-## Development roadmap
-
-1. Run and evaluate all 45 independent perspectives on a synthetic case.
-2. Improve and version the agent prompts and output quality.
-3. Add evidence-source adapters and citation provenance validation.
-4. Implement the four-round debate, adversarial review, and chair synthesis while preserving dissent.
-5. Add structured MDT, evidence, patient-reality, and feasibility/risk reports.
-6. Evaluate reliability, reproducibility, bias, and safety using synthetic test suites and clinician review.
+- Synthetic cases only. Do not enter identifiable or real patient information.
+- Not a medical device, clinical decision-support system, treatment-planning tool, or substitute for a qualified MDT.
+- Do not use outputs as diagnosis, prescriptions, dose instructions, contours, or treatment plans.
+- Model outputs may be incomplete or inaccurate; clinical claims require traceable evidence and qualified review.
+- Economic, policy, safeguarding, and medico-legal perspectives are issue-spotting aids, not professional advice.
+- Patient personas are discussion lenses, not demographic stereotypes or assumptions about an individual.
 
 ## Local setup
 
-Use the Windows source folder and double-click Start-RadOnc-MDT.cmd. Stop the backend and frontend with Stop-RadOnc-MDT.cmd. The services bind to localhost only.
+From the Windows Source folder, double-click Start-RadOnc-MDT.cmd. Use Stop-RadOnc-MDT.cmd to stop the backend and frontend. Ollama remains running. Services bind to localhost.
 
-## Repository hygiene
+## Repository hygiene and license
 
-Local runner credentials, model weights, environment files, local databases, logs, and build artifacts are excluded through .gitignore. Never commit registration tokens, API keys, real patient information, or model files.
-
-## License
-
-No license is currently specified. Until a license is added, no permissions for redistribution, modification, or commercial use should be assumed.
+Model weights, runner credentials, local database files, logs, build output, and secrets must remain outside Git. No license is currently specified; do not assume redistribution, modification, or commercial-use permission.
