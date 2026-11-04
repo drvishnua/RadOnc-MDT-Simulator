@@ -84,3 +84,12 @@ jobs:
         run: |
           & $env:PYTHON_EXE -m pytest
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Benchmark one vs two concurrent local Ollama requests
+        shell: powershell
+        continue-on-error: true
+        run: |
+          $python = & py -3 -c "import sys; print(sys.executable)"
+          if ($LASTEXITCODE -ne 0) { throw "Python launcher not available for optional Ollama benchmark." }
+          & $python (Join-Path $env:GITHUB_WORKSPACE "backend/scripts/benchmark_ollama_parallel.py")
+          if ($LASTEXITCODE -ne 0) { Write-Warning "Ollama benchmark did not complete; unit-test result remains authoritative." }
