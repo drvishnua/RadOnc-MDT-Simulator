@@ -123,7 +123,7 @@ type FinalMDTReport = {
   run_id: string;
   round_number: 4;
   report_title: string;
-  overall_position: string;
+  consensus_status: string;
   chair_conclusion: string;
   overall_educational_synthesis: string;
   consensus_points: string[];
@@ -984,7 +984,7 @@ function App() {
                     <div className="assessment-conclusion">
                       <p className="eyebrow">ROUND 4 · CHAIR SYNTHESIS</p>
                       <h4>{finalReport.report_title}</h4>
-                      <strong>Chair conclusion · {finalReport.overall_position.replaceAll("_", " ")}</strong>
+                      <strong>Consensus status · {finalReport.consensus_status.replaceAll("_", " ")}</strong>
                       <p>{finalReport.chair_conclusion}</p>
                       <strong>Overall educational synthesis</strong>
                       <p>{finalReport.overall_educational_synthesis}</p>
