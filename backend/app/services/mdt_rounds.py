@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 
 from app.agents.catalog import AGENT_PROFILES
+from app.config import RADONC_AGENT_CONCURRENCY
 from app.schemas import SyntheticCase
 from app.services import run_store
 from app.services.execution_lock import MODEL_EXECUTION_LOCK
@@ -151,49 +153,54 @@ async def run_mdt_round(run_id: str, round_number: int) -> None:
                             time.perf_counter() - started,
                         )
             else:
-                for profile in AGENT_PROFILES:
+                semaphore = asyncio.Semaphore(RADONC_AGENT_CONCURRENCY)
+
+                async def process_profile(profile: dict[str, str]) -> None:
                     agent_id = profile["agent_id"]
                     if agent_id in completed_ids:
-                        continue
-                    started = time.perf_counter()
-                    run_store.mark_round_agent_running(run_id, round_number, agent_id)
-                    try:
-                        if round_number == 2:
-                            peer_views = _select_peer_views(profile, round1_rows, "assessment")
-                            result = await _with_one_schema_retry(
-                                generate_debate_contribution,
-                                profile,
-                                case,
-                                round1_by_id[agent_id],
-                                peer_views,
+                        return
+                    async with semaphore:
+                        started = time.perf_counter()
+                        run_store.mark_round_agent_running(run_id, round_number, agent_id)
+                        try:
+                            if round_number == 2:
+                                peer_views = _select_peer_views(profile, round1_rows, "assessment")
+                                result = await _with_one_schema_retry(
+                                    generate_debate_contribution,
+                                    profile,
+                                    case,
+                                    round1_by_id[agent_id],
+                                    peer_views,
+                                )
+                            else:
+                                peer_views = _select_peer_views(profile, round2_rows, "result")
+                                result = await _with_one_schema_retry(
+                                    generate_adversarial_contribution,
+                                    profile,
+                                    case,
+                                    round1_by_id[agent_id],
+                                    round2_by_id[agent_id],
+                                    peer_views,
+                                )
+                            run_store.save_round_success(
+                                run_id,
+                                round_number,
+                                agent_id,
+                                result.model_dump_json(),
+                                time.perf_counter() - started,
                             )
-                        else:
-                            peer_views = _select_peer_views(profile, round2_rows, "result")
-                            result = await _with_one_schema_retry(
-                                generate_adversarial_contribution,
-                                profile,
-                                case,
-                                round1_by_id[agent_id],
-                                round2_by_id[agent_id],
-                                peer_views,
+                        except Exception as exc:
+                            logger.exception(
+                                "Round %s contribution failed for run %s agent %s",
+                                round_number, run_id, agent_id,
                             )
-                        run_store.save_round_success(
-                            run_id,
-                            round_number,
-                            agent_id,
-                            result.model_dump_json(),
-                            time.perf_counter() - started,
-                        )
-                    except Exception as exc:
-                        logger.exception(
-                            "Round %s contribution failed for run %s agent %s",
-                            round_number, run_id, agent_id,
-                        )
-                        run_store.save_round_failure(
-                            run_id, round_number, agent_id,
-                            f"{type(exc).__name__}: {exc}",
-                            time.perf_counter() - started,
-                        )
+                            run_store.save_round_failure(
+                                run_id, round_number, agent_id,
+                                f"{type(exc).__name__}: {exc}",
+                                time.perf_counter() - started,
+                            )
+
+                await asyncio.gather(*(process_profile(profile) for profile in AGENT_PROFILES))
 
             run_store.mark_round_finished(run_id, round_number)
         except Exception:
