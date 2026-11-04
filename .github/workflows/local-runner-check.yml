@@ -1,4 +1,4 @@
-name: Local Runner Connection Check
+name: Local Runner and GPU Diagnostic
 
 on:
   workflow_dispatch:
@@ -17,17 +17,31 @@ concurrency:
 
 jobs:
   verify:
-    name: Verify Windows self-hosted runner
+    name: Inspect Windows runner, NVIDIA GPU, and Ollama
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 5
     steps:
-      - name: Confirm runner environment
+      - name: Inspect system and GPU
         shell: powershell
         run: |
-          Write-Host "RadOnc MDT Simulator local runner is connected."
-          Write-Host "Operating system:"
-          Get-CimInstance Win32_OperatingSystem | Select-Object Caption, Version
-          Write-Host "PowerShell:"
-          $PSVersionTable.PSVersion
-          Write-Host "Runner identity:"
+          $ErrorActionPreference = "Continue"
+          Write-Host "=== RUNNER ==="
           whoami
+          Get-CimInstance Win32_OperatingSystem | Select-Object Caption, Version
+          Write-Host "=== NVIDIA GPU ==="
+          $nvidia = Get-Command nvidia-smi -ErrorAction SilentlyContinue
+          if ($nvidia) {
+            nvidia-smi
+            Write-Host "NVIDIA_SMI_STATUS=$LASTEXITCODE"
+          } else {
+            Write-Host "NVIDIA_SMI_NOT_FOUND"
+          }
+          Write-Host "=== OLLAMA ==="
+          $ollama = Get-Command ollama -ErrorAction SilentlyContinue
+          if ($ollama) {
+            ollama --version
+            Write-Host "OLLAMA_FOUND"
+          } else {
+            Write-Host "OLLAMA_NOT_FOUND_IN_RUNNER_PATH"
+          }
+          Write-Host "=== DIAGNOSTIC COMPLETE ==="
