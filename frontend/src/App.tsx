@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import type { FormEvent } from "react";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
 
@@ -94,7 +95,7 @@ function App() {
     [agentFilter, agents]
   );
 
-  async function validateSyntheticCase(event: React.FormEvent<HTMLFormElement>) {
+  async function validateSyntheticCase(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setValidation(null);
     setValidationError("");
