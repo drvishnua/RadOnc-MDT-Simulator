@@ -17,7 +17,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Confirm runner environment
-        shell: pwsh
+        shell: powershell
         run: |
           Write-Host "RadOnc MDT Simulator local runner is connected."
           Write-Host "Operating system:"
