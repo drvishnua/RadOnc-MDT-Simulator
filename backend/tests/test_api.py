@@ -52,3 +52,19 @@ def test_case_schema_rejects_blank_list_items() -> None:
         },
     )
     assert response.status_code == 422
+
+
+def test_runtime_endpoint_returns_ollama_status(monkeypatch) -> None:
+    async def fake_status() -> dict[str, object]:
+        return {
+            "reachable": True,
+            "version": "test",
+            "configured_model": "qwen3.5:4b",
+            "configured_model_installed": True,
+            "models": ["qwen3.5:4b"],
+        }
+
+    monkeypatch.setattr("app.main.get_ollama_status", fake_status)
+    response = client.get("/api/runtime")
+    assert response.status_code == 200
+    assert response.json()["ollama"]["reachable"] is True
