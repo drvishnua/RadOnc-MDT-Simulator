@@ -2,62 +2,74 @@
 
 A local-first, AI-assisted educational simulator for multidisciplinary oncology case discussions.
 
-> **Status: Backend foundation implemented; simulation engine and frontend are not yet implemented.** The product specification, 45-agent catalogue, initial architecture, local runner, Ollama integration check, strict synthetic-case API, and backend test workflow are in place.
+> **Status: 45-agent independent assessment workflow implemented and CI-tested.** The first four-round MDT debate, evidence retrieval, and final report synthesis are not implemented yet.
 
 ## Purpose
 
-The initial release will focus on **synthetic head-and-neck cancer cases**. It is designed to help trainees and educators explore how different clinical specialties, patient perspectives, evidence quality, resources, feasibility, ethics, and uncertainty shape an MDT discussion.
+The initial release focuses on **synthetic head-and-neck cancer cases**. It helps trainees and educators explore how clinical specialties, patient perspectives, evidence quality, resources, feasibility, ethics, and uncertainty shape an MDT discussion.
 
-The simulator is intended to preserve independent opinions, meaningful disagreement, evidence limitations, and missing information rather than forcing artificial consensus.
+The simulator is designed to preserve independent opinions, meaningful disagreement, evidence limitations, and missing information rather than forcing artificial consensus.
 
 ## Core design
 
 - **45 configured perspectives** spanning radiation oncology, medical oncology, surgical oncology, diagnostic/supportive specialties, patient lenses, evidence, resources, feasibility, governance, and safeguarding.
-- **Four simulation rounds:** independent assessments, MDT discussion, adversarial review, and chair synthesis.
-- **Evidence-aware outputs:** explicit distinction between established standard-of-care, emerging evidence, and investigational approaches.
-- **Structured reports:** simulated MDT discussion, evidence and uncertainty, patient reality, and feasibility/risk review.
-- **Local-first inference:** one shared local model with versioned agent profiles; no separate model process for every agent is required.
+- **Independent first-round assessments:** every agent receives the same synthetic case and only its own role profile; no other agent's assessment is passed into its prompt.
+- **Four simulation rounds planned:** independent assessments, MDT discussion, adversarial review, and chair synthesis.
+- **Evidence-aware outputs planned:** distinguish established standard-of-care, emerging evidence, and investigational approaches.
+- **Local-first inference:** one shared Ollama model with role-specific profiles; no separate model process for every agent is required.
 
 See:
 - [Product specification](docs/PRODUCT_SPEC.md)
 - [45-agent catalogue](docs/AGENT_CATALOGUE.md)
 - [Initial technical architecture](docs/ARCHITECTURE.md)
 - [Backend setup and endpoints](backend/README.md)
+- [Frontend setup and capabilities](frontend/README.md)
+- [Implementation status](docs/IMPLEMENTATION_STATUS.md)
 
 ## Current implementation
 
-The initial FastAPI backend is available under the backend directory:
+### Backend API
 
-- GET /health — application health and educational-only mode.
-- GET /api/runtime — read-only Ollama reachability and installed-model status.
-- POST /api/cases/validate — strict synthetic-case schema validation only.
+- GET /health — application health and education-only mode.
+- GET /api/runtime — local Ollama reachability and installed-model status.
+- GET /api/agents — all 45 role profiles.
+- POST /api/cases/validate — strict synthetic-case schema validation.
+- POST /api/agents/{agent_id}/assess — one local, schema-validated agent assessment.
+- POST /api/runs — queue a sequential run of all 45 independent assessments.
+- GET /api/runs/{run_id} — progress and run status.
+- GET /api/runs/{run_id}/results — saved per-agent results.
+- POST /api/runs/{run_id}/resume — retry failed or interrupted agents while retaining completed results.
 
-The API rejects unapproved extra case fields, uses no patient-name or medical-record-number fields, and returns warnings for missing scenario details. This is schema validation, not clinical validation.
+### 45-agent batch workflow
 
-The four-round orchestrator, evidence retrieval, agent execution, report generation, database persistence, and React interface remain future work.
+The browser dashboard now provides:
+- A **Run all 45 agents** button after case validation.
+- Sequential local Ollama execution.
+- Live progress, completed/failed/remaining counts, and current agent ID.
+- Per-agent expandable results.
+- Continuation when an individual agent fails.
+- Retry of failed agents without rerunning successful ones.
+- JSON export of saved independent assessments.
+- Browser refresh recovery for the active run and synthetic case.
+
+Run records and agent results are stored locally in SQLite under the backend data folder. The model is kept loaded during a batch to reduce repeated loading. Execution is sequential to avoid competing model calls on the laptop GPU.
+
+The batch API and resume behavior are covered by automated tests. **The complete 45-agent batch has not yet been run against a real case in the browser.**
 
 ## Current technical direction
 
 | Layer | Technology | Status |
 |---|---|---|
-| Frontend | React + Vite | Planned |
-| Backend | Python + FastAPI | Foundation implemented |
-| Local model runtime | Ollama | Connected and smoke-tested |
-| Initial database | SQLite | Planned |
-| Backend tests | Pytest | Five tests passing |
+| Frontend | React + Vite | Dashboard and batch controls implemented |
+| Backend | Python + FastAPI | Implemented |
+| Local model runtime | Ollama / qwen3.5:4b | Connected; local inference verified |
+| Initial database | SQLite | Batch-run persistence implemented |
+| Backend tests | Pytest | 17 tests passing |
+| Frontend build | TypeScript + Vite | Production build passing |
 
-## Infrastructure and test validation
+## Evidence boundary
 
-The GitHub self-hosted Windows runner has successfully executed jobs on the development laptop. A local Ollama smoke test verified:
-
-- Ollama API reachable
-- Installed model: qwen3.5:4b
-- Test prompt returned: RADONC_LOCAL_INFERENCE_OK
-- Ollama reported the model allocated **100% to GPU** on the NVIDIA RTX 4060
-
-The backend CI workflow installed dependencies on the laptop and completed **5 tests successfully** using the laptop's existing Python 3.14 installation.
-
-These checks validate infrastructure, basic API behavior, and schema rules only. They do **not** validate oncology knowledge, evidence retrieval, agent quality, or clinical safety.
+Evidence retrieval and citation verification are **not connected yet**. The model is instructed not to invent references, and the server rejects evidence claims until a traceable retrieval source is integrated. The absence of citations must not be mistaken for verified clinical evidence.
 
 ## Safety and data boundaries
 
@@ -65,24 +77,27 @@ This project is for **research and education only**.
 
 - It is not a medical device or a clinically validated decision-support system.
 - Do not use outputs as diagnosis, prescriptions, radiotherapy dose instructions, treatment plans, or as a substitute for a qualified MDT.
-- Use synthetic data only in the initial release. Do not enter identifiable patient information.
-- AI-generated content may be incomplete or inaccurate. Material clinical claims must be supported by traceable sources and critically reviewed.
+- Use synthetic cases only. Do not enter identifiable patient information.
+- AI-generated content may be incomplete or inaccurate. Material clinical claims require traceable sources and critical review.
 - Economic, policy, and medico-legal perspectives are issue-spotting aids, not professional advice.
 - Patient personas are discussion lenses, not demographic stereotypes or facts about an individual.
 
 ## Development roadmap
 
-1. Define agent output, evidence citation, and report schemas.
-2. Implement versioned profiles for all 45 agents.
-3. Implement resumable four-round orchestration with preserved independent assessments and dissent.
-4. Add evidence-source adapters and citation validation.
-5. Add structured report generation and auditability.
-6. Build the React interface and local setup workflow.
-7. Evaluate reliability, reproducibility, bias, evidence handling, and safety using synthetic cases.
+1. Run and evaluate all 45 independent perspectives on a synthetic case.
+2. Improve and version the agent prompts and output quality.
+3. Add evidence-source adapters and citation provenance validation.
+4. Implement the four-round debate, adversarial review, and chair synthesis while preserving dissent.
+5. Add structured MDT, evidence, patient-reality, and feasibility/risk reports.
+6. Evaluate reliability, reproducibility, bias, and safety using synthetic test suites and clinician review.
+
+## Local setup
+
+Use the Windows source folder and double-click Start-RadOnc-MDT.cmd. Stop the backend and frontend with Stop-RadOnc-MDT.cmd. The services bind to localhost only.
 
 ## Repository hygiene
 
-Local runner credentials and working files, model weights, environment files, local databases, logs, and build artifacts are excluded through the .gitignore file. Never commit registration tokens, API keys, private case data, or model files.
+Local runner credentials, model weights, environment files, local databases, logs, and build artifacts are excluded through .gitignore. Never commit registration tokens, API keys, real patient information, or model files.
 
 ## License
 
