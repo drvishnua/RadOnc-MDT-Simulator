@@ -1,14 +1,20 @@
-"""Initial API surface: runtime, agents, and synthetic case validation."""
+"""Initial API surface: runtime, agent catalogue, and synthetic case assessment."""
 
 from __future__ import annotations
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.agent_schemas import AgentAssessment
 from app.agents.catalog import AGENT_PROFILES, EXPECTED_AGENT_COUNT
 from app.config import APP_NAME, APP_VERSION
-from app.schemas import CaseValidationResult, SyntheticCase
-from app.services.ollama import get_ollama_status
+from app.schemas import AgentAssessmentRequest, CaseValidationResult, SyntheticCase
+from app.services.ollama import (
+    AgentGenerationError,
+    OllamaUnavailable,
+    generate_agent_assessment,
+    get_ollama_status,
+)
 
 app = FastAPI(
     title=APP_NAME,
@@ -56,6 +62,36 @@ async def list_agents() -> dict[str, object]:
         "all_roles_required": True,
         "agents": AGENT_PROFILES,
     }
+
+
+@app.post("/api/agents/{agent_id}/assess", response_model=AgentAssessment)
+async def assess_with_agent(
+    agent_id: str,
+    request: AgentAssessmentRequest,
+) -> AgentAssessment:
+    profile = next(
+        (item for item in AGENT_PROFILES if item["agent_id"] == agent_id),
+        None,
+    )
+    if profile is None:
+        raise HTTPException(status_code=404, detail="Unknown agent profile.")
+
+    try:
+        return await generate_agent_assessment(
+            profile=profile,
+            case=request.case,
+            round_number=request.round_number,
+        )
+    except OllamaUnavailable as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="The local Ollama service is unavailable.",
+        ) from exc
+    except AgentGenerationError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail="The local model output did not meet the required educational assessment schema.",
+        ) from exc
 
 
 @app.post("/api/cases/validate", response_model=CaseValidationResult)
