@@ -1,60 +1,76 @@
 # RadOnc MDT Simulator
 
-A local, AI-assisted multidisciplinary team (MDT) simulator for radiation oncology.
+A local-first, AI-assisted educational simulator for multidisciplinary oncology case discussions.
 
-## Overview
+> **Status: Planning and infrastructure validation.** The product specification, 45-agent catalogue, initial architecture, repository safeguards, and local runner diagnostics are in place. The clinical simulation application itself has not yet been implemented or clinically validated.
 
-**RadOnc MDT Simulator** is intended to support research, education, and structured exploration of multidisciplinary case discussions in radiation oncology. It aims to provide a case-based environment in which users can examine clinical information, consider relevant specialty perspectives, and formulate an MDT-style recommendation.
+## Purpose
 
-The project is under active development. Features and workflows should be considered experimental unless explicitly documented and validated in the application.
+The initial release will focus on **synthetic head-and-neck cancer cases**. It is designed to help trainees and educators explore how different clinical specialties, patient perspectives, evidence quality, resources, feasibility, ethics, and uncertainty shape an MDT discussion.
 
-## Intended capabilities
+The simulator is intended to preserve independent opinions, meaningful disagreement, evidence limitations, and missing information rather than forcing artificial consensus.
 
-The project direction may include:
+## Core design
 
-- Structured presentation of oncology cases.
-- Review of diagnosis, staging, pathology, imaging, and relevant investigations.
-- Multidisciplinary perspectives relevant to radiation, medical, and surgical oncology.
-- Structured discussion of treatment options and the rationale behind recommendations.
-- Capture of MDT conclusions, uncertainties, and follow-up requirements.
-- Educational case simulations for trainees and facilitators.
+- **45 configured perspectives** spanning radiation oncology, medical oncology, surgical oncology, diagnostic/supportive specialties, patient lenses, evidence, resources, feasibility, governance, and safeguarding.
+- **Four simulation rounds:** independent assessments, MDT discussion, adversarial review, and chair synthesis.
+- **Evidence-aware outputs:** explicit distinction between established standard-of-care, emerging evidence, and investigational approaches.
+- **Structured reports:** simulated MDT discussion, evidence and uncertainty, patient reality, and feasibility/risk review.
+- **Local-first inference:** one shared local model with versioned agent profiles; no separate model process for every agent is required.
 
-This list describes intended areas of development; it does not imply that every capability is currently implemented.
+See:
+- [Product specification](docs/PRODUCT_SPEC.md)
+- [45-agent catalogue](docs/AGENT_CATALOGUE.md)
+- [Initial technical architecture](docs/ARCHITECTURE.md)
 
-## Running the project
+## Current technical direction
 
-The repository is at an early setup stage. Detailed installation, configuration, and launch instructions will be added after the application structure and supported runtime have been verified.
+| Layer | Planned technology |
+|---|---|
+| Frontend | React + Vite |
+| Backend | Python + FastAPI |
+| Local model runtime | Ollama |
+| Initial database | SQLite |
+| Tests | Pytest and frontend tests |
 
-For now, consult the source files and project history for the current implementation.
+These are the selected starting technologies, not a claim that the application stack is already implemented.
 
-## Clinical safety and limitations
+## Infrastructure validation
 
-This project is intended for **research and education**, not autonomous clinical decision-making.
+The GitHub self-hosted Windows runner has successfully executed jobs on the development laptop. A local Ollama smoke test verified:
+
+- Ollama API reachable
+- Installed model: qwen3.5:4b
+- Test prompt returned: RADONC_LOCAL_INFERENCE_OK
+- Ollama reported the model allocated **100% to GPU** on the NVIDIA RTX 4060
+
+This confirms local execution and GPU allocation only. It does **not** validate oncology knowledge, evidence retrieval, agent quality, or clinical safety.
+
+## Safety and data boundaries
+
+This project is for **research and education only**.
 
 - It is not a medical device or a clinically validated decision-support system.
-- Do not use its output as a diagnosis, prescription, radiotherapy dose, treatment plan, or substitute for a qualified multidisciplinary team.
-- All clinical decisions must be made and independently verified by appropriately qualified healthcare professionals.
-- Use synthetic or properly de-identified data for development and demonstrations.
-- Do not enter identifiable patient information unless institutional approval, privacy safeguards, and applicable legal requirements explicitly permit it.
-- AI-generated content may be incomplete, inaccurate, or misleading and must be critically reviewed.
+- Do not use outputs as diagnosis, prescriptions, radiotherapy dose instructions, treatment plans, or as a substitute for a qualified MDT.
+- Use synthetic data only in the initial release. Do not enter identifiable patient information.
+- AI-generated content may be incomplete or inaccurate. Material clinical claims must be supported by traceable sources and critically reviewed.
+- Economic, policy, and medico-legal perspectives are issue-spotting aids, not professional advice.
+- Patient personas are discussion lenses, not demographic stereotypes or facts about an individual.
 
 ## Development roadmap
 
-As implementation progresses, this README should be expanded to document:
+1. Define case, agent, evidence, and report schemas.
+2. Implement the local Ollama client and test its response handling.
+3. Implement resumable four-round orchestration for all 45 agent profiles.
+4. Add evidence-source metadata and citation validation.
+5. Add structured reporting and auditability.
+6. Build the React interface and local setup workflow.
+7. Evaluate reliability, reproducibility, bias, evidence handling, and safety using synthetic cases.
 
-1. Current features and supported workflows.
-2. Technology stack and system architecture.
-3. Prerequisites, installation, and configuration.
-4. Local execution and troubleshooting.
-5. Example cases and screenshots.
-6. Testing, evaluation, and clinical validation boundaries.
-7. Data privacy, security, and governance.
-8. Licensing, attribution, and contribution guidelines.
+## Repository hygiene
 
-## Contributing
-
-When contributing, please include a clear description of the change, its purpose, relevant screenshots or examples where useful, and the tests or checks performed.
+Local runner credentials and working files, model weights, environment files, local databases, logs, and build artifacts are excluded through the .gitignore file. Never commit registration tokens, API keys, private case data, or model files.
 
 ## License
 
-No license is currently specified. Unless and until a license is added, no permissions for redistribution, modification, or commercial use should be assumed.
+No license is currently specified. Until a license is added, no permissions for redistribution, modification, or commercial use should be assumed.
