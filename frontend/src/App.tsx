@@ -123,6 +123,8 @@ type FinalMDTReport = {
   run_id: string;
   round_number: 4;
   report_title: string;
+  overall_position: string;
+  chair_conclusion: string;
   overall_educational_synthesis: string;
   consensus_points: string[];
   unresolved_disagreements: string[];
@@ -686,7 +688,7 @@ function App() {
                 {validation.warnings.length > 0 && (
                   <ul>{validation.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>
                 )}
-                <p className="result-footnote">Full MDT simulation is not implemented yet.</p>
+                <p className="result-footnote">Case structure is validated. Once all 45 independent assessments finish, the debate, adversarial review and Chair synthesis stages become available below.</p>
               </div>
             )}
             {validation && validatedCase && (
@@ -982,6 +984,9 @@ function App() {
                     <div className="assessment-conclusion">
                       <p className="eyebrow">ROUND 4 · CHAIR SYNTHESIS</p>
                       <h4>{finalReport.report_title}</h4>
+                      <strong>Chair conclusion · {finalReport.overall_position.replaceAll("_", " ")}</strong>
+                      <p>{finalReport.chair_conclusion}</p>
+                      <strong>Overall educational synthesis</strong>
                       <p>{finalReport.overall_educational_synthesis}</p>
                     </div>
                     {([
