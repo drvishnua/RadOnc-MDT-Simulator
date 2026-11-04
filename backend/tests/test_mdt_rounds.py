@@ -50,6 +50,8 @@ def _final_report(run_id, case, round1, round2, round3):
     return FinalMDTReport(
         run_id=run_id,
         report_title="Synthetic MDT educational synthesis",
+        overall_position="conditional",
+        chair_conclusion="The simulated MDT position remains conditional because the available synthetic facts are insufficient to resolve the outstanding disagreements and uncertainties.",
         overall_educational_synthesis="This simulated synthesis preserves the conditional nature of the positions and identifies missing information rather than presenting a treatment directive.",
         consensus_points=["All roles identified missing case information."],
         unresolved_disagreements=["No treatment approach can be resolved from the supplied synthetic data alone."],
