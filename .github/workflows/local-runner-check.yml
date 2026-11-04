@@ -1,4 +1,4 @@
-name: Local Runner and GPU Diagnostic
+name: Local Ollama and GPU Diagnostic
 
 on:
   workflow_dispatch:
@@ -17,31 +17,55 @@ concurrency:
 
 jobs:
   verify:
-    name: Inspect Windows runner, NVIDIA GPU, and Ollama
+    name: Test local Ollama API and inference
     runs-on: [self-hosted, Windows, X64]
-    timeout-minutes: 5
+    timeout-minutes: 6
     steps:
-      - name: Inspect system and GPU
+      - name: Inspect Ollama server, installed models, and inference
         shell: powershell
         run: |
           $ErrorActionPreference = "Continue"
+          $base = "http://127.0.0.1:11434"
           Write-Host "=== RUNNER ==="
           whoami
-          Get-CimInstance Win32_OperatingSystem | Select-Object Caption, Version
-          Write-Host "=== NVIDIA GPU ==="
-          $nvidia = Get-Command nvidia-smi -ErrorAction SilentlyContinue
-          if ($nvidia) {
-            nvidia-smi
-            Write-Host "NVIDIA_SMI_STATUS=$LASTEXITCODE"
-          } else {
-            Write-Host "NVIDIA_SMI_NOT_FOUND"
+          Write-Host "=== OLLAMA SERVER ==="
+          try {
+            $version = Invoke-RestMethod -Uri "$base/api/version" -TimeoutSec 5
+            Write-Host "OLLAMA_SERVER_REACHABLE version=$($version.version)"
+          } catch {
+            Write-Host "OLLAMA_SERVER_UNREACHABLE"
+            Write-Host "DETAIL=$($_.Exception.Message)"
+            exit 0
           }
-          Write-Host "=== OLLAMA ==="
-          $ollama = Get-Command ollama -ErrorAction SilentlyContinue
-          if ($ollama) {
-            ollama --version
-            Write-Host "OLLAMA_FOUND"
-          } else {
-            Write-Host "OLLAMA_NOT_FOUND_IN_RUNNER_PATH"
+          Write-Host "=== INSTALLED MODELS ==="
+          try {
+            $tags = Invoke-RestMethod -Uri "$base/api/tags" -TimeoutSec 10
+            $models = @($tags.models)
+            if ($models.Count -eq 0) {
+              Write-Host "NO_MODELS_DOWNLOADED"
+              exit 0
+            }
+            $models | ForEach-Object { Write-Host ("MODEL name={0} size_bytes={1}" -f $_.name,$_.size) }
+          } catch {
+            Write-Host "MODEL_LIST_FAILED: $($_.Exception.Message)"
+            exit 0
           }
+          $model = $models[0].name
+          Write-Host "=== INFERENCE TEST ==="
+          Write-Host "Testing already-installed model: $model"
+          try {
+            $body = @{ model = $model; prompt = "Reply with exactly: RADONC_LOCAL_INFERENCE_OK"; stream = $false; options = @{ num_predict = 32 } } | ConvertTo-Json -Depth 5
+            $result = Invoke-RestMethod -Uri "$base/api/generate" -Method Post -ContentType "application/json" -Body $body -TimeoutSec 180
+            Write-Host "INFERENCE_COMPLETED"
+            Write-Host "MODEL_RESPONSE=$($result.response)"
+            Write-Host "TOTAL_DURATION_NS=$($result.total_duration)"
+            Write-Host "LOAD_DURATION_NS=$($result.load_duration)"
+            Write-Host "=== OLLAMA PROCESSOR ALLOCATION ==="
+            ollama ps
+          } catch {
+            Write-Host "INFERENCE_FAILED: $($_.Exception.Message)"
+            try { ollama ps } catch {}
+          }
+          Write-Host "=== GPU SNAPSHOT ==="
+          try { nvidia-smi } catch { Write-Host "NVIDIA_SMI_UNAVAILABLE" }
           Write-Host "=== DIAGNOSTIC COMPLETE ==="
