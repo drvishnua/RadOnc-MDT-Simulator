@@ -8,6 +8,7 @@ on:
     paths:
       - "backend/scripts/live_four_round_validation.py"
       - "backend/app/**"
+      - "backend/tests/**"
       - ".github/workflows/live-four-round-validation.yml"
 
 permissions:
