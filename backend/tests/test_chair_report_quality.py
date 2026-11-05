@@ -85,7 +85,7 @@ def test_empty_chair_sections_are_filled_from_source_records():
     assert any("PP-05" in item and "conditional" in item for item in report.minority_and_dissenting_views)
     assert any("Clinical stage is not supplied" in item for item in report.major_uncertainties)
     assert any("Patient preferences" in item for item in report.missing_information_before_real_world_review)
-    assert "unanimous agreement" not in " ".join(report.consensus_points).casefold()
+    assert "not unanimous agreement" in " ".join(report.consensus_points).casefold()
 
 
 def test_uniform_rounds_use_explicit_absence_notes_not_blank_or_false_consensus():
