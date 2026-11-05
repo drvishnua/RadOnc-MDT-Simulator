@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - feature/four-round-mdt-and-performance
 
 permissions:
   contents: read
@@ -38,6 +39,8 @@ jobs:
           Set-Content -Path $marker -Value "Managed by the RadOnc MDT Simulator GitHub sync workflow." -Encoding UTF8
 
           Write-Host "Repository checkout: $env:GITHUB_WORKSPACE"
+          Write-Host "Sync branch: $env:GITHUB_REF_NAME"
+          Write-Host "Sync commit: $env:GITHUB_SHA"
           Write-Host "Local source destination: $destination"
 
           & robocopy.exe $env:GITHUB_WORKSPACE $destination /E /XD .git node_modules .venv __pycache__ .local-logs /NFL /NDL /NJH /NJS /NP
@@ -60,5 +63,21 @@ jobs:
             }
           }
 
+          $syncState = [ordered]@{
+            repository = "drvishnua/RadOnc-MDT-Simulator"
+            branch = $env:GITHUB_REF_NAME
+            commit = $env:GITHUB_SHA
+            synced_at_utc = [DateTime]::UtcNow.ToString("o")
+          }
+          $statePath = Join-Path $destination ".radonc-sync-state.json"
+          $syncState | ConvertTo-Json | Set-Content -Path $statePath -Encoding UTF8
+
+          $verifiedState = Get-Content -Path $statePath -Raw | ConvertFrom-Json
+          if ($verifiedState.commit -ne $env:GITHUB_SHA -or $verifiedState.branch -ne $env:GITHUB_REF_NAME) {
+            throw "Local sync state verification failed."
+          }
+
           Write-Host "LOCAL_SOURCE_SYNC_OK"
-          Write-Host "Files copied. Local runner and AI_Models folders were not included."
+          Write-Host "Verified local Source version: $($verifiedState.branch) @ $($verifiedState.commit)"
+          Write-Host "Copy mode: additive/update only; unrelated local files are not deleted."
+          Write-Host "Local runner, AI_Models, node_modules, virtual environments and local logs are excluded."
