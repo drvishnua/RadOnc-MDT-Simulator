@@ -35,3 +35,11 @@ def test_case_audit_flags_unsupported_stage_for_incomplete_glottic_case():
     }}]}
     findings = audit_case_outputs("MDT-002", case, rounds, {"chair_conclusion": "No stage can be confirmed."})
     assert any(item["severity"] == "hard_fail" for item in findings)
+
+
+def test_stress_cases_keep_case_specific_oracles_separate_from_case_facts():
+    cases = {item["case_id"]: item for item in load_stress_cases()}
+    assert "no_unsupported_tnm" in cases["MDT-002"]["oracle_checks"]
+    assert "preserve_attributed_opinions" in cases["MDT-006"]["oracle_checks"]
+    assert "no_fabricated_patient_preference" in cases["MDT-007"]["oracle_checks"]
+    assert "oracle_checks" not in cases["MDT-002"]["case"].model_dump()
