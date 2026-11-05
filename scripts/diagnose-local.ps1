@@ -98,8 +98,14 @@ if ($edgeExe) {
         "--dump-dom",
         "http://127.0.0.1:5173/"
     )
-    $edgeProcess = Start-Process -FilePath $edgeExe -ArgumentList $edgeArgs -Wait -PassThru -NoNewWindow -RedirectStandardOutput $domPath -RedirectStandardError $stderrPath
-    Write-Host "EDGE_EXIT_CODE=$($edgeProcess.ExitCode)"
+    $edgeProcess = Start-Process -FilePath $edgeExe -ArgumentList $edgeArgs -PassThru -NoNewWindow -RedirectStandardOutput $domPath -RedirectStandardError $stderrPath
+    $edgeExited = $edgeProcess.WaitForExit(20000)
+    if (-not $edgeExited) {
+        Write-Warning "Headless Edge did not exit within 20 seconds; terminating only the diagnostic Edge process."
+        Stop-Process -Id $edgeProcess.Id -Force -ErrorAction SilentlyContinue
+    }
+    Write-Host "EDGE_EXITED_WITHIN_LIMIT=$edgeExited"
+    if ($edgeExited) { Write-Host "EDGE_EXIT_CODE=$($edgeProcess.ExitCode)" }
     if (Test-Path $domPath) {
         $dom = Get-Content -Path $domPath -Raw
         $reactMounted = $dom.Contains('class="app-shell"')
