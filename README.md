@@ -2,7 +2,7 @@
 
 A local-first, AI-assisted educational simulator for multidisciplinary oncology case discussions.
 
-> **Current milestone:** The development branch implements 45 independent assessments, 45-agent debate, 45-agent adversarial review, and SG-07 Chair synthesis. An earlier full local-model run completed all 136 generations. The newer Chair reconciliation logic is covered by backend regression tests; a fresh live-model validation is pending.
+> **Current milestone:** The development branch implements 45 independent assessments, 45-agent debate, 45-agent adversarial review, and SG-07 Chair synthesis. The reconciled Chair logic has passed backend regression tests and a fresh 136-generation live run on the target laptop. Feature-branch pushes now automatically synchronize the source into the laptop's `Source` folder.
 
 ## Purpose
 
@@ -60,7 +60,18 @@ The model is kept warm during a run. Prompts use Ollama's schema-constrained out
 
 ## Validation status
 
-Live run 41941583054 completed all 136 generations with zero failures or retries in 798.63 seconds. This run predates the new Chair reconciliation logic. The backend suite passed 26 tests on the reconciled code, and backend/frontend CI checks passed on commit 1daa89eda17f7b09e028a1aa5fc981a6c3879187. A fresh live run is still required to validate the reconciled Chair against the local model.
+- **Fresh live local-model validation:** run [41979964363](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/41979964363) passed on commit `cf1792b617bdceb7e0beea4cc42c183f9068f9b2`. It completed all 136 generations (45 + 45 + 45 + 1) with zero failures or retries in 793.06 seconds using Ollama `qwen3.5:4b` and the laptop RTX 4060.
+- **Backend regression suite:** 31 tests passed on the final reconciled backend.
+- **Frontend/launcher CI:** PowerShell parsing, Node compatibility checks, dependency installation, TypeScript checking, and production build passed on commit `1f9212653457dbeb5a656d72d3b333833842b5a2`.
+- **Laptop source sync:** run [41984385622](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/41984385622) passed on the self-hosted `RadOnc-Laptop` runner and verified the local `Source` folder at commit `1f9212653457dbeb5a656d72d3b333833842b5a2`.
+
+## Automatic laptop source synchronization
+
+Pushes to `main` and `feature/four-round-mdt-and-performance` trigger the Windows self-hosted runner to check out that exact commit and copy/update the repository into the persistent sibling `Source` folder. The workflow writes `.radonc-sync-state.json` with the branch and commit, then reads it back to verify the copy.
+
+The sync is additive/update-only: it does not delete unrelated files in `Source`. It excludes Git metadata, installed Node/Python dependencies, Python caches, and local logs. The runner installation and sibling `AI_Models` folder are outside the destination and are not copied over.
+
+The `Source` folder is a runtime source mirror, not a separate Git working tree. The Actions runner's own checkout is refreshed to the pushed branch/commit for each workflow run. After a sync, use `Start-RadOnc-MDT.cmd` from `Source` to start the local app; use `Stop-RadOnc-MDT.cmd` to stop the backend and frontend. The sync does not forcibly restart an already-running app, so restart the local services after backend-code changes to load the new backend modules. The launcher prepares/checks dependencies, starts FastAPI and Vite, and starts Ollama if it is installed but not already reachable.
 
 ## Evidence boundary
 
