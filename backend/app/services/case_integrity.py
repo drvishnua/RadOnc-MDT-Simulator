@@ -122,10 +122,18 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         matches = _unqualified_matches(re.compile(r"(?:\b(?:c|p|yc|yp)?M(?:x|0|1)\b|(?:c|p|yc|yp)?T(?:is|x|0|[1-4][a-d]?)(?:N(?:x|0|[1-3]))?M(?:x|0|1)\b)", re.IGNORECASE), text)
         if matches:
             flags.append("Generated narrative contains M-stage terminology (" + ", ".join(matches[:4]) + "), but clinical_m_stage is not supplied in the case snapshot.")
-    if case.sex_at_birth is None:
+    source_text = case.case_summary.casefold()
+    sex_is_reported_in_source = bool(
+        re.search(
+            r"\b(?:male|female|man|woman|boy|girl)\b|\b(?:sex|gender)\s*[:=]\s*(?:male|female)\b",
+            source_text,
+            re.IGNORECASE,
+        )
+    )
+    if case.sex_at_birth is None and not sex_is_reported_in_source:
         matches = _unqualified_matches(re.compile(r"\b(?:male|female|man|woman|boy|girl)\b", re.IGNORECASE), text)
         if matches:
-            flags.append("Generated narrative assigns a sex/gender descriptor (" + ", ".join(matches[:4]) + "), but sex_at_birth is not supplied in the case snapshot.")
+            flags.append("Generated narrative assigns a sex/gender descriptor (" + ", ".join(matches[:4]) + "), but sex_at_birth is not supplied in the case snapshot or source text.")
     if not case.relevant_comorbidities:
         matches = _unqualified_matches(re.compile(r"\b(?:no known comorbidities|no comorbidities|no relevant medical history|otherwise healthy)\b", re.IGNORECASE), text)
         if matches:

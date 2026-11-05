@@ -54,3 +54,12 @@ def test_unverified_stage_and_sex_claims_are_flagged_but_qualified_mentions_are_
 
 def test_report_title_never_adds_unprovided_stage():
     assert build_case_report_title(_case()) == "MDT Chair Synthesis: ca glottis — scc"
+
+
+def test_sex_explicitly_reported_in_raw_case_text_is_not_flagged_as_invented():
+    case = _case(case_summary="Synthetic case: 75-year-old man with a glottic lesion.")
+    flags = audit_unverified_case_claims(
+        case,
+        {"provisional_conclusion": "This male patient requires further staging clarification."},
+    )
+    assert not any("sex/gender" in flag for flag in flags)
