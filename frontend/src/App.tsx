@@ -55,6 +55,8 @@ type AgentAssessmentResult = {
   uncertainty_notes: string[];
   confidence: number;
   evidence_claims: unknown[];
+  case_facts?: string[];
+  case_data_integrity_flags?: string[];
   safety_boundary: string;
   not_a_treatment_instruction: boolean;
 };
@@ -114,6 +116,7 @@ type RoundAgentResult = {
     position_changes: string[];
     remaining_unknowns: string[];
     risk_flags: string[];
+    case_data_integrity_flags?: string[];
     confidence: number;
   } | null;
   error_message: string | null;
@@ -137,6 +140,7 @@ type FinalMDTReport = {
   governance_and_safeguarding_considerations: string[];
   evidence_limitations: string[];
   chair_reflection: string;
+  case_data_integrity_flags?: string[];
   evidence_retrieval_connected: false;
   not_a_treatment_instruction: true;
 };
@@ -916,6 +920,18 @@ function App() {
                               <p>{item.assessment.preferred_educational_option}</p>
                             </div>
                             <p>{item.assessment.perspective_summary}</p>
+                            {(item.assessment.case_facts ?? []).length > 0 && (
+                              <>
+                                <strong>Source case facts · snapshot-derived</strong>
+                                <ul>{(item.assessment.case_facts ?? []).map((fact, index) => <li key={index}>{fact}</li>)}</ul>
+                              </>
+                            )}
+                            {(item.assessment.case_data_integrity_flags ?? []).length > 0 && (
+                              <div className="result-card result-error" role="status">
+                                <strong>Case-data integrity flags · review required</strong>
+                                <ul>{(item.assessment.case_data_integrity_flags ?? []).map((flag, index) => <li key={index}>{flag}</li>)}</ul>
+                              </div>
+                            )}
                             {item.assessment.discussion_options.length > 0 && (
                               <>
                                 <strong>Discussion topics</strong>
@@ -1037,6 +1053,13 @@ function App() {
                                       <p>{item.result.provisional_conclusion}</p>
                                       <strong>Response to other perspectives</strong>
                                       <p>{item.result.response_to_other_perspectives}</p>
+                                      {(item.result.position_changes ?? []).length > 0 && <><strong>Recorded position change</strong><ul>{(item.result.position_changes ?? []).map((value, index) => <li key={index}>{value}</li>)}</ul></>}
+                                      {(item.result.case_data_integrity_flags ?? []).length > 0 && (
+                                        <div className="result-card result-error" role="status">
+                                          <strong>Case-data integrity flags · review required</strong>
+                                          <ul>{(item.result.case_data_integrity_flags ?? []).map((flag, index) => <li key={index}>{flag}</li>)}</ul>
+                                        </div>
+                                      )}
                                       {item.result.agreements.length > 0 && <><strong>Agreements</strong><ul>{item.result.agreements.map((value, index) => <li key={index}>{value}</li>)}</ul></>}
                                       {item.result.substantive_challenges.length > 0 && <><strong>Challenges</strong><ul>{item.result.substantive_challenges.map((value, index) => <li key={index}>{value}</li>)}</ul></>}
                                       {item.result.risk_flags.length > 0 && <><strong>Risk flags</strong><ul>{item.result.risk_flags.map((value, index) => <li key={index}>{value}</li>)}</ul></>}
@@ -1072,7 +1095,8 @@ function App() {
                       ["Patient and family considerations", finalReport.patient_and_family_considerations],
                       ["Feasibility and resource considerations", finalReport.feasibility_and_resource_considerations],
                       ["Governance and safeguarding considerations", finalReport.governance_and_safeguarding_considerations],
-                      ["Evidence limitations", finalReport.evidence_limitations]
+                      ["Evidence limitations", finalReport.evidence_limitations],
+                      ["Case-data integrity flags", finalReport.case_data_integrity_flags ?? []]
                     ] as [string, string[]][]).map(([heading, items]) => (
                       <div className="report-section" key={heading}>
                         <strong>{heading}</strong>
