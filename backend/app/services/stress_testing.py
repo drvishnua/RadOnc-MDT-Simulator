@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import re
 from pathlib import Path
 from typing import Any
 
@@ -25,7 +24,7 @@ def load_stress_cases(path: Path = DEFAULT_CASE_FILE) -> list[dict[str, Any]]:
     loaded: list[dict[str, Any]] = []
     for item in cases:
         case_id = item.get("case_id")
-        if not isinstance(case_id, str) or not re.fullmatch(r"MDT-\\d{3}", case_id):
+        if not isinstance(case_id, str) or not case_id.startswith("MDT-") or not case_id[4:].isdigit() or len(case_id) != 7:
             raise ValueError(f"Invalid stress case ID: {case_id!r}")
         if case_id in seen:
             raise ValueError(f"Duplicate stress case ID: {case_id}")
@@ -63,17 +62,20 @@ def audit_case_outputs(case_id: str, case: SyntheticCase, rounds: dict[int, list
 
     chair_text = _all_text(chair).casefold()
     if case_id == "MDT-003":
-        for term, label in (("diabetes", "diabetes/DM discrepancy"), ("hypertension", "hypertension/HTN discrepancy")):
-            if term not in chair_text and not (label.startswith("diabetes") and re.search(r"\\bdm\\b", chair_text)) and not (label.startswith("hypertension") and re.search(r"\\b(?:shtn|htn)\\b", chair_text)):
-                findings.append({"severity": "major", "source": "R4:SG-07", "finding": f"Chair report omitted the source discrepancy: {label}."})
+        has_diabetes = "diabetes" in chair_text or " dm " in f" {chair_text} "
+        has_hypertension = "hypertension" in chair_text or "shtn" in chair_text or " htn " in f" {chair_text} "
+        if not has_diabetes:
+            findings.append({"severity": "major", "source": "R4:SG-07", "finding": "Chair report omitted the source discrepancy: diabetes/DM."})
+        if not has_hypertension:
+            findings.append({"severity": "major", "source": "R4:SG-07", "finding": "Chair report omitted the source discrepancy: hypertension/HTN."})
 
-    if case_id == "MDT-006" and re.search(
-        r"\\b(?:unanimously agreed|unanimous consensus|all specialists agreed)\\b", chair_text
-    ):
+    if case_id == "MDT-006" and any(term in chair_text for term in (
+        "unanimously agreed", "unanimous consensus", "all specialists agreed"
+    )):
         findings.append({"severity": "hard_fail", "source": "R4:SG-07", "finding": "Chair asserts unanimity despite intentionally competing attributed opinions."})
 
-    if case_id == "MDT-007" and re.search(
-        r"\\bpatient (?:prefers|chooses|refuses|declines)\\b", chair_text
-    ):
+    if case_id == "MDT-007" and any(term in chair_text for term in (
+        "patient prefers", "patient chooses", "patient refuses", "patient declines"
+    )):
         findings.append({"severity": "hard_fail", "source": "R4:SG-07", "finding": "Chair attributes a patient preference that is not documented in the case."})
     return findings
