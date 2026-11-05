@@ -61,7 +61,14 @@ async def _generate_structured(prompt: str, schema_type: type[T], max_tokens: in
     try:
         return schema_type.model_validate(json.loads(raw))
     except json.JSONDecodeError as exc:
-        raise AgentGenerationError("The model did not return valid JSON for this MDT round.") from exc
+        done_reason = payload.get("done_reason", "unknown")
+        eval_count = payload.get("eval_count", "unknown")
+        prompt_eval_count = payload.get("prompt_eval_count", "unknown")
+        raise AgentGenerationError(
+            "The model did not return valid JSON for this MDT round "
+            f"(done_reason={done_reason}, prompt_tokens={prompt_eval_count}, "
+            f"output_tokens={eval_count}, output_chars={len(raw)})."
+        ) from exc
     except ValidationError as exc:
         details = "; ".join(
             ".".join(str(part) for part in item["loc"]) + ": " + item["msg"]
@@ -174,7 +181,7 @@ async def generate_chair_report(
     round1_views: list[dict],
     round2_views: list[dict],
     round3_views: list[dict],
-    max_tokens: int = 1200,
+    max_tokens: int = 1600,
 ) -> FinalMDTReport:
     def digest(items: list[dict], round_key: str) -> list[dict]:
         """Keep the chair prompt under the laptop's 4K context budget."""
@@ -187,22 +194,22 @@ async def generate_chair_report(
                 entry = {
                     "agent": item["agent_id"],
                     "position": result.get("position"),
-                    "view": _compact(result.get("provisional_conclusion", ""), 25),
+                    "view": _compact(result.get("provisional_conclusion", ""), 18),
                 }
             elif round_key == "round2":
                 entry = {
                     "agent": item["agent_id"],
                     "position": result.get("position"),
-                    "view": _compact(result.get("provisional_conclusion", ""), 25),
+                    "view": _compact(result.get("provisional_conclusion", ""), 18),
                     "challenge": _compact(
-                        (result.get("substantive_challenges") or [""])[0], 25
+                        (result.get("substantive_challenges") or [""])[0], 18
                     ),
                 }
             else:
                 entry = {
                     "agent": item["agent_id"],
-                    "risk": _compact(" ".join(result.get("risk_flags", [])[:2]), 25),
-                    "unknown": _compact(" ".join(result.get("remaining_unknowns", [])[:2]), 20),
+                    "risk": _compact(" ".join(result.get("risk_flags", [])[:2]), 18),
+                    "unknown": _compact(" ".join(result.get("remaining_unknowns", [])[:2]), 16),
                 }
             output.append(entry)
         return output
@@ -222,9 +229,11 @@ async def generate_chair_report(
         + "\nROUND 3 ADVERSARIAL REVIEW:\n"
         + json.dumps(digest(round3_views, "round3"), ensure_ascii=False, separators=(",", ":"))
         + "\nReturn a balanced synthesis. Set consensus_status to consensus, qualified_consensus, no_consensus, or insufficient_information. "
-        "chair_conclusion must be a clear 2-4 sentence conclusion stating what the simulated MDT has and has not resolved, and why. "
-        "If there is no clear agreement, use no_consensus or insufficient_information and explain why. "
-        "If views conflict, name the conflict and what information would be required to resolve it. Never fabricate a majority count. "
+        "Keep the JSON output compact. chair_conclusion: 2 short sentences. overall_educational_synthesis: at most 100 words. "
+        "chair_reflection: 2 short sentences. For each list field, provide no more than 3 concise entries; use [] when there is no distinct supported point. "
+        "Preserve any material dissent, patient/family concern, feasibility issue, governance concern, and missing information. "
+        "Set consensus_status to consensus, qualified_consensus, no_consensus, or insufficient_information. "
+        "If there is no clear agreement, use no_consensus or insufficient_information. Do not infer consensus from missing views and never fabricate a majority count. "
         "The output format is schema-enforced."
     )
     draft = await _generate_structured(prompt, FinalReportDraft, max_tokens)
