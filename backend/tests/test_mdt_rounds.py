@@ -263,3 +263,34 @@ def test_chair_reconciliation_marks_support_opposition_split_as_no_consensus():
 
     assert report.consensus_status == "no_consensus"
     assert any("supports" in item and "opposes" in item for item in report.unresolved_disagreements)
+
+
+def test_uniform_support_labels_with_conflicting_options_are_not_consensus():
+    case = SyntheticCase(
+        scenario_title="Synthetic conflicting-options test",
+        case_summary="Fictional case used only to test consensus proposition safeguards.",
+    )
+    round1 = _chair_rows("assessment", ["supports"] * 45)
+    for index, row in enumerate(round1):
+        row["assessment"]["preferred_educational_option"] = (
+            "Educational option A: compare a surgery-led pathway."
+            if index < 22
+            else "Educational option B: compare a non-surgical pathway."
+        )
+    round2 = _chair_rows("result", ["supports"] * 45)
+    round3 = _chair_rows("result", ["supports"] * 45)
+
+    report = reconcile_chair_report_draft(
+        "synthetic-conflicting-options",
+        case,
+        round1,
+        round2,
+        round3,
+        _chair_draft(),
+    )
+
+    assert report.consensus_status == "insufficient_information"
+    assert "shared, proposition-level" in " ".join(report.unresolved_disagreements)
+    assert "descriptive, not votes" in " ".join(report.consensus_points)
+    assert report.chair_conclusion.startswith("No treatment recommendation can be made")
+
