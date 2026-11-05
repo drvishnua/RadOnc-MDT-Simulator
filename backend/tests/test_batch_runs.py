@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 from collections import Counter
 import json
@@ -8,6 +9,8 @@ from app.agent_schemas import AgentAssessment
 from app.agents.catalog import AGENT_PROFILES
 from app.main import app
 from app.services import batch_runner, run_store
+from app.services.ollama import AgentGenerationError
+from app.schemas import SyntheticCase
 
 client = TestClient(app)
 
@@ -39,8 +42,8 @@ def test_batch_run_executes_all_45_agents_independently(monkeypatch, tmp_path) -
     monkeypatch.setattr(run_store, "DB_PATH", tmp_path / "batch.sqlite3")
     calls = []
 
-    async def fake_generate(profile, case, round_number):
-        calls.append((profile["agent_id"], case.model_dump_json(), round_number))
+    async def fake_generate(profile, case, round_number, max_tokens=1100):
+        calls.append((profile["agent_id"], case.model_dump_json(), round_number, max_tokens))
         return _fake_assessment(profile, case, round_number)
 
     monkeypatch.setattr(batch_runner, "generate_agent_assessment", fake_generate)
@@ -58,6 +61,7 @@ def test_batch_run_executes_all_45_agents_independently(monkeypatch, tmp_path) -
     assert len({call[0] for call in calls}) == 45
     assert len({call[1] for call in calls}) == 1
     assert {call[2] for call in calls} == {1}
+    assert {call[3] for call in calls} == {1100}
 
     case_response = client.get(f"/api/runs/{run_id}/case")
     assert case_response.status_code == 200
@@ -80,7 +84,7 @@ def test_batch_continues_after_failure_and_resume_runs_only_failed_agent(monkeyp
     calls = Counter()
     fail_first_ro01 = {"enabled": True}
 
-    async def fake_generate(profile, case, round_number):
+    async def fake_generate(profile, case, round_number, max_tokens=1100):
         calls[profile["agent_id"]] += 1
         if profile["agent_id"] == "RO-01" and fail_first_ro01["enabled"]:
             fail_first_ro01["enabled"] = False
@@ -113,3 +117,24 @@ def test_batch_status_for_unknown_run_returns_404(monkeypatch, tmp_path) -> None
     monkeypatch.setattr(run_store, "DB_PATH", tmp_path / "missing.sqlite3")
     response = client.get("/api/runs/not-a-real-run")
     assert response.status_code == 404
+
+ 
+def test_schema_retry_increases_output_budget(monkeypatch) -> None:
+    budgets = []
+
+    async def fake_generate(profile, case, round_number, max_tokens):
+        budgets.append(max_tokens)
+        if len(budgets) == 1:
+            raise AgentGenerationError("intentional truncated JSON test")
+        return _fake_assessment(profile, case, round_number)
+
+    monkeypatch.setattr(batch_runner, "generate_agent_assessment", fake_generate)
+    case = SyntheticCase(
+        scenario_title="Synthetic retry test",
+        case_summary="Fictional case used only to test adaptive structured-output retries.",
+    )
+    result = asyncio.run(
+        batch_runner._generate_with_schema_retry(AGENT_PROFILES[0], case)
+    )
+    assert result.agent_id == AGENT_PROFILES[0]["agent_id"]
+    assert budgets == [1100, 1500]
