@@ -1,0 +1,107 @@
+name: Local Ollama MDT Stress Suite
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: local-ollama-mdt-stress-suite
+  cancel-in-progress: false
+
+jobs:
+  stress-suite:
+    if: >-
+      github.event.issue.pull_request != null &&
+      github.event.comment.user.login == 'drvishnua' &&
+      startsWith(github.event.comment.body, '/run-mdt-stress')
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 240
+    env:
+      OLLAMA_MODEL: qwen3.5:4b
+      RADONC_AGENT_CONCURRENCY: "1"
+    steps:
+      - name: Verify authorised PR and parse requested cases
+        id: request
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.issue.number;
+            if (prNumber !== 1) {
+              core.setFailed('Stress runs are accepted only from PR #1.');
+              return;
+            }
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+            if (pr.head.ref !== 'feature/four-round-mdt-and-performance' ||
+                pr.head.repo.full_name !== context.repo.owner + '/' + context.repo.repo) {
+              core.setFailed('PR head does not match the protected development branch.');
+              return;
+            }
+            const body = context.payload.comment.body.trim();
+            const match = body.match(/^\/run-mdt-stress(?:\s+([A-Za-z0-9_,-]+))?$/);
+            if (!match) {
+              core.setFailed('Invalid command. Use /run-mdt-stress [MDT-002,MDT-003].');
+              return;
+            }
+            const ids = (match[1] || 'MDT-002,MDT-003,MDT-004,MDT-005,MDT-006,MDT-007')
+              .split(',').map(x => x.trim()).filter(Boolean);
+            const allowed = new Set(['MDT-002','MDT-003','MDT-004','MDT-005','MDT-006','MDT-007']);
+            if (!ids.length || ids.some(x => !allowed.has(x)) || new Set(ids).size !== ids.length) {
+              core.setFailed('Invalid case list. Allowed IDs: MDT-002 through MDT-007, without duplicates.');
+              return;
+            }
+            core.setOutput('case_ids', ids.join(','));
+            core.info('Authorised stress request: ' + ids.join(','));
+      - name: Check out development branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/four-round-mdt-and-performance
+          clean: false
+      - name: Verify checked-out commit and local runtime
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+          $branch = git branch --show-current
+          $sha = git rev-parse HEAD
+          if ($branch -ne "feature/four-round-mdt-and-performance") { throw "Unexpected branch: $branch" }
+          Write-Host "STRESS_COMMIT=$sha"
+          Write-Host "STRESS_BRANCH=$branch"
+          $python = Get-Command python -ErrorAction Stop
+          python --version
+          $ollama = Invoke-RestMethod -Uri "http://127.0.0.1:11434/api/version" -TimeoutSec 10
+          Write-Host "OLLAMA_VERSION=$($ollama.version)"
+          ollama list
+          nvidia-smi
+      - name: Install backend dependencies
+        shell: powershell
+        working-directory: backend
+        run: |
+          $ErrorActionPreference = "Stop"
+          python -m pip install -r requirements.txt
+          if ($LASTEXITCODE -ne 0) { throw "Backend dependency installation failed." }
+      - name: Run synthetic MDT stress suite
+        shell: powershell
+        env:
+          STRESS_CASE_IDS: ${{ steps.request.outputs.case_ids }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          Write-Host "Starting synthetic stress suite for: $env:STRESS_CASE_IDS"
+          python scripts/run_mdt_stress_suite.py --case-ids $env:STRESS_CASE_IDS
+          if ($LASTEXITCODE -ne 0) { throw "Stress suite returned exit code $LASTEXITCODE." }
+      - name: Upload complete stress report and SQLite audit database
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: radonc-mdt-stress-suite-${{ github.run_id }}
+          path: |
+            backend/validation_artifacts/stress_suite/stress_suite_report.json
+            backend/validation_artifacts/stress_suite/stress_suite.sqlite3
+          if-no-files-found: warn
+          retention-days: 30
