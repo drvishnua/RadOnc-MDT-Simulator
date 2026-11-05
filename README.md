@@ -93,3 +93,8 @@ From the Windows Source folder, double-click Start-RadOnc-MDT.cmd. Use Stop-RadO
 ## Repository hygiene and license
 
 Model weights, runner credentials, local database files, logs, build output, and secrets must remain outside Git. No license is currently specified; do not assume redistribution, modification, or commercial-use permission.
+
+
+## Project operating instructions
+
+Repository-wide development and safety rules are documented in [`AGENTS.md`](./AGENTS.md). Read this file before making code changes or interpreting simulation exports, especially when continuing work in a new chat.
