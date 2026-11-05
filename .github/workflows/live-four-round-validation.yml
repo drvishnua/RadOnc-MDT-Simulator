@@ -2,14 +2,6 @@ name: Live Four-Round Synthetic Validation
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - feature/four-round-mdt-and-performance
-    paths:
-      - "backend/scripts/live_four_round_validation.py"
-      - "backend/app/**"
-      - "!backend/app/services/stress_testing.py"
-      - ".github/workflows/live-four-round-validation.yml"
 
 permissions:
   contents: read
