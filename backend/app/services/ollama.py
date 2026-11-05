@@ -87,7 +87,7 @@ async def generate_agent_assessment(
         + json.dumps(case_payload, ensure_ascii=False, separators=(",", ":"))
         + "\nReturn one concise JSON object. Required fields: position "
         "(supports/opposes/conditional/insufficient_information), provisional_conclusion, "
-        "preferred_educational_option, perspective_summary, case_facts, assumptions, unknowns, "
+        "preferred_educational_option, perspective_summary, assumptions, unknowns, "
         "discussion_options, evidence_gaps, uncertainty_notes, disagreement_notes, confidence. "
         "Do not add keys or markdown. The response format is schema-enforced."
     )
