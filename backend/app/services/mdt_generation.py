@@ -80,6 +80,7 @@ async def generate_debate_contribution(
     case: SyntheticCase,
     own_independent_assessment: dict,
     peer_views: list[dict],
+    max_tokens: int = 700,
 ) -> RoundContribution:
     peers = [
         {
@@ -109,7 +110,7 @@ async def generate_debate_contribution(
         + json.dumps(peers, ensure_ascii=False, separators=(",", ":"))
         + "\nReturn a concise response with specific agreements, disagreements, and any reason for changing or retaining your position. The output format is schema-enforced."
     )
-    draft = await _generate_structured(prompt, RoundContributionDraft, 420)
+    draft = await _generate_structured(prompt, RoundContributionDraft, max_tokens)
     return RoundContribution(
         agent_id=profile["agent_id"],
         round_number=2,
@@ -123,6 +124,7 @@ async def generate_adversarial_contribution(
     own_independent_assessment: dict,
     own_debate_contribution: dict,
     peer_debate_views: list[dict],
+    max_tokens: int = 700,
 ) -> RoundContribution:
     peers = [
         {
@@ -158,7 +160,7 @@ async def generate_adversarial_contribution(
         + json.dumps(peers, ensure_ascii=False, separators=(",", ":"))
         + "\nReturn concise findings only. List concrete risks and remaining unknowns; do not invent source-backed conclusions. The output format is schema-enforced."
     )
-    draft = await _generate_structured(prompt, RoundContributionDraft, 420)
+    draft = await _generate_structured(prompt, RoundContributionDraft, max_tokens)
     return RoundContribution(
         agent_id=profile["agent_id"],
         round_number=3,
@@ -172,6 +174,7 @@ async def generate_chair_report(
     round1_views: list[dict],
     round2_views: list[dict],
     round3_views: list[dict],
+    max_tokens: int = 1200,
 ) -> FinalMDTReport:
     def digest(items: list[dict], round_key: str) -> list[dict]:
         """Keep the chair prompt under the laptop's 4K context budget."""
@@ -224,5 +227,5 @@ async def generate_chair_report(
         "If views conflict, name the conflict and what information would be required to resolve it. Never fabricate a majority count. "
         "The output format is schema-enforced."
     )
-    draft = await _generate_structured(prompt, FinalReportDraft, 950)
+    draft = await _generate_structured(prompt, FinalReportDraft, max_tokens)
     return FinalMDTReport(run_id=run_id, **draft.model_dump())
