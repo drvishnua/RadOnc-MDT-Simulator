@@ -1,9 +1,12 @@
+import asyncio
+
 from fastapi.testclient import TestClient
 
 from app.agent_schemas import AgentAssessment
 from app.main import app
 from app.round_schemas import FinalMDTReport, RoundContribution
 from app.services import batch_runner, mdt_rounds, run_store
+from app.services.ollama import AgentGenerationError
 
 client = TestClient(app)
 
@@ -147,3 +150,24 @@ def test_final_report_not_found_before_chair_synthesis(monkeypatch, tmp_path):
     run_id = _create_complete_round1(monkeypatch, tmp_path)
     response = client.get(f"/api/runs/{run_id}/report")
     assert response.status_code == 404
+
+ 
+
+def test_chair_retry_uses_higher_output_budget():
+    budgets = []
+
+    async def fake_generate(*args, max_tokens=1600):
+        budgets.append(max_tokens)
+        if len(budgets) == 1:
+            raise AgentGenerationError("intentional chair JSON failure")
+        return "valid"
+
+    result = asyncio.run(
+        mdt_rounds._with_one_schema_retry(
+            fake_generate,
+            "synthetic",
+            retry_max_tokens=2200,
+        )
+    )
+    assert result == "valid"
+    assert budgets == [1600, 2200]
