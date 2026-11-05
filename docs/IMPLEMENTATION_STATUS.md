@@ -6,65 +6,51 @@ Last updated: 2026-11-05
 
 | Area | State | Verification |
 |---|---|---|
-| Local environment | Windows self-hosted runner connected | GitHub Actions runs on RadOnc-Laptop |
-| Ollama | qwen3.5:4b reachable | Local inference smoke test |
+| Local environment | Windows self-hosted runner connected to local Ollama/GPU | Live GitHub Actions execution on RadOnc-Laptop |
+| Ollama | qwen3.5:4b reachable locally | Live preflight and inference |
 | Agent catalogue | 45 unique roles | Catalogue tests |
-| Round 1 | 45 independent assessments with required position, provisional conclusion, and preferred educational option | Batch/resume tests; prior browser run exercised this stage |
-| Round 2 | All 45 roles generate debate contributions from bounded peer digests | Four-round mocked orchestration test |
-| Round 3 | All 45 roles generate adversarial review contributions | Four-round mocked orchestration test |
-| Round 4 | SG-07 generates structured Chair synthesis with consensus status and explicit conclusion | Four-round mocked orchestration test |
-| Persistence | SQLite stores case snapshot, case hash, per-agent outputs and round statuses | Persistence and endpoint tests |
-| Export | JSON export includes exact stored case JSON, checksum, R1–R3 outputs and final report | Case snapshot/checksum test |
-| Recovery | Failed/interrupted agents can be resumed without rerunning successes | Batch and round resume tests |
-| Frontend | Round controls, progress, per-role results and Chair report view | TypeScript/Vite build |
-| Prompt size | JSON Schema passed via Ollama structured-output format; duplicated schema removed from prompt text | Code review and CI |
-| Concurrency | Default remains 1 | Two-request laptop benchmark: 0.86× versus sequential |
-| Context | Fixed 4K for reliable structured output | 2K optimization deferred; live structured-output benchmark did not return valid JSON |
-
-## Current API
-
-- GET /health
-- GET /api/runtime
-- GET /api/agents
-- POST /api/cases/validate
-- POST /api/agents/{agent_id}/assess
-- POST /api/runs
-- GET /api/runs/{run_id}
-- GET /api/runs/{run_id}/case
-- GET /api/runs/{run_id}/results
-- POST /api/runs/{run_id}/resume
-- POST /api/runs/{run_id}/rounds/{2|3|4}
-- GET /api/runs/{run_id}/rounds/{round_number}
-- GET /api/runs/{run_id}/rounds/{round_number}/results
-- POST /api/runs/{run_id}/rounds/{round_number}/resume
-- GET /api/runs/{run_id}/report
+| Round 1 | 45 independent assessments with position, provisional conclusion, and preferred educational option or reason none can be preferred | Batch/resume tests and earlier live run |
+| Round 2 | All 45 roles generate debate contributions from bounded peer digests | Orchestration tests and earlier live run |
+| Round 3 | All 45 roles generate adversarial reviews | Orchestration tests and earlier live run |
+| Round 4 | SG-07 Chair synthesis reconciled against saved position counts and role records | 2 regression tests; fresh live validation pending |
+| Persistence | SQLite stores case snapshot, checksum, per-role outputs and statuses | Persistence and endpoint tests |
+| Export | JSON export includes exact case JSON, checksum, outputs and report | Case snapshot/checksum test |
+| Recovery | Failed/interrupted roles resume without rerunning completed roles | Batch and round resume tests |
+| Frontend | Round controls, progress, per-role results and Chair report | TypeScript/Vite build and launcher checks |
+| Concurrency | Default remains 1 | Laptop benchmark: two-at-once throughput was 0.86x sequential |
 
 ## Four-round behavior
 
-Round 1 sends the same saved synthetic case separately to all 45 roles. Each role receives only its own profile and the case. Round 2 asks all 45 roles to compare their independent position with a compact selection of peer perspectives. Round 3 asks all 45 roles to challenge assumptions, uncertainty, patient/context, feasibility, resource, and governance issues. Round 4 runs SG-07 as Chair over compact digests of all stored results.
+Round 1 sends the saved synthetic case separately to all 45 roles. Each role receives only its own profile and the case. Round 2 asks all 45 roles to compare their independent view with selected peer perspectives. Round 3 asks all 45 roles to challenge assumptions, uncertainty, missing information, patient/context, feasibility, resource and governance issues. Round 4 runs SG-07 as Chair over compact digests of all stored results.
 
-All outputs are persisted by role and round. A single malformed structured response receives one automatic retry. A failed or interrupted stage can be resumed, retaining completed outputs. The Chair report distinguishes consensus status from each agent's individual support/opposition position and preserves dissent.
+All outputs are persisted by role and round. A malformed structured response receives one retry with a larger output budget. Failed or interrupted work can be resumed while retaining completed outputs.
 
-## Runtime optimization
+The Chair produces a structured draft, then the backend reconciles its report against saved Round-1, Round-2 and Round-3 records. It recomputes exact position distributions, derives consensus status conservatively, preserves non-modal views with source conclusions, and fills uncertainty, missing-information, patient/family, feasibility, governance and evidence-limitations sections from structured case and role data. Conditional positions are not automatically treated as opposition. This reporting safeguard is not clinical validation.
 
-- Two-at-once inference was measured on the laptop and produced 0.86× the throughput of sequential execution. The project therefore keeps RADONC_AGENT_CONCURRENCY=1.
-- Ollama structured-output schema is passed in the API format field, avoiding repeated schema text in every prompt.
-- Context remains fixed at 4K. A 2K optimization is deferred because the live structured-output benchmark did not return valid JSON.
-- R1 output cap is 700 tokens; Round 2 and 3 caps are 420 each; Round 4 cap is 950.
+## Output budgets and runtime
 
-## Not implemented / not validated yet
+- Round 1: 1,100-token initial budget; one retry at 1,500.
+- Rounds 2 and 3: 700-token initial budget; one retry at 1,000.
+- Round 4 Chair: 1,600-token initial budget; one retry at 2,200.
+- Ollama context remains fixed at 4K.
+- RADONC_AGENT_CONCURRENCY remains 1 because two simultaneous generations were slower than sequential execution on the target laptop.
 
-- Evidence source retrieval adapters and citation provenance verification
+## Validation record
+
+- Live run 41941583054 on commit 4446065b53b67907861493269ea16aaed81aef7a completed 45 + 45 + 45 + 1 generations (136 total), zero failures/retries, in 798.63 seconds. This run preceded the new Chair reconciliation logic.
+- Backend regression suite: 26 passed on the reconciled code/test revision.
+- Backend and frontend CI checks passed on commit 1daa89eda17f7b09e028a1aa5fc981a6c3879187.
+- A new live run on the local Windows/Ollama runner is exercising the reconciliation code. A stricter run also checks exact Chair counts and required sections; those live checks are not yet confirmed complete.
+
+## Not implemented / not validated
+
+- Evidence retrieval adapters and citation provenance verification
 - Clinically validated evidence grading or accuracy evaluation
-- Clinical validation by a qualified MDT
-- Full live end-to-end four-round run on a synthetic case (round tests use mocked generation)
-- Formal bias, reproducibility, and safety evaluation
+- Validation by a qualified clinical MDT
+- Formal bias, reproducibility and safety evaluation
+- Real-patient use
 
 No evidence claim should be presented as source-verified. Use synthetic cases only.
-
-## Local folder layout
-
-Source contains synchronized code. The project-root actions-runner and AI_Models folders remain separate and excluded from source sync. Run Start-RadOnc-MDT.cmd and Stop-RadOnc-MDT.cmd from Source.
 
 ## Safety
 
