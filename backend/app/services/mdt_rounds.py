@@ -80,14 +80,15 @@ def _select_peer_views(
     return selected
 
 
-async def _with_one_schema_retry(callable_, *args):
-    for attempt in range(2):
-        try:
-            return await callable_(*args)
-        except AgentGenerationError:
-            if attempt:
-                raise
-            logger.warning("Retrying invalid structured MDT response once.")
+async def _with_one_schema_retry(callable_, *args, retry_max_tokens: int):
+    try:
+        return await callable_(*args)
+    except AgentGenerationError:
+        logger.warning(
+            "Retrying invalid structured MDT response with increased output budget (%s tokens).",
+            retry_max_tokens,
+        )
+        return await callable_(*args, max_tokens=retry_max_tokens)
 
 
 async def run_mdt_round(run_id: str, round_number: int) -> None:
@@ -141,6 +142,7 @@ async def run_mdt_round(run_id: str, round_number: int) -> None:
                             round1_rows,
                             round2_rows,
                             round3_rows,
+                            retry_max_tokens=1600,
                         )
                         run_store.save_round_success(
                             run_id, 4, "SG-07", report.model_dump_json(),
@@ -171,6 +173,7 @@ async def run_mdt_round(run_id: str, round_number: int) -> None:
                                     case,
                                     round1_by_id[agent_id],
                                     peer_views,
+                                    retry_max_tokens=1000,
                                 )
                             else:
                                 peer_views = _select_peer_views(profile, round2_rows, "result")
@@ -181,6 +184,7 @@ async def run_mdt_round(run_id: str, round_number: int) -> None:
                                     round1_by_id[agent_id],
                                     round2_by_id[agent_id],
                                     peer_views,
+                                    retry_max_tokens=1000,
                                 )
                             run_store.save_round_success(
                                 run_id,
