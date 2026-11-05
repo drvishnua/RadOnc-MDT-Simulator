@@ -89,6 +89,7 @@ _QUALIFIER = re.compile(
     r"|unconfirmed|unverified|unknown|not\s+supplied|not\s+reported"
     r"|cannot\s+be\s+assumed|should\s+not\s+be\s+assumed|do\s+not\s+assume"
     r"|cannot\s+confirm|without\s+(?:confirmation|a\s+confirmed)"
+    r"|no\s+prior\s+treatment\s+(?:data|records?|history|information|details|documentation)\b"
     r"|assum(?:e|es|ed|ing|ption|ptions)|hypothetical|provisional"
     r"|\be\.g\.?\b|for\s+example|such\s+as|\bif\b"
     r"|risk\s+of|inability\s+to\s+distinguish|cannot\s+distinguish"
