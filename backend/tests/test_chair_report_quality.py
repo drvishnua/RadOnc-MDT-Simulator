@@ -132,3 +132,47 @@ def test_minority_history_is_preserved_from_earlier_rounds_after_round_three_con
     assert "Round 2: conditional" in history
     assert "Round 3:" not in history
     assert "earlier round" in report.unresolved_disagreements[0].casefold()
+
+
+def test_minority_history_merges_earlier_roles_with_existing_round_three_minority():
+    case = SyntheticCase(
+        scenario_title="Synthetic multi-round minority merge test",
+        case_summary="Fictional case used only to validate distinct minority roles across rounds.",
+    )
+    round1 = _rows("assessment", ["supports"] * 44 + ["conditional"], unknowns=False)
+    round1[-1]["agent_id"] = "PP-01"
+    round1[-1]["agent_name"] = "Earlier patient perspective"
+
+    round2 = _rows("result", ["supports"] * 44 + ["conditional"], unknowns=False)
+    round2[-1]["agent_id"] = "FE-02"
+    round2[-1]["agent_name"] = "Earlier feasibility perspective"
+
+    round3 = _rows(
+        "result",
+        ["insufficient_information"] * 44 + ["supports"],
+        unknowns=False,
+    )
+    round3[-1]["agent_id"] = "SG-07"
+    round3[-1]["agent_name"] = "Current Round-3 minority"
+
+    report_with_round_three_minority = _empty_report().model_copy(
+        update={
+            "minority_and_dissenting_views": [
+                "SG-07 — Current Round-3 minority (supports): The saved review retains a distinct position."
+            ]
+        }
+    )
+    report = ensure_chair_report_completeness(
+        report_with_round_three_minority,
+        case,
+        round1,
+        round2,
+        round3,
+    )
+
+    history = " ".join(report.minority_and_dissenting_views)
+    assert "PP-01" in history and "Round 1: conditional" in history
+    assert "FE-02" in history and "Round 2: conditional" in history
+    assert "SG-07" in history and "Round 3: supports" in history
+    assert len(report.minority_and_dissenting_views) <= 45
+
