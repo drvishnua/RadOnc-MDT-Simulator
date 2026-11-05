@@ -23,22 +23,23 @@ def batch_is_running() -> bool:
 
 
 async def _generate_with_schema_retry(profile, case: SyntheticCase):
-    """Retry one malformed/empty structured response without rerunning other agents."""
-    for attempt in range(1, MAX_SCHEMA_ATTEMPTS + 1):
+    """Retry malformed structured output once with a larger token budget."""
+    token_budgets = (1100, 1500)
+    for attempt, max_tokens in enumerate(token_budgets, start=1):
         try:
             return await generate_agent_assessment(
                 profile=profile,
                 case=case,
                 round_number=1,
+                max_tokens=max_tokens,
             )
         except AgentGenerationError:
-            if attempt >= MAX_SCHEMA_ATTEMPTS:
+            if attempt >= len(token_budgets):
                 raise
             logger.warning(
-                "Retrying malformed structured output for %s (attempt %s/%s)",
+                "Retrying malformed structured output for %s with increased output budget (%s tokens)",
                 profile["agent_id"],
-                attempt + 1,
-                MAX_SCHEMA_ATTEMPTS,
+                token_budgets[attempt],
             )
 
 
