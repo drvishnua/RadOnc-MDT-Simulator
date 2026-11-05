@@ -206,6 +206,17 @@ def reconcile_chair_report_draft(
         for key, count in agreement_counts.most_common(5)
         if count >= agreement_threshold
     ]
+    if (
+        not consensus_points
+        and final_counts.get("insufficient_information")
+        and not final_counts.get("supports")
+        and not final_counts.get("opposes")
+    ):
+        consensus_points.append(
+            "Round 3 recorded no supports/opposes labels: "
+            + _format_position_counts(final_counts)
+            + ". This indicates no definitive treatment position, not unanimous agreement."
+        )
 
     # Any non-modal Round-3 label is listed with its source conclusion. It is not
     # automatically called opposing dissent.
