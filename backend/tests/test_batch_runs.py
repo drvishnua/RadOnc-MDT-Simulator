@@ -118,7 +118,7 @@ def test_batch_status_for_unknown_run_returns_404(monkeypatch, tmp_path) -> None
     response = client.get("/api/runs/not-a-real-run")
     assert response.status_code == 404
 
- 
+
 def test_schema_retry_increases_output_budget(monkeypatch) -> None:
     budgets = []
 
