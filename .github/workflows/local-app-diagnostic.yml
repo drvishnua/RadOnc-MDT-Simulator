@@ -1,0 +1,129 @@
+name: Diagnose Local App Runtime
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/four-round-mdt-and-performance
+      - main
+    paths:
+      - "frontend/**"
+      - "scripts/start-local.ps1"
+      - "scripts/stop-local.ps1"
+      - ".github/workflows/sync-local-source.yml"
+      - ".github/workflows/local-app-diagnostic.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: local-app-diagnostic
+  cancel-in-progress: false
+
+jobs:
+  diagnose:
+    name: Inspect live local web app and API
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Diagnose synced Source folder and running local services
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Continue"
+          $projectRoot = (Resolve-Path (Join-Path $env:GITHUB_WORKSPACE "..\..\..\..")).Path
+          $source = Join-Path $projectRoot "Source"
+          $statePath = Join-Path $source ".radonc-sync-state.json"
+
+          Write-Host "=== MACHINE ==="
+          hostname
+          whoami
+          Write-Host "EXPECTED_BRANCH=$env:GITHUB_REF_NAME"
+          Write-Host "EXPECTED_COMMIT=$env:GITHUB_SHA"
+          Write-Host "SOURCE_PATH=$source"
+
+          Write-Host "=== WAIT FOR SOURCE SYNC ==="
+          $syncOk = $false
+          for ($i = 0; $i -lt 30; $i++) {
+            if (Test-Path $statePath) {
+              try {
+                $state = Get-Content -Path $statePath -Raw | ConvertFrom-Json
+                if ($state.commit -eq $env:GITHUB_SHA -and $state.branch -eq $env:GITHUB_REF_NAME) {
+                  $syncOk = $true
+                  break
+                }
+              } catch {}
+            }
+            Start-Sleep -Seconds 2
+          }
+          if ($syncOk) {
+            Write-Host "SOURCE_SYNC_VERIFIED=$($state.branch)@$($state.commit)"
+          } else {
+            Write-Host "SOURCE_SYNC_NOT_YET_VERIFIED"
+            if (Test-Path $statePath) { Get-Content -Path $statePath -Raw }
+          }
+
+          Write-Host "=== REQUIRED SOURCE FILES ==="
+          foreach ($relative in @("frontend\index.html","frontend\src\main.tsx","frontend\src\App.tsx","frontend\src\styles.css","frontend\package.json","frontend\node_modules\vite\bin\vite.js","backend\app\main.py")) {
+            $path = Join-Path $source $relative
+            Write-Host ("{0}={1}" -f $relative,(Test-Path $path))
+          }
+
+          Write-Host "=== LISTENING PORTS AND PROCESS COMMANDS ==="
+          foreach ($port in @(5173,8000,11434)) {
+            $connections = @(Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction SilentlyContinue)
+            if ($connections.Count -eq 0) {
+              Write-Host "PORT $port NOT LISTENING"
+            } else {
+              foreach ($connection in $connections) {
+                $proc = Get-CimInstance Win32_Process -Filter ("ProcessId = " + $connection.OwningProcess) -ErrorAction SilentlyContinue
+                Write-Host ("PORT {0} PID {1} PROCESS {2} COMMAND {3}" -f $port,$connection.OwningProcess,$proc.Name,$proc.CommandLine)
+              }
+            }
+          }
+
+          function Test-Endpoint([string]$Name,[string]$Uri) {
+            try {
+              $response = Invoke-WebRequest -UseBasicParsing -Uri $Uri -TimeoutSec 12
+              $body = [string]$response.Content
+              Write-Host ("ENDPOINT {0} STATUS={1} TYPE={2} LENGTH={3}" -f $Name,[int]$response.StatusCode,$response.Headers["Content-Type"],$body.Length)
+              if ($Name -eq "VITE_ROOT") {
+                Write-Host ("VITE_ROOT_HTML=" + $body.Substring(0,[Math]::Min(1200,$body.Length)))
+              } elseif ($Name -eq "VITE_ENTRY") {
+                Write-Host ("VITE_ENTRY_HEAD=" + $body.Substring(0,[Math]::Min(2200,$body.Length)))
+              } elseif ($Name -eq "BACKEND_HEALTH" -or $Name -eq "BACKEND_RUNTIME") {
+                Write-Host ("{0}_BODY={1}" -f $Name,$body.Substring(0,[Math]::Min(1800,$body.Length)))
+              }
+              return $true
+            } catch {
+              Write-Host ("ENDPOINT {0} FAILED: {1}" -f $Name,$_.Exception.Message)
+              if ($_.ErrorDetails.Message) { Write-Host $_.ErrorDetails.Message }
+              return $false
+            }
+          }
+
+          Write-Host "=== LIVE HTTP CHECKS ==="
+          $null = Test-Endpoint "VITE_ROOT" "http://127.0.0.1:5173/"
+          $null = Test-Endpoint "VITE_ENTRY" "http://127.0.0.1:5173/src/main.tsx"
+          $null = Test-Endpoint "VITE_STYLES" "http://127.0.0.1:5173/src/styles.css"
+          $null = Test-Endpoint "BACKEND_HEALTH" "http://127.0.0.1:8000/health"
+          $null = Test-Endpoint "BACKEND_RUNTIME" "http://127.0.0.1:8000/api/runtime"
+          $null = Test-Endpoint "BACKEND_AGENTS" "http://127.0.0.1:8000/api/agents"
+
+          Write-Host "=== LOCAL LOG TAILS ==="
+          foreach ($name in @("frontend.stderr.log","frontend.stdout.log","backend.stderr.log","backend.stdout.log")) {
+            $path = Join-Path (Join-Path $source ".local-logs") $name
+            Write-Host "--- $name ---"
+            if (Test-Path $path) { Get-Content $path -Tail 50 } else { Write-Host "LOG_NOT_FOUND" }
+          }
+
+          Write-Host "=== OLLAMA ==="
+          try {
+            $ollama = Invoke-RestMethod -Uri "http://127.0.0.1:11434/api/version" -TimeoutSec 5
+            Write-Host "OLLAMA_REACHABLE version=$($ollama.version)"
+          } catch { Write-Host "OLLAMA_UNREACHABLE: $($_.Exception.Message)" }
+
+          if (-not $syncOk) { throw "Source folder has not verified the expected commit." }
+          Write-Host "LOCAL_APP_DIAGNOSTIC_COMPLETED"
