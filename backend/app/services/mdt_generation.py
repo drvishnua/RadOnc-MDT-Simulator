@@ -185,18 +185,23 @@ def reconcile_chair_report_draft(
         limit=20,
     )
 
-    # Only repeated, verbatim Round-2 agreement statements are called consensus points.
-    agreement_rows = [
-        item
-        for _, result in r2
-        for item in (result.get("agreements") or [])
-        if isinstance(item, str) and item.strip()
-    ]
-    agreement_counts: Counter = Counter(" ".join(item.split()).casefold() for item in agreement_rows)
-    agreement_text = {
-        " ".join(item.split()).casefold(): " ".join(item.split())
-        for item in agreement_rows
-    }
+    # Count distinct contributing roles, not raw statements: one role repeating
+    # the same wording must never satisfy a cross-role agreement threshold.
+    agreement_contributors: dict[str, set[str]] = {}
+    agreement_text: dict[str, str] = {}
+    for row, result in r2:
+        agent_id = str(row.get("agent_id") or "unknown-role")
+        for item in (result.get("agreements") or []):
+            if not isinstance(item, str) or not item.strip():
+                continue
+            normalized = " ".join(item.split())
+            key = normalized.casefold()
+            agreement_contributors.setdefault(key, set()).add(agent_id)
+            agreement_text.setdefault(key, normalized)
+    agreement_counts: Counter = Counter({
+        key: len(agent_ids)
+        for key, agent_ids in agreement_contributors.items()
+    })
     agreement_threshold = max(3, (len(r2) + 3) // 4)
     consensus_points = [
         (
