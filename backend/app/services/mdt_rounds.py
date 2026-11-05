@@ -142,7 +142,7 @@ async def run_mdt_round(run_id: str, round_number: int) -> None:
                             round1_rows,
                             round2_rows,
                             round3_rows,
-                            retry_max_tokens=1600,
+                            retry_max_tokens=2200,
                         )
                         run_store.save_round_success(
                             run_id, 4, "SG-07", report.model_dump_json(),
