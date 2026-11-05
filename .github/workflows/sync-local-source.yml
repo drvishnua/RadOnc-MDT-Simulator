@@ -81,3 +81,14 @@ jobs:
           Write-Host "Verified local Source version: $($verifiedState.branch) @ $($verifiedState.commit)"
           Write-Host "Copy mode: additive/update only; unrelated local files are not deleted."
           Write-Host "Local runner, AI_Models, node_modules, virtual environments and local logs are excluded."
+          Write-Host "=== LIVE LOCAL APP DIAGNOSTIC ==="
+          $diagnosticScript = Join-Path $destination "scripts\diagnose-local.ps1"
+          if (Test-Path $diagnosticScript) {
+            & $diagnosticScript -SourceRoot $destination
+            if ($LASTEXITCODE -ne 0) {
+              throw "Local app diagnostic reported a failure."
+            }
+          } else {
+            throw "Local app diagnostic script was not copied to Source."
+          }
+
