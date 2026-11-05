@@ -111,15 +111,15 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     text = " ".join(_flatten_strings(generated_payload))
     flags: list[str] = []
     if case.clinical_t_stage is None:
-        matches = _unqualified_matches(re.compile(r"\b(?:c|p|yc|yp)?T(?:is|x|0|[1-4][a-d]?)\b", re.IGNORECASE), text)
+        matches = _unqualified_matches(re.compile(r"\b(?:c|p|yc|yp)?T(?:is|x|0|[1-4][a-d]?)(?:N(?:x|0|[1-3]))?(?:M(?:x|0|1))?\b", re.IGNORECASE), text)
         if matches:
             flags.append("Generated narrative contains T-stage terminology (" + ", ".join(matches[:4]) + "), but clinical_t_stage is not supplied in the case snapshot.")
     if case.clinical_n_stage is None:
-        matches = _unqualified_matches(re.compile(r"\b(?:c|p|yc|yp)?N(?:x|0|[1-3])\b", re.IGNORECASE), text)
+        matches = _unqualified_matches(re.compile(r"(?:\b(?:c|p|yc|yp)?N(?:x|0|[1-3])\b|(?:c|p|yc|yp)?T(?:is|x|0|[1-4][a-d]?)N(?:x|0|[1-3])(?:M(?:x|0|1))?\b)", re.IGNORECASE), text)
         if matches:
             flags.append("Generated narrative contains N-stage terminology (" + ", ".join(matches[:4]) + "), but clinical_n_stage is not supplied in the case snapshot.")
     if case.clinical_m_stage is None:
-        matches = _unqualified_matches(re.compile(r"\b(?:c|p|yc|yp)?M(?:x|0|1)\b", re.IGNORECASE), text)
+        matches = _unqualified_matches(re.compile(r"(?:\b(?:c|p|yc|yp)?M(?:x|0|1)\b|(?:c|p|yc|yp)?T(?:is|x|0|[1-4][a-d]?)(?:N(?:x|0|[1-3]))?M(?:x|0|1)\b)", re.IGNORECASE), text)
         if matches:
             flags.append("Generated narrative contains M-stage terminology (" + ", ".join(matches[:4]) + "), but clinical_m_stage is not supplied in the case snapshot.")
     if case.sex_at_birth is None:

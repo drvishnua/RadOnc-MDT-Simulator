@@ -91,7 +91,7 @@ def _minority_history(
 
     round3_counts = _position_counts(round3_rows, "result")
     final_modal = round3_counts.most_common(1)[0][0] if round3_counts else None
-    output: list[str] = []
+    output: list[tuple[int, str]] = []
     for agent_id in sorted(by_agent):
         record = by_agent[agent_id]
         positions = record["positions"]
@@ -104,8 +104,9 @@ def _minority_history(
         if not (changed or qualified_minority or substantive_position):
             continue
         transition = "Position evolution: " + " → ".join(positions) + ". " if changed else ""
-        output.append(f"{agent_id} — {record['name']}: " + transition + "; ".join(record["events"]))
-    return output[:45]
+        priority = 0 if qualified_minority else 1
+        output.append((priority, f"{agent_id} — {record['name']}: " + transition + "; ".join(record["events"])))
+    return [item for _, item in sorted(output)][:45]
 
 def _merge_minority_views(
     history: list[str],
@@ -252,7 +253,9 @@ def ensure_chair_report_completeness(
     for rows, field in ((round1_rows, "assessment"), (round2_rows, "result"), (round3_rows, "result")):
         for _, item in _entries(rows, field):
             integrity_flags.extend(item.get("case_data_integrity_flags") or [])
-    data["case_data_integrity_flags"] = _unique(integrity_flags, SECTION_LIMITS["case_data_integrity_flags"])
+    data["case_data_integrity_flags"] = _unique(integrity_flags, SECTION_LIMITS["case_data_integrity_flags"]) or [
+        "No unsupported stage, demographic, or absence claim was detected by the deterministic case-data audit."
+    ]
 
     uncertainty_items = list(case.known_unknowns or [])
     missing_items = list(case.known_unknowns or [])

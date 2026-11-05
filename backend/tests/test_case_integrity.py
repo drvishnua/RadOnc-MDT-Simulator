@@ -23,7 +23,7 @@ def test_empty_structured_fields_are_marked_not_reported_not_absent():
     context = build_case_prompt_context(_case())
     assert context["field_status"]["relevant_comorbidities"]["status"] == "not_reported"
     assert context["field_status"]["prior_treatment"]["status"] == "not_reported"
-    assert any("not confirmed absent" in item for item in context["interpretation_rules"])
+    assert any("confirmed absent or negative" in item for item in context["interpretation_rules"])
 
 
 def test_source_case_facts_are_built_from_snapshot_not_model_generated_facts():

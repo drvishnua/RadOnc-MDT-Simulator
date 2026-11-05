@@ -355,9 +355,12 @@ def reconcile_chair_report_draft(
         governance_and_safeguarding_considerations=governance,
         evidence_limitations=evidence_limitations,
         chair_reflection=reflection,
-        case_data_integrity_flags=_unique_strings(
-            [flag for _, result in (r1 + r2 + r3) for flag in (result.get("case_data_integrity_flags") or [])],
-            limit=20,
+        case_data_integrity_flags=(
+            _unique_strings(
+                [flag for _, result in (r1 + r2 + r3) for flag in (result.get("case_data_integrity_flags") or [])],
+                limit=20,
+            )
+            or ["No unsupported stage, demographic, or absence claim was detected by the deterministic case-data audit."]
         ),
     )
 
