@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from app.agent_schemas import AgentAssessment
+from app.agent_schemas import AgentAssessment, AgentDraft
 
 
 def _valid_payload():
@@ -13,6 +13,7 @@ def _valid_payload():
         "preferred_educational_option": "No option can be preferred until the missing staging and fitness information is clarified.",
         "perspective_summary": "This is a simulated educational perspective for a synthetic case.",
         "case_facts": ["Synthetic pathology summary supplied."],
+        "case_data_integrity_flags": ["Synthetic fixture flag."],
         "assumptions": ["No additional clinical facts are assumed."],
         "unknowns": ["Additional staging details are not supplied."],
         "discussion_options": ["Discuss what additional information would be needed."],
@@ -72,3 +73,12 @@ def test_agent_assessment_cannot_be_marked_as_treatment_instruction() -> None:
     payload["not_a_treatment_instruction"] = False
     with pytest.raises(ValidationError):
         AgentAssessment.model_validate(payload)
+
+
+def test_case_facts_and_integrity_flags_are_server_owned():
+    assert "case_facts" not in AgentDraft.model_fields
+    assert "case_data_integrity_flags" not in AgentDraft.model_fields
+
+    assessment = AgentAssessment.model_validate(_valid_payload())
+    assert assessment.case_facts == ["Synthetic pathology summary supplied."]
+    assert assessment.case_data_integrity_flags == ["Synthetic fixture flag."]
