@@ -14,6 +14,7 @@ import platform
 import subprocess
 import sys
 import time
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from statistics import median
@@ -223,6 +224,68 @@ async def main() -> int:
         require(report.get("evidence_retrieval_connected") is False,
                 "Evidence boundary flag is missing.")
 
+
+        def position_counts(rows: list[dict], result_field: str) -> dict[str, int]:
+            return dict(Counter(
+                row[result_field].get("position")
+                for row in rows
+                if row.get(result_field) and row[result_field].get("position")
+            ))
+
+        position_counts_by_round = {
+            "round_1": position_counts(round1, "assessment"),
+            "round_2": position_counts(round2, "result"),
+            "round_3": position_counts(round3, "result"),
+        }
+        final_positions = position_counts_by_round["round_3"]
+        if final_positions.get("supports") and final_positions.get("opposes"):
+            expected_chair_status = "no_consensus"
+        elif final_positions.get("insufficient_information"):
+            expected_chair_status = "insufficient_information"
+        elif final_positions.get("conditional"):
+            expected_chair_status = "qualified_consensus"
+        elif final_positions.get("supports") or final_positions.get("opposes"):
+            expected_chair_status = "consensus"
+        else:
+            expected_chair_status = "insufficient_information"
+        require(
+            report.get("consensus_status") == expected_chair_status,
+            "Chair consensus status does not match the saved Round-3 position distribution.",
+        )
+        synthesis = report.get("overall_educational_synthesis", "")
+        for round_name, counts in position_counts_by_round.items():
+            label = round_name.replace("_", " ").title()
+            require(f"{label}:" in synthesis, f"Chair synthesis omits {label} position counts.")
+            for position, count in counts.items():
+                expected_count = f"{count}/{sum(counts.values())} {position.replace('_', '-')}"
+                require(
+                    expected_count in synthesis,
+                    f"Chair synthesis omits {expected_count} for {label}.",
+                )
+        require(bool(report.get("major_uncertainties")), "Chair major uncertainties are empty.")
+        require(bool(report.get("missing_information_before_real_world_review")),
+                "Chair missing-information section is empty.")
+        require(bool(report.get("patient_and_family_considerations")),
+                "Chair patient/family section is empty.")
+        require(bool(report.get("feasibility_and_resource_considerations")),
+                "Chair feasibility/resource section is empty.")
+        require(bool(report.get("governance_and_safeguarding_considerations")),
+                "Chair governance section is empty.")
+        require(bool(report.get("evidence_limitations")),
+                "Chair evidence limitations are empty.")
+        if len(final_positions) > 1:
+            require(bool(report.get("unresolved_disagreements")),
+                    "Non-uniform Round-3 positions were not preserved.")
+            require(bool(report.get("minority_and_dissenting_views")),
+                    "Non-modal Round-3 positions were not listed separately.")
+        if (
+            final_positions.get("insufficient_information")
+            and not final_positions.get("supports")
+            and not final_positions.get("opposes")
+        ):
+            require(bool(report.get("consensus_points")),
+                    "Chair did not summarize the lack of a definitive Round-3 treatment position.")
+
         # Check variety as a diagnostic only; it is not a clinical quality score.
         round1_conclusions = [
             row["assessment"]["provisional_conclusion"].strip().lower()
@@ -254,6 +317,8 @@ async def main() -> int:
                 "total_agent_generations_saved": len(round1) + len(round2) + len(round3) + 1,
                 "evidence_retrieval_connected": False,
                 "clinical_accuracy_evaluated": False,
+                "chair_position_counts_by_round": position_counts_by_round,
+                "chair_consensus_status_reconciled": expected_chair_status,
             },
         })
     except Exception as exc:
