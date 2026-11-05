@@ -67,6 +67,7 @@ async def run_one(item: dict[str, Any]) -> dict[str, Any]:
     run_id = created["run_id"]
     output: dict[str, Any] = {
         "case_id": item["case_id"], "run_id": run_id,
+        "started_at": datetime.now(timezone.utc).isoformat(),
         "case_snapshot": json.loads(case_json), "case_snapshot_sha256": case_hash,
         "oracle_checks": item["oracle_checks"], "status": "running",
     }
@@ -98,6 +99,7 @@ async def run_one(item: dict[str, Any]) -> dict[str, Any]:
             else:
                 require(len(rows) == 1 and rows[0]["agent_id"] == "SG-07" and rows[0]["status"] == "completed",
                         "R4 Chair output missing or incomplete.")
+            r4 = rows
             metrics["round_seconds"][f"R{number}"] = round(time.perf_counter() - t, 2)
 
         rounds[1] = r1
@@ -110,6 +112,10 @@ async def run_one(item: dict[str, Any]) -> dict[str, Any]:
             "status": "completed_with_findings" if findings else "completed_no_process_findings",
             "metrics": metrics,
             "round_summaries": {str(n): run_store.get_round_summary(run_id, n) for n in (2, 3, 4)},
+            "round_1_results": r1,
+            "round_2_results": rounds[2],
+            "round_3_results": rounds[3],
+            "round_4_results": r4,
             "position_counts": {
                 "R1": _position_counts(r1, "assessment"),
                 "R2": _position_counts(rounds[2], "result"),
@@ -118,10 +124,12 @@ async def run_one(item: dict[str, Any]) -> dict[str, Any]:
             "process_safety_findings": findings,
             "chair_report": chair,
             "total_seconds": round(time.perf_counter() - started, 2),
+            "completed_at": datetime.now(timezone.utc).isoformat(),
         })
     except Exception as exc:
         output.update({"status": "failed_or_incomplete", "error": f"{type(exc).__name__}: {exc}",
-                       "total_seconds": round(time.perf_counter() - started, 2)})
+                       "total_seconds": round(time.perf_counter() - started, 2),
+                       "completed_at": datetime.now(timezone.utc).isoformat()})
         try:
             output["partial_round_1"] = run_store.list_results(run_id)
             for n in (2, 3, 4):
@@ -160,8 +168,15 @@ async def main() -> int:
     require(runtime.get("reachable") is True, "Local Ollama is unreachable.")
     require(runtime.get("configured_model_installed") is True, f"Configured model {OLLAMA_MODEL} is not installed.")
 
+    try:
+        simulator_commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=REPO_ROOT, text=True, timeout=5).strip()
+    except Exception:
+        simulator_commit = "unavailable"
     report: dict[str, Any] = {
         "suite_version": "1.0", "synthetic_only": True,
+        "simulator_commit": simulator_commit,
+        "branch": "feature/four-round-mdt-and-performance",
+        "prompt_schema_version": "repository-head-unversioned",
         "started_at": datetime.now(timezone.utc).isoformat(),
         "host_platform": platform.platform(), "python_version": sys.version,
         "model": OLLAMA_MODEL, "ollama": runtime, "concurrency": 1,
