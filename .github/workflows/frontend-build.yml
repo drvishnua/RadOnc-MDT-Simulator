@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - feature/four-round-mdt-and-performance
   pull_request:
     branches:
       - main
@@ -25,7 +26,7 @@ concurrency:
 jobs:
   build:
     name: Validate launcher and build frontend
-    runs-on: [self-hosted, Windows, X64]
+    runs-on: windows-latest
     timeout-minutes: 15
     steps:
       - name: Check out repository
