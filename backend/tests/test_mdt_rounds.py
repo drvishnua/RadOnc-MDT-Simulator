@@ -303,3 +303,35 @@ def test_round_finish_updates_parent_run_timestamp(monkeypatch, tmp_path):
     monkeypatch.setattr(run_store, "_now", lambda: expected)
     run_store.mark_round_finished(run_id, 2)
     assert run_store.get_run(run_id)["updated_at"] == expected
+
+
+
+def test_repeated_agreement_from_one_role_does_not_meet_cross_role_threshold():
+    case = SyntheticCase(
+        scenario_title="Synthetic repeated-agreement test",
+        case_summary="Fictional case for validating distinct-role agreement counting.",
+    )
+    round1 = _chair_rows("assessment", ["supports"] * 45)
+    round2 = _chair_rows("result", ["supports"] * 45)
+    round3 = _chair_rows("result", ["supports"] * 45)
+
+    repeated_statement = "The same educational concern is recorded."
+    round2[0]["result"]["agreements"] = [repeated_statement] * 12
+
+    report = reconcile_chair_report_draft(
+        "synthetic-repeated-agreement",
+        case,
+        round1,
+        round2,
+        round3,
+        _chair_draft(),
+    )
+
+    assert not any(
+        item.startswith("Repeated Round-2 statement")
+        for item in report.consensus_points
+    )
+    assert any(
+        "No shared, proposition-level educational option" in item
+        for item in report.consensus_points
+    )
