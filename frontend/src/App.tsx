@@ -150,10 +150,80 @@ const emptyForm = {
 };
 
 function readSavedCase(): SyntheticCasePayload | null {
+  const key = "radonc-mdt-last-case";
   try {
-    const saved = window.localStorage.getItem("radonc-mdt-last-case");
-    return saved ? (JSON.parse(saved) as SyntheticCasePayload) : null;
-  } catch {
+    const saved = window.localStorage.getItem(key);
+    if (!saved) return null;
+
+    const parsed: unknown = JSON.parse(saved);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      window.localStorage.removeItem(key);
+      return null;
+    }
+
+    const value = parsed as Record<string, unknown>;
+    const valid =
+      typeof value.scenario_title === "string" &&
+      typeof value.case_summary === "string" &&
+      (value.age_years === null ||
+        (typeof value.age_years === "number" && Number.isFinite(value.age_years))) &&
+      (value.primary_site === null || typeof value.primary_site === "string") &&
+      (value.histology === null || typeof value.histology === "string");
+
+    if (!valid) {
+      console.warn("[RadOnc] Discarding an incompatible saved synthetic case.");
+      window.localStorage.removeItem(key);
+      return null;
+    }
+
+    return {
+      scenario_title: value.scenario_title,
+      case_summary: value.case_summary,
+      age_years: value.age_years as number | null,
+      primary_site: value.primary_site as string | null,
+      histology: value.histology as string | null
+    };
+  } catch (error) {
+    console.warn("[RadOnc] Could not restore the saved synthetic case; starting clean.", error);
+    try { window.localStorage.removeItem(key); } catch { /* Storage may be unavailable. */ }
+    return null;
+  }
+}
+
+function readSavedBatch(): BatchRunSummary | null {
+  const key = "radonc-mdt-active-batch";
+  try {
+    const saved = window.localStorage.getItem(key);
+    if (!saved) return null;
+
+    const parsed: unknown = JSON.parse(saved);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      window.localStorage.removeItem(key);
+      return null;
+    }
+
+    const value = parsed as Record<string, unknown>;
+    const validStatuses = ["queued", "running", "completed", "completed_with_errors"];
+    const valid =
+      typeof value.run_id === "string" &&
+      value.run_id.length > 0 &&
+      typeof value.status === "string" &&
+      validStatuses.includes(value.status) &&
+      ["total_agents", "completed_count", "failed_count", "queued_count",
+        "running_count", "finished_count", "progress_percent"].every(
+          (field) => typeof value[field] === "number" && Number.isFinite(value[field])
+        ) &&
+      typeof value.updated_at === "string";
+
+    if (!valid) {
+      console.warn("[RadOnc] Discarding an incompatible saved run pointer; backend records are untouched.");
+      window.localStorage.removeItem(key);
+      return null;
+    }
+    return parsed as BatchRunSummary;
+  } catch (error) {
+    console.warn("[RadOnc] Could not restore the saved run pointer; starting without browser session state.", error);
+    try { window.localStorage.removeItem(key); } catch { /* Storage may be unavailable. */ }
     return null;
   }
 }
@@ -189,14 +259,7 @@ function App() {
   const [agentAssessment, setAgentAssessment] = useState<AgentAssessmentResult | null>(null);
   const [assessmentError, setAssessmentError] = useState("");
   const [assessing, setAssessing] = useState(false);
-  const [batchRun, setBatchRun] = useState<BatchRunSummary | null>(() => {
-    try {
-      const saved = window.localStorage.getItem("radonc-mdt-active-batch");
-      return saved ? (JSON.parse(saved) as BatchRunSummary) : null;
-    } catch {
-      return null;
-    }
-  });
+  const [batchRun, setBatchRun] = useState<BatchRunSummary | null>(() => readSavedBatch());
   const [batchResults, setBatchResults] = useState<BatchAgentResult[]>([]);
   const [batchError, setBatchError] = useState("");
   const [batchStarting, setBatchStarting] = useState(false);
