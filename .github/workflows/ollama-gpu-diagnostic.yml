@@ -1,0 +1,166 @@
+name: Ollama NVIDIA GPU Diagnostic
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/four-round-mdt-and-performance
+    paths:
+      - ".github/workflows/ollama-gpu-diagnostic.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ollama-gpu-diagnostic
+  cancel-in-progress: false
+
+jobs:
+  gpu-check:
+    name: Verify live Ollama GPU offload on laptop
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 5
+    steps:
+      - name: Inspect NVIDIA driver and GPU
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Continue"
+          Write-Host "=== MACHINE ==="
+          hostname
+          whoami
+          Write-Host "=== WINDOWS GPU ADAPTERS ==="
+          Get-CimInstance Win32_VideoController | Select-Object Name,DriverVersion,AdapterRAM,Status | Format-List | Out-String | Write-Host
+
+          $nvidiaCandidates = @(
+            (Join-Path $env:ProgramFiles "NVIDIA Corporation\NVSMI\nvidia-smi.exe"),
+            (Join-Path $env:windir "System32\nvidia-smi.exe")
+          )
+          $nvidiaCommand = Get-Command nvidia-smi.exe -ErrorAction SilentlyContinue
+          $nvidiaSmi = if ($nvidiaCommand) { $nvidiaCommand.Source } else { $nvidiaCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1 }
+
+          if (-not $nvidiaSmi) {
+            Write-Host "NVIDIA_SMI_NOT_FOUND"
+            throw "NVIDIA driver utility nvidia-smi.exe is not available to the laptop runner."
+          }
+
+          Write-Host "NVIDIA_SMI_PATH=$nvidiaSmi"
+          Write-Host "=== NVIDIA DRIVER / CUDA / GPU ==="
+          & $nvidiaSmi
+          if ($LASTEXITCODE -ne 0) { throw "nvidia-smi failed with exit code $LASTEXITCODE." }
+          Write-Host "=== GPU INVENTORY ==="
+          & $nvidiaSmi -L
+          Write-Host "=== GPU BASELINE ==="
+          & $nvidiaSmi --query-gpu=name,driver_version,memory.total,memory.used,memory.free,utilization.gpu,utilization.memory,temperature.gpu,power.draw --format=csv
+
+      - name: Inspect Ollama version and current placement
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Continue"
+          $ollamaCommand = Get-Command ollama.exe -ErrorAction SilentlyContinue
+          if (-not $ollamaCommand) { throw "ollama.exe is not on the runner PATH." }
+          $ollamaExe = $ollamaCommand.Source
+          Write-Host "OLLAMA_EXE=$ollamaExe"
+          Write-Host "=== OLLAMA VERSION ==="
+          & $ollamaExe --version
+          Write-Host "=== OLLAMA MODELS ==="
+          & $ollamaExe list
+          Write-Host "=== OLLAMA CURRENT MODEL PLACEMENT BEFORE TEST ==="
+          & $ollamaExe ps
+          Write-Host "=== OLLAMA API RUNTIME ==="
+          try {
+            $runtime = Invoke-RestMethod -Uri "http://127.0.0.1:11434/api/version" -TimeoutSec 8
+            Write-Host "OLLAMA_API_VERSION=$($runtime.version)"
+          } catch {
+            throw "Ollama API is not reachable on localhost:11434: $($_.Exception.Message)"
+          }
+
+      - name: Run one short generation while sampling NVIDIA utilization
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+          $model = "qwen3.5:4b"
+          $body = @{
+            model = $model
+            prompt = "This is a short hardware diagnostic. Reply with a numbered list of 100 brief words about the parts of a computer. Do not mention medical advice."
+            stream = $false
+            keep_alive = "2m"
+            options = @{
+              num_ctx = 2048
+              num_predict = 128
+              temperature = 0
+            }
+          } | ConvertTo-Json -Depth 5 -Compress
+
+          Write-Host "=== GPU SNAPSHOTS DURING REAL INFERENCE ==="
+          $job = Start-Job -ScriptBlock {
+            param($requestBody)
+            try {
+              $response = Invoke-RestMethod -Uri "http://127.0.0.1:11434/api/generate" -Method Post -ContentType "application/json" -Body $requestBody -TimeoutSec 180
+              [pscustomobject]@{
+                ok = $true
+                model = $response.model
+                done = $response.done
+                eval_count = $response.eval_count
+                eval_duration = $response.eval_duration
+                prompt_eval_count = $response.prompt_eval_count
+                prompt_eval_duration = $response.prompt_eval_duration
+                total_duration = $response.total_duration
+                error = $null
+              }
+            } catch {
+              [pscustomobject]@{
+                ok = $false
+                model = $null
+                done = $false
+                eval_count = 0
+                eval_duration = 0
+                prompt_eval_count = 0
+                prompt_eval_duration = 0
+                total_duration = 0
+                error = $_.Exception.Message
+              }
+            }
+          } -ArgumentList $body
+
+          $deadline = [DateTime]::UtcNow.AddMinutes(3)
+          while ($job.State -in @("NotStarted","Running") -and [DateTime]::UtcNow -lt $deadline) {
+            $stamp = [DateTime]::UtcNow.ToString("HH:mm:ss")
+            $sample = & $nvidiaSmi --query-gpu=utilization.gpu,memory.used,memory.free,temperature.gpu,power.draw --format=csv,noheader 2>&1
+            Write-Host ("GPU_SAMPLE_UTC={0} {1}" -f $stamp,($sample -join " "))
+            Start-Sleep -Seconds 1
+          }
+
+          if ($job.State -in @("NotStarted","Running")) {
+            Stop-Job $job -ErrorAction SilentlyContinue
+            Remove-Job $job -Force -ErrorAction SilentlyContinue
+            throw "GPU test inference exceeded three minutes."
+          }
+
+          $result = Receive-Job $job -Wait
+          Remove-Job $job -Force -ErrorAction SilentlyContinue
+          Write-Host "=== INFERENCE RESULT ==="
+          $result | Format-List | Out-String | Write-Host
+          if (-not $result.ok) { throw "Ollama generation failed: $($result.error)" }
+          if ($result.eval_count -gt 0 -and $result.eval_duration -gt 0) {
+            $tokensPerSecond = [Math]::Round($result.eval_count / ($result.eval_duration / 1000000000.0), 2)
+            Write-Host "GENERATION_TOKENS_PER_SECOND=$tokensPerSecond"
+          }
+
+          Write-Host "=== NVIDIA COMPUTE PROCESSES AFTER GENERATION ==="
+          & $nvidiaSmi --query-compute-apps=pid,process_name,used_memory --format=csv
+          Write-Host "=== OLLAMA MODEL PLACEMENT DURING KEEP-ALIVE ==="
+          & $ollamaExe ps
+          Write-Host "=== NVIDIA FINAL STATE ==="
+          & $nvidiaSmi --query-gpu=name,memory.total,memory.used,memory.free,utilization.gpu,temperature.gpu,power.draw --format=csv
+
+      - name: Inspect Ollama server GPU discovery logs
+        if: always()
+        shell: powershell
+        run: |
+          $logPath = Join-Path $env:LOCALAPPDATA "Ollama\server.log"
+          Write-Host "OLLAMA_SERVER_LOG=$logPath"
+          if (Test-Path $logPath) {
+            Get-Content $logPath -Tail 250 | Select-String -Pattern "cuda|gpu|nvidia|runner|offload|memory|library|error|warning|discover" -CaseSensitive:$false | Select-Object -Last 80 | ForEach-Object { Write-Host $_.Line }
+          } else {
+            Write-Host "OLLAMA_SERVER_LOG_NOT_FOUND"
+          }
