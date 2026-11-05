@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections import Counter
 from typing import TypeVar
 
 import httpx
@@ -80,6 +81,267 @@ async def _generate_structured(prompt: str, schema_type: type[T], max_tokens: in
 def _compact(value: str, limit: int) -> str:
     normalized = " ".join(value.split())
     return normalized if len(normalized) <= limit else normalized[: limit - 1].rstrip() + "…"
+
+
+def _round_items(rows: list[dict], field: str) -> list[tuple[dict, dict]]:
+    return [
+        (row, row.get(field) or {})
+        for row in rows
+        if isinstance(row.get(field), dict)
+    ]
+
+
+def _position_counts(rows: list[dict], field: str) -> Counter:
+    return Counter(
+        result.get("position")
+        for _, result in _round_items(rows, field)
+        if result.get("position")
+    )
+
+
+def _unique_strings(values: list[str], limit: int = 12) -> list[str]:
+    output: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        if not isinstance(value, str):
+            continue
+        cleaned = " ".join(value.split())
+        key = cleaned.casefold()
+        if cleaned and key not in seen:
+            output.append(cleaned)
+            seen.add(key)
+        if len(output) >= limit:
+            break
+    return output
+
+
+def _format_position_counts(counts: Counter) -> str:
+    total = sum(counts.values())
+    if not total:
+        return "no valid positions recorded"
+    labels = {
+        "insufficient_information": "insufficient-information",
+        "conditional": "conditional",
+        "supports": "supports",
+        "opposes": "opposes",
+    }
+    return ", ".join(
+        f"{count}/{total} {labels.get(position, position)}"
+        for position, count in sorted(counts.items(), key=lambda item: (-item[1], item[0]))
+    )
+
+
+def reconcile_chair_report_draft(
+    run_id: str,
+    case: SyntheticCase,
+    round1_views: list[dict],
+    round2_views: list[dict],
+    round3_views: list[dict],
+    draft: FinalReportDraft,
+) -> FinalMDTReport:
+    """Reconcile the Chair draft against saved records; source records win over model prose."""
+    r1 = _round_items(round1_views, "assessment")
+    r2 = _round_items(round2_views, "result")
+    r3 = _round_items(round3_views, "result")
+    counts_by_round = {
+        "Round 1": _position_counts(round1_views, "assessment"),
+        "Round 2": _position_counts(round2_views, "result"),
+        "Round 3": _position_counts(round3_views, "result"),
+    }
+    final_counts = counts_by_round["Round 3"]
+
+    # A genuine support/opposition split is no consensus. Missing information takes
+    # precedence over a qualified position; position labels are never treated as votes.
+    if final_counts.get("supports") and final_counts.get("opposes"):
+        consensus_status = "no_consensus"
+    elif final_counts.get("insufficient_information"):
+        consensus_status = "insufficient_information"
+    elif final_counts.get("conditional"):
+        consensus_status = "qualified_consensus"
+    elif final_counts.get("supports") or final_counts.get("opposes"):
+        consensus_status = "consensus"
+    else:
+        consensus_status = "insufficient_information"
+
+    distribution = "; ".join(
+        f"{name}: {_format_position_counts(counts)}"
+        for name, counts in counts_by_round.items()
+    )
+
+    case_unknowns = list(case.known_unknowns or [])
+    assessment_unknowns = [
+        item
+        for _, result in r1
+        for item in (result.get("unknowns") or [])
+    ]
+    adversarial_unknowns = [
+        item
+        for _, result in r3
+        for item in (result.get("remaining_unknowns") or [])
+    ]
+    uncertainties = _unique_strings(
+        case_unknowns + assessment_unknowns + adversarial_unknowns,
+        limit=15,
+    )
+    missing_information = _unique_strings(
+        case_unknowns + assessment_unknowns + adversarial_unknowns,
+        limit=20,
+    )
+
+    # Only repeated, verbatim Round-2 agreement statements are called consensus points.
+    agreement_rows = [
+        item
+        for _, result in r2
+        for item in (result.get("agreements") or [])
+        if isinstance(item, str) and item.strip()
+    ]
+    agreement_counts: Counter = Counter(" ".join(item.split()).casefold() for item in agreement_rows)
+    agreement_text = {
+        " ".join(item.split()).casefold(): " ".join(item.split())
+        for item in agreement_rows
+    }
+    agreement_threshold = max(3, (len(r2) + 3) // 4)
+    consensus_points = [
+        f"Repeated Round-2 agreement ({count} role contributions): {agreement_text[key]}"
+        for key, count in agreement_counts.most_common(5)
+        if count >= agreement_threshold
+    ]
+
+    # Any non-modal Round-3 label is listed with its source conclusion. It is not
+    # automatically called opposing dissent.
+    modal_position = final_counts.most_common(1)[0][0] if final_counts else None
+    minority_views: list[str] = []
+    for row, result in r3:
+        position = result.get("position")
+        if position and position != modal_position:
+            agent = row.get("agent_id", "unknown role")
+            role = row.get("agent_name", "Role")
+            conclusion = result.get("provisional_conclusion", "")
+            minority_views.append(
+                f"{agent} — {role} ({position}): {_compact(conclusion, 300)}"
+            )
+    if not minority_views:
+        # Retain the originating Round-1 qualified position if debate/review later
+        # converged, so a changed position does not erase the original view.
+        for row, result in r1:
+            position = result.get("position")
+            if position and final_counts and position != final_counts.most_common(1)[0][0]:
+                minority_views.append(
+                    f"{row.get('agent_id', 'unknown role')} — "
+                    f"{row.get('agent_name', 'Role')} ({position}, Round 1): "
+                    f"{_compact(result.get('provisional_conclusion', ''), 300)}"
+                )
+    minority_views = minority_views[:10]
+
+    unresolved: list[str] = []
+    if len(final_counts) > 1:
+        unresolved.append(
+            "Round-3 position labels were not uniform: "
+            + _format_position_counts(final_counts)
+            + ". The labels are preserved as recorded and are not, by themselves, proof of opposing treatment views."
+        )
+    if final_counts.get("supports") and final_counts.get("opposes"):
+        unresolved.append(
+            "Round 3 contains both supporting and opposing positions; the report therefore records no consensus."
+        )
+
+    patient_family: list[str] = []
+    if case.patient_goals:
+        patient_family.extend(
+            f"Recorded patient goal/preference: {item}" for item in case.patient_goals
+        )
+    else:
+        patient_family.append(
+            "Patient goals and preferences were not supplied; no preference is inferred."
+        )
+    patient_family.extend(case.social_context or [])
+    patient_family = _unique_strings(patient_family, limit=10)
+
+    feasibility: list[str] = list(case.resource_context or [])
+    if not feasibility:
+        feasibility.append(
+            "No structured resource context was supplied; resource feasibility cannot be assessed."
+        )
+    feasibility.extend(
+        item for item in (case.social_context or [])
+        if any(term in item.casefold() for term in ("support", "adher", "access", "transport", "caregiver"))
+    )
+    feasibility = _unique_strings(feasibility, limit=10)
+
+    governance = [
+        "Synthetic educational simulation only; this report is not a clinical decision or treatment instruction.",
+        "Patient goals, consent, and decision-making preferences must not be inferred from missing data.",
+        "No evidence retrieval or citation verification is connected to this run.",
+    ]
+    evidence_limitations = [
+        "Evidence retrieval and citation verification are not connected; model-generated evidence statements are unverified.",
+        "Clinical accuracy and guideline concordance have not been evaluated.",
+    ]
+    evidence_gaps = [
+        item
+        for _, result in r1
+        for item in (result.get("evidence_gaps") or [])
+    ]
+    evidence_limitations.extend(_unique_strings(evidence_gaps, limit=4))
+    evidence_limitations = _unique_strings(evidence_limitations, limit=8)
+
+    if consensus_status == "no_consensus":
+        chair_conclusion = (
+            "The simulated MDT did not reach a single position. Round-3 position labels were "
+            f"{_format_position_counts(final_counts)}; review the recorded minority views and "
+            "underlying contributions rather than treating the label counts as a clinical vote."
+        )
+    elif consensus_status == "insufficient_information":
+        key_unknowns = "; ".join(uncertainties[:4]) or "critical clinical information is not supplied"
+        chair_conclusion = (
+            "No treatment recommendation can be made from the supplied synthetic case. "
+            f"Unresolved information includes: {key_unknowns}. Round-3 positions were "
+            f"{_format_position_counts(final_counts)}; any conditional view is retained separately."
+        )
+    elif consensus_status == "qualified_consensus":
+        chair_conclusion = (
+            "The recorded Round-3 positions indicate a qualified rather than definitive "
+            "educational position. This simulation does not support a patient-specific treatment "
+            "recommendation, and the missing information must remain explicit."
+        )
+    else:
+        chair_conclusion = (
+            "The recorded Round-3 positions are aligned, but this is only a synthetic educational "
+            "summary and does not establish clinical validity or support a patient-specific treatment recommendation."
+        )
+
+    overall = (
+        f"Recorded position distribution — {distribution}. These are role-level labels, not "
+        "votes; conditional positions are not recast as support or opposition, and a non-uniform "
+        "distribution is not described as unanimous. The source case and role contributions "
+        "identify the missing information and social/resource context listed below. Evidence "
+        "retrieval is not connected, and clinical accuracy was not evaluated."
+    )
+    reflection = (
+        "This Chair record is reconciled against the saved Round-1, Round-2, and Round-3 "
+        "contributions so that counts and minority positions remain traceable. It is a "
+        "structural educational synthesis only; it does not validate clinical correctness, "
+        "guideline concordance, or evidence quality."
+    )
+
+    return FinalMDTReport(
+        run_id=run_id,
+        report_title=draft.report_title,
+        consensus_status=consensus_status,
+        chair_conclusion=chair_conclusion,
+        overall_educational_synthesis=overall,
+        consensus_points=consensus_points,
+        unresolved_disagreements=unresolved,
+        minority_and_dissenting_views=minority_views,
+        major_uncertainties=uncertainties,
+        missing_information_before_real_world_review=missing_information,
+        patient_and_family_considerations=patient_family,
+        feasibility_and_resource_considerations=feasibility,
+        governance_and_safeguarding_considerations=governance,
+        evidence_limitations=evidence_limitations,
+        chair_reflection=reflection,
+    )
+
 
 
 async def generate_debate_contribution(
@@ -183,36 +445,58 @@ async def generate_chair_report(
     round3_views: list[dict],
     max_tokens: int = 1600,
 ) -> FinalMDTReport:
-    def digest(items: list[dict], round_key: str) -> list[dict]:
-        """Keep the chair prompt under the laptop's 4K context budget."""
-        output = []
-        for item in items:
-            result = item.get("assessment") if round_key == "round1" else item.get("result")
-            if not result:
-                continue
-            if round_key == "round1":
-                entry = {
-                    "agent": item["agent_id"],
-                    "position": result.get("position"),
-                    "view": _compact(result.get("provisional_conclusion", ""), 18),
-                }
-            elif round_key == "round2":
-                entry = {
-                    "agent": item["agent_id"],
-                    "position": result.get("position"),
-                    "view": _compact(result.get("provisional_conclusion", ""), 18),
-                    "challenge": _compact(
-                        (result.get("substantive_challenges") or [""])[0], 18
-                    ),
-                }
-            else:
-                entry = {
-                    "agent": item["agent_id"],
-                    "risk": _compact(" ".join(result.get("risk_flags", [])[:2]), 18),
-                    "unknown": _compact(" ".join(result.get("remaining_unknowns", [])[:2]), 16),
-                }
-            output.append(entry)
-        return output
+    def digest(items: list[dict], round_key: str) -> dict:
+        """Send position counts and explicit non-modal views, not truncated unanimity cues."""
+        field = "assessment" if round_key == "round1" else "result"
+        entries = _round_items(items, field)
+        counts = Counter(
+            result.get("position")
+            for _, result in entries
+            if result.get("position")
+        )
+        modal = counts.most_common(1)[0][0] if counts else None
+        non_modal = []
+        representative = []
+        for row, result in entries:
+            position = result.get("position")
+            entry = {
+                "agent": row.get("agent_id"),
+                "position": position,
+                "conclusion": _compact(result.get("provisional_conclusion", ""), 160),
+            }
+            if position and position != modal:
+                if round_key == "round3":
+                    entry["risks"] = [
+                        _compact(value, 90)
+                        for value in (result.get("risk_flags") or [])[:2]
+                    ]
+                    entry["unknowns"] = [
+                        _compact(value, 90)
+                        for value in (result.get("remaining_unknowns") or [])[:2]
+                    ]
+                non_modal.append(entry)
+            elif len(representative) < 3:
+                if round_key == "round2":
+                    entry["challenges"] = [
+                        _compact(value, 100)
+                        for value in (result.get("substantive_challenges") or [])[:1]
+                    ]
+                elif round_key == "round3":
+                    entry["risks"] = [
+                        _compact(value, 90)
+                        for value in (result.get("risk_flags") or [])[:2]
+                    ]
+                    entry["unknowns"] = [
+                        _compact(value, 90)
+                        for value in (result.get("remaining_unknowns") or [])[:2]
+                    ]
+                representative.append(entry)
+        return {
+            "role_count": len(entries),
+            "position_counts": dict(counts),
+            "non_modal_views": non_modal[:5],
+            "representative_views": representative,
+        }
 
     prompt = (
         "ROUND 4 — MDT CHAIR SYNTHESIS. Synthesize the completed independent, debate, and "
@@ -220,7 +504,7 @@ async def generate_chair_report(
         "Do not invent consensus. Explicitly separate genuine agreement from unresolved dissent. "
         "Do not recommend a patient-specific treatment or include doses. Evidence retrieval is "
         "not connected: say so, and identify evidence gaps rather than inventing citations. "
-        "Do not silently resolve contradictory facts.\nSYNTHETIC CASE:\n"
+        "Do not silently resolve contradictory facts. Do not say unanimous, all agents, or no dissent unless exact position counts support it. Treat position labels as descriptions, not votes; distinguish a conditional view from support/opposition.\nSYNTHETIC CASE:\n"
         + json.dumps(case.model_dump(exclude_none=True), ensure_ascii=False, separators=(",", ":"))
         + "\nROUND 1 INDEPENDENT POSITIONS:\n"
         + json.dumps(digest(round1_views, "round1"), ensure_ascii=False, separators=(",", ":"))
@@ -231,10 +515,12 @@ async def generate_chair_report(
         + "\nReturn a balanced synthesis. Set consensus_status to consensus, qualified_consensus, no_consensus, or insufficient_information. "
         "Keep the JSON output compact. chair_conclusion: 2 short sentences. overall_educational_synthesis: at most 100 words. "
         "chair_reflection: 2 short sentences. For each list field, provide no more than 3 concise entries; use [] when there is no distinct supported point. "
-        "Preserve any material dissent, patient/family concern, feasibility issue, governance concern, and missing information. "
+        "Populate every applicable section from the supplied records; do not leave a section empty merely to save tokens. Preserve non-modal positions and list them separately without overstating dissent. "
         "Set consensus_status to consensus, qualified_consensus, no_consensus, or insufficient_information. "
         "If there is no clear agreement, use no_consensus or insufficient_information. Do not infer consensus from missing views and never fabricate a majority count. "
         "The output format is schema-enforced."
     )
     draft = await _generate_structured(prompt, FinalReportDraft, max_tokens)
-    return FinalMDTReport(run_id=run_id, **draft.model_dump())
+    return reconcile_chair_report_draft(
+        run_id, case, round1_views, round2_views, round3_views, draft
+    )
