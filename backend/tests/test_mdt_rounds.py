@@ -4,8 +4,10 @@ from fastapi.testclient import TestClient
 
 from app.agent_schemas import AgentAssessment
 from app.main import app
-from app.round_schemas import FinalMDTReport, RoundContribution
+from app.round_schemas import FinalMDTReport, FinalReportDraft, RoundContribution
+from app.schemas import SyntheticCase
 from app.services import batch_runner, mdt_rounds, run_store
+from app.services.mdt_generation import reconcile_chair_report_draft
 from app.services.ollama import AgentGenerationError
 
 client = TestClient(app)
@@ -171,3 +173,91 @@ def test_chair_retry_uses_higher_output_budget():
     )
     assert result == "valid"
     assert budgets == [1600, 2200]
+
+
+def _chair_rows(field, positions):
+    rows = []
+    for index, position in enumerate(positions, start=1):
+        agent_id = "PP-05" if position == "conditional" else f"RO-{index:02d}"
+        payload = {
+            "position": position,
+            "provisional_conclusion": (
+                "Treatment hesitation remains plausible but cannot be confirmed without more information."
+                if position == "conditional"
+                else "A definitive treatment recommendation cannot be made from the missing clinical information."
+            ),
+            "unknowns": ["Clinical stage and functional status are not supplied."],
+            "remaining_unknowns": ["Patient goals and preferences are not supplied."],
+            "evidence_gaps": ["Evidence retrieval is not connected."],
+            "agreements": ["The missing clinical information prevents a definitive educational conclusion."],
+            "risk_flags": ["Do not make a treatment recommendation from incomplete synthetic data."],
+        }
+        rows.append({
+            "agent_id": agent_id,
+            "agent_name": "Treatment-averse Perspective" if position == "conditional" else f"Role {index}",
+            field: payload,
+        })
+    return rows
+
+
+def _chair_draft():
+    return FinalReportDraft(
+        report_title="Synthetic Chair report",
+        consensus_status="consensus",
+        chair_conclusion="All roles unanimously agreed to one treatment approach despite missing information.",
+        overall_educational_synthesis="All agents unanimously identified the same position and no dissent was present.",
+        chair_reflection="The model draft contains enough text to satisfy the output schema.",
+    )
+
+
+def test_chair_reconciliation_preserves_position_counts_and_minor_view():
+    case = SyntheticCase(
+        scenario_title="Synthetic reconciliation test",
+        case_summary="Fictional case for validating source-grounded Chair reconciliation.",
+        known_unknowns=["Clinical stage is not supplied.", "Patient goals are not supplied."],
+        social_context=["Family support difficulties are recorded."],
+        resource_context=[],
+    )
+    positions = ["insufficient_information"] * 44 + ["conditional"]
+    report = reconcile_chair_report_draft(
+        "synthetic-run",
+        case,
+        _chair_rows("assessment", positions),
+        _chair_rows("result", positions),
+        _chair_rows("result", positions),
+        _chair_draft(),
+    )
+
+    assert report.consensus_status == "insufficient_information"
+    assert "44/45 insufficient-information" in report.overall_educational_synthesis
+    assert "1/45 conditional" in report.overall_educational_synthesis
+    assert "unanimously" not in report.overall_educational_synthesis.casefold()
+    assert report.minority_and_dissenting_views
+    assert any("PP-05" in item and "conditional" in item for item in report.minority_and_dissenting_views)
+    assert report.major_uncertainties
+    assert report.missing_information_before_real_world_review
+    assert report.patient_and_family_considerations
+    assert report.feasibility_and_resource_considerations
+    assert report.governance_and_safeguarding_considerations
+    assert report.evidence_limitations
+
+
+def test_chair_reconciliation_marks_support_opposition_split_as_no_consensus():
+    case = SyntheticCase(
+        scenario_title="Synthetic disagreement test",
+        case_summary="Fictional case for validating position disagreement handling.",
+    )
+    round1 = _chair_rows("assessment", ["conditional"] * 45)
+    round2 = _chair_rows("result", ["conditional"] * 45)
+    round3 = _chair_rows("result", ["supports"] * 44 + ["opposes"])
+    report = reconcile_chair_report_draft(
+        "synthetic-disagreement",
+        case,
+        round1,
+        round2,
+        round3,
+        _chair_draft(),
+    )
+
+    assert report.consensus_status == "no_consensus"
+    assert any("supports" in item and "opposes" in item for item in report.unresolved_disagreements)
