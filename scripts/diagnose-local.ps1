@@ -86,18 +86,10 @@ if ($edgeExe) {
     New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
     $domPath = Join-Path $tempDir "dom.html"
     $stderrPath = Join-Path $tempDir "edge.stderr.log"
-    $edgeArgs = @(
-        "--headless=new",
-        "--no-first-run",
-        "--disable-gpu",
-        "--disable-extensions",
-        "--no-sandbox",
-        "--disable-background-networking",
-        "--user-data-dir=$tempDir\profile",
-        "--virtual-time-budget=7000",
-        "--dump-dom",
-        "http://127.0.0.1:5173/"
-    )
+    $profileDir = Join-Path $tempDir "profile"
+    New-Item -ItemType Directory -Force -Path $profileDir | Out-Null
+    # Quote the profile path because the Windows runner's user path contains spaces.
+    $edgeArgs = "--headless=new --no-first-run --disable-gpu --disable-extensions --no-sandbox --disable-background-networking --remote-allow-origins=* --user-data-dir=`"$profileDir`" --virtual-time-budget=7000 --dump-dom http://127.0.0.1:5173/"
     $edgeProcess = Start-Process -FilePath $edgeExe -ArgumentList $edgeArgs -PassThru -NoNewWindow -RedirectStandardOutput $domPath -RedirectStandardError $stderrPath
     $edgeExited = $edgeProcess.WaitForExit(20000)
     if (-not $edgeExited) {
@@ -108,10 +100,14 @@ if ($edgeExe) {
     if ($edgeExited) { Write-Host "EDGE_EXIT_CODE=$($edgeProcess.ExitCode)" }
     if (Test-Path $domPath) {
         $dom = Get-Content -Path $domPath -Raw
-        $reactMounted = $dom.Contains('class="app-shell"')
-        Write-Host "EDGE_DOM_LENGTH=$($dom.Length)"
-        Write-Host "REACT_APP_SHELL_MOUNTED=$reactMounted"
-        Write-Host "EDGE_DOM_HEAD=$($dom.Substring(0,[Math]::Min(3600,$dom.Length)))"
+        if ([string]::IsNullOrWhiteSpace($dom)) {
+            Write-Host "EDGE_DOM_EMPTY"
+        } else {
+            $reactMounted = $dom.Contains('class="app-shell"')
+            Write-Host "EDGE_DOM_LENGTH=$($dom.Length)"
+            Write-Host "REACT_APP_SHELL_MOUNTED=$reactMounted"
+            Write-Host "EDGE_DOM_HEAD=$($dom.Substring(0,[Math]::Min(3600,$dom.Length)))"
+        }
     } else {
         Write-Host "EDGE_DOM_OUTPUT_MISSING"
     }
