@@ -100,8 +100,7 @@ def _minority_history(
         changed = len(set(positions)) > 1
         final_position = positions[-1]
         qualified_minority = final_position in {"conditional", "supports", "opposes"} and final_position != final_modal
-        substantive_position = any(position in {"supports", "opposes"} for position in positions)
-        if not (changed or qualified_minority or substantive_position):
+        if not (changed or qualified_minority):
             continue
         transition = "Position evolution: " + " → ".join(positions) + ". " if changed else ""
         priority = 0 if qualified_minority else 1

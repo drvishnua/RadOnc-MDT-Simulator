@@ -177,3 +177,21 @@ def test_minority_history_merges_earlier_roles_with_existing_round_three_minorit
     assert "SG-07" in history and "Round 3: supports" in history
     assert len(report.minority_and_dissenting_views) <= 45
 
+
+
+def test_uniform_support_positions_are_not_reported_as_minority_dissent():
+    case = SyntheticCase(
+        scenario_title="Synthetic uniform-support test",
+        case_summary="Fictional case for validating minority classification.",
+    )
+    positions = ["supports"] * 45
+    report = ensure_chair_report_completeness(
+        _empty_report(),
+        case,
+        _rows("assessment", positions, unknowns=False),
+        _rows("result", positions, unknowns=False),
+        _rows("result", positions, unknowns=False),
+    )
+    joined = " ".join(report.minority_and_dissenting_views).casefold()
+    assert "no genuine conditional/minority position" in joined
+    assert not any(f"RO-{index:02d}" in joined for index in range(1, 46))
