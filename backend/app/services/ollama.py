@@ -75,8 +75,9 @@ async def generate_agent_assessment(
         "assumptions and unknowns. No evidence retrieval is connected: do not cite sources or "
         "make unsupported claims of evidence. Do not give prescriptions, doses, or treatment "
         "instructions. You MUST state a clear provisional position and conclusion. "
-        "Keep the whole response concise: conclusion 2-4 sentences, summary 3-5 sentences, "
-        "lists only when material. Use conditional or insufficient_information when appropriate."
+        "Keep the whole response concise: conclusion 2-3 short sentences, summary 2-3 short sentences. "
+        "Use no more than 3 short entries in any list; use empty arrays for non-material lists. "
+        "Use conditional or insufficient_information when appropriate."
     )
 
     prompt = (
@@ -100,7 +101,7 @@ async def generate_agent_assessment(
         "keep_alive": "30m",
         "options": {
             "temperature": 0.1,
-            "num_predict": 700,
+            "num_predict": max_tokens,
             "num_ctx": 4096,
         },
     }
@@ -124,7 +125,12 @@ async def generate_agent_assessment(
         decoded = json.loads(raw_response)
         draft = AgentDraft.model_validate(decoded)
     except json.JSONDecodeError as exc:
-        raise AgentGenerationError("The local model did not return valid JSON.") from exc
+        done_reason = payload.get("done_reason", "unknown")
+        eval_count = payload.get("eval_count", "unknown")
+        raise AgentGenerationError(
+            "The local model did not return valid JSON "
+            f"(done_reason={done_reason}, eval_count={eval_count}, output_chars={len(raw_response)})."
+        ) from exc
     except (ValidationError, TypeError) as exc:
         if isinstance(exc, ValidationError):
             details = "; ".join(
