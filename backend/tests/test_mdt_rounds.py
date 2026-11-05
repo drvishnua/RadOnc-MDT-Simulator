@@ -189,7 +189,7 @@ def _chair_rows(field, positions):
             "unknowns": ["Clinical stage and functional status are not supplied."],
             "remaining_unknowns": ["Patient goals and preferences are not supplied."],
             "evidence_gaps": ["Evidence retrieval is not connected."],
-            "agreements": ["The missing clinical information prevents a definitive educational conclusion."],
+            "agreements": [],
             "risk_flags": ["Do not make a treatment recommendation from incomplete synthetic data."],
         }
         rows.append({
