@@ -273,6 +273,45 @@ async def main() -> int:
                 "Chair governance section is empty.")
         require(bool(report.get("evidence_limitations")),
                 "Chair evidence limitations are empty.")
+
+        # Every report section must contain source-grounded content or an explicit
+        # statement that no applicable item was recorded. Empty arrays are not a pass.
+        required_report_sections = (
+            "consensus_points",
+            "unresolved_disagreements",
+            "minority_and_dissenting_views",
+            "major_uncertainties",
+            "missing_information_before_real_world_review",
+            "patient_and_family_considerations",
+            "feasibility_and_resource_considerations",
+            "governance_and_safeguarding_considerations",
+            "evidence_limitations",
+        )
+        for section in required_report_sections:
+            require(bool(report.get(section)), f"Chair report section is empty: {section}")
+            require(
+                all(isinstance(item, str) and item.strip() for item in report[section]),
+                f"Chair report section contains a blank item: {section}",
+            )
+        report_text = " ".join(
+            [report.get("chair_conclusion", ""), report.get("overall_educational_synthesis", "")]
+            + [
+                item
+                for section in required_report_sections
+                for item in report.get(section, [])
+            ]
+        ).casefold()
+        if any(len(counts) > 1 for counts in position_counts_by_round.values()):
+            for unsupported_claim in (
+                "unanimously agreed",
+                "unanimous consensus",
+                "no dissent was present",
+                "all agents agreed",
+            ):
+                require(
+                    unsupported_claim not in report_text,
+                    f"Chair report makes an unsupported unanimity claim: {unsupported_claim}",
+                )
         if len(final_positions) > 1:
             require(bool(report.get("unresolved_disagreements")),
                     "Non-uniform Round-3 positions were not preserved.")
