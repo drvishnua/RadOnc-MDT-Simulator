@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter, defaultdict
+import re
 
 from app.round_schemas import FinalMDTReport
 from app.schemas import SyntheticCase
@@ -17,7 +18,7 @@ ROUND_SOURCES = (
 SECTION_LIMITS = {
     "consensus_points": 15,
     "unresolved_disagreements": 15,
-    "minority_and_dissenting_views": 15,
+    "minority_and_dissenting_views": 45,
     "major_uncertainties": 20,
     "missing_information_before_real_world_review": 20,
     "patient_and_family_considerations": 15,
@@ -105,7 +106,48 @@ def _minority_history(
             f"{agent_id} — {record['name']}: "
             + "; ".join(record["events"])
         )
-    return output[:10]
+    return output[:45]
+
+
+def _merge_minority_views(
+    history: list[str],
+    existing: list[str],
+    limit: int = 45,
+) -> list[str]:
+    """Prefer complete source-derived round histories and retain unmatched Chair entries."""
+    agent_pattern = re.compile(r"^([A-Z]{2}-[0-9]{2})\s+—")
+    merged: list[str] = []
+    seen_agents: set[str] = set()
+    seen_text: set[str] = set()
+
+    for entry in history:
+        cleaned = " ".join(str(entry).split())
+        if not cleaned:
+            continue
+        match = agent_pattern.match(cleaned)
+        if match:
+            seen_agents.add(match.group(1))
+        key = cleaned.casefold()
+        if key not in seen_text:
+            merged.append(cleaned)
+            seen_text.add(key)
+
+    for entry in existing:
+        cleaned = " ".join(str(entry).split())
+        if not cleaned:
+            continue
+        match = agent_pattern.match(cleaned)
+        if match and match.group(1) in seen_agents:
+            # The source-derived entry already contains that role's complete history.
+            continue
+        key = cleaned.casefold()
+        if key not in seen_text:
+            merged.append(cleaned)
+            seen_text.add(key)
+        if len(merged) >= limit:
+            break
+
+    return merged[:limit]
 
 
 def ensure_chair_report_completeness(
@@ -165,6 +207,20 @@ def ensure_chair_report_completeness(
                 + distribution
                 + "); these labels do not by themselves establish opposing treatment views."
             )
+        elif len(final_counts) == 1 and any(
+            final_counts.get(position)
+            for position in ("supports", "opposes", "conditional")
+        ):
+            distribution = ", ".join(
+                f"{count}/{sum(final_counts.values())} {position.replace('_', '-')}"
+                for position, count in sorted(final_counts.items())
+            )
+            note = (
+                "Round-3 positions were uniform ("
+                + distribution
+                + "), but the saved contributions do not establish one shared, "
+                "proposition-level educational option. Uniform labels alone do not prove consensus."
+            )
         else:
             earlier_variation = any(
                 len(counts_by_round[round_number]) > 1
@@ -185,12 +241,15 @@ def ensure_chair_report_completeness(
                 )
         data["unresolved_disagreements"] = [note]
 
-    if not data["minority_and_dissenting_views"]:
-        history = _minority_history(round1_rows, round2_rows, round3_rows)
-        data["minority_and_dissenting_views"] = history or [
-            "No non-modal role position was recorded in Rounds 1–3. This does not "
-            "establish unanimous clinical agreement; inspect the full role contributions."
-        ]
+    history = _minority_history(round1_rows, round2_rows, round3_rows)
+    data["minority_and_dissenting_views"] = _merge_minority_views(
+        history,
+        data["minority_and_dissenting_views"],
+        SECTION_LIMITS["minority_and_dissenting_views"],
+    ) or [
+        "No non-modal role position was recorded in Rounds 1–3. This does not "
+        "establish unanimous clinical agreement; inspect the full role contributions."
+    ]
 
     uncertainty_items = list(case.known_unknowns or [])
     missing_items = list(case.known_unknowns or [])
