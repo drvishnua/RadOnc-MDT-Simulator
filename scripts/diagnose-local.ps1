@@ -87,9 +87,10 @@ if ($edgeExe) {
     $domPath = Join-Path $tempDir "dom.html"
     $stderrPath = Join-Path $tempDir "edge.stderr.log"
     $profileDir = Join-Path $tempDir "profile"
+    $screenshotPath = Join-Path $env:RUNNER_TEMP "radonc-local-app.png"
     New-Item -ItemType Directory -Force -Path $profileDir | Out-Null
-    # Quote the profile path because the Windows runner's user path contains spaces.
-    $edgeArgs = "--headless=new --no-first-run --disable-gpu --disable-extensions --no-sandbox --disable-background-networking --remote-allow-origins=* --user-data-dir=`"$profileDir`" --virtual-time-budget=7000 --dump-dom http://127.0.0.1:5173/"
+    # Quote both paths because the Windows runner's user path contains spaces.
+    $edgeArgs = "--headless=new --no-first-run --disable-gpu --disable-extensions --no-sandbox --disable-background-networking --remote-allow-origins=* --user-data-dir=`"$profileDir`" --window-size=1440,900 --virtual-time-budget=7000 --dump-dom --screenshot=`"$screenshotPath`" http://127.0.0.1:5173/"
     $edgeProcess = Start-Process -FilePath $edgeExe -ArgumentList $edgeArgs -PassThru -NoNewWindow -RedirectStandardOutput $domPath -RedirectStandardError $stderrPath
     $edgeExited = $edgeProcess.WaitForExit(20000)
     if (-not $edgeExited) {
@@ -104,12 +105,24 @@ if ($edgeExe) {
             Write-Host "EDGE_DOM_EMPTY"
         } else {
             $reactMounted = $dom.Contains('class="app-shell"')
+            $hasTopbar = $dom.Contains('class="topbar"')
+            $hasHero = $dom.Contains('class="hero"')
+            $hasStatusGrid = $dom.Contains('class="status-grid"')
             Write-Host "EDGE_DOM_LENGTH=$($dom.Length)"
             Write-Host "REACT_APP_SHELL_MOUNTED=$reactMounted"
-            Write-Host "EDGE_DOM_HEAD=$($dom.Substring(0,[Math]::Min(3600,$dom.Length)))"
+            Write-Host "REACT_TOPBAR_MOUNTED=$hasTopbar"
+            Write-Host "REACT_HERO_MOUNTED=$hasHero"
+            Write-Host "REACT_STATUS_GRID_MOUNTED=$hasStatusGrid"
+            Write-Host "EDGE_DOM_HEAD=$($dom.Substring(0,[Math]::Min(1400,$dom.Length)))"
         }
     } else {
         Write-Host "EDGE_DOM_OUTPUT_MISSING"
+    }
+    if (Test-Path $screenshotPath) {
+        $screenshotInfo = Get-Item $screenshotPath
+        Write-Host "EDGE_SCREENSHOT_CREATED=True SIZE_BYTES=$($screenshotInfo.Length) PATH=$screenshotPath"
+    } else {
+        Write-Host "EDGE_SCREENSHOT_CREATED=False"
     }
     if (Test-Path $stderrPath) {
         Write-Host "EDGE_STDERR_TAIL"
