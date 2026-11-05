@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - feature/four-round-mdt-and-performance
   pull_request:
     branches:
       - main
