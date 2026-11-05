@@ -28,6 +28,7 @@ from app.config import OLLAMA_MODEL
 from app.schemas import SyntheticCase
 from app.services import batch_runner, mdt_rounds, run_store
 from app.services.ollama import get_ollama_status
+from app.services.case_integrity import build_source_case_facts, build_case_report_title
 
 ARTIFACT_DIR = BACKEND_DIR / "validation_artifacts"
 ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
@@ -53,35 +54,21 @@ def gpu_snapshot() -> str:
 
 def build_case() -> SyntheticCase:
     """A fixed, fictional case used only for software integration validation."""
+    # Exact snapshot from the user-uploaded baseline export. Preserve the raw
+    # shorthand and empty structured arrays so the regression run tests the
+    # free-text/structured-field discrepancy rather than silently repairing it.
     return SyntheticCase(
-        scenario_title="LIVE-VALIDATION-SYNTHETIC-01 — right vocal-cord SCC",
-        case_summary=(
-            "Fictional software-validation scenario only. A 75-year-old man has a "
-            "1 x 1 cm lesion involving the right vocal cord and anterior commissure. "
-            "Biopsy is described as squamous cell carcinoma. The synthetic history lists "
-            "diabetes, hypertension, smoking, and alcohol use. It also records family "
-            "support difficulties and prior difficulty adhering to planned appointments. "
-            "No staging, cord mobility, imaging, pulmonary function, formal fitness, "
-            "or complete work-up details are supplied. Do not infer missing facts."
-        ),
+        scenario_title="Synthetic head-and-neck case",
+        case_summary="dm\\nshtn\\nsmoker\\n\\n1x1 cm growth involving right vocal cord and anterior commissure",
         age_years=75,
-        primary_site="Right vocal cord",
-        histology="Squamous cell carcinoma",
-        relevant_comorbidities=["Diabetes", "Hypertension"],
-        social_context=[
-            "Smoking and alcohol use recorded in the fictional scenario",
-            "Family support difficulties recorded in the fictional scenario",
-            "Prior difficulty adhering to planned appointments recorded in the fictional scenario",
-        ],
-        known_unknowns=[
-            "Clinical T and N stage not supplied",
-            "Vocal cord mobility and fixation status not supplied",
-            "Imaging and endoscopic extent not supplied",
-            "Performance status and formal fitness not supplied",
-            "Renal, pulmonary, and hearing assessments not supplied",
-            "Patient goals and preferences not supplied",
-            "Dental, nutritional, and swallowing assessments not supplied",
-        ],
+        primary_site="ca glottis",
+        histology="scc",
+        relevant_comorbidities=[],
+        prior_treatment=[],
+        patient_goals=[],
+        social_context=[],
+        resource_context=[],
+        known_unknowns=[],
     )
 
 
@@ -95,6 +82,29 @@ def ids_match(rows: list[dict], expected: set[str], label: str) -> None:
     missing = sorted(expected - actual)
     extra = sorted(actual - expected)
     require(not missing and not extra, f"{label}: role mismatch; missing={missing}, extra={extra}")
+
+
+
+def verify_position_transitions(previous_rows: list[dict], current_rows: list[dict], label: str) -> None:
+    previous_field = "assessment" if label == "Round 2" else "result"
+    current_by_id = {row["agent_id"]: row for row in current_rows}
+    for previous in previous_rows:
+        agent_id = previous["agent_id"]
+        old_position = previous[previous_field]["position"]
+        current = current_by_id[agent_id]["result"]
+        new_position = current["position"]
+        transitions = current.get("position_changes") or []
+        if old_position != new_position:
+            expected = f"{old_position} → {new_position}"
+            require(
+                any(expected in item for item in transitions),
+                f"{label}: {agent_id} changed {old_position} → {new_position} without a traceable transition record.",
+            )
+        else:
+            require(
+                not transitions,
+                f"{label}: {agent_id} has a position-change record despite retaining {old_position}.",
+            )
 
 
 async def ensure_round1(run_id: str, metrics: dict) -> dict:
@@ -195,6 +205,20 @@ async def main() -> int:
                 "Round 1 safety boundary missing.")
         require(all(not row["assessment"].get("evidence_claims") for row in round1),
                 "Evidence claims must remain empty until evidence retrieval is implemented.")
+        expected_case_facts = build_source_case_facts(case)
+        require(
+            all(row["assessment"].get("case_facts") == expected_case_facts for row in round1),
+            "Round 1 factual registers differ from the immutable source case snapshot.",
+        )
+        require(
+            all("case_data_integrity_flags" in row["assessment"] for row in round1),
+            "Round 1 case-data integrity audit fields are missing.",
+        )
+        saved_run = run_store.get_run(run_id)
+        require(
+            saved_run["case_snapshot_sha256"] == case_hash,
+            "Persisted run case snapshot hash does not match the validation input.",
+        )
 
         round2_summary = await ensure_round(run_id, 2, metrics)
         round2 = run_store.list_round_results(run_id, 2)
@@ -203,6 +227,11 @@ async def main() -> int:
                 "Round 2 contains an incomplete agent result.")
         require(all(row["result"].get("provisional_conclusion") for row in round2),
                 "At least one Round-2 contribution lacks a conclusion.")
+        require(
+            all("case_data_integrity_flags" in row["result"] for row in round2),
+            "Round 2 case-data integrity audit fields are missing.",
+        )
+        verify_position_transitions(round1, round2, "Round 2")
 
         round3_summary = await ensure_round(run_id, 3, metrics)
         round3 = run_store.list_round_results(run_id, 3)
@@ -211,6 +240,11 @@ async def main() -> int:
                 "Round 3 contains an incomplete agent result.")
         require(all(row["result"].get("risk_flags") is not None for row in round3),
                 "At least one Round-3 risk review is malformed.")
+        require(
+            all("case_data_integrity_flags" in row["result"] for row in round3),
+            "Round 3 case-data integrity audit fields are missing.",
+        )
+        verify_position_transitions(round2, round3, "Round 3")
 
         round4_summary = await ensure_round(run_id, 4, metrics)
         report = run_store.get_final_report(run_id)
@@ -223,6 +257,18 @@ async def main() -> int:
                 "Chair report safety boundary missing.")
         require(report.get("evidence_retrieval_connected") is False,
                 "Evidence boundary flag is missing.")
+        require(
+            report.get("report_title") == build_case_report_title(case),
+            "Chair title contains fields not sourced from the verified case snapshot.",
+        )
+        require(
+            bool(report.get("case_data_integrity_flags")),
+            "Chair report did not include case-data integrity findings or an explicit no-flags note.",
+        )
+        require(
+            run_store.get_run(run_id)["updated_at"] >= round4_summary["updated_at"],
+            "Parent run updated_at was not advanced after the Chair stage.",
+        )
 
 
         def position_counts(rows: list[dict], result_field: str) -> dict[str, int]:
@@ -238,6 +284,33 @@ async def main() -> int:
             "round_3": position_counts(round3, "result"),
         }
         final_positions = position_counts_by_round["round_3"]
+        r1_positions = {row["agent_id"]: row["assessment"]["position"] for row in round1}
+        r2_positions = {row["agent_id"]: row["result"]["position"] for row in round2}
+        r3_positions = {row["agent_id"]: row["result"]["position"] for row in round3}
+        final_modal = max(final_positions, key=final_positions.get)
+        expected_minority_ids = {
+            agent_id
+            for agent_id in expected_ids
+            if len({r1_positions[agent_id], r2_positions[agent_id], r3_positions[agent_id]}) > 1
+            or (
+                r3_positions[agent_id] in {"conditional", "supports", "opposes"}
+                and r3_positions[agent_id] != final_modal
+            )
+        }
+        chair_minority_text = " ".join(report.get("minority_and_dissenting_views") or [])
+        require(
+            all(agent_id in chair_minority_text for agent_id in expected_minority_ids),
+            "Chair minority history omits at least one genuine position change or final non-modal view.",
+        )
+        stable_modal_insufficient = {
+            agent_id for agent_id in expected_ids
+            if r1_positions[agent_id] == r2_positions[agent_id] == r3_positions[agent_id] == final_modal
+            and final_modal == "insufficient_information"
+        }
+        require(
+            not any(agent_id in chair_minority_text for agent_id in stable_modal_insufficient),
+            "Chair minority history incorrectly labels stable modal insufficient-information roles as dissent.",
+        )
         if final_positions.get("supports") and final_positions.get("opposes"):
             expected_chair_status = "no_consensus"
         else:
