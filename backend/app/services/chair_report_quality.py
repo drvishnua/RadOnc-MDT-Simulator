@@ -7,6 +7,7 @@ import re
 
 from app.round_schemas import FinalMDTReport
 from app.schemas import SyntheticCase
+from app.services.case_integrity import build_case_report_title
 
 
 ROUND_SOURCES = (
@@ -25,6 +26,7 @@ SECTION_LIMITS = {
     "feasibility_and_resource_considerations": 15,
     "governance_and_safeguarding_considerations": 15,
     "evidence_limitations": 15,
+    "case_data_integrity_flags": 20,
 }
 
 
@@ -65,33 +67,21 @@ def _minority_history(
     round2_rows: list[dict],
     round3_rows: list[dict],
 ) -> list[str]:
-    by_agent: dict[str, dict[str, object]] = defaultdict(
-        lambda: {"name": "Role", "events": []}
-    )
-    for round_number, rows, field in (
-        (1, round1_rows, "assessment"),
-        (2, round2_rows, "result"),
-        (3, round3_rows, "result"),
-    ):
-        entries = _entries(rows, field)
-        counts = Counter(
-            item.get("position")
-            for _, item in entries
-            if item.get("position")
-        )
-        if not counts:
-            continue
-        modal_position = counts.most_common(1)[0][0]
-        for row, item in entries:
-            position = item.get("position")
-            if not position or position == modal_position:
-                continue
+    """Keep genuine qualified minority views and auditable position changes.
+
+    Stable insufficient-information roles are uncertainty contributors, not dissenters.
+    """
+    by_agent: dict[str, dict[str, object]] = defaultdict(lambda: {"name": "Role", "positions": [], "events": []})
+    for round_number, rows, field in ((1, round1_rows, "assessment"), (2, round2_rows, "result"), (3, round3_rows, "result")):
+        for row, item in _entries(rows, field):
             agent_id = str(row.get("agent_id") or "unknown-role")
             record = by_agent[agent_id]
             record["name"] = row.get("agent_name") or record["name"]
-            conclusion = " ".join(
-                str(item.get("provisional_conclusion") or "").split()
-            )
+            position = item.get("position")
+            if not position:
+                continue
+            record["positions"].append(position)
+            conclusion = " ".join(str(item.get("provisional_conclusion") or "").split())
             if len(conclusion) > 180:
                 conclusion = conclusion[:179].rstrip() + "…"
             event = f"Round {round_number}: {position}"
@@ -99,15 +89,23 @@ def _minority_history(
                 event += f" — {conclusion}"
             record["events"].append(event)
 
-    output = []
+    round3_counts = _position_counts(round3_rows, "result")
+    final_modal = round3_counts.most_common(1)[0][0] if round3_counts else None
+    output: list[str] = []
     for agent_id in sorted(by_agent):
         record = by_agent[agent_id]
-        output.append(
-            f"{agent_id} — {record['name']}: "
-            + "; ".join(record["events"])
-        )
+        positions = record["positions"]
+        if not positions:
+            continue
+        changed = len(set(positions)) > 1
+        final_position = positions[-1]
+        qualified_minority = final_position in {"conditional", "supports", "opposes"} and final_position != final_modal
+        substantive_position = any(position in {"supports", "opposes"} for position in positions)
+        if not (changed or qualified_minority or substantive_position):
+            continue
+        transition = "Position evolution: " + " → ".join(positions) + ". " if changed else ""
+        output.append(f"{agent_id} — {record['name']}: " + transition + "; ".join(record["events"]))
     return output[:45]
-
 
 def _merge_minority_views(
     history: list[str],
@@ -164,6 +162,7 @@ def ensure_chair_report_completeness(
     a completed analysis.
     """
     data = report.model_dump()
+    data["report_title"] = build_case_report_title(case)
     rows_by_round = (round1_rows, round2_rows, round3_rows)
     counts_by_round = {
         round_number: _position_counts(rows, field)
@@ -242,14 +241,18 @@ def ensure_chair_report_completeness(
         data["unresolved_disagreements"] = [note]
 
     history = _minority_history(round1_rows, round2_rows, round3_rows)
-    data["minority_and_dissenting_views"] = _merge_minority_views(
-        history,
-        data["minority_and_dissenting_views"],
-        SECTION_LIMITS["minority_and_dissenting_views"],
-    ) or [
-        "No non-modal role position was recorded in Rounds 1–3. This does not "
-        "establish unanimous clinical agreement; inspect the full role contributions."
+    # Saved role records are authoritative; ignore model-generated entries for
+    # stable insufficient-information roles.
+    data["minority_and_dissenting_views"] = history or [
+        "No genuine conditional/minority position or position change was identified in the saved rounds. "
+        "Stable insufficient-information roles are represented in uncertainty sections, not as dissent."
     ]
+
+    integrity_flags: list[str] = []
+    for rows, field in ((round1_rows, "assessment"), (round2_rows, "result"), (round3_rows, "result")):
+        for _, item in _entries(rows, field):
+            integrity_flags.extend(item.get("case_data_integrity_flags") or [])
+    data["case_data_integrity_flags"] = _unique(integrity_flags, SECTION_LIMITS["case_data_integrity_flags"])
 
     uncertainty_items = list(case.known_unknowns or [])
     missing_items = list(case.known_unknowns or [])

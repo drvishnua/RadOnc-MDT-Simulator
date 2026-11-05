@@ -105,7 +105,7 @@ def test_uniform_rounds_use_explicit_absence_notes_not_blank_or_false_consensus(
     _assert_all_sections_are_explicit(report)
     assert "not proof" in report.consensus_points[0].casefold() or "not unanimous" in report.consensus_points[0].casefold()
     assert "not proof" in report.unresolved_disagreements[0].casefold()
-    assert "no non-modal role position" in report.minority_and_dissenting_views[0].casefold()
+    assert "no genuine conditional/minority position" in report.minority_and_dissenting_views[0].casefold()
     assert "not establish" in report.major_uncertainties[0].casefold()
     assert "not supplied" in report.patient_and_family_considerations[0].casefold()
 
@@ -130,7 +130,8 @@ def test_minority_history_is_preserved_from_earlier_rounds_after_round_three_con
     assert "PP-05" in history
     assert "Round 1: conditional" in history
     assert "Round 2: conditional" in history
-    assert "Round 3:" not in history
+    assert "Round 3: insufficient_information" in history
+    assert "Position evolution" in history
     assert "earlier round" in report.unresolved_disagreements[0].casefold()
 
 

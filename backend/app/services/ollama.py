@@ -11,6 +11,7 @@ from pydantic import ValidationError
 from app.agent_schemas import AgentAssessment, AgentDraft
 from app.config import OLLAMA_BASE_URL, OLLAMA_MODEL
 from app.schemas import SyntheticCase
+from app.services.case_integrity import audit_unverified_case_claims, build_case_prompt_context, build_source_case_facts
 
 
 class OllamaUnavailable(Exception):
@@ -66,7 +67,7 @@ async def generate_agent_assessment(
     accepted until a traceable retrieval and citation-verification layer exists.
     """
     schema = AgentDraft.model_json_schema()
-    case_payload = case.model_dump(exclude_none=True)
+    case_payload = build_case_prompt_context(case)
 
     system_prompt = (
         "You are one role in a synthetic oncology MDT education simulation, never real care. "
@@ -145,6 +146,8 @@ async def generate_agent_assessment(
         agent_id=profile["agent_id"],
         round_number=round_number,
         evidence_claims=[],
+        case_facts=build_source_case_facts(case),
+        case_data_integrity_flags=audit_unverified_case_claims(case, draft.model_dump(exclude={"case_facts"})),
         safety_boundary="educational_simulation_only",
         not_a_treatment_instruction=True,
         **draft.model_dump(),

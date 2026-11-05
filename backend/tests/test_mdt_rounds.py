@@ -125,7 +125,7 @@ def test_four_rounds_require_full_previous_round_and_preserve_all_roles(monkeypa
     assert report.status_code == 200
     assert report.json()["not_a_treatment_instruction"] is True
     assert report.json()["evidence_retrieval_connected"] is False
-    assert report.json()["report_title"] == "Synthetic MDT educational synthesis"
+    assert report.json()["report_title"] == "MDT Chair Synthesis: Larynx — Squamous cell carcinoma"
 
 
 def test_round_cannot_start_before_all_45_independent_assessments(monkeypatch, tmp_path):
@@ -294,3 +294,12 @@ def test_uniform_support_labels_with_conflicting_options_are_not_consensus():
     assert "descriptive, not votes" in " ".join(report.consensus_points)
     assert report.chair_conclusion.startswith("No treatment recommendation can be made")
 
+
+
+def test_round_finish_updates_parent_run_timestamp(monkeypatch, tmp_path):
+    run_id = _create_complete_round1(monkeypatch, tmp_path)
+    run_store.create_round_job(run_id, 2)
+    expected = "2099-01-01T00:00:00+00:00"
+    monkeypatch.setattr(run_store, "_now", lambda: expected)
+    run_store.mark_round_finished(run_id, 2)
+    assert run_store.get_run(run_id)["updated_at"] == expected

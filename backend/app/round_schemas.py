@@ -36,6 +36,7 @@ class RoundContribution(StrictModel):
     remaining_unknowns: list[str] = Field(default_factory=list, max_length=8)
     risk_flags: list[str] = Field(default_factory=list, max_length=8)
     confidence: float = Field(ge=0.0, le=1.0)
+    case_data_integrity_flags: list[str] = Field(default_factory=list, max_length=20)
     safety_boundary: Literal["educational_simulation_only"] = "educational_simulation_only"
     not_a_treatment_instruction: Literal[True] = True
 
@@ -74,6 +75,7 @@ class FinalMDTReport(StrictModel):
     governance_and_safeguarding_considerations: list[str]
     evidence_limitations: list[str]
     chair_reflection: str
+    case_data_integrity_flags: list[str] = Field(default_factory=list, max_length=20)
     evidence_retrieval_connected: Literal[False] = False
     safety_boundary: Literal["educational_simulation_only"] = "educational_simulation_only"
     not_a_treatment_instruction: Literal[True] = True

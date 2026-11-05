@@ -18,6 +18,7 @@ from app.round_schemas import (
     RoundContributionDraft,
 )
 from app.schemas import SyntheticCase
+from app.services.case_integrity import audit_unverified_case_claims, build_case_prompt_context, build_case_report_title
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -340,7 +341,7 @@ def reconcile_chair_report_draft(
 
     return FinalMDTReport(
         run_id=run_id,
-        report_title=draft.report_title,
+        report_title=build_case_report_title(case),
         consensus_status=consensus_status,
         chair_conclusion=chair_conclusion,
         overall_educational_synthesis=overall,
@@ -354,6 +355,10 @@ def reconcile_chair_report_draft(
         governance_and_safeguarding_considerations=governance,
         evidence_limitations=evidence_limitations,
         chair_reflection=reflection,
+        case_data_integrity_flags=_unique_strings(
+            [flag for _, result in (r1 + r2 + r3) for flag in (result.get("case_data_integrity_flags") or [])],
+            limit=20,
+        ),
     )
 
 
@@ -386,7 +391,7 @@ async def generate_debate_contribution(
         "but explain why. Do not imply that omitted perspectives agree. Do not force consensus.\n"
         f"ROLE: {profile['name']}\nMANDATE: {profile['mandate']}\n"
         "SYNTHETIC CASE:\n"
-        + json.dumps(case.model_dump(exclude_none=True), ensure_ascii=False, separators=(",", ":"))
+        + json.dumps(build_case_prompt_context(case), ensure_ascii=False, separators=(",", ":"))
         + "\nYOUR ROUND-1 POSITION:\n"
         + json.dumps(own, ensure_ascii=False, separators=(",", ":"))
         + "\nSELECTED PEER POSITIONS (compressed for local context limits):\n"
@@ -394,10 +399,18 @@ async def generate_debate_contribution(
         + "\nReturn a concise response with specific agreements, disagreements, and any reason for changing or retaining your position. The output format is schema-enforced."
     )
     draft = await _generate_structured(prompt, RoundContributionDraft, max_tokens)
+    payload = draft.model_dump()
+    previous_position = own_independent_assessment.get("position", "unknown")
+    if draft.position != previous_position:
+        rationale = _compact(draft.response_to_other_perspectives or draft.provisional_conclusion, 320)
+        payload["position_changes"] = [f"Round 1 → Round 2: {previous_position} → {draft.position}. Rationale: {rationale}"]
+    else:
+        payload["position_changes"] = []
     return RoundContribution(
         agent_id=profile["agent_id"],
         round_number=2,
-        **draft.model_dump(),
+        case_data_integrity_flags=audit_unverified_case_claims(case, payload),
+        **payload,
     )
 
 
@@ -436,7 +449,7 @@ async def generate_adversarial_contribution(
         "change the educational synthesis. Preserve justified dissent.\n"
         f"ROLE: {profile['name']}\nMANDATE: {profile['mandate']}\n"
         "SYNTHETIC CASE:\n"
-        + json.dumps(case.model_dump(exclude_none=True), ensure_ascii=False, separators=(",", ":"))
+        + json.dumps(build_case_prompt_context(case), ensure_ascii=False, separators=(",", ":"))
         + "\nYOUR PREVIOUS POSITIONS:\n"
         + json.dumps(own, ensure_ascii=False, separators=(",", ":"))
         + "\nSELECTED DEBATE VIEW DIGEST:\n"
@@ -444,10 +457,18 @@ async def generate_adversarial_contribution(
         + "\nReturn concise findings only. List concrete risks and remaining unknowns; do not invent source-backed conclusions. The output format is schema-enforced."
     )
     draft = await _generate_structured(prompt, RoundContributionDraft, max_tokens)
+    payload = draft.model_dump()
+    previous_position = own_debate_contribution.get("position", "unknown")
+    if draft.position != previous_position:
+        rationale = _compact(draft.response_to_other_perspectives or draft.provisional_conclusion, 320)
+        payload["position_changes"] = [f"Round 2 → Round 3: {previous_position} → {draft.position}. Rationale: {rationale}"]
+    else:
+        payload["position_changes"] = []
     return RoundContribution(
         agent_id=profile["agent_id"],
         round_number=3,
-        **draft.model_dump(),
+        case_data_integrity_flags=audit_unverified_case_claims(case, payload),
+        **payload,
     )
 
 
@@ -519,7 +540,7 @@ async def generate_chair_report(
         "Do not recommend a patient-specific treatment or include doses. Evidence retrieval is "
         "not connected: say so, and identify evidence gaps rather than inventing citations. "
         "Do not silently resolve contradictory facts. Do not say unanimous, all agents, or no dissent unless exact position counts support it. Treat position labels as descriptions, not votes; distinguish a conditional view from support/opposition. Consensus requires the same explicit proposition or educational option to be supported in the saved contributions. A uniform position-label distribution alone is not consensus; when no shared proposition is established, set insufficient_information.\nSYNTHETIC CASE:\n"
-        + json.dumps(case.model_dump(exclude_none=True), ensure_ascii=False, separators=(",", ":"))
+        + json.dumps(build_case_prompt_context(case), ensure_ascii=False, separators=(",", ":"))
         + "\nROUND 1 INDEPENDENT POSITIONS:\n"
         + json.dumps(digest(round1_views, "round1"), ensure_ascii=False, separators=(",", ":"))
         + "\nROUND 2 DEBATE POSITIONS:\n"

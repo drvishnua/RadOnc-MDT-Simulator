@@ -63,6 +63,7 @@ class AgentDraft(StrictModel):
     preferred_educational_option: str = Field(min_length=5, max_length=800)
     perspective_summary: str = Field(min_length=10, max_length=3000)
     case_facts: list[str] = Field(default_factory=list, max_length=25)
+    case_data_integrity_flags: list[str] = Field(default_factory=list, max_length=20)
     assumptions: list[str] = Field(default_factory=list, max_length=20)
     unknowns: list[str] = Field(default_factory=list, max_length=20)
     discussion_options: list[str] = Field(default_factory=list, max_length=12)

@@ -11,6 +11,7 @@ from app.agent_schemas import AgentAssessment
 from app.agents.catalog import AGENT_PROFILES, EXPECTED_AGENT_COUNT
 from app.config import APP_NAME, APP_VERSION
 from app.schemas import AgentAssessmentRequest, BatchRunRequest, CaseValidationResult, SyntheticCase
+from app.services.case_integrity import build_case_validation_warnings
 from app.services import run_store
 from app.services.batch_runner import batch_is_running, run_independent_assessments, validate_resume_state
 from app.services.mdt_rounds import prepare_round_resume, round_is_running, run_mdt_round
@@ -238,14 +239,7 @@ async def get_final_mdt_report(run_id: str) -> dict[str, object]:
 
 @app.post("/api/cases/validate", response_model=CaseValidationResult)
 async def validate_case(case: SyntheticCase) -> CaseValidationResult:
-    warnings: list[str] = []
-    if case.age_years is None:
-        warnings.append("Age is not supplied; keep it marked as unknown in the simulation.")
-    if not case.primary_site:
-        warnings.append("Primary site is not supplied.")
-    if not case.histology:
-        warnings.append("Histology is not supplied.")
+    warnings = build_case_validation_warnings(case)
     if not case.known_unknowns:
         warnings.append("No explicit known-unknowns were listed; review for missing case details.")
-
     return CaseValidationResult(valid=True, warnings=warnings)

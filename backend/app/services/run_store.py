@@ -593,6 +593,15 @@ def mark_round_finished(run_id: str, round_number: int) -> None:
             """,
             (status, now, run_id, round_number),
         )
+        # Keep the parent run timestamp current through all four rounds.
+        if round_number == 4 and status in {"completed", "completed_with_errors"}:
+            overall_status = "completed" if status == "completed" else "completed_with_errors"
+            db.execute(
+                "UPDATE simulation_runs SET status = ?, updated_at = ? WHERE run_id = ?",
+                (overall_status, now, run_id),
+            )
+        else:
+            db.execute("UPDATE simulation_runs SET updated_at = ? WHERE run_id = ?", (now, run_id))
 
 
 def reset_failed_round_agents(run_id: str, round_number: int) -> None:
