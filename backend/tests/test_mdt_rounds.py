@@ -69,7 +69,7 @@ def _final_report(run_id, case, round1, round2, round3):
 def _create_complete_round1(monkeypatch, tmp_path):
     monkeypatch.setattr(run_store, "DB_PATH", tmp_path / "mdt_rounds.sqlite3")
 
-    async def fake_assess(profile, case, round_number):
+    async def fake_assess(profile, case, round_number, max_tokens=1100):
         return _assessment(profile, case, round_number)
 
     monkeypatch.setattr(batch_runner, "generate_agent_assessment", fake_assess)
