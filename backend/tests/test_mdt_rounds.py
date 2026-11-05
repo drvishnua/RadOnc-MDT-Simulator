@@ -233,6 +233,8 @@ def test_chair_reconciliation_preserves_position_counts_and_minor_view():
     assert "1/45 conditional" in report.overall_educational_synthesis
     assert "unanimously" not in report.overall_educational_synthesis.casefold()
     assert report.minority_and_dissenting_views
+    assert report.consensus_points
+    assert "not unanimous agreement" in report.consensus_points[0]
     assert any("PP-05" in item and "conditional" in item for item in report.minority_and_dissenting_views)
     assert report.major_uncertainties
     assert report.missing_information_before_real_world_review
