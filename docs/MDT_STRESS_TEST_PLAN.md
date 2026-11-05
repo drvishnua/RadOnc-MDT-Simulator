@@ -69,14 +69,32 @@ Automated text checks are screens, not proof of clinical correctness. Avoid trea
 
 ## Initial execution sequence
 
-1. Freeze the current baseline commit and test-case versions.
-2. Run all 20 cases once; save complete exports.
-3. Repeat a representative subset (at least 5) without changing inputs to assess stochastic consistency.
-4. Independently review hard fails and all major findings.
-5. Classify each finding: ingestion/provenance, role profile, prompt, peer selection/context, schema, orchestration, Chair reconciliation, or model limitation.
+1. Freeze the baseline commit and the versioned test-case specifications.
+2. Execute the six priority executable inputs (MDT-002 to MDT-007) with the live local model using the stress-suite runner below.
+3. Review every hard fail and major finding against the complete saved round contributions; automated text checks are screening signals, not semantic adjudication.
+4. Repeat at least two representative cases without changing inputs to assess stochastic consistency.
+5. Classify each confirmed finding: ingestion/provenance, role profile, prompt, peer selection/context, schema, orchestration, Chair reconciliation, or model limitation.
 6. Make one bounded change at a time on the development branch.
-7. Rerun affected cases and the full regression subset against the unchanged baseline.
-8. Publish a comparison with exact commit/model/prompt versions. Do not claim improvement from an unpaired or differently configured run.
+7. Rerun affected cases against the same case versions and model configuration.
+8. Expand to all 20 cases only after the first six-case harness and findings have been reviewed.
+9. Publish comparisons with exact commit/model/prompt versions. Do not claim improvement from an unpaired or differently configured run.
+
+### Executable stress suite
+
+From the repository root on the connected Windows laptop, after the development branch has synced and the local Ollama service is available:
+
+```powershell
+cd backend
+python scripts/run_mdt_stress_suite.py
+```
+
+The default run executes MDT-002 through MDT-007 sequentially at concurrency 1. A narrower run can be selected explicitly:
+
+```powershell
+python scripts/run_mdt_stress_suite.py --case-ids MDT-002,MDT-003
+```
+
+The runner saves a per-case SQLite record and incrementally writes `backend/validation_artifacts/stress_suite/stress_suite_report.json`. A case may be recorded as completed with process findings; this is not a clinical pass. The report preserves run IDs, case hashes, round outputs, Chair reports, position counts, timing and detected process-safety findings. A failed/incomplete case is recorded and the suite continues to the next case.
 
 ## Required run manifest
 
