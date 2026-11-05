@@ -58,6 +58,7 @@ async def generate_agent_assessment(
     profile: dict[str, str],
     case: SyntheticCase,
     round_number: int,
+    max_tokens: int = 1100,
 ) -> AgentAssessment:
     """Generate one concise educational position and validate it.
 
