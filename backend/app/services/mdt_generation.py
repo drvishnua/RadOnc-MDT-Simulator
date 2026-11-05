@@ -150,16 +150,12 @@ def reconcile_chair_report_draft(
     }
     final_counts = counts_by_round["Round 3"]
 
-    # A genuine support/opposition split is no consensus. Missing information takes
-    # precedence over a qualified position; position labels are never treated as votes.
+    # Position labels describe each role's stance; they do not identify a shared
+    # proposition or common educational option. Only a direct support/opposition
+    # split is enough to establish that the recorded positions conflict. In every
+    # other case, no proposition-level consensus has been demonstrated.
     if final_counts.get("supports") and final_counts.get("opposes"):
         consensus_status = "no_consensus"
-    elif final_counts.get("insufficient_information"):
-        consensus_status = "insufficient_information"
-    elif final_counts.get("conditional"):
-        consensus_status = "qualified_consensus"
-    elif final_counts.get("supports") or final_counts.get("opposes"):
-        consensus_status = "consensus"
     else:
         consensus_status = "insufficient_information"
 
@@ -202,20 +198,17 @@ def reconcile_chair_report_draft(
     }
     agreement_threshold = max(3, (len(r2) + 3) // 4)
     consensus_points = [
-        f"Repeated Round-2 agreement ({count} role contributions): {agreement_text[key]}"
+        (
+            f"Repeated Round-2 statement ({count} role contributions; not sufficient "
+            f"by itself to establish consensus on a common proposition): {agreement_text[key]}"
+        )
         for key, count in agreement_counts.most_common(5)
         if count >= agreement_threshold
     ]
-    if (
-        not consensus_points
-        and final_counts.get("insufficient_information")
-        and not final_counts.get("supports")
-        and not final_counts.get("opposes")
-    ):
+    if not consensus_points:
         consensus_points.append(
-            "Round 3 recorded no supports/opposes labels: "
-            + _format_position_counts(final_counts)
-            + ". This indicates no definitive treatment position, not unanimous agreement."
+            "No shared, proposition-level educational option was demonstrated in the "
+            "saved Round-2 statements; role-position labels are descriptive, not votes."
         )
 
     # Any non-modal Round-3 label is listed with its source conclusion. It is not
@@ -242,7 +235,7 @@ def reconcile_chair_report_draft(
                     f"{row.get('agent_name', 'Role')} ({position}, Round 1): "
                     f"{_compact(result.get('provisional_conclusion', ''), 300)}"
                 )
-    minority_views = minority_views[:10]
+    minority_views = minority_views[:45]
 
     unresolved: list[str] = []
     if len(final_counts) > 1:
@@ -250,6 +243,16 @@ def reconcile_chair_report_draft(
             "Round-3 position labels were not uniform: "
             + _format_position_counts(final_counts)
             + ". The labels are preserved as recorded and are not, by themselves, proof of opposing treatment views."
+        )
+    elif len(final_counts) == 1 and any(
+        final_counts.get(position)
+        for position in ("supports", "opposes", "conditional")
+    ):
+        unresolved.append(
+            "Round-3 position labels were uniform ("
+            + _format_position_counts(final_counts)
+            + "), but the saved contributions do not establish one shared, proposition-level "
+            "educational option. The report therefore does not infer consensus from labels alone."
         )
     if final_counts.get("supports") and final_counts.get("opposes"):
         unresolved.append(
@@ -515,7 +518,7 @@ async def generate_chair_report(
         "Do not invent consensus. Explicitly separate genuine agreement from unresolved dissent. "
         "Do not recommend a patient-specific treatment or include doses. Evidence retrieval is "
         "not connected: say so, and identify evidence gaps rather than inventing citations. "
-        "Do not silently resolve contradictory facts. Do not say unanimous, all agents, or no dissent unless exact position counts support it. Treat position labels as descriptions, not votes; distinguish a conditional view from support/opposition.\nSYNTHETIC CASE:\n"
+        "Do not silently resolve contradictory facts. Do not say unanimous, all agents, or no dissent unless exact position counts support it. Treat position labels as descriptions, not votes; distinguish a conditional view from support/opposition. Consensus requires the same explicit proposition or educational option to be supported in the saved contributions. A uniform position-label distribution alone is not consensus; when no shared proposition is established, set insufficient_information.\nSYNTHETIC CASE:\n"
         + json.dumps(case.model_dump(exclude_none=True), ensure_ascii=False, separators=(",", ":"))
         + "\nROUND 1 INDEPENDENT POSITIONS:\n"
         + json.dumps(digest(round1_views, "round1"), ensure_ascii=False, separators=(",", ":"))
