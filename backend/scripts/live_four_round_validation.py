@@ -240,13 +240,8 @@ async def main() -> int:
         final_positions = position_counts_by_round["round_3"]
         if final_positions.get("supports") and final_positions.get("opposes"):
             expected_chair_status = "no_consensus"
-        elif final_positions.get("insufficient_information"):
-            expected_chair_status = "insufficient_information"
-        elif final_positions.get("conditional"):
-            expected_chair_status = "qualified_consensus"
-        elif final_positions.get("supports") or final_positions.get("opposes"):
-            expected_chair_status = "consensus"
         else:
+            # Uniform labels do not establish a shared proposition or common option.
             expected_chair_status = "insufficient_information"
         require(
             report.get("consensus_status") == expected_chair_status,
