@@ -2,7 +2,7 @@
 
 A local-first, AI-assisted educational simulator for multidisciplinary oncology case discussions.
 
-> **Current milestone:** 45 independent assessments, 45-agent debate, 45-agent adversarial review, and MDT Chair synthesis are implemented in the development branch and covered by automated orchestration tests. Full four-round execution using 45 live local model calls per stage has not yet been completed end-to-end.
+> **Current milestone:** The development branch implements 45 independent assessments, 45-agent debate, 45-agent adversarial review, and SG-07 Chair synthesis. An earlier full local-model run completed all 136 generations. The newer Chair reconciliation logic is covered by backend regression tests; a fresh live-model validation is pending.
 
 ## Purpose
 
@@ -15,21 +15,21 @@ All 45 configured role profiles are required in each of Rounds 1–3. Round 4 us
 ## Four-round workflow
 
 1. **Round 1 — Independent assessments:** Each role receives the saved synthetic case and its own role profile. No other agent's output is included. Each must state a position, provisional conclusion, and preferred educational option or explain why none can yet be preferred.
-2. **Round 2 — MDT debate:** Each role receives its own Round-1 view and a bounded, cross-specialty digest of selected peer positions. It records agreements, substantive challenges, and any change in position. The full independent views remain preserved.
+2. **Round 2 — MDT debate:** Each role receives its own Round-1 view and a bounded digest of selected peer positions. It records agreements, substantive challenges, and any change in position. The full independent views remain preserved.
 3. **Round 3 — Adversarial review:** All roles identify unsupported assumptions, uncertainty, missing information, patient/context concerns, feasibility issues, risks, and governance questions.
-4. **Round 4 — Chair synthesis:** The MDT Chair produces a structured educational report with an explicit consensus status and conclusion, consensus points, unresolved disagreements, minority views, uncertainties, missing information, patient/family issues, feasibility, governance, and evidence limitations.
+4. **Round 4 — Chair synthesis:** SG-07 creates a structured Chair draft. Before storage, the backend reconciles it against saved role records: exact position counts are recomputed, non-modal views are preserved with source conclusions, and missing-information, patient/family, feasibility, governance, and evidence-limitations sections are populated from source data.
 
-The system does not invent a majority or force consensus. The Chair report is an educational synthesis, not a treatment directive.
+Position labels are descriptions, not votes. The system does not invent a majority or force consensus. A conditional position is not automatically classified as opposition, and a non-uniform distribution is not described as unanimous.
 
 ## Dashboard capabilities
 
 - Synthetic case validation and 45-role directory.
 - Sequential local Ollama execution with progress and per-agent outputs.
-- Automatic single retry for malformed structured output, without rerunning successful agents.
+- One retry with a larger output budget for malformed structured responses, without rerunning successful agents.
 - Resume failed/interrupted work while retaining completed results.
 - Separate Start/Resume controls and progress for Rounds 2–4.
 - Expandable role contributions and a final Chair report.
-- JSON export of all available rounds, including the exact saved case JSON and its SHA-256 checksum.
+- JSON export of all available rounds, including exact saved case JSON and its SHA-256 checksum.
 - Run and case recovery after browser refresh.
 
 ## API overview
@@ -54,9 +54,13 @@ See the backend and frontend READMEs for setup and details.
 
 ## Local inference and runtime
 
-The target laptop uses Ollama with qwen3.5:4b and an 8 GB RTX 4060. The orchestrator defaults to **one active generation at a time**. A real two-request benchmark on the connected laptop measured 0.86× throughput relative to sequential execution, so two-at-once execution was not enabled.
+The target laptop uses Ollama with qwen3.5:4b and an 8 GB RTX 4060. The orchestrator defaults to **one active generation at a time**. A real two-request benchmark measured 0.86x throughput relative to sequential execution, so two-at-once execution was not enabled.
 
-The model is kept warm during a run. Prompts use Ollama's schema-constrained output rather than duplicating the full JSON schema in prompt text. Context remains fixed at 4K until a production-shaped live benchmark can validate both speed and structured-output correctness.
+The model is kept warm during a run. Prompts use Ollama's schema-constrained output rather than duplicating the full JSON schema in prompt text. Context remains fixed at 4K. Initial/retry output budgets are 1,100/1,500 tokens for Round 1, 700/1,000 for Rounds 2–3, and 1,600/2,200 for the Chair.
+
+## Validation status
+
+Live run 41941583054 completed all 136 generations with zero failures or retries in 798.63 seconds. This run predates the new Chair reconciliation logic. The backend suite passed 26 tests on the reconciled code, and backend/frontend CI checks passed on commit 1daa89eda17f7b09e028a1aa5fc981a6c3879187. A fresh live run is still required to validate the reconciled Chair against the local model.
 
 ## Evidence boundary
 
