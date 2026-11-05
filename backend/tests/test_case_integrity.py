@@ -52,6 +52,31 @@ def test_unverified_stage_and_sex_claims_are_flagged_but_qualified_mentions_are_
     assert qualified == []
 
 
+def test_hypothetical_stage_examples_and_missing_prior_records_are_not_false_positive_claims():
+    case = _case()
+    payload = {
+        "risk_flags": [
+            "Assuming T1 or N0 from the limited description would be unsafe.",
+            "For example, a hypothetical T1N0 case cannot be inferred.",
+            "No prior treatment data or records are supplied for review.",
+        ]
+    }
+    assert audit_unverified_case_claims(case, payload) == []
+
+
+def test_unqualified_stage_and_prior_treatment_absence_claims_remain_flagged():
+    case = _case()
+    payload = {
+        "provisional_conclusion": (
+            "The tumour is T1N0. The patient has received no prior treatment."
+        )
+    }
+    flags = " ".join(audit_unverified_case_claims(case, payload)).casefold()
+    assert "t-stage" in flags
+    assert "n-stage" in flags
+    assert "prior-treatment" in flags
+
+
 def test_report_title_never_adds_unprovided_stage():
     assert build_case_report_title(_case()) == "MDT Chair Synthesis: ca glottis — scc"
 
