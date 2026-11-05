@@ -177,8 +177,8 @@ function readSavedCase(): SyntheticCasePayload | null {
     }
 
     return {
-      scenario_title: value.scenario_title,
-      case_summary: value.case_summary,
+      scenario_title: value.scenario_title as string,
+      case_summary: value.case_summary as string,
       age_years: value.age_years as number | null,
       primary_site: value.primary_site as string | null,
       histology: value.histology as string | null
