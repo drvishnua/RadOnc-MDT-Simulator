@@ -119,6 +119,33 @@ jobs:
             if (Test-Path $path) { Get-Content $path -Tail 50 } else { Write-Host "LOG_NOT_FOUND" }
           }
 
+          Write-Host "=== HEADLESS EDGE RENDER CHECK ==="
+          $edgeCandidates = @(
+            (Join-Path ([Environment]::GetFolderPath("ProgramFilesX86")) "Microsoft\Edge\Application\msedge.exe"),
+            (Join-Path ([Environment]::GetFolderPath("ProgramFiles")) "Microsoft\Edge\Application\msedge.exe")
+          )
+          $edgeExe = $edgeCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if ($edgeExe) {
+            $domPath = Join-Path $env:RUNNER_TEMP "radonc-edge-dom.html"
+            $edgeErrorPath = Join-Path $env:RUNNER_TEMP "radonc-edge.stderr.log"
+            & $edgeExe --headless=new --no-first-run --disable-gpu --disable-extensions --no-sandbox --virtual-time-budget=8000 --dump-dom "http://127.0.0.1:5173/" 1> $domPath 2> $edgeErrorPath
+            $edgeExit = $LASTEXITCODE
+            if (Test-Path $domPath) {
+              $dom = Get-Content -Path $domPath -Raw
+              Write-Host "EDGE_HEADLESS_EXIT=$edgeExit"
+              Write-Host "EDGE_DOM_LENGTH=$($dom.Length)"
+              Write-Host "EDGE_APP_SHELL_MOUNTED=$($dom.Contains('class="app-shell"'))"
+              Write-Host "EDGE_ROOT_CONTENT_PRESENT=$($dom.Contains('RadOnc MDT'))"
+              Write-Host ("EDGE_DOM_HEAD=" + $dom.Substring(0,[Math]::Min(3500,$dom.Length)))
+            }
+            if (Test-Path $edgeErrorPath) {
+              Write-Host "EDGE_STDERR_TAIL"
+              Get-Content $edgeErrorPath -Tail 60
+            }
+          } else {
+            Write-Host "EDGE_HEADLESS_CHECK_SKIPPED: Microsoft Edge executable not found."
+          }
+
           Write-Host "=== OLLAMA ==="
           try {
             $ollama = Invoke-RestMethod -Uri "http://127.0.0.1:11434/api/version" -TimeoutSec 5
