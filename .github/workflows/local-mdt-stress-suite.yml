@@ -23,19 +23,19 @@ jobs:
       OLLAMA_MODEL: qwen3.5:4b
       RADONC_AGENT_CONCURRENCY: "1"
     steps:
-      - name: Check out the exact requested development-branch commit
+      - name: Check out the exact triggering commit
         uses: actions/checkout@v4
         with:
-          ref: feature/four-round-mdt-and-performance
+          ref: ${{ github.sha }}
           clean: false
       - name: Validate request and local runtime
         id: request
         shell: powershell
         run: |
           $ErrorActionPreference = "Stop"
-          $branch = git branch --show-current
           $sha = git rev-parse HEAD
-          if ($branch -ne "feature/four-round-mdt-and-performance") { throw "Unexpected branch: $branch" }
+          if ($sha -ne $env:GITHUB_SHA) { throw "Checkout SHA $sha does not match triggering SHA $env:GITHUB_SHA." }
+          if ($env:GITHUB_REF -ne "refs/heads/feature/four-round-mdt-and-performance") { throw "Unexpected triggering ref: $env:GITHUB_REF" }
           $request = Get-Content ".github/mdt-stress-request.json" -Raw | ConvertFrom-Json
           if ($request.requested_by -ne "drvishnua") { throw "Unauthorised stress request." }
           $allowed = @("MDT-002","MDT-003","MDT-004","MDT-005","MDT-006","MDT-007")
@@ -46,7 +46,6 @@ jobs:
           "STRESS_CASE_IDS=$($ids -join ',')" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "STRESS_REQUEST_ID=$($request.request_id)"
           Write-Host "STRESS_COMMIT=$sha"
-          Write-Host "STRESS_BRANCH=$branch"
           Write-Host "STRESS_CASE_IDS=$($ids -join ',')"
           python --version
           $ollama = Invoke-RestMethod -Uri "http://127.0.0.1:11434/api/version" -TimeoutSec 10
@@ -67,6 +66,10 @@ jobs:
           $ErrorActionPreference = "Stop"
           python scripts/run_mdt_stress_suite.py --case-ids $env:STRESS_CASE_IDS
           if ($LASTEXITCODE -ne 0) { throw "Stress suite returned exit code $LASTEXITCODE." }
+          $report = Get-Content "validation_artifacts/stress_suite/stress_suite_report.json" -Raw | ConvertFrom-Json
+          if ($report.simulator_commit -ne $env:GITHUB_SHA) {
+            throw "Report simulator_commit $($report.simulator_commit) does not match triggering SHA $env:GITHUB_SHA."
+          }
       - name: Upload complete stress report and SQLite audit database
         if: always()
         uses: actions/upload-artifact@v4
