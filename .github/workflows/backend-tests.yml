@@ -6,6 +6,9 @@ on:
     branches:
       - main
       - feature/four-round-mdt-and-performance
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-tests.yml"
   pull_request:
     branches:
       - main
@@ -23,74 +26,25 @@ concurrency:
 jobs:
   test:
     name: Install backend dependencies and run tests
-    runs-on: [self-hosted, Windows, X64]
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Find installed Python 3.11 or newer
-        shell: powershell
-        run: |
-          $ErrorActionPreference = "Continue"
-          Write-Host "=== PYTHON LAUNCHERS ==="
-          $launcher = Get-Command py -ErrorAction SilentlyContinue
-          if ($launcher) {
-            py -0p
-          }
-          $selected = $null
-          if ($launcher) {
-            foreach ($version in @("3.13", "3.12", "3.11")) {
-              $candidate = & py "-$version" -c "import sys; print(sys.executable)" 2>$null
-              if ($LASTEXITCODE -eq 0 -and $candidate) {
-                $selected = [string]($candidate | Select-Object -Last 1)
-                break
-              }
-            }
-          }
-          if (-not $selected) {
-            $pythonCommand = Get-Command python -ErrorAction SilentlyContinue
-            if ($pythonCommand) {
-              $candidate = & python -c "import sys; print(sys.executable)" 2>$null
-              if ($LASTEXITCODE -eq 0 -and $candidate) {
-                $selected = [string]($candidate | Select-Object -Last 1)
-              }
-            }
-          }
-          if (-not $selected) {
-            Write-Error "No usable Python 3.11+ installation found on this laptop."
-            exit 1
-          }
-          $version = & $selected -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"
-          if ([version]$version -lt [version]"3.11") {
-            Write-Error "Python 3.11 or newer is required; found $version."
-            exit 1
-          }
-          Write-Host "Selected Python: $selected"
-          Write-Host "Python version: $version"
-          "PYTHON_EXE=$selected" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: backend/requirements.txt
 
       - name: Install dependencies
         working-directory: backend
-        shell: powershell
         run: |
-          & $env:PYTHON_EXE -m pip install --upgrade pip
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          & $env:PYTHON_EXE -m pip install -r requirements.txt
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
 
       - name: Run backend tests
         working-directory: backend
-        shell: powershell
-        run: |
-          & $env:PYTHON_EXE -m pytest
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-      - name: Benchmark one vs two concurrent local Ollama requests
-        shell: powershell
-        continue-on-error: true
-        run: |
-          $python = & py -3 -c "import sys; print(sys.executable)"
-          if ($LASTEXITCODE -ne 0) { throw "Python launcher not available for optional Ollama benchmark." }
-          & $python (Join-Path $env:GITHUB_WORKSPACE "backend/scripts/benchmark_ollama_parallel.py")
-          if ($LASTEXITCODE -ne 0) { Write-Warning "Ollama benchmark did not complete; unit-test result remains authoritative." }
+        run: python -m pytest
