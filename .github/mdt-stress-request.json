@@ -1,12 +1,7 @@
 {
   "requested_by": "drvishnua",
-  "request_id": "stress-suite-2026-11-06-all-six",
+  "request_id": "focused-mdt006-2026-11-06-eff6b445",
   "case_ids": [
-    "MDT-002",
-    "MDT-003",
-    "MDT-004",
-    "MDT-005",
-    "MDT-006",
-    "MDT-007"
+    "MDT-006"
   ]
 }
