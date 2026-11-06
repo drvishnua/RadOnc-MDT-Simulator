@@ -173,27 +173,9 @@ def ensure_chair_report_completeness(
     for field, limit in SECTION_LIMITS.items():
         data[field] = _unique(data.get(field) or [], limit)
 
-    if not data["consensus_points"]:
-        if (
-            final_counts.get("insufficient_information")
-            and not final_counts.get("supports")
-            and not final_counts.get("opposes")
-        ):
-            note = (
-                "No definitive consensus point was established: Round 3 recorded "
-                + ", ".join(
-                    f"{count}/{sum(final_counts.values())} {position.replace('_', '-')}"
-                    for position, count in sorted(final_counts.items())
-                )
-                + "; this is insufficient information, not unanimous agreement."
-            )
-        else:
-            note = (
-                "No repeated cross-role agreement met the reporting threshold in "
-                "the saved Round-2 contributions; position labels are descriptive, "
-                "not votes."
-            )
-        data["consensus_points"] = [note]
+    # An empty consensus_points list is meaningful: free-text agreement
+    # notes do not provide proposition-level evidence and must not be replaced
+    # with a position-count statement labelled as a consensus point.
 
     if not data["unresolved_disagreements"]:
         if len(final_counts) > 1:
