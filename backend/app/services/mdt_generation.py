@@ -187,35 +187,9 @@ def reconcile_chair_report_draft(
 
     # Count distinct contributing roles, not raw statements: one role repeating
     # the same wording must never satisfy a cross-role agreement threshold.
-    agreement_contributors: dict[str, set[str]] = {}
-    agreement_text: dict[str, str] = {}
-    for row, result in r2:
-        agent_id = str(row.get("agent_id") or "unknown-role")
-        for item in (result.get("agreements") or []):
-            if not isinstance(item, str) or not item.strip():
-                continue
-            normalized = " ".join(item.split())
-            key = normalized.casefold()
-            agreement_contributors.setdefault(key, set()).add(agent_id)
-            agreement_text.setdefault(key, normalized)
-    agreement_counts: Counter = Counter({
-        key: len(agent_ids)
-        for key, agent_ids in agreement_contributors.items()
-    })
-    agreement_threshold = max(3, (len(r2) + 3) // 4)
-    consensus_points = [
-        (
-            f"Repeated Round-2 statement ({count} role contributions; not sufficient "
-            f"by itself to establish consensus on a common proposition): {agreement_text[key]}"
-        )
-        for key, count in agreement_counts.most_common(5)
-        if count >= agreement_threshold
-    ]
-    if not consensus_points:
-        consensus_points.append(
-            "No shared, proposition-level educational option was demonstrated in the "
-            "saved Round-2 statements; role-position labels are descriptive, not votes."
-        )
+    # Free-text agreement notes have no normalized proposition/option identifier.
+    # Repeated wording may be generic or copied and cannot establish consensus.
+    consensus_points: list[str] = []
 
     # Any non-modal Round-3 label is listed with its source conclusion. It is not
     # automatically called opposing dissent.
@@ -243,7 +217,20 @@ def reconcile_chair_report_draft(
                 )
     minority_views = minority_views[:45]
 
-    unresolved: list[str] = []
+    unresolved: list[str] = [
+        "No proposition-level consensus is established by the saved free-text agreement "
+        "notes; position labels and repeated wording are not counted as votes."
+    ]
+    # Retain explicitly attributed competing opinions verbatim, with all conditions.
+    # This is a source record, not a verified fact or MDT-endorsed plan.
+    if (
+        re.search(r"\b(?:two|competing|contrasting)\s+(?:provisional\s+)?opinions\b", case.case_summary, re.IGNORECASE)
+        and re.search(r"\bconditional\b", case.case_summary, re.IGNORECASE)
+    ):
+        unresolved.append(
+            "Source-case attributed opinions and conditions (verbatim; not verified facts "
+            "or MDT consensus): " + _compact(case.case_summary, 1200)
+        )
     # Preserve source-attributed R2/R3 challenge statements in the Chair record.
     # These are recorded model contributions, not independently validated facts.
     recorded_review_findings: list[str] = []
@@ -426,8 +413,16 @@ async def generate_debate_contribution(
         "option": _compact(own_independent_assessment.get("preferred_educational_option", ""), 160),
     }
     prompt = (
-        "ROUND 2 — STRUCTURED MDT DEBATE. You are the role below. First read your own "
-        "independent position, then compare it with the selected peer views. Engage with each "
+        "ROUND 2 — STRUCTURED MDT DEBATE. You are the role below. First inspect the "
+        "verbatim case summary for explicitly attributed opinions and their exact conditions. "
+        "Treat each as a source statement (source ID CASE:case_summary), not a verified fact. "
+        "Compare those source opinions with your own R1 view and selected peer views. Do not "
+        "collapse distinct conditional pathways into a generic statement that staging is missing. "
+        "For each attributed opinion, state whether the selected peer digest preserves its option "
+        "and every prerequisite; if omitted or weakened, record a source-linked challenge to "
+        "CASE:case_summary or the relevant R1:AGENT_ID. If the selected digest does not contain "
+        "enough information to assess it, explicitly say so rather than assuming agreement. "
+        "First read your own independent position, then compare it with the selected peer views. Engage with each "
         "selected peer by its exact source ID (R1:AGENT_ID). Record an agreement only when the "
         "same substantive proposition is actually present in both contributions. Record a "
         "substantive challenge only when you identify the source ID, the precise claim or "
@@ -498,8 +493,18 @@ async def generate_adversarial_contribution(
         "round2_conclusion": _compact(own_debate_contribution.get("provisional_conclusion", ""), 150),
     }
     prompt = (
-        "ROUND 3 — ADVERSARIAL REVIEW. Re-examine your own R1 and R2 conclusions and the "
-        "selected R2 peer contributions. Treat the original case summary and structured fields "
+        "ROUND 3 — ADVERSARIAL REVIEW. Before reviewing general risks, inspect the verbatim "
+        "case_summary for each explicitly attributed provisional opinion and its conditions. "
+        "Treat that text as source ID CASE:case_summary, not as a verified fact or consensus. "
+        "Create an explicit preservation check for each distinct option and prerequisite: was it "
+        "carried into R2, was its conditionality retained, and was it accurately represented? "
+        "If any option or condition was omitted, weakened, or replaced by generic uncertainty, "
+        "record a substantive challenge citing CASE:case_summary and the relevant R2:AGENT_ID. "
+        "If the supplied peer digest cannot establish preservation, record that limitation; do "
+        "not claim preservation from silence. Do not manufacture a clinical disagreement where "
+        "the source contains none. "
+        "Re-examine your own R1 and R2 conclusions and the selected R2 peer contributions. Treat "
+        "the original case summary and structured fields "
         "as separate source records; retain attributed competing opinions and their conditions. "
         "For every substantive challenge, name its exact source using R1:AGENT_ID or R2:AGENT_ID, "
         "quote or accurately identify the challenged proposition, explain the logical/data gap, "
