@@ -1,8 +1,8 @@
 """Compact Ollama generation for debate, adversarial review, and chair synthesis."""
 
-import re
-
 from __future__ import annotations
+
+import re
 
 import json
 from collections import Counter
