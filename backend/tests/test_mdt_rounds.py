@@ -210,6 +210,102 @@ def _chair_draft():
     )
 
 
+def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
+    from app.round_schemas import RoundContributionDraft
+    from app.services import mdt_generation
+
+    prompts = []
+
+    async def fake_generate(prompt, schema_type, max_tokens):
+        prompts.append(prompt)
+        return RoundContributionDraft(
+            position="conditional",
+            provisional_conclusion="The educational position remains conditional because source information is incomplete.",
+            response_to_other_perspectives="The reviewed peer material was considered by source ID; no unsupported agreement is inferred.",
+            agreements=[],
+            substantive_challenges=[],
+            remaining_unknowns=["Complete staging remains unknown."],
+            risk_flags=["Do not infer stage from incomplete data."],
+            confidence=0.5,
+        )
+
+    monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate)
+    profile = {"agent_id": "RO-01", "name": "Radiation Oncology", "mandate": "Review educational radiotherapy considerations."}
+    case = SyntheticCase(
+        scenario_title="Synthetic attributed-opinion case",
+        case_summary=(
+            "Fictional case. Surgical note favours surgical assessment first, conditional on local staging. "
+            "Medical oncology note favours discussion of preoperative multimodality sequencing, conditional on MRI and fitness."
+        ),
+    )
+    own = {
+        "position": "conditional",
+        "provisional_conclusion": "The source case contains competing conditional opinions.",
+        "preferred_educational_option": "No option until prerequisites are reviewed.",
+    }
+    peer_r1 = [{
+        "agent_id": "SO-01", "agent_name": "Surgical Oncology",
+        "assessment": {
+            "position": "conditional",
+            "provisional_conclusion": "Surgical assessment first, conditional on complete local staging.",
+            "preferred_educational_option": "Surgery-led assessment.",
+            "disagreement_notes": ["Do not proceed without local staging."],
+            "unknowns": ["MRI staging is not supplied."],
+        },
+    }]
+    asyncio.run(mdt_generation.generate_debate_contribution(profile, case, own, peer_r1))
+    assert "R1:SO-01" in prompts[0]
+    assert "Surgery-led assessment" in prompts[0]
+    assert "Record an agreement only when" in prompts[0]
+    assert "Do not claim that all peers agree" in prompts[0]
+
+    own_r2 = {
+        "position": "conditional",
+        "provisional_conclusion": "The debate retains conditionality.",
+        "response_to_other_perspectives": "The competing attributed opinions remain unresolved.",
+    }
+    peer_r2 = [{
+        "agent_id": "MO-01", "agent_name": "Medical Oncology",
+        "result": {
+            "position": "conditional",
+            "provisional_conclusion": "Preoperative multimodality discussion, conditional on MRI and fitness.",
+            "response_to_other_perspectives": "The source condition is not yet met.",
+            "agreements": [],
+            "substantive_challenges": ["R1:SO-01 — local staging prerequisite remains unresolved."],
+            "risk_flags": ["Do not assume resectability."],
+        },
+    }]
+    asyncio.run(mdt_generation.generate_adversarial_contribution(profile, case, own, own_r2, peer_r2))
+    assert "R2:MO-01" in prompts[1]
+    assert "local staging prerequisite remains unresolved" in prompts[1]
+    assert "For every substantive challenge, name its exact source" in prompts[1]
+    assert "Risk flags are not substitutes" in prompts[1]
+
+
+def test_chair_reconciliation_preserves_saved_round_challenges_as_unresolved():
+    case = SyntheticCase(
+        scenario_title="Synthetic source challenge test",
+        case_summary="Fictional case for source-linked challenge preservation.",
+    )
+    round1 = _chair_rows("assessment", ["insufficient_information"] * 45)
+    round2 = _chair_rows("result", ["insufficient_information"] * 45)
+    round3 = _chair_rows("result", ["insufficient_information"] * 45)
+    round2[0]["result"]["substantive_challenges"] = [
+        "R1:SO-01 — the proposed sequence remains conditional on local staging."
+    ]
+    round3[1]["result"]["substantive_challenges"] = [
+        "R2:MO-01 — MRI and fitness prerequisites are not documented."
+    ]
+    report = reconcile_chair_report_draft(
+        "synthetic-source-challenges", case, round1, round2, round3, _chair_draft()
+    )
+    joined = " ".join(report.unresolved_disagreements)
+    assert "Round 2 recorded challenge —" in joined
+    assert "Round 3 recorded challenge —" in joined
+    assert "R1:SO-01" in joined
+    assert "R2:MO-01" in joined
+
+
 def test_chair_reconciliation_preserves_position_counts_and_minor_view():
     case = SyntheticCase(
         scenario_title="Synthetic reconciliation test",
