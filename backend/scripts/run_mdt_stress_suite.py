@@ -89,8 +89,15 @@ async def run_one(item: dict[str, Any], on_progress=None) -> dict[str, Any]:
         if on_progress is not None:
             on_progress(output)
 
+    def mark_started(stage: str) -> None:
+        output["current_stage"] = stage
+        output["updated_at"] = datetime.now(timezone.utc).isoformat()
+        if on_progress is not None:
+            on_progress(output)
+
     checkpoint("run_created")
     try:
+        mark_started("R1_inference")
         t = time.perf_counter()
         await batch_runner.run_independent_assessments(run_id)
         r1_summary = run_store.get_run(run_id)
@@ -109,6 +116,7 @@ async def run_one(item: dict[str, Any], on_progress=None) -> dict[str, Any]:
 
         rounds: dict[int, list[dict]] = {}
         for number in (2, 3, 4):
+            mark_started(f"R{number}_inference")
             t = time.perf_counter()
             run_store.create_round_job(run_id, number)
             await mdt_rounds.run_mdt_round(run_id, number)
@@ -160,7 +168,7 @@ async def run_one(item: dict[str, Any], on_progress=None) -> dict[str, Any]:
         output.update({"status": "failed_or_incomplete", "error": f"{type(exc).__name__}: {exc}",
                        "exception_type": type(exc).__name__, "exception_message": str(exc),
                        "total_seconds": round(time.perf_counter() - started, 2),
-                       "failed_at_stage": output.get("last_completed_stage"),
+                       "failed_at_stage": output.get("current_stage", output.get("last_completed_stage")),
                        "completed_at": datetime.now(timezone.utc).isoformat()})
         try:
             output["partial_round_1"] = run_store.list_results(run_id)
@@ -173,6 +181,7 @@ async def run_one(item: dict[str, Any], on_progress=None) -> dict[str, Any]:
             output["partial_capture_error"] = f"{type(nested).__name__}: {nested}"
         output["gpu_snapshots"]["at_failure"] = gpu_snapshot()
         checkpoint("exception_captured")
+    output["current_stage"] = "completed" if output["status"].startswith("completed") else "failed"
     return output
 
 
