@@ -42,11 +42,13 @@ def test_run_one_persists_partial_state_and_exception_details(monkeypatch):
     assert result["status"] == "failed_or_incomplete"
     assert result["exception_type"] == "RuntimeError"
     assert result["exception_message"] == "intentional synthetic R1 failure"
-    assert result["failed_at_stage"] == "run_created"
+    assert result["failed_at_stage"] == "R1_inference"
     assert result["last_completed_stage"] == "exception_captured"
     assert result["partial_round_1"][0]["agent_id"] == "RO-01"
     assert result["gpu_snapshots"]["at_failure"] == "test GPU snapshot"
     assert [entry["last_completed_stage"] for entry in progress] == [
         "run_created",
+        "run_created",
         "exception_captured",
     ]
+    assert progress[1]["current_stage"] == "R1_inference"
