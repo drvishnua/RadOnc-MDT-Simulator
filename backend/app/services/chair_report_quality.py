@@ -222,6 +222,16 @@ def ensure_chair_report_completeness(
                 )
         data["unresolved_disagreements"] = [note]
 
+    if not any("proposition-level consensus" in item.casefold() for item in data["unresolved_disagreements"]):
+        data["unresolved_disagreements"] = _unique(
+            [
+                *data["unresolved_disagreements"],
+                "No proposition-level consensus is established by free-text agreement notes; "
+                "position labels and repeated wording are not counted as votes.",
+            ],
+            SECTION_LIMITS["unresolved_disagreements"],
+        )
+
     history = _minority_history(round1_rows, round2_rows, round3_rows)
     # Saved role records are authoritative; ignore model-generated entries for
     # stable insufficient-information roles.
