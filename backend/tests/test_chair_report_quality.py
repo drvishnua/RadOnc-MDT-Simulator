@@ -56,6 +56,9 @@ def _empty_report() -> FinalMDTReport:
 def _assert_all_sections_are_explicit(report: FinalMDTReport) -> None:
     payload = report.model_dump()
     for field in SECTION_LIMITS:
+        if field == "consensus_points":
+            assert payload[field] == [], "Do not populate consensus points without proposition-level evidence"
+            continue
         assert payload[field], f"{field} must contain findings or an explicit absence note"
         assert all(isinstance(item, str) and item.strip() for item in payload[field])
         assert len(payload[field]) <= SECTION_LIMITS[field]
@@ -80,12 +83,13 @@ def test_empty_chair_sections_are_filled_from_source_records():
     )
 
     _assert_all_sections_are_explicit(report)
-    assert any("44/45 insufficient-information" in item for item in report.consensus_points)
+    assert report.consensus_points == []
+    assert any("No proposition-level consensus" in item for item in report.unresolved_disagreements)
     assert any("non-uniform" in item for item in report.unresolved_disagreements)
     assert any("PP-05" in item and "conditional" in item for item in report.minority_and_dissenting_views)
     assert any("Clinical stage is not supplied" in item for item in report.major_uncertainties)
     assert any("Patient preferences" in item for item in report.missing_information_before_real_world_review)
-    assert "not unanimous agreement" in " ".join(report.consensus_points).casefold()
+    assert "not counted as votes" in " ".join(report.unresolved_disagreements).casefold()
 
 
 def test_uniform_rounds_use_explicit_absence_notes_not_blank_or_false_consensus():
@@ -103,7 +107,7 @@ def test_uniform_rounds_use_explicit_absence_notes_not_blank_or_false_consensus(
     )
 
     _assert_all_sections_are_explicit(report)
-    assert "not proof" in report.consensus_points[0].casefold() or "not unanimous" in report.consensus_points[0].casefold()
+    assert report.consensus_points == []
     assert "not proof" in report.unresolved_disagreements[0].casefold()
     assert "no genuine conditional/minority position" in report.minority_and_dissenting_views[0].casefold()
     assert "not establish" in report.major_uncertainties[0].casefold()
