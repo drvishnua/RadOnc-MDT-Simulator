@@ -279,6 +279,7 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
     assert "R2:MO-01" in prompts[1]
     assert "local staging prerequisite remains unresolved" in prompts[1]
     assert "For every substantive challenge, name its exact source" in prompts[1]
+    assert "Create an explicit preservation check" in prompts[1]
     assert "Risk flags are not substitutes" in prompts[1]
 
 
@@ -329,8 +330,8 @@ def test_chair_reconciliation_preserves_position_counts_and_minor_view():
     assert "1/45 conditional" in report.overall_educational_synthesis
     assert "unanimously" not in report.overall_educational_synthesis.casefold()
     assert report.minority_and_dissenting_views
-    assert report.consensus_points
-    assert "descriptive, not votes" in report.consensus_points[0]
+    assert report.consensus_points == []
+    assert any("No proposition-level consensus" in item for item in report.unresolved_disagreements)
     assert any("PP-05" in item and "conditional" in item for item in report.minority_and_dissenting_views)
     assert report.major_uncertainties
     assert report.missing_information_before_real_world_review
@@ -387,7 +388,7 @@ def test_uniform_support_labels_with_conflicting_options_are_not_consensus():
 
     assert report.consensus_status == "insufficient_information"
     assert "shared, proposition-level" in " ".join(report.unresolved_disagreements)
-    assert "descriptive, not votes" in " ".join(report.consensus_points)
+    assert report.consensus_points == []
     assert report.chair_conclusion.startswith("No treatment recommendation can be made")
 
 
@@ -427,7 +428,32 @@ def test_repeated_agreement_from_one_role_does_not_meet_cross_role_threshold():
         item.startswith("Repeated Round-2 statement")
         for item in report.consensus_points
     )
-    assert any(
-        "No shared, proposition-level educational option" in item
-        for item in report.consensus_points
+    assert report.consensus_points == []
+    assert any("No proposition-level consensus" in item for item in report.unresolved_disagreements)
+
+
+
+def test_chair_preserves_competing_source_opinions_verbatim_with_conditions():
+    case = SyntheticCase(
+        scenario_title="Synthetic competing opinions",
+        case_summary=(
+            "Fictional scenario. The referral includes two provisional opinions: the "
+            "colorectal surgical note favours proceeding to a surgical assessment first, "
+            "conditional on complete local staging and resectability review; the medical "
+            "oncology note favours discussing a preoperative multimodality sequence, "
+            "conditional on MRI staging, metastatic work-up and fitness assessment."
+        ),
     )
+    round1 = _chair_rows("assessment", ["insufficient_information"] * 45)
+    round2 = _chair_rows("result", ["insufficient_information"] * 45)
+    round3 = _chair_rows("result", ["insufficient_information"] * 45)
+    report = reconcile_chair_report_draft(
+        "synthetic-competing-source-opinions", case, round1, round2, round3, _chair_draft()
+    )
+    joined = " ".join(report.unresolved_disagreements)
+    assert "Source-case attributed opinions and conditions (verbatim" in joined
+    assert "surgical assessment first" in joined
+    assert "complete local staging and resectability review" in joined
+    assert "preoperative multimodality sequence" in joined
+    assert "MRI staging, metastatic work-up and fitness assessment" in joined
+    assert report.consensus_points == []
