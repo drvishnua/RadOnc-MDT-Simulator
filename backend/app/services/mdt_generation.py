@@ -416,23 +416,30 @@ async def generate_debate_contribution(
     }
     prompt = (
         "ROUND 2 — STRUCTURED MDT DEBATE. You are the role below. First inspect the "
-        "verbatim case summary for explicitly attributed opinions and their exact conditions. "
-        "Treat each as a source statement (source ID CASE:case_summary), not a verified fact. "
-        "Compare those source opinions with your own R1 view and selected peer views. Do not "
-        "collapse distinct conditional pathways into a generic statement that staging is missing. "
-        "For each attributed opinion, state whether the selected peer digest preserves its option "
-        "and every prerequisite; if omitted or weakened, record a source-linked challenge to "
-        "CASE:case_summary or the relevant R1:AGENT_ID. If the selected digest does not contain "
-        "enough information to assess it, explicitly say so rather than assuming agreement. "
-        "First read your own independent position, then compare it with the selected peer views. Engage with each "
-        "selected peer by its exact source ID (R1:AGENT_ID). Record an agreement only when the "
-        "same substantive proposition is actually present in both contributions. Record a "
-        "substantive challenge only when you identify the source ID, the precise claim or "
-        "condition being challenged, why it is unsupported or different, and what information "
-        "would resolve it. Do not claim that all peers agree; omitted perspectives are unknown. "
-        "If no substantive agreement or challenge is justified, say so explicitly in "
-        "response_to_other_perspectives and leave the corresponding list empty. Do not force "
-        "consensus or convert conditional positions into support.\n"
+        "verbatim case summary for each explicitly attributed opinion, its proposed option, "
+        "and every stated prerequisite. Treat each as a source statement (CASE:case_summary), "
+        "not a verified fact. Compare each option separately with your own R1 view and the "
+        "selected peer views. Do not collapse distinct conditional pathways into generic "
+        "uncertainty about missing staging. In particular, a surgery-first/surgical-assessment "
+        "pathway and a preoperative multimodality pathway remain distinct options even when "
+        "both depend on some missing investigations. Shared uncertainty about prerequisites "
+        "is not agreement on treatment sequence, option, resectability, or fitness. Do not "
+        "describe different prerequisites as identical unless the source text explicitly says so. "
+        "For EACH attributed opinion, state whether its option and every condition are preserved, "
+        "partly preserved, omitted, or unclear in the selected peer digest. If omitted or "
+        "weakened, record a source-linked challenge; if the digest is insufficient, mark it "
+        "unclear rather than assuming preservation or agreement. Engage only with the peers "
+        "actually supplied below, citing their exact R1:AGENT_ID source IDs. The digest is a "
+        "bounded sample of at most 15 of 44 other roles, not the complete MDT; never say all "
+        "roles or all peers agree, and never generalise sampled views to unshown roles. Record "
+        "an agreement only when the same substantive proposition or educational option is "
+        "explicitly present in both source contributions. Agreement that information is missing "
+        "does not establish agreement on an option. Record a substantive challenge only when "
+        "you identify its source, exact claim or condition, the reason it is unsupported or "
+        "misrepresented, and what information would resolve it. Do not manufacture challenges. "
+        "If no agreement or challenge is justified, explain the evidence limitation in "
+        "response_to_other_perspectives and leave the corresponding list empty. Preserve "
+        "conditionality; do not convert conditional positions into support.\\n"
         f"ROLE: {profile['name']}\nMANDATE: {profile['mandate']}\n"
         "SYNTHETIC CASE:\n"
         + json.dumps(build_case_prompt_context(case), ensure_ascii=False, separators=(",", ":"))
@@ -485,37 +492,52 @@ async def generate_adversarial_contribution(
                 _compact(item, 90)
                 for item in (peer["result"].get("risk_flags") or [])[:2]
             ],
+            "position_changes": [
+                _compact(item, 120)
+                for item in (peer["result"].get("position_changes") or [])[:2]
+            ],
         }
         for peer in peer_debate_views
     ]
     own = {
         "round1_position": own_independent_assessment.get("position"),
-        "round1_conclusion": _compact(own_independent_assessment.get("provisional_conclusion", ""), 150),
+        "round1_conclusion": _compact(own_independent_assessment.get("provisional_conclusion", ""), 180),
+        "round1_option": _compact(own_independent_assessment.get("preferred_educational_option", ""), 180),
         "round2_position": own_debate_contribution.get("position"),
-        "round2_conclusion": _compact(own_debate_contribution.get("provisional_conclusion", ""), 150),
+        "round2_conclusion": _compact(own_debate_contribution.get("provisional_conclusion", ""), 220),
+        "round2_response": _compact(own_debate_contribution.get("response_to_other_perspectives", ""), 420),
+        "round2_agreements": [_compact(item, 180) for item in (own_debate_contribution.get("agreements") or [])[:4]],
+        "round2_challenges": [_compact(item, 220) for item in (own_debate_contribution.get("substantive_challenges") or [])[:4]],
+        "round2_position_changes": [_compact(item, 180) for item in (own_debate_contribution.get("position_changes") or [])[:3]],
+        "round2_unknowns": [_compact(item, 120) for item in (own_debate_contribution.get("remaining_unknowns") or [])[:4]],
+        "round2_risks": [_compact(item, 120) for item in (own_debate_contribution.get("risk_flags") or [])[:4]],
     }
     prompt = (
         "ROUND 3 — ADVERSARIAL REVIEW. Before reviewing general risks, inspect the verbatim "
-        "case_summary for each explicitly attributed provisional opinion and its conditions. "
-        "Treat that text as source ID CASE:case_summary, not as a verified fact or consensus. "
-        "Create an explicit preservation check for each distinct option and prerequisite: was it "
-        "carried into R2, was its conditionality retained, and was it accurately represented? "
-        "If any option or condition was omitted, weakened, or replaced by generic uncertainty, "
-        "record a substantive challenge citing CASE:case_summary and the relevant R2:AGENT_ID. "
-        "If the supplied peer digest cannot establish preservation, record that limitation; do "
-        "not claim preservation from silence. Do not manufacture a clinical disagreement where "
-        "the source contains none. "
-        "Re-examine your own R1 and R2 conclusions and the selected R2 peer contributions. Treat "
-        "the original case summary and structured fields "
-        "as separate source records; retain attributed competing opinions and their conditions. "
-        "For every substantive challenge, name its exact source using R1:AGENT_ID or R2:AGENT_ID, "
-        "quote or accurately identify the challenged proposition, explain the logical/data gap, "
-        "state the potential consequence for the educational synthesis, and identify the missing "
-        "evidence or criterion needed to resolve it. Do not invent a claim or manufacture dissent. "
-        "If no challenge is warranted, leave substantive_challenges empty and explain in "
-        "response_to_other_perspectives why the reviewed material contains no material unsupported "
-        "claim or unresolved conflict. Risk flags are not substitutes for source-linked challenges. "
-        "Preserve conditionality and justified minority views. Do not invent evidence or legal conclusions.\n"
+        "case_summary for EACH attributed opinion, its distinct option, and its exact conditions. "
+        "Treat it as CASE:case_summary, not a verified fact or consensus. Compare each option "
+        "separately against your COMPLETE own saved R2 contribution (including its response, "
+        "agreements, challenges, position changes, unknowns, and risks) and the selected R2 "
+        "peer digest. Shared missing prerequisites do not make a surgery-first/surgical-assessment "
+        "pathway equivalent to a preoperative multimodality pathway; do not call the conditions "
+        "identical unless the source establishes that. For each opinion, explicitly determine "
+        "whether the option and every prerequisite were preserved, partly preserved, omitted, "
+        "or cannot be assessed from the supplied records. Silence or a generic statement that "
+        "staging is missing is not proof of preservation. Where the source option or condition "
+        "was omitted, weakened, conflated with the other pathway, or represented as agreement "
+        "without evidence, record a substantive challenge citing CASE:case_summary and the "
+        "specific R2:AGENT_ID. Where the record is incomplete, record that limitation without "
+        "inventing a challenge. Do not manufacture a clinical disagreement where the source "
+        "contains none. The peer digest is a bounded sample of at most 15 of 44 other roles; "
+        "never claim all 45 roles or all peers agree, and do not generalise sampled views to "
+        "unshown roles. Re-examine your own R1 and R2 conclusions and the selected R2 peer "
+        "contributions. For every substantive challenge, name its exact source, identify the "
+        "challenged proposition or condition, explain the logical/data gap, state the possible "
+        "effect on the educational synthesis, and identify the missing evidence or criterion "
+        "needed to resolve it. If no challenge is warranted, leave substantive_challenges empty "
+        "and explain why the reviewed records contain no material omission or unsupported claim. "
+        "Risk flags are not substitutes for source-linked challenges. Preserve conditionality "
+        "and justified minority views. Do not invent evidence or legal conclusions.\\n"
         f"ROLE: {profile['name']}\nMANDATE: {profile['mandate']}\n"
         "SYNTHETIC CASE:\n"
         + json.dumps(build_case_prompt_context(case), ensure_ascii=False, separators=(",", ":"))
