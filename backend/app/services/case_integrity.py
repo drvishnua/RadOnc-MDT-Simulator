@@ -93,7 +93,9 @@ _QUALIFIER = re.compile(
     r"|assum(?:e|es|ed|ing|ption|ptions)|hypothetical|provisional"
     r"|\be\.g\.?\b|for\s+example|such\s+as|\bif\b"
     r"|risk\s+of|inability\s+to\s+distinguish|cannot\s+distinguish"
-    r"|not\s+possible\s+to\s+distinguish|misclassif(?:y|ication|ied)",
+    r"|not\s+possible\s+to\s+distinguish|misclassif(?:y|ication|ied)"
+    r"|cannot\s+exclude|exclusion\s+of|exclude[sd]?\s+(?:the\s+)?possibility\s+of"
+    r"|rule\s+out|not\s+(?:evidence|proof)\s+of",
     re.IGNORECASE,
 )
 
