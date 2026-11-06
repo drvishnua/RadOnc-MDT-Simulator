@@ -380,10 +380,19 @@ async def generate_debate_contribution(
 ) -> RoundContribution:
     peers = [
         {
-            "agent": peer["agent_id"],
+            "source": f"R1:{peer['agent_id']}",
             "role": peer["agent_name"],
             "position": peer["assessment"].get("position", "unknown"),
-            "conclusion": _compact(peer["assessment"].get("provisional_conclusion", ""), 105),
+            "conclusion": _compact(peer["assessment"].get("provisional_conclusion", ""), 180),
+            "educational_option": _compact(peer["assessment"].get("preferred_educational_option", ""), 140),
+            "disagreement_notes": [
+                _compact(item, 100)
+                for item in (peer["assessment"].get("disagreement_notes") or [])[:2]
+            ],
+            "unknowns": [
+                _compact(item, 90)
+                for item in (peer["assessment"].get("unknowns") or [])[:2]
+            ],
         }
         for peer in peer_views
     ]
@@ -394,9 +403,15 @@ async def generate_debate_contribution(
     }
     prompt = (
         "ROUND 2 — STRUCTURED MDT DEBATE. You are the role below. First read your own "
-        "independent position, then compare it with the selected peer views. State specific "
-        "agreements and substantive disagreements. You may retain or revise your position, "
-        "but explain why. Do not imply that omitted perspectives agree. Do not force consensus.\n"
+        "independent position, then compare it with the selected peer views. Engage with each "
+        "selected peer by its exact source ID (R1:AGENT_ID). Record an agreement only when the "
+        "same substantive proposition is actually present in both contributions. Record a "
+        "substantive challenge only when you identify the source ID, the precise claim or "
+        "condition being challenged, why it is unsupported or different, and what information "
+        "would resolve it. Do not claim that all peers agree; omitted perspectives are unknown. "
+        "If no substantive agreement or challenge is justified, say so explicitly in "
+        "response_to_other_perspectives and leave the corresponding list empty. Do not force "
+        "consensus or convert conditional positions into support.\n"
         f"ROLE: {profile['name']}\nMANDATE: {profile['mandate']}\n"
         "SYNTHETIC CASE:\n"
         + json.dumps(build_case_prompt_context(case), ensure_ascii=False, separators=(",", ":"))
@@ -432,13 +447,22 @@ async def generate_adversarial_contribution(
 ) -> RoundContribution:
     peers = [
         {
-            "agent": peer["agent_id"],
+            "source": f"R2:{peer['agent_id']}",
             "role": peer["agent_name"],
             "position": peer["result"].get("position", "unknown"),
-            "challenge": _compact(peer["result"].get("response_to_other_perspectives", ""), 100),
+            "conclusion": _compact(peer["result"].get("provisional_conclusion", ""), 150),
+            "response": _compact(peer["result"].get("response_to_other_perspectives", ""), 150),
+            "agreements": [
+                _compact(item, 90)
+                for item in (peer["result"].get("agreements") or [])[:2]
+            ],
+            "challenges": [
+                _compact(item, 110)
+                for item in (peer["result"].get("substantive_challenges") or [])[:2]
+            ],
             "risks": [
-                _compact(item, 65)
-                for item in peer["result"].get("risk_flags", [])[:2]
+                _compact(item, 90)
+                for item in (peer["result"].get("risk_flags") or [])[:2]
             ],
         }
         for peer in peer_debate_views
@@ -450,11 +474,17 @@ async def generate_adversarial_contribution(
         "round2_conclusion": _compact(own_debate_contribution.get("provisional_conclusion", ""), 150),
     }
     prompt = (
-        "ROUND 3 — ADVERSARIAL REVIEW. Challenge unsupported assumptions, evidence gaps, "
-        "misapplied staging or eligibility claims, patient/family assumptions, access barriers, "
-        "feasibility, resource constraints, consent, safeguarding, documentation, and governance. "
-        "Do not invent evidence or claim a legal conclusion. Identify what could materially "
-        "change the educational synthesis. Preserve justified dissent.\n"
+        "ROUND 3 — ADVERSARIAL REVIEW. Re-examine your own R1 and R2 conclusions and the "
+        "selected R2 peer contributions. Treat the original case summary and structured fields "
+        "as separate source records; retain attributed competing opinions and their conditions. "
+        "For every substantive challenge, name its exact source using R1:AGENT_ID or R2:AGENT_ID, "
+        "quote or accurately identify the challenged proposition, explain the logical/data gap, "
+        "state the potential consequence for the educational synthesis, and identify the missing "
+        "evidence or criterion needed to resolve it. Do not invent a claim or manufacture dissent. "
+        "If no challenge is warranted, leave substantive_challenges empty and explain in "
+        "response_to_other_perspectives why the reviewed material contains no material unsupported "
+        "claim or unresolved conflict. Risk flags are not substitutes for source-linked challenges. "
+        "Preserve conditionality and justified minority views. Do not invent evidence or legal conclusions.\n"
         f"ROLE: {profile['name']}\nMANDATE: {profile['mandate']}\n"
         "SYNTHETIC CASE:\n"
         + json.dumps(build_case_prompt_context(case), ensure_ascii=False, separators=(",", ":"))
