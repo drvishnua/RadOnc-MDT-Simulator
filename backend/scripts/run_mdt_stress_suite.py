@@ -57,7 +57,15 @@ def verify_rows(rows: list[dict], field: str, label: str) -> None:
     require(not failures, f"{label} contains failed/missing outputs: {failures}")
 
 
-async def run_one(item: dict[str, Any]) -> dict[str, Any]:
+def persist_json_atomic(path: Path, payload: dict[str, Any]) -> None:
+    """Atomically replace a JSON checkpoint."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(path.name + ".tmp")
+    temporary.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    temporary.replace(path)
+
+
+async def run_one(item: dict[str, Any], on_progress=None) -> dict[str, Any]:
     case = item["case"]
     case_json = case.model_dump_json(exclude_none=True)
     case_hash = hashlib.sha256(case_json.encode("utf-8")).hexdigest()
@@ -70,7 +78,18 @@ async def run_one(item: dict[str, Any]) -> dict[str, Any]:
         "started_at": datetime.now(timezone.utc).isoformat(),
         "case_snapshot": json.loads(case_json), "case_snapshot_sha256": case_hash,
         "oracle_checks": item["oracle_checks"], "status": "running",
+        "last_completed_stage": "run_created", "rounds_completed": [],
+        "gpu_snapshots": {"before_R1": gpu_snapshot()},
     }
+
+    def checkpoint(stage: str) -> None:
+        output["last_completed_stage"] = stage
+        output["total_seconds"] = round(time.perf_counter() - started, 2)
+        output["updated_at"] = datetime.now(timezone.utc).isoformat()
+        if on_progress is not None:
+            on_progress(output)
+
+    checkpoint("run_created")
     try:
         t = time.perf_counter()
         await batch_runner.run_independent_assessments(run_id)
@@ -83,6 +102,10 @@ async def run_one(item: dict[str, Any]) -> dict[str, Any]:
                 "R1 source facts differ from immutable case snapshot.")
         require(run_store.get_run(run_id)["case_snapshot_sha256"] == case_hash, "Persisted case hash mismatch.")
         metrics["round_seconds"]["R1"] = round(time.perf_counter() - t, 2)
+        output["partial_round_1"] = r1
+        output["gpu_snapshots"]["after_R1"] = gpu_snapshot()
+        output["rounds_completed"].append("R1")
+        checkpoint("R1_completed")
 
         rounds: dict[int, list[dict]] = {}
         for number in (2, 3, 4):
@@ -101,6 +124,10 @@ async def run_one(item: dict[str, Any]) -> dict[str, Any]:
                         "R4 Chair output missing or incomplete.")
             r4 = rows
             metrics["round_seconds"][f"R{number}"] = round(time.perf_counter() - t, 2)
+            output[f"partial_round_{number}"] = rows
+            output["gpu_snapshots"][f"after_R{number}"] = gpu_snapshot()
+            output["rounds_completed"].append(f"R{number}")
+            checkpoint(f"R{number}_completed")
 
         rounds[1] = r1
         chair = run_store.get_final_report(run_id)
@@ -110,6 +137,7 @@ async def run_one(item: dict[str, Any]) -> dict[str, Any]:
         findings = audit_case_outputs(item["case_id"], case, rounds, chair)
         output.update({
             "status": "completed_with_findings" if findings else "completed_no_process_findings",
+            "last_completed_stage": "chair_synthesis_and_audit_completed",
             "metrics": metrics,
             "round_summaries": {str(n): run_store.get_round_summary(run_id, n) for n in (2, 3, 4)},
             "round_1_results": r1,
@@ -125,10 +153,14 @@ async def run_one(item: dict[str, Any]) -> dict[str, Any]:
             "chair_report": chair,
             "total_seconds": round(time.perf_counter() - started, 2),
             "completed_at": datetime.now(timezone.utc).isoformat(),
+            "gpu_snapshots": output["gpu_snapshots"],
         })
+        checkpoint("case_completed")
     except Exception as exc:
         output.update({"status": "failed_or_incomplete", "error": f"{type(exc).__name__}: {exc}",
+                       "exception_type": type(exc).__name__, "exception_message": str(exc),
                        "total_seconds": round(time.perf_counter() - started, 2),
+                       "failed_at_stage": output.get("last_completed_stage"),
                        "completed_at": datetime.now(timezone.utc).isoformat()})
         try:
             output["partial_round_1"] = run_store.list_results(run_id)
@@ -138,7 +170,9 @@ async def run_one(item: dict[str, Any]) -> dict[str, Any]:
                 except KeyError:
                     pass
         except Exception as nested:
-            output["partial_capture_error"] = type(nested).__name__
+            output["partial_capture_error"] = f"{type(nested).__name__}: {nested}"
+        output["gpu_snapshots"]["at_failure"] = gpu_snapshot()
+        checkpoint("exception_captured")
     return output
 
 
@@ -173,7 +207,7 @@ async def main() -> int:
     except Exception:
         simulator_commit = "unavailable"
     report: dict[str, Any] = {
-        "suite_version": "1.0", "synthetic_only": True,
+        "suite_version": "1.1", "synthetic_only": True,
         "simulator_commit": simulator_commit,
         "branch": "feature/four-round-mdt-and-performance",
         "prompt_schema_version": "repository-head-unversioned",
@@ -182,15 +216,28 @@ async def main() -> int:
         "model": OLLAMA_MODEL, "ollama": runtime, "concurrency": 1,
         "gpu_before": gpu_snapshot(), "selected_case_ids": [item["case_id"] for item in cases],
         "estimated_agent_generations": len(cases) * 136, "cases": [],
+        "last_completed_stage": "runtime_preflight_completed",
+        "runner_metadata": {"python_executable": sys.executable, "process_id": __import__("os").getpid()},
     }
+    persist_json_atomic(args.output, report)
+
     for item in cases:
         print(f"STRESS_CASE_START={item['case_id']}", flush=True)
-        result = await run_one(item)
-        report["cases"].append(result)
+
+        def persist_case_progress(progress: dict[str, Any]) -> None:
+            index = next((i for i, row in enumerate(report["cases"])
+                          if row.get("case_id") == progress.get("case_id")), None)
+            if index is None:
+                report["cases"].append(progress)
+            else:
+                report["cases"][index] = progress
+            report["last_completed_stage"] = f"{progress.get('case_id')}:{progress.get('last_completed_stage', 'unknown')}"
+            report["updated_at"] = datetime.now(timezone.utc).isoformat()
+            persist_json_atomic(args.output, report)
+
+        result = await run_one(item, on_progress=persist_case_progress)
+        persist_case_progress(result)
         print(f"STRESS_CASE_END={item['case_id']} STATUS={result['status']}", flush=True)
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        report["updated_at"] = datetime.now(timezone.utc).isoformat()
-        args.output.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
 
     report["finished_at"] = datetime.now(timezone.utc).isoformat()
     report["gpu_after"] = gpu_snapshot()
@@ -201,7 +248,8 @@ async def main() -> int:
         "hard_fail_findings": sum(1 for item in report["cases"] for finding in item.get("process_safety_findings", []) if finding["severity"] == "hard_fail"),
         "major_findings": sum(1 for item in report["cases"] for finding in item.get("process_safety_findings", []) if finding["severity"] == "major"),
     }
-    args.output.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    report["last_completed_stage"] = "suite_finished"
+    persist_json_atomic(args.output, report)
     print(f"STRESS_SUITE_REPORT={args.output}")
     print(f"STRESS_SUITE_SUMMARY={json.dumps(report['summary'])}")
     return 0 if report["summary"]["failed_or_incomplete"] == 0 else 1
