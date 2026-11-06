@@ -257,12 +257,20 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
     assert "R1:SO-01" in prompts[0]
     assert "Surgery-led assessment" in prompts[0]
     assert "Record an agreement only when" in prompts[0]
-    assert "Do not claim that all peers agree" in prompts[0]
+    assert "bounded sample of at most 15 of 44 other roles" in prompts[0]
+    assert "Shared uncertainty about prerequisites" in prompts[0]
+    assert "surgery-first/surgical-assessment" in prompts[0]
+    assert "Agreement that information is missing does not establish agreement on an option" in prompts[0]
 
     own_r2 = {
         "position": "conditional",
         "provisional_conclusion": "The debate retains conditionality.",
-        "response_to_other_perspectives": "The competing attributed opinions remain unresolved.",
+        "response_to_other_perspectives": "The surgical assessment and multimodality options remain distinct.",
+        "agreements": ["Both pathways require completion of missing investigations."],
+        "substantive_challenges": ["CASE:case_summary — do not collapse the two conditional options."],
+        "position_changes": ["Round 1 → Round 2: insufficient_information → conditional."],
+        "remaining_unknowns": ["MRI and distant staging remain unknown."],
+        "risk_flags": ["Do not infer resectability."],
     }
     peer_r2 = [{
         "agent_id": "MO-01", "agent_name": "Medical Oncology",
@@ -281,6 +289,10 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
     assert "For every substantive challenge, name its exact source" in prompts[1]
     assert "Create an explicit preservation check" in prompts[1]
     assert "Risk flags are not substitutes" in prompts[1]
+    assert "COMPLETE own saved R2 contribution" in prompts[1]
+    assert "The surgical assessment and multimodality options remain distinct" in prompts[1]
+    assert "CASE:case_summary — do not collapse the two conditional options" in prompts[1]
+    assert "bounded sample of at most 15 of 44 other roles" in prompts[1]
 
 
 def test_chair_reconciliation_preserves_saved_round_challenges_as_unresolved():
