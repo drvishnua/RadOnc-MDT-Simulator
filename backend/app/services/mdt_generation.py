@@ -244,6 +244,30 @@ def reconcile_chair_report_draft(
     minority_views = minority_views[:45]
 
     unresolved: list[str] = []
+    # Preserve source-attributed R2/R3 challenge statements in the Chair record.
+    # These are recorded model contributions, not independently validated facts.
+    recorded_review_findings: list[str] = []
+    for round_label, entries in (("Round 2", r2), ("Round 3", r3)):
+        for row, result in entries:
+            role_id = str(row.get("agent_id") or "unknown-role")
+            role_name = str(row.get("agent_name") or "Role")
+            for challenge in (result.get("substantive_challenges") or []):
+                if isinstance(challenge, str) and challenge.strip():
+                    recorded_review_findings.append(
+                        f"{round_label} recorded challenge — {role_id} ({role_name}): "
+                        f"{_compact(challenge, 260)}"
+                    )
+    unresolved.extend(_unique_strings(recorded_review_findings, limit=12))
+    r3_challenge_count = sum(
+        1 for _, result in r3
+        if any(isinstance(item, str) and item.strip()
+               for item in (result.get("substantive_challenges") or []))
+    )
+    if not r3_challenge_count:
+        unresolved.append(
+            "No Round-3 role saved a substantive_challenges entry. Risk flags and generic "
+            "warnings are not counted as source-linked adversarial challenges."
+        )
     if len(final_counts) > 1:
         unresolved.append(
             "Round-3 position labels were not uniform: "
