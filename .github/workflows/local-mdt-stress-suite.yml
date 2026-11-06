@@ -79,10 +79,12 @@ jobs:
           } | ConvertTo-Json -Depth 4 | Set-Content "$diagnostics/run_metadata.json" -Encoding utf8
           Start-Transcript -Path "$diagnostics/powershell_transcript.txt" -Force
           try {
-            # Redirect native streams to files separately. Piping native stderr through
-            # 2>&1 can create terminating NativeCommandError records in Windows PowerShell
-            # when ErrorActionPreference is Stop, even when Python only emits a retry notice.
-            & python scripts/run_mdt_stress_suite.py --case-ids $env:STRESS_CASE_IDS 1> $stdoutLog 2> $stderrLog
+            # Invoke Python through cmd.exe so Windows PowerShell 5.1 does not convert
+            # native stderr lines into terminating NativeCommandError records.
+            # cmd.exe propagates the Python process exit code because Python is the
+            # final command in this /c invocation.
+            $cmdLine = 'python scripts/run_mdt_stress_suite.py --case-ids ' + $env:STRESS_CASE_IDS + ' 1> "' + $stdoutLog + '" 2> "' + $stderrLog + '"'
+            & $env:ComSpec /d /c $cmdLine
             $stressExitCode = $LASTEXITCODE
           }
           finally {
