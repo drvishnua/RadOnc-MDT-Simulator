@@ -88,3 +88,21 @@ def test_sex_explicitly_reported_in_raw_case_text_is_not_flagged_as_invented():
         {"provisional_conclusion": "This male patient requires further staging clarification."},
     )
     assert not any("sex/gender" in flag for flag in flags)
+
+
+
+def test_uncertain_m_stage_reference_about_exclusion_is_not_flagged():
+    case = _case()
+    payload = {
+        "risk_flags": [
+            "The available record does not permit exclusion of M1 disease.",
+            "M1 status remains unknown and cannot be assumed.",
+        ]
+    }
+    assert audit_unverified_case_claims(case, payload) == []
+
+
+def test_unqualified_m1_assertion_is_still_flagged():
+    case = _case()
+    flags = audit_unverified_case_claims(case, {"provisional_conclusion": "The patient has M1 disease."})
+    assert any("M-stage" in item for item in flags)
