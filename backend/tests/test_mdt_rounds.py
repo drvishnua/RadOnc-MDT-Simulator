@@ -286,7 +286,7 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
     asyncio.run(mdt_generation.generate_adversarial_contribution(profile, case, own, own_r2, peer_r2))
     assert "R2:MO-01" in prompts[1]
     assert "local staging prerequisite remains unresolved" in prompts[1]
-    assert "For every substantive challenge, name its exact source" in prompts[1]
+    assert "make a source-linked challenge naming CASE:case_summary" in prompts[1]
     assert "state whether its option and conditions are preserved" in prompts[1]
     assert "Silence or a generic statement that staging is missing is not proof of preservation" in prompts[1]
     assert "Risk flags are not substitutes" in prompts[1]
