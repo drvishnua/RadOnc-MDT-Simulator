@@ -294,6 +294,7 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
     assert "The surgical assessment and multimodality options remain distinct" in prompts[1]
     assert "CASE:case_summary — do not collapse the two conditional options" in prompts[1]
     assert "bounded sample of at most 5 of 44 other roles" in prompts[1]
+    assert "never relabel an R2 peer as R1" in prompts[1]
 
 
 def test_chair_reconciliation_preserves_saved_round_challenges_as_unresolved():
