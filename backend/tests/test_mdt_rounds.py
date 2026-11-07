@@ -128,6 +128,39 @@ def test_four_rounds_require_full_previous_round_and_preserve_all_roles(monkeypa
     assert report.json()["report_title"] == "MDT Chair Synthesis: Larynx — Squamous cell carcinoma"
 
 
+def test_retried_or_failed_round_record_cannot_retain_stale_payload(monkeypatch, tmp_path):
+    import json
+    from app.agents.catalog import AGENT_PROFILES
+
+    monkeypatch.setattr(run_store, "DB_PATH", tmp_path / "stale_round_payload.sqlite3")
+    case = SyntheticCase(
+        scenario_title="Synthetic stale-payload test",
+        case_summary="Fictional case used to validate failed-record cleanup.",
+    )
+    run = run_store.create_run(case)
+    for profile in AGENT_PROFILES:
+        run_store.save_agent_success(
+            run["run_id"],
+            profile["agent_id"],
+            json.dumps({"position": "insufficient_information"}),
+            0.01,
+        )
+
+    run_store.create_round_job(run["run_id"], 2)
+    stale = json.dumps({"position": "supports", "provisional_conclusion": "STALE"})
+    run_store.save_round_success(run["run_id"], 2, "RO-01", stale, 0.01)
+    run_store.mark_round_agent_running(run["run_id"], 2, "RO-01")
+    row = next(item for item in run_store.list_round_results(run["run_id"], 2) if item["agent_id"] == "RO-01")
+    assert row["status"] == "running"
+    assert row["result"] is None
+
+    run_store.save_round_success(run["run_id"], 2, "RO-01", stale, 0.01)
+    run_store.save_round_failure(run["run_id"], 2, "RO-01", "intentional test failure", 0.01)
+    row = next(item for item in run_store.list_round_results(run["run_id"], 2) if item["agent_id"] == "RO-01")
+    assert row["status"] == "failed"
+    assert row["result"] is None
+
+
 def test_round_cannot_start_before_all_45_independent_assessments(monkeypatch, tmp_path):
     monkeypatch.setattr(run_store, "DB_PATH", tmp_path / "incomplete.sqlite3")
     run_store.initialize_database()
