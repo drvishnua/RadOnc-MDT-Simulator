@@ -41,6 +41,7 @@ def test_stress_cases_keep_case_specific_oracles_separate_from_case_facts():
     cases = {item["case_id"]: item for item in load_stress_cases()}
     assert "no_unsupported_tnm" in cases["MDT-002"]["oracle_checks"]
     assert "preserve_attributed_opinions" in cases["MDT-006"]["oracle_checks"]
+    assert "review_attributed_opinions" in cases["MDT-006"]["oracle_checks"]
     assert "no_fabricated_patient_preference" in cases["MDT-007"]["oracle_checks"]
     assert "oracle_checks" not in cases["MDT-002"]["case"].model_dump()
 
@@ -119,13 +120,43 @@ def test_mdt006_oracles_pass_only_when_both_opinions_conditions_and_no_consensus
         ),
         "unresolved_disagreements": ["Both attributed opinions remain provisional."],
     }
+    challenge_one = (
+        "CASE:case_summary#1; R2:RO-02 omitted the surgical-assessment-first option "
+        "and its local-staging/resectability conditions from the peer digest; retain it "
+        "as an attributed provisional opinion pending those data."
+    )
+    challenge_two = (
+        "CASE:case_summary#2; R2:RO-02 omitted the preoperative multimodality option "
+        "and its MRI, metastatic-work-up and fitness conditions from the peer digest; "
+        "retain it as an attributed provisional opinion pending those data."
+    )
+    reviews = [
+        {
+            "source_id": "CASE:case_summary#1",
+            "opinion_label": "colorectal surgical note",
+            "option_status": "omitted",
+            "conditions_status": "omitted",
+            "review_basis": "The supplied peer digest does not mention this option or its prerequisites.",
+            "challenge": challenge_one,
+        },
+        {
+            "source_id": "CASE:case_summary#2",
+            "opinion_label": "medical oncology note",
+            "option_status": "omitted",
+            "conditions_status": "omitted",
+            "review_basis": "The supplied peer digest does not mention this option or its prerequisites.",
+            "challenge": challenge_two,
+        },
+    ]
     rounds = {
         3: [{
             "agent_id": "RO-01",
             "status": "completed",
-            "result": {"substantive_challenges": [
-                "The source opinions require review against the missing staging and fitness data."
-            ]},
+            "source_peer_ids": ["RO-02"],
+            "result": {
+                "source_opinion_reviews": reviews,
+                "substantive_challenges": [challenge_one, challenge_two],
+            },
         }]
     }
     findings = audit_case_outputs(
@@ -155,13 +186,28 @@ def test_mdt006_oracles_flag_missing_attribution_conditions_and_false_consensus(
     }
     assert all(
         row["severity"] == "hard_fail"
-        for row in findings if row["source"].startswith("STRESS_ORACLE:")
+        for row in findings
+        if row["source"] in {
+            "STRESS_ORACLE:preserve_attributed_opinions",
+            "STRESS_ORACLE:no_false_consensus",
+            "STRESS_ORACLE:retain_conditions",
+        }
+    )
+    assert any(
+        row["severity"] == "major"
+        for row in findings
+        if row["source"] == "STRESS_ORACLE:review_attributed_opinions"
     )
 
 
-def test_mdt006_requires_structured_r3_challenge_not_generic_risk_flags():
+def test_mdt006_flags_missing_structured_opinion_reviews_even_when_risks_are_present():
     cases = {item["case_id"]: item for item in load_stress_cases()}
     item = cases["MDT-006"]
+    chair = {
+        "consensus_status": "insufficient_information",
+        "consensus_points": [],
+        "chair_conclusion": "No final educational pathway is established from the supplied case.",
+    }
     rounds = {
         3: [{
             "agent_id": "RO-01",
@@ -169,8 +215,61 @@ def test_mdt006_requires_structured_r3_challenge_not_generic_risk_flags():
             "result": {
                 "risk_flags": ["The two source opinions remain provisional."],
                 "substantive_challenges": [],
+                "source_opinion_reviews": [],
             },
         }]
     }
-    findings = audit_case_outputs("MDT-006", item["case"], rounds, {}, [])
-    assert any(row["source"] == "R3:CHALLENGE_COVERAGE" for row in findings)
+    findings = audit_case_outputs(
+        "MDT-006", item["case"], rounds, chair, ["review_attributed_opinions"]
+    )
+    assert any(
+        row["source"] == "STRESS_ORACLE:review_attributed_opinions"
+        and row["severity"] == "major"
+        for row in findings
+    )
+
+
+def test_mdt006_flags_missing_challenge_when_review_says_option_was_omitted():
+    cases = {item["case_id"]: item for item in load_stress_cases()}
+    item = cases["MDT-006"]
+    chair = {
+        "consensus_status": "insufficient_information",
+        "consensus_points": [],
+        "chair_conclusion": "No final educational pathway is established from the supplied case.",
+    }
+    rounds = {
+        3: [{
+            "agent_id": "RO-01",
+            "status": "completed",
+            "source_peer_ids": ["RO-02"],
+            "result": {
+                "source_opinion_reviews": [
+                    {
+                        "source_id": "CASE:case_summary#1",
+                        "opinion_label": "colorectal surgical note",
+                        "option_status": "omitted",
+                        "conditions_status": "omitted",
+                        "review_basis": "The supplied peer digest does not discuss the opinion.",
+                        "challenge": "",
+                    },
+                    {
+                        "source_id": "CASE:case_summary#2",
+                        "opinion_label": "medical oncology note",
+                        "option_status": "preserved",
+                        "conditions_status": "preserved",
+                        "review_basis": "The supplied peer digest explicitly discusses this option and its prerequisites.",
+                        "challenge": "",
+                    },
+                ],
+                "substantive_challenges": [],
+            },
+        }]
+    }
+    findings = audit_case_outputs(
+        "MDT-006", item["case"], rounds, chair, ["review_attributed_opinions"]
+    )
+    assert any(
+        "without recording the required source-linked challenge" in row["finding"]
+        for row in findings
+        if row["source"] == "STRESS_ORACLE:review_attributed_opinions"
+    )

@@ -24,6 +24,20 @@ class RoundContributionDraft(StrictModel):
     confidence: float = Field(ge=0.0, le=1.0)
 
 
+class SourceOpinionReview(StrictModel):
+    source_id: str = Field(min_length=8, max_length=100)
+    opinion_label: str = Field(min_length=4, max_length=120)
+    option_status: Literal["preserved", "partly_preserved", "omitted", "unclear"]
+    conditions_status: Literal["preserved", "partly_preserved", "omitted", "unclear"]
+    review_basis: str = Field(min_length=20, max_length=600)
+    challenge: str = Field(default="", max_length=700)
+
+
+class AdversarialContributionDraft(RoundContributionDraft):
+    # Required even when empty: absence of review data must be explicit in R3.
+    source_opinion_reviews: list[SourceOpinionReview] = Field(max_length=4)
+
+
 class RoundContribution(StrictModel):
     agent_id: str = Field(pattern=r"^[A-Z]{2}-[0-9]{2}$")
     round_number: Literal[2, 3]
@@ -32,6 +46,7 @@ class RoundContribution(StrictModel):
     response_to_other_perspectives: str = Field(min_length=20, max_length=1600)
     agreements: list[str] = Field(default_factory=list, max_length=8)
     substantive_challenges: list[str] = Field(default_factory=list, max_length=8)
+    source_opinion_reviews: list[SourceOpinionReview] = Field(default_factory=list, max_length=4)
     position_changes: list[str] = Field(default_factory=list, max_length=5)
     remaining_unknowns: list[str] = Field(default_factory=list, max_length=8)
     risk_flags: list[str] = Field(default_factory=list, max_length=8)

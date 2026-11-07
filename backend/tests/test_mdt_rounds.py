@@ -271,14 +271,14 @@ def test_peer_selection_excludes_failed_or_running_records():
 
 
 def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
-    from app.round_schemas import RoundContributionDraft
+    from app.round_schemas import AdversarialContributionDraft, RoundContributionDraft
     from app.services import mdt_generation
 
     prompts = []
 
     async def fake_generate(prompt, schema_type, max_tokens):
         prompts.append(prompt)
-        return RoundContributionDraft(
+        draft_fields = dict(
             position="conditional",
             provisional_conclusion="The educational position remains conditional because source information is incomplete.",
             response_to_other_perspectives="The reviewed peer material was considered by source ID; no unsupported agreement is inferred.",
@@ -288,6 +288,9 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
             risk_flags=["Do not infer stage from incomplete data."],
             confidence=0.5,
         )
+        if schema_type is AdversarialContributionDraft:
+            return AdversarialContributionDraft(**draft_fields, source_opinion_reviews=[])
+        return RoundContributionDraft(**draft_fields)
 
     monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate)
     profile = {"agent_id": "RO-01", "name": "Radiation Oncology", "mandate": "Review educational radiotherapy considerations."}
@@ -355,6 +358,10 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
     assert "CASE:case_summary — do not collapse the two conditional options" in prompts[1]
     assert "bounded sample of at most 5 of 44 other roles" in prompts[1]
     assert "never relabel an R2 peer as R1" in prompts[1]
+    assert "source_opinion_reviews" in prompts[1]
+    assert "CASE:case_summary#1" in prompts[1]
+    assert "CASE:case_summary#2" in prompts[1]
+    assert "ALLOWED ROUND SOURCE IDS" in prompts[1]
 
 
 def test_chair_reconciliation_preserves_saved_round_challenges_as_unresolved():

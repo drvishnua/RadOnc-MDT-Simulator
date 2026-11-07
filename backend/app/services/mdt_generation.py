@@ -14,6 +14,7 @@ from pydantic import BaseModel, ValidationError
 from app.services.ollama import AgentGenerationError, OllamaUnavailable
 from app.config import OLLAMA_BASE_URL, OLLAMA_MODEL
 from app.round_schemas import (
+    AdversarialContributionDraft,
     FinalReportDraft,
     FinalMDTReport,
     RoundContribution,
@@ -269,6 +270,26 @@ def reconcile_chair_report_draft(
                         f"{round_label} recorded challenge — {role_id} ({role_name}): "
                         f"{_compact(challenge, 260)}"
                     )
+    # Aggregate source-opinion review dispositions by distinct contributing role.
+    # These are coverage counts, not votes or evidence of clinical agreement.
+    review_ids = (
+        ("CASE:case_summary#1", "colorectal surgical note"),
+        ("CASE:case_summary#2", "medical oncology note"),
+    )
+    for source_id, label in review_ids:
+        source_reviews = [
+            (row, review)
+            for row, result in r3
+            for review in (result.get("source_opinion_reviews") or [])
+            if isinstance(review, dict) and review.get("source_id") == source_id
+        ]
+        if source_reviews:
+            option_counts = Counter(review.get("option_status", "unreported") for _, review in source_reviews)
+            condition_counts = Counter(review.get("conditions_status", "unreported") for _, review in source_reviews)
+            unresolved.append(
+                f"R3 source-opinion review coverage (role counts, not consensus) — {label}: "
+                f"option status {dict(option_counts)}; condition status {dict(condition_counts)}."
+            )
     unresolved.extend(_unique_strings(recorded_review_findings, limit=12))
     # Surface incorrect round-qualified citations without mutating the original model text.
     source_reference_findings: list[str] = []
@@ -392,6 +413,8 @@ def reconcile_chair_report_draft(
         "guideline concordance, or evidence quality."
     )
 
+    unresolved = _unique_strings(unresolved, limit=15)
+
     return FinalMDTReport(
         run_id=run_id,
         report_title=build_case_report_title(case),
@@ -511,7 +534,7 @@ async def generate_adversarial_contribution(
     own_independent_assessment: dict,
     own_debate_contribution: dict,
     peer_debate_views: list[dict],
-    max_tokens: int = 700,
+    max_tokens: int = 1100,
 ) -> RoundContribution:
     # R3 receives a deliberately small, source-labelled sample. All 45 saved
     # contributions remain in storage and are supplied to the Chair in R4.
@@ -554,6 +577,11 @@ async def generate_adversarial_contribution(
         "round2_unknowns": [_compact(item, 90) for item in (own_debate_contribution.get("remaining_unknowns") or [])[:2]],
         "round2_risks": [_compact(item, 90) for item in (own_debate_contribution.get("risk_flags") or [])[:2]],
     }
+    allowed_source_ids = [
+        f"R1:{profile['agent_id']}",
+        f"R2:{profile['agent_id']}",
+        *(f"R2:{peer['agent_id']}" for peer in peer_debate_views[:5]),
+    ]
     prompt = (
         "ROUND 3 — ADVERSARIAL REVIEW. Educational simulation only; do not give a treatment "
         "instruction or invent facts/evidence. Treat the verbatim case summary as attributed "
@@ -571,7 +599,19 @@ async def generate_adversarial_contribution(
         "empty and explain the limitation. The peer digest is a bounded sample of at most 5 of "
         "44 other roles, not the full MDT. Never generalise it to unshown roles or claim all roles "
         "agree. Preserve uncertainty, conditions, and minority views. Risk flags are not "
-        "substitutes for source-linked challenges.\\n"
+        "substitutes for source-linked challenges. For every distinct attributed source opinion, "
+        "populate source_opinion_reviews with its source ID, option_status, conditions_status, "
+        "and a concise review_basis. For MDT-006, return exactly two reviews: "
+        "CASE:case_summary#1 for the colorectal surgical note and CASE:case_summary#2 for "
+        "the medical oncology note. Judge preservation only from the actual R1/R2 material "
+        "available to you; generic agreement that information is missing does not mean an "
+        "option or its conditions were preserved. Use preserved, partly_preserved, omitted, "
+        "or unclear. If either status is partly_preserved or omitted, write a source-linked "
+        "challenge in the review and copy it into substantive_challenges. Such a challenge "
+        "must cite CASE:case_summary and at least one supplied R2 peer ID. If status is unclear, "
+        "explain the limitation in review_basis and do not invent a challenge. For cases with "
+        "no attributed source opinions, return an empty source_opinion_reviews list.\\n"
+        f"ALLOWED ROUND SOURCE IDS: {', '.join(allowed_source_ids)}\\n"
         f"ROLE: {profile['name']}\\nMANDATE: {profile['mandate']}\\n"
         "SYNTHETIC CASE:\\n"
         + json.dumps(build_case_prompt_context(case), ensure_ascii=False, separators=(",", ":"))
@@ -581,8 +621,16 @@ async def generate_adversarial_contribution(
         + json.dumps(peers, ensure_ascii=False, separators=(",", ":"))
         + "\\nReturn concise, concrete findings only. The output format is schema-enforced."
     )
-    draft = await _generate_structured(prompt, RoundContributionDraft, max_tokens)
+    draft = await _generate_structured(prompt, AdversarialContributionDraft, max_tokens)
     payload = draft.model_dump()
+    # Keep the canonical R3 challenge field in sync with the structured review.
+    # This copies model-authored challenges; it does not create or infer new ones.
+    challenges = list(payload.get("substantive_challenges") or [])
+    for review in payload.get("source_opinion_reviews") or []:
+        challenge = review.get("challenge") if isinstance(review, dict) else ""
+        if isinstance(challenge, str) and challenge.strip() and challenge not in challenges:
+            challenges.append(challenge)
+    payload["substantive_challenges"] = challenges[:8]
     previous_position = own_debate_contribution.get("position", "unknown")
     if draft.position != previous_position:
         rationale = _compact(draft.response_to_other_perspectives or draft.provisional_conclusion, 320)

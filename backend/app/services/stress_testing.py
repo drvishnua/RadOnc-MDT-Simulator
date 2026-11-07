@@ -91,6 +91,7 @@ def audit_case_outputs(
         "preserve_attributed_opinions",
         "no_false_consensus",
         "retain_conditions",
+        "review_attributed_opinions",
     }
     for oracle_id in oracle_checks or []:
         if oracle_id not in implemented_oracles:
@@ -175,23 +176,80 @@ def audit_case_outputs(
                     "source-attributed opinions: " + ", ".join(missing) + ".",
                 )
 
-    # A source opinion is not considered adversarially reviewed merely because
-    # R3 repeats it in risk_flags or generic uncertainty language.
-    if case_id == "MDT-006":
-        r3_challenges = [
-            challenge
-            for row in rounds.get(3, [])
-            if row.get("status") == "completed" and isinstance(row.get("result"), dict)
-            for challenge in (row["result"].get("substantive_challenges") or [])
-            if isinstance(challenge, str) and challenge.strip()
-        ]
-        if not r3_challenges:
-            findings.append({
-                "severity": "major",
-                "source": "R3:CHALLENGE_COVERAGE",
-                "finding": "No Round-3 role saved a structured substantive_challenges entry. "
-                           "Risk flags and generic warnings are not counted as source-linked adversarial challenges.",
-            })
+        elif oracle_id == "review_attributed_opinions":
+            expected_ids = {"CASE:case_summary#1", "CASE:case_summary#2"}
+            completed_r3 = [
+                row for row in rounds.get(3, [])
+                if row.get("status") == "completed" and isinstance(row.get("result"), dict)
+            ]
+            if not completed_r3:
+                add_oracle_finding(
+                    oracle_id,
+                    "No completed R3 contribution is available for attributed-opinion review.",
+                    "major",
+                )
+            for row in completed_r3:
+                result = row["result"]
+                reviews = result.get("source_opinion_reviews") or []
+                review_map = {
+                    item.get("source_id"): item
+                    for item in reviews
+                    if isinstance(item, dict) and item.get("source_id")
+                }
+                if len(reviews) != 2 or set(review_map) != expected_ids:
+                    add_oracle_finding(
+                        oracle_id,
+                        f"{row.get('agent_id', 'unknown role')} did not record exactly one review "
+                        "for each of the two attributed referral opinions.",
+                        "major",
+                    )
+                    continue
+                supplied_peer_ids = row.get("source_peer_ids") or []
+                substantive_challenges = result.get("substantive_challenges") or []
+                for source_id, review in review_map.items():
+                    if not str(review.get("review_basis") or "").strip():
+                        add_oracle_finding(
+                            oracle_id,
+                            f"{row.get('agent_id')} omitted the review basis for {source_id}.",
+                            "major",
+                        )
+                    statuses = {
+                        review.get("option_status"),
+                        review.get("conditions_status"),
+                    }
+                    if not statuses.issubset({"preserved", "partly_preserved", "omitted", "unclear"}):
+                        add_oracle_finding(
+                            oracle_id,
+                            f"{row.get('agent_id')} used an invalid preservation status for {source_id}.",
+                            "major",
+                        )
+                        continue
+                    if statuses.intersection({"partly_preserved", "omitted"}):
+                        challenge = str(review.get("challenge") or "").strip()
+                        if not challenge:
+                            add_oracle_finding(
+                                oracle_id,
+                                f"{row.get('agent_id')} marked {source_id} partly preserved/omitted "
+                                "without recording the required source-linked challenge.",
+                                "major",
+                            )
+                            continue
+                        if "CASE:case_summary" not in challenge or not any(
+                            f"R2:{peer_id}" in challenge for peer_id in supplied_peer_ids
+                        ):
+                            add_oracle_finding(
+                                oracle_id,
+                                f"{row.get('agent_id')} challenge for {source_id} does not cite "
+                                "the case source and an R2 peer actually supplied to that role.",
+                                "major",
+                            )
+                        if challenge not in substantive_challenges:
+                            add_oracle_finding(
+                                oracle_id,
+                                f"{row.get('agent_id')} review challenge for {source_id} was not "
+                                "copied into the canonical substantive_challenges field.",
+                                "major",
+                            )
     if case_id == "MDT-003":
         has_diabetes = "diabetes" in chair_text or " dm " in f" {chair_text} "
         has_hypertension = "hypertension" in chair_text or "shtn" in chair_text or " htn " in f" {chair_text} "

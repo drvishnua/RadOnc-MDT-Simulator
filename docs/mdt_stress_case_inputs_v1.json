@@ -115,7 +115,8 @@
       "oracle_checks": [
         "preserve_attributed_opinions",
         "no_false_consensus",
-        "retain_conditions"
+        "retain_conditions",
+        "review_attributed_opinions"
       ]
     },
     {
