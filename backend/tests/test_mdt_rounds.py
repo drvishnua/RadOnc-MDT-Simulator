@@ -287,13 +287,13 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
     assert "R2:MO-01" in prompts[1]
     assert "local staging prerequisite remains unresolved" in prompts[1]
     assert "For every substantive challenge, name its exact source" in prompts[1]
-    assert "explicitly determine" in prompts[1]
+    assert "state whether its option and conditions are preserved" in prompts[1]
     assert "Silence or a generic statement that staging is missing is not proof of preservation" in prompts[1]
     assert "Risk flags are not substitutes" in prompts[1]
-    assert "COMPLETE own saved R2 contribution" in prompts[1]
+    assert "COMPLETE own R2 record" in prompts[1]
     assert "The surgical assessment and multimodality options remain distinct" in prompts[1]
     assert "CASE:case_summary — do not collapse the two conditional options" in prompts[1]
-    assert "bounded sample of at most 15 of 44 other roles" in prompts[1]
+    assert "bounded sample of at most 5 of 44 other roles" in prompts[1]
 
 
 def test_chair_reconciliation_preserves_saved_round_challenges_as_unresolved():
@@ -470,3 +470,82 @@ def test_chair_preserves_competing_source_opinions_verbatim_with_conditions():
     assert "preoperative multimodality sequence" in joined
     assert "MRI staging, metastatic work-up and fitness assessment" in joined
     assert report.consensus_points == []
+
+
+def test_round_three_peer_selector_enforces_small_bounded_sample():
+    from app.agents.catalog import AGENT_PROFILES
+
+    current = next(profile for profile in AGENT_PROFILES if profile["agent_id"] == "RO-01")
+    rows = [
+        {
+            "agent_id": profile["agent_id"],
+            "agent_name": profile["name"],
+            "result": {
+                "position": "conditional",
+                "provisional_conclusion": "The position remains conditional pending missing information.",
+            },
+        }
+        for profile in AGENT_PROFILES
+    ]
+    selected = mdt_rounds._select_peer_views(current, rows, "result", max_total=5)
+    assert len(selected) <= 5
+    assert all(item["agent_id"] != current["agent_id"] for item in selected)
+    assert all("result" in item for item in selected)
+
+
+def test_adversarial_prompt_truncates_peer_digest_to_five_source_records(monkeypatch):
+    from app.round_schemas import RoundContributionDraft
+    from app.services import mdt_generation
+
+    captured = []
+
+    async def fake_generate(prompt, schema_type, max_tokens):
+        captured.append(prompt)
+        return RoundContributionDraft(
+            position="conditional",
+            provisional_conclusion="The educational position remains conditional because source information is incomplete.",
+            response_to_other_perspectives="The bounded peer sample does not justify a broader claim about all roles.",
+            agreements=[],
+            substantive_challenges=[],
+            remaining_unknowns=["Complete staging remains unknown."],
+            risk_flags=["Do not infer stage from incomplete data."],
+            confidence=0.5,
+        )
+
+    monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate)
+    profile = {"agent_id": "RO-01", "name": "Radiation Oncology", "mandate": "Review educational radiotherapy considerations."}
+    case = SyntheticCase(
+        scenario_title="Synthetic bounded-context test",
+        case_summary="Fictional case with unknown staging and no verified treatment recommendation.",
+    )
+    own_r1 = {
+        "position": "conditional",
+        "provisional_conclusion": "The case information is incomplete.",
+        "preferred_educational_option": "No option can be selected.",
+    }
+    own_r2 = {
+        "position": "conditional",
+        "provisional_conclusion": "The debate remains conditional.",
+        "response_to_other_perspectives": "No proposition-level agreement is established.",
+    }
+    peers = [
+        {
+            "agent_id": f"SO-{index:02d}",
+            "agent_name": f"Surgical role {index}",
+            "result": {
+                "position": "conditional",
+                "provisional_conclusion": f"Peer conclusion {index} remains conditional.",
+                "response_to_other_perspectives": "The source record remains incomplete.",
+                "agreements": [],
+                "substantive_challenges": [],
+                "risk_flags": [],
+                "position_changes": [],
+            },
+        }
+        for index in range(1, 9)
+    ]
+    asyncio.run(mdt_generation.generate_adversarial_contribution(profile, case, own_r1, own_r2, peers))
+    assert captured[0].count('"source":"R2:') == 5
+    assert '"source":"R2:SO-01"' in captured[0]
+    assert '"source":"R2:SO-05"' in captured[0]
+    assert '"source":"R2:SO-06"' not in captured[0]
