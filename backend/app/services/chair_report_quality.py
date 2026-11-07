@@ -34,7 +34,7 @@ def _entries(rows: list[dict], field: str) -> list[tuple[dict, dict]]:
     return [
         (row, row[field])
         for row in rows
-        if isinstance(row.get(field), dict)
+        if row.get("status") == "completed" and isinstance(row.get(field), dict)
     ]
 
 
