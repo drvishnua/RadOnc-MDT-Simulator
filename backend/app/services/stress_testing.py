@@ -109,6 +109,21 @@ def audit_case_outputs(
             )
             continue
 
+        # A status-only Chair payload is not a report. Do not mistake absent
+        # narrative for a completed oracle evaluation or silently pass it.
+        chair_narrative = {
+            key: value
+            for key, value in chair.items()
+            if key not in {"consensus_status", "consensus_points"}
+        }
+        if not _all_text(chair_narrative).strip():
+            add_oracle_finding(
+                oracle_id,
+                f"Oracle {oracle_id} could not be evaluated because the Chair report narrative is absent.",
+                "major",
+            )
+            continue
+
         if oracle_id == "preserve_attributed_opinions":
             opinion_markers = (
                 "surgical assessment first",
