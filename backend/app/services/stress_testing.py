@@ -78,16 +78,106 @@ def audit_case_outputs(
             )) else "major"
             findings.append({"severity": severity, "source": label, "finding": flag})
 
-    # Do not silently count declared case oracles as passed. These are currently
-    # explicit coverage gaps until a deterministic evaluator is added for each ID.
-    for oracle_id in oracle_checks or []:
+    chair_text = _all_text(chair).casefold()
+    case_text = case.case_summary.casefold()
+
+    def add_oracle_finding(oracle_id: str, message: str, severity: str = "hard_fail") -> None:
         findings.append({
-            "severity": "major",
-            "source": "STRESS_ORACLE",
-            "finding": f"Case-specific oracle is declared but not yet executable: {oracle_id}.",
+            "severity": severity,
+            "source": f"STRESS_ORACLE:{oracle_id}",
+            "finding": message,
         })
 
-    chair_text = _all_text(chair).casefold()
+    implemented_oracles = {
+        "preserve_attributed_opinions",
+        "no_false_consensus",
+        "retain_conditions",
+    }
+    for oracle_id in oracle_checks or []:
+        if oracle_id not in implemented_oracles:
+            add_oracle_finding(
+                oracle_id,
+                f"Case-specific oracle is declared but not yet executable: {oracle_id}.",
+                "major",
+            )
+            continue
+
+        if case_id != "MDT-006":
+            add_oracle_finding(
+                oracle_id,
+                f"Oracle {oracle_id} has no evaluator registered for case {case_id}.",
+                "major",
+            )
+            continue
+
+        if oracle_id == "preserve_attributed_opinions":
+            opinion_markers = (
+                "surgical assessment first",
+                "preoperative multimodality sequence",
+            )
+            missing = [marker for marker in opinion_markers if marker not in chair_text]
+            if missing:
+                add_oracle_finding(
+                    oracle_id,
+                    "Chair report does not preserve both source-attributed provisional opinions; "
+                    "missing markers: " + ", ".join(missing) + ".",
+                )
+
+        elif oracle_id == "no_false_consensus":
+            if chair.get("consensus_status") in {"consensus", "qualified_consensus"}:
+                add_oracle_finding(
+                    oracle_id,
+                    "Chair assigns a consensus status despite two explicitly competing "
+                    "source-attributed sequencing opinions and no established MDT plan.",
+                )
+            if chair.get("consensus_points"):
+                add_oracle_finding(
+                    oracle_id,
+                    "Chair records consensus points for a case whose referral opinions "
+                    "explicitly state that no final plan or MDT consensus is established.",
+                )
+            if any(term in chair_text for term in (
+                "unanimously agreed", "unanimous consensus", "all specialists agreed",
+                "consensus reached", "the team agreed to proceed",
+            )):
+                add_oracle_finding(
+                    oracle_id,
+                    "Chair narrative asserts agreement or consensus not established by the case source.",
+                )
+
+        elif oracle_id == "retain_conditions":
+            condition_markers = (
+                "complete local staging",
+                "resectability review",
+                "mri staging",
+                "metastatic work-up",
+                "fitness assessment",
+            )
+            missing = [marker for marker in condition_markers if marker not in chair_text]
+            if missing:
+                add_oracle_finding(
+                    oracle_id,
+                    "Chair report omits one or more prerequisites attached to the "
+                    "source-attributed opinions: " + ", ".join(missing) + ".",
+                )
+
+    # A source opinion is not considered adversarially reviewed merely because
+    # R3 repeats it in risk_flags or generic uncertainty language.
+    if case_id == "MDT-006":
+        r3_challenges = [
+            challenge
+            for row in rounds.get(3, [])
+            if row.get("status") == "completed" and isinstance(row.get("result"), dict)
+            for challenge in (row["result"].get("substantive_challenges") or [])
+            if isinstance(challenge, str) and challenge.strip()
+        ]
+        if not r3_challenges:
+            findings.append({
+                "severity": "major",
+                "source": "R3:CHALLENGE_COVERAGE",
+                "finding": "No Round-3 role saved a structured substantive_challenges entry. "
+                           "Risk flags and generic warnings are not counted as source-linked adversarial challenges.",
+            })
     if case_id == "MDT-003":
         has_diabetes = "diabetes" in chair_text or " dm " in f" {chair_text} "
         has_hypertension = "hypertension" in chair_text or "shtn" in chair_text or " htn " in f" {chair_text} "
