@@ -42,14 +42,18 @@ def _select_peer_views(
     current_position = None
     for row in rows:
         if row["agent_id"] == current_profile["agent_id"]:
-            data = row.get(result_field)
+            data = row.get(result_field) if row.get("status") == "completed" else None
             if data:
                 current_position = data.get("position")
             break
 
     grouped: dict[str, list[dict]] = {}
     for row in rows:
-        if row["agent_id"] == current_profile["agent_id"] or not row.get(result_field):
+        if (
+            row.get("status") != "completed"
+            or row["agent_id"] == current_profile["agent_id"]
+            or not row.get(result_field)
+        ):
             continue
         profile = profiles.get(row["agent_id"])
         if not profile:
@@ -111,7 +115,7 @@ async def run_mdt_round(run_id: str, round_number: int) -> None:
             round1_by_id = {
                 row["agent_id"]: row["assessment"]
                 for row in round1_rows
-                if row.get("assessment")
+                if row.get("status") == "completed" and row.get("assessment")
             }
             if len(round1_by_id) != len(AGENT_PROFILES):
                 raise RuntimeError("All 45 Round-1 assessments are required before debate.")
@@ -121,7 +125,7 @@ async def run_mdt_round(run_id: str, round_number: int) -> None:
                 round2_by_id = {
                     row["agent_id"]: row["result"]
                     for row in round2_rows
-                    if row.get("result")
+                    if row.get("status") == "completed" and row.get("result")
                 }
                 if len(round2_by_id) != len(AGENT_PROFILES):
                     raise RuntimeError("All 45 Round-2 debate contributions are required.")
@@ -131,7 +135,10 @@ async def run_mdt_round(run_id: str, round_number: int) -> None:
 
             if round_number == 4:
                 round3_rows = run_store.list_round_results(run_id, 3)
-                if sum(1 for row in round3_rows if row.get("result")) != len(AGENT_PROFILES):
+                if sum(
+                    1 for row in round3_rows
+                    if row.get("status") == "completed" and row.get("result")
+                ) != len(AGENT_PROFILES):
                     raise RuntimeError("All 45 Round-3 adversarial reviews are required.")
                 if "SG-07" not in completed_ids:
                     started = time.perf_counter()
