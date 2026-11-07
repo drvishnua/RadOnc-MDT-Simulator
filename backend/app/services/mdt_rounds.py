@@ -196,7 +196,7 @@ async def run_mdt_round(run_id: str, round_number: int) -> None:
                                     round1_by_id[agent_id],
                                     round2_by_id[agent_id],
                                     peer_views,
-                                    retry_max_tokens=1000,
+                                    retry_max_tokens=1500,
                                 )
                             run_store.save_round_success(
                                 run_id,

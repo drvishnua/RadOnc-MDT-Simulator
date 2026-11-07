@@ -24,7 +24,7 @@
 
 1. Round 1 runs all 45 independent roles; no agent sees another's output.
 2. Round 2 runs all 45 roles again, each receiving its own Round-1 view and a bounded digest of selected cross-specialty peer positions.
-3. Round 3 runs all 45 roles again, each receiving its earlier views and a bounded digest of peer debate contributions; it challenges assumptions, uncertainty, patient/context, feasibility, resources, and governance.
+3. Round 3 runs all 45 roles again, each receiving its earlier views and a bounded digest of peer debate contributions; it challenges assumptions, uncertainty, patient/context, feasibility, resources, and governance. Where a case contains attributed source opinions, R3 records structured per-opinion option/condition preservation statuses and source-linked challenges when an option or prerequisite is omitted or weakened.
 4. Round 4 runs SG-07, the MDT Chair, over compact digests of all stored contributions from Rounds 1–3.
 
 The full outputs are preserved in SQLite. The bounded digest is a context-window optimization: every role contributes in each stage, but every role does not receive all 44 full-length peer outputs.

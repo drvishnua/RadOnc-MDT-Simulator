@@ -85,6 +85,7 @@ def test_case_audit_does_not_silently_pass_unimplemented_oracles():
         "preserve_attributed_opinions",
         "no_false_consensus",
         "retain_conditions",
+        "review_attributed_opinions",
     }
     assert all(item["severity"] == "major" for item in pending)
 
@@ -183,6 +184,7 @@ def test_mdt006_oracles_flag_missing_attribution_conditions_and_false_consensus(
         "STRESS_ORACLE:preserve_attributed_opinions",
         "STRESS_ORACLE:no_false_consensus",
         "STRESS_ORACLE:retain_conditions",
+        "STRESS_ORACLE:review_attributed_opinions",
     }
     assert all(
         row["severity"] == "hard_fail"
