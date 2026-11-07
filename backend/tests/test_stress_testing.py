@@ -79,8 +79,8 @@ def test_case_audit_does_not_silently_pass_unimplemented_oracles():
         {"consensus_status": "insufficient_information"},
         cases["MDT-006"]["oracle_checks"],
     )
-    pending = [item for item in findings if item["source"] == "STRESS_ORACLE"]
-    assert {item["finding"].rsplit(": ", 1)[-1].rstrip(".") for item in pending} == {
+    pending = [item for item in findings if item["source"].startswith("STRESS_ORACLE:")]
+    assert {item["source"].split(":", 1)[1] for item in pending} == {
         "preserve_attributed_opinions",
         "no_false_consensus",
         "retain_conditions",
