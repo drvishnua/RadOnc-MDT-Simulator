@@ -79,7 +79,6 @@ def audit_case_outputs(
             findings.append({"severity": severity, "source": label, "finding": flag})
 
     chair_text = _all_text(chair).casefold()
-    case_text = case.case_summary.casefold()
 
     def add_oracle_finding(oracle_id: str, message: str, severity: str = "hard_fail") -> None:
         findings.append({
