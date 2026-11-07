@@ -102,7 +102,7 @@ def _position_counts(rows: list[dict], field: str) -> Counter:
     )
 
 
-_ROUND_REFERENCE_PATTERN = re.compile(r"\\bR([123]):([A-Z]{2}-[0-9]{2})\\b")
+_ROUND_REFERENCE_PATTERN = re.compile(r"\bR([123]):([A-Z]{2}-[0-9]{2})\b")
 
 
 def _audit_source_references(payload: dict, allowed: set[tuple[str, str]]) -> list[str]:
