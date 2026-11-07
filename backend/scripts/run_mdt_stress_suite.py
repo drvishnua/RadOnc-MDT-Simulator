@@ -142,7 +142,7 @@ async def run_one(item: dict[str, Any], on_progress=None) -> dict[str, Any]:
         require(isinstance(chair, dict), "Chair report not persisted.")
         require(chair.get("not_a_treatment_instruction") is True, "Chair safety boundary missing.")
         require(chair.get("evidence_retrieval_connected") is False, "Evidence-retrieval boundary missing.")
-        findings = audit_case_outputs(item["case_id"], case, rounds, chair)
+        findings = audit_case_outputs(item["case_id"], case, rounds, chair, item["oracle_checks"])
         output.update({
             "status": "completed_with_findings" if findings else "completed_no_process_findings",
             "last_completed_stage": "chair_synthesis_and_audit_completed",
