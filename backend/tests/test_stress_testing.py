@@ -43,3 +43,62 @@ def test_stress_cases_keep_case_specific_oracles_separate_from_case_facts():
     assert "preserve_attributed_opinions" in cases["MDT-006"]["oracle_checks"]
     assert "no_fabricated_patient_preference" in cases["MDT-007"]["oracle_checks"]
     assert "oracle_checks" not in cases["MDT-002"]["case"].model_dump()
+
+
+
+def test_case_audit_hard_fails_invalid_source_reference_flags():
+    cases = {item["case_id"]: item for item in load_stress_cases()}
+    case = cases["MDT-006"]["case"]
+    rounds = {
+        2: [{
+            "agent_id": "RO-01",
+            "status": "completed",
+            "result": {
+                "source_reference_integrity_flags": [
+                    "R1:RO-99 was cited but was not supplied to this role."
+                ]
+            },
+        }]
+    }
+    findings = audit_case_outputs("MDT-006", case, rounds, {})
+    assert any(
+        item["severity"] == "hard_fail"
+        and item["source"] == "R2:RO-01"
+        and "RO-99" in item["finding"]
+        for item in findings
+    )
+
+
+def test_case_audit_does_not_silently_pass_unimplemented_oracles():
+    cases = {item["case_id"]: item for item in load_stress_cases()}
+    case = cases["MDT-006"]["case"]
+    findings = audit_case_outputs(
+        "MDT-006",
+        case,
+        {},
+        {"consensus_status": "insufficient_information"},
+        cases["MDT-006"]["oracle_checks"],
+    )
+    pending = [item for item in findings if item["source"] == "STRESS_ORACLE"]
+    assert {item["finding"].rsplit(": ", 1)[-1].rstrip(".") for item in pending} == {
+        "preserve_attributed_opinions",
+        "no_false_consensus",
+        "retain_conditions",
+    }
+    assert all(item["severity"] == "major" for item in pending)
+
+
+def test_case_audit_ignores_source_reference_flags_on_failed_rows():
+    cases = {item["case_id"]: item for item in load_stress_cases()}
+    case = cases["MDT-006"]["case"]
+    rounds = {
+        3: [{
+            "agent_id": "RO-01",
+            "status": "failed",
+            "result": {
+                "source_reference_integrity_flags": ["stale output must not be audited"]
+            },
+        }]
+    }
+    findings = audit_case_outputs("MDT-006", case, rounds, {})
+    assert not any("stale output" in item["finding"] for item in findings)
