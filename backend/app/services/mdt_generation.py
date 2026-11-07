@@ -559,7 +559,7 @@ async def generate_adversarial_contribution(
         "instruction or invent facts/evidence. Treat the verbatim case summary as attributed "
         "source text, not verified fact or consensus. Identify each distinct attributed opinion, "
         "its option, and every prerequisite. Compare each separately with your own saved R1/R2 "
-        "positions and the supplied R2 peer sample. Do not conflate different conditional options "
+        "positions and the supplied R2 peer sample. Cite peer roles only with their exact R2:AGENT_ID labels from that sample; never relabel an R2 peer as R1. An R1 citation is permitted only for your own role's independent assessment. Do not invent or cite an unprovided role. Do not conflate different conditional options "
         "or treat shared missing investigations as agreement on a pathway. For each opinion, "
         "state whether its option and conditions are preserved, partly preserved, omitted, or "
         "cannot be assessed. A generic statement that staging is missing does not prove that an "
