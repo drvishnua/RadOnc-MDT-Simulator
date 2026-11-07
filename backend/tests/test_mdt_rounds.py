@@ -288,7 +288,7 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
     assert "local staging prerequisite remains unresolved" in prompts[1]
     assert "make a source-linked challenge naming CASE:case_summary" in prompts[1]
     assert "state whether its option and conditions are preserved" in prompts[1]
-    assert "Silence or a generic statement that staging is missing is not proof of preservation" in prompts[1]
+    assert "A generic statement that staging is missing does not prove" in prompts[1]
     assert "Risk flags are not substitutes" in prompts[1]
     assert "COMPLETE own R2 record" in prompts[1]
     assert "The surgical assessment and multimodality options remain distinct" in prompts[1]
