@@ -30,6 +30,7 @@ def _select_peer_views(
     current_profile: dict[str, str],
     rows: list[dict],
     result_field: str,
+    max_total: int = 15,
 ) -> list[dict]:
     """Select compact cross-specialty context that fits the local context window.
 
@@ -75,7 +76,7 @@ def _select_peer_views(
         limit = 3 if category == current_profile["category"] else 2
         selected.extend(candidates[:limit])
 
-    selected = selected[:15]
+    selected = selected[:max_total]
     for item in selected:
         item.pop("_category", None)
     return selected
@@ -180,7 +181,7 @@ async def run_mdt_round(run_id: str, round_number: int) -> None:
                                     retry_max_tokens=1000,
                                 )
                             else:
-                                peer_views = _select_peer_views(profile, round2_rows, "result")
+                                peer_views = _select_peer_views(profile, round2_rows, "result", max_total=5)
                                 result = await _with_one_schema_retry(
                                     generate_adversarial_contribution,
                                     profile,
