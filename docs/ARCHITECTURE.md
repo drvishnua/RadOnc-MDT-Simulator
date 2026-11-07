@@ -31,7 +31,7 @@ The full outputs are preserved in SQLite. The bounded digest is a context-window
 
 ## Chair reconciliation
 
-The model returns a structured Chair draft. Before persistence, the backend recomputes Round-1, Round-2, and Round-3 position distributions from saved records. The final consensus status is derived conservatively from Round-3 positions: a support/opposition split gives no consensus; insufficient-information positions retain insufficient-information status; conditional-only positions remain qualified consensus.
+The model returns a structured Chair draft. Before persistence, the backend recomputes Round-1, Round-2, and Round-3 position distributions from saved records. The final consensus status is derived conservatively from completed Round-3 contributions. A recorded support/opposition split gives no consensus. If the saved positions are insufficient-information, the report remains insufficient-information. Conditional-only or uniform position labels do not establish proposition-level consensus and must not be upgraded to qualified consensus without an explicitly supported shared proposition and retained conditions.
 
 Non-modal views are retained with role IDs and source conclusions. If debate or adversarial review changes a minority position, the originating Round-1 view remains available. The backend fills missing-information, uncertainty, patient/family, feasibility/resource, governance, and evidence-limitations sections from structured case and role records. A conditional label is not automatically treated as opposing dissent. Exact role-level position counts are displayed as descriptions, not votes.
 
