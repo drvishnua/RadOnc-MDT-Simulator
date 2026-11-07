@@ -290,7 +290,7 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
     assert "state whether its option and conditions are preserved" in prompts[1]
     assert "A generic statement that staging is missing does not prove" in prompts[1]
     assert "Risk flags are not substitutes" in prompts[1]
-    assert "COMPLETE own R2 record" in prompts[1]
+    assert "YOUR R1 AND COMPLETE OWN R2 RECORD" in prompts[1]
     assert "The surgical assessment and multimodality options remain distinct" in prompts[1]
     assert "CASE:case_summary — do not collapse the two conditional options" in prompts[1]
     assert "bounded sample of at most 5 of 44 other roles" in prompts[1]
