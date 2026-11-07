@@ -473,79 +473,73 @@ async def generate_adversarial_contribution(
     peer_debate_views: list[dict],
     max_tokens: int = 700,
 ) -> RoundContribution:
+    # R3 receives a deliberately small, source-labelled sample. All 45 saved
+    # contributions remain in storage and are supplied to the Chair in R4.
     peers = [
         {
             "source": f"R2:{peer['agent_id']}",
             "role": peer["agent_name"],
             "position": peer["result"].get("position", "unknown"),
-            "conclusion": _compact(peer["result"].get("provisional_conclusion", ""), 150),
-            "response": _compact(peer["result"].get("response_to_other_perspectives", ""), 150),
+            "conclusion": _compact(peer["result"].get("provisional_conclusion", ""), 110),
+            "response": _compact(peer["result"].get("response_to_other_perspectives", ""), 100),
             "agreements": [
-                _compact(item, 90)
-                for item in (peer["result"].get("agreements") or [])[:2]
+                _compact(item, 70)
+                for item in (peer["result"].get("agreements") or [])[:1]
             ],
             "challenges": [
-                _compact(item, 110)
-                for item in (peer["result"].get("substantive_challenges") or [])[:2]
+                _compact(item, 90)
+                for item in (peer["result"].get("substantive_challenges") or [])[:1]
             ],
             "risks": [
-                _compact(item, 90)
-                for item in (peer["result"].get("risk_flags") or [])[:2]
+                _compact(item, 70)
+                for item in (peer["result"].get("risk_flags") or [])[:1]
             ],
             "position_changes": [
-                _compact(item, 120)
-                for item in (peer["result"].get("position_changes") or [])[:2]
+                _compact(item, 90)
+                for item in (peer["result"].get("position_changes") or [])[:1]
             ],
         }
-        for peer in peer_debate_views
+        for peer in peer_debate_views[:5]
     ]
     own = {
         "round1_position": own_independent_assessment.get("position"),
-        "round1_conclusion": _compact(own_independent_assessment.get("provisional_conclusion", ""), 180),
-        "round1_option": _compact(own_independent_assessment.get("preferred_educational_option", ""), 180),
+        "round1_conclusion": _compact(own_independent_assessment.get("provisional_conclusion", ""), 150),
+        "round1_option": _compact(own_independent_assessment.get("preferred_educational_option", ""), 140),
         "round2_position": own_debate_contribution.get("position"),
-        "round2_conclusion": _compact(own_debate_contribution.get("provisional_conclusion", ""), 220),
-        "round2_response": _compact(own_debate_contribution.get("response_to_other_perspectives", ""), 420),
-        "round2_agreements": [_compact(item, 180) for item in (own_debate_contribution.get("agreements") or [])[:4]],
-        "round2_challenges": [_compact(item, 220) for item in (own_debate_contribution.get("substantive_challenges") or [])[:4]],
-        "round2_position_changes": [_compact(item, 180) for item in (own_debate_contribution.get("position_changes") or [])[:3]],
-        "round2_unknowns": [_compact(item, 120) for item in (own_debate_contribution.get("remaining_unknowns") or [])[:4]],
-        "round2_risks": [_compact(item, 120) for item in (own_debate_contribution.get("risk_flags") or [])[:4]],
+        "round2_conclusion": _compact(own_debate_contribution.get("provisional_conclusion", ""), 160),
+        "round2_response": _compact(own_debate_contribution.get("response_to_other_perspectives", ""), 220),
+        "round2_agreements": [_compact(item, 100) for item in (own_debate_contribution.get("agreements") or [])[:2]],
+        "round2_challenges": [_compact(item, 120) for item in (own_debate_contribution.get("substantive_challenges") or [])[:2]],
+        "round2_position_changes": [_compact(item, 100) for item in (own_debate_contribution.get("position_changes") or [])[:1]],
+        "round2_unknowns": [_compact(item, 90) for item in (own_debate_contribution.get("remaining_unknowns") or [])[:2]],
+        "round2_risks": [_compact(item, 90) for item in (own_debate_contribution.get("risk_flags") or [])[:2]],
     }
     prompt = (
-        "ROUND 3 — ADVERSARIAL REVIEW. Before reviewing general risks, inspect the verbatim "
-        "case_summary for EACH attributed opinion, its distinct option, and its exact conditions. "
-        "Treat it as CASE:case_summary, not a verified fact or consensus. Compare each option "
-        "separately against your COMPLETE own saved R2 contribution (including its response, "
-        "agreements, challenges, position changes, unknowns, and risks) and the selected R2 "
-        "peer digest. Shared missing prerequisites do not make a surgery-first/surgical-assessment "
-        "pathway equivalent to a preoperative multimodality pathway; do not call the conditions "
-        "identical unless the source establishes that. For each opinion, explicitly determine "
-        "whether the option and every prerequisite were preserved, partly preserved, omitted, "
-        "or cannot be assessed from the supplied records. Silence or a generic statement that "
-        "staging is missing is not proof of preservation. Where the source option or condition "
-        "was omitted, weakened, conflated with the other pathway, or represented as agreement "
-        "without evidence, record a substantive challenge citing CASE:case_summary and the "
-        "specific R2:AGENT_ID. Where the record is incomplete, record that limitation without "
-        "inventing a challenge. Do not manufacture a clinical disagreement where the source "
-        "contains none. The peer digest is a bounded sample of at most 15 of 44 other roles; "
-        "never claim all 45 roles or all peers agree, and do not generalise sampled views to "
-        "unshown roles. Re-examine your own R1 and R2 conclusions and the selected R2 peer "
-        "contributions. For every substantive challenge, name its exact source, identify the "
-        "challenged proposition or condition, explain the logical/data gap, state the possible "
-        "effect on the educational synthesis, and identify the missing evidence or criterion "
-        "needed to resolve it. If no challenge is warranted, leave substantive_challenges empty "
-        "and explain why the reviewed records contain no material omission or unsupported claim. "
-        "Risk flags are not substitutes for source-linked challenges. Preserve conditionality "
-        "and justified minority views. Do not invent evidence or legal conclusions.\\n"
-        f"ROLE: {profile['name']}\nMANDATE: {profile['mandate']}\n"
-        "SYNTHETIC CASE:\n"
+        "ROUND 3 — ADVERSARIAL REVIEW. Educational simulation only; do not give a treatment "
+        "instruction or invent facts/evidence. Treat the verbatim case summary as attributed "
+        "source text, not verified fact or consensus. Identify each distinct attributed opinion, "
+        "its option, and every prerequisite. Compare each separately with your own saved R1/R2 "
+        "positions and the supplied R2 peer sample. Do not conflate different conditional options "
+        "or treat shared missing investigations as agreement on a pathway. For each opinion, "
+        "state whether its option and conditions are preserved, partly preserved, omitted, or "
+        "cannot be assessed. A generic statement that staging is missing does not prove that an "
+        "option or condition was preserved. If an option/condition was omitted, weakened, "
+        "conflated, or misrepresented, make a source-linked challenge naming CASE:case_summary "
+        "and the exact R2:AGENT_ID, the claim/condition, the data or reasoning gap, its possible "
+        "effect on the educational synthesis, and what information would resolve it. Do not "
+        "manufacture challenges; if the records do not support one, leave the challenge list "
+        "empty and explain the limitation. The peer digest is a bounded sample of at most 5 of "
+        "44 other roles, not the full MDT. Never generalise it to unshown roles or claim all roles "
+        "agree. Preserve uncertainty, conditions, and minority views. Risk flags are not "
+        "substitutes for source-linked challenges.\\n"
+        f"ROLE: {profile['name']}\\nMANDATE: {profile['mandate']}\\n"
+        "SYNTHETIC CASE:\\n"
         + json.dumps(build_case_prompt_context(case), ensure_ascii=False, separators=(",", ":"))
-        + "\nYOUR PREVIOUS POSITIONS:\n"
+        + "\\nYOUR R1 AND COMPLETE OWN R2 RECORD (bounded fields):\\n"
         + json.dumps(own, ensure_ascii=False, separators=(",", ":"))
-        + "\nSELECTED DEBATE VIEW DIGEST:\n"
+        + "\\nSELECTED SOURCE-LABELLED R2 PEER SAMPLE:\\n"
         + json.dumps(peers, ensure_ascii=False, separators=(",", ":"))
-        + "\nReturn concise findings only. List concrete risks and remaining unknowns; do not invent source-backed conclusions. The output format is schema-enforced."
+        + "\\nReturn concise, concrete findings only. The output format is schema-enforced."
     )
     draft = await _generate_structured(prompt, RoundContributionDraft, max_tokens)
     payload = draft.model_dump()
