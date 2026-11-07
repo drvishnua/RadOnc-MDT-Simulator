@@ -102,6 +102,29 @@ def _position_counts(rows: list[dict], field: str) -> Counter:
     )
 
 
+_ROUND_REFERENCE_PATTERN = re.compile(r"\\bR([123]):([A-Z]{2}-[0-9]{2})\\b")
+
+
+def _audit_source_references(payload: dict, allowed: set[tuple[str, str]]) -> list[str]:
+    """Flag round-qualified citations that were not present in this role's inputs.
+
+    Generated text is preserved verbatim. This audit records provenance defects rather
+    than silently rewriting a model-generated citation.
+    """
+    values: list[str] = []
+    for value in payload.values():
+        if isinstance(value, str):
+            values.append(value)
+        elif isinstance(value, list):
+            values.extend(item for item in value if isinstance(item, str))
+    references = sorted(set(_ROUND_REFERENCE_PATTERN.findall(" ".join(values))))
+    return [
+        f"Reference R{round_number}:{agent_id} was not supplied as an attributable source to this contribution."
+        for round_number, agent_id in references
+        if (f"R{round_number}", agent_id) not in allowed
+    ]
+
+
 def _unique_strings(values: list[str], limit: int = 12) -> list[str]:
     output: list[str] = []
     seen: set[str] = set()
@@ -247,6 +270,18 @@ def reconcile_chair_report_draft(
                         f"{_compact(challenge, 260)}"
                     )
     unresolved.extend(_unique_strings(recorded_review_findings, limit=12))
+    # Surface incorrect round-qualified citations without mutating the original model text.
+    source_reference_findings: list[str] = []
+    for round_label, entries in (("Round 2", r2), ("Round 3", r3)):
+        for row, result in entries:
+            flags = result.get("source_reference_integrity_flags") or []
+            if flags:
+                role_id = str(row.get("agent_id") or "unknown-role")
+                source_reference_findings.append(
+                    f"{round_label} source-reference audit — {role_id}: "
+                    + "; ".join(_unique_strings(flags, limit=3))
+                )
+    unresolved.extend(_unique_strings(source_reference_findings, limit=12))
     r3_challenge_count = sum(
         1 for _, result in r3
         if any(isinstance(item, str) and item.strip()
@@ -457,6 +492,11 @@ async def generate_debate_contribution(
         payload["position_changes"] = [f"Round 1 → Round 2: {previous_position} → {draft.position}. Rationale: {rationale}"]
     else:
         payload["position_changes"] = []
+    allowed_sources = {("R1", profile["agent_id"])} | {
+        ("R1", peer["agent_id"]) for peer in peer_views
+    }
+    payload["source_peer_ids"] = [peer["agent_id"] for peer in peer_views]
+    payload["source_reference_integrity_flags"] = _audit_source_references(payload, allowed_sources)
     return RoundContribution(
         agent_id=profile["agent_id"],
         round_number=2,
@@ -549,6 +589,11 @@ async def generate_adversarial_contribution(
         payload["position_changes"] = [f"Round 2 → Round 3: {previous_position} → {draft.position}. Rationale: {rationale}"]
     else:
         payload["position_changes"] = []
+    allowed_sources = {("R1", profile["agent_id"]), ("R2", profile["agent_id"])} | {
+        ("R2", peer["agent_id"]) for peer in peer_debate_views[:5]
+    }
+    payload["source_peer_ids"] = [peer["agent_id"] for peer in peer_debate_views[:5]]
+    payload["source_reference_integrity_flags"] = _audit_source_references(payload, allowed_sources)
     return RoundContribution(
         agent_id=profile["agent_id"],
         round_number=3,
