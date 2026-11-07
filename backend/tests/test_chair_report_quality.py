@@ -25,6 +25,7 @@ def _rows(field: str, positions: list[str], *, unknowns: bool = True) -> list[di
             })
         rows.append({
             "agent_id": agent_id,
+            "status": "completed",
             "agent_name": "Patient-perspective role" if position == "conditional" else f"Role {index}",
             field: payload,
         })
@@ -181,6 +182,26 @@ def test_minority_history_merges_earlier_roles_with_existing_round_three_minorit
     assert "SG-07" in history and "Round 3: supports" in history
     assert len(report.minority_and_dissenting_views) <= 45
 
+
+
+def test_failed_round_payloads_are_excluded_from_chair_counts_and_history():
+    case = SyntheticCase(
+        scenario_title="Synthetic failed-record exclusion test",
+        case_summary="Fictional case used to validate completed-record provenance.",
+    )
+    round1 = _rows("assessment", ["insufficient_information"] * 45)
+    round2 = _rows("result", ["insufficient_information"] * 45)
+    round3 = _rows("result", ["insufficient_information"] * 45)
+    round3[-1]["status"] = "failed"
+    round3[-1]["result"]["position"] = "supports"
+    round3[-1]["result"]["provisional_conclusion"] = "STALE FAILED PAYLOAD MUST NOT ENTER THE CHAIR REPORT."
+    round3[-1]["result"]["unknowns"] = ["STALE FAILED UNKNOWN MUST NOT ENTER THE REPORT."]
+
+    report = ensure_chair_report_completeness(_empty_report(), case, round1, round2, round3)
+
+    assert report.consensus_status == "insufficient_information"
+    assert not any("RO-45" in item or "STALE FAILED" in item for item in report.minority_and_dissenting_views)
+    assert not any("STALE FAILED" in item for item in report.major_uncertainties)
 
 
 def test_uniform_support_positions_are_not_reported_as_minority_dissent():
