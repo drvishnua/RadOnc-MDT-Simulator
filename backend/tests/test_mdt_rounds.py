@@ -549,3 +549,95 @@ def test_adversarial_prompt_truncates_peer_digest_to_five_source_records(monkeyp
     assert '"source":"R2:SO-01"' in captured[0]
     assert '"source":"R2:SO-05"' in captured[0]
     assert '"source":"R2:SO-06"' not in captured[0]
+
+
+
+def test_r3_records_exact_peer_sources_and_flags_wrong_round_references(monkeypatch):
+    from app.round_schemas import RoundContributionDraft
+    from app.services import mdt_generation
+
+    async def fake_generate(prompt, schema_type, max_tokens):
+        assert '"source":"R2:MO-01"' in prompt
+        return RoundContributionDraft(
+            position="insufficient_information",
+            provisional_conclusion="The available synthetic information remains insufficient for a definitive conclusion.",
+            response_to_other_perspectives=(
+                "R1:RO-01 is my own independent record; R1:SO-01 was not supplied here; "
+                "R2:MO-01 is a selected debate source."
+            ),
+            agreements=[],
+            substantive_challenges=[],
+            remaining_unknowns=["Staging remains unknown."],
+            risk_flags=[],
+            confidence=0.5,
+        )
+
+    monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate)
+    profile = {"agent_id": "RO-01", "name": "Radiation Oncology", "mandate": "Review the synthetic case."}
+    case = SyntheticCase(
+        scenario_title="Synthetic provenance audit",
+        case_summary="Fictional case with incomplete staging and no established treatment plan.",
+    )
+    own_r1 = {
+        "position": "insufficient_information",
+        "provisional_conclusion": "The case lacks verified staging and patient goals.",
+        "preferred_educational_option": "Complete the missing information first.",
+    }
+    own_r2 = {
+        "position": "insufficient_information",
+        "provisional_conclusion": "The debate remains insufficient pending missing information.",
+        "response_to_other_perspectives": "No proposition-level agreement is established.",
+    }
+    peer_r2 = [{
+        "agent_id": "MO-01",
+        "agent_name": "Medical Oncology",
+        "result": {
+            "position": "insufficient_information",
+            "provisional_conclusion": "The source case remains incomplete.",
+            "response_to_other_perspectives": "The missing investigations remain unresolved.",
+            "agreements": [],
+            "substantive_challenges": [],
+            "risk_flags": [],
+            "position_changes": [],
+        },
+    }]
+
+    result = asyncio.run(
+        mdt_generation.generate_adversarial_contribution(
+            profile, case, own_r1, own_r2, peer_r2
+        )
+    )
+
+    assert result.source_peer_ids == ["MO-01"]
+    assert result.response_to_other_perspectives.startswith("R1:RO-01")
+    assert result.source_reference_integrity_flags == [
+        "Reference R1:SO-01 was not supplied as an attributable source to this contribution."
+    ]
+
+
+def test_chair_report_surfaces_round_source_reference_integrity_flags():
+    case = SyntheticCase(
+        scenario_title="Synthetic provenance audit",
+        case_summary="Fictional case for validating source-reference audit reporting.",
+    )
+    round1 = _chair_rows("assessment", ["insufficient_information"] * 45)
+    round2 = _chair_rows("result", ["insufficient_information"] * 45)
+    round3 = _chair_rows("result", ["insufficient_information"] * 45)
+    round3[0]["result"]["source_peer_ids"] = ["MO-01", "SO-02"]
+    round3[0]["result"]["source_reference_integrity_flags"] = [
+        "Reference R1:SO-01 was not supplied as an attributable source to this contribution."
+    ]
+
+    report = reconcile_chair_report_draft(
+        "synthetic-source-reference-audit",
+        case,
+        round1,
+        round2,
+        round3,
+        _chair_draft(),
+    )
+
+    assert any(
+        "Round 3 source-reference audit" in item and "R1:SO-01" in item
+        for item in report.unresolved_disagreements
+    )
