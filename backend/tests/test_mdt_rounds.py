@@ -195,6 +195,7 @@ def _chair_rows(field, positions):
         rows.append({
             "agent_id": agent_id,
             "agent_name": "Treatment-averse Perspective" if position == "conditional" else f"Role {index}",
+            "status": "completed",
             field: payload,
         })
     return rows
@@ -208,6 +209,32 @@ def _chair_draft():
         overall_educational_synthesis="All agents unanimously identified the same position and no dissent was present.",
         chair_reflection="The model draft contains enough text to satisfy the output schema.",
     )
+
+
+def test_peer_selection_excludes_failed_or_running_records():
+    from app.agents.catalog import AGENT_PROFILES
+
+    current = next(item for item in AGENT_PROFILES if item["agent_id"] == "RO-01")
+    completed_peer = next(item for item in AGENT_PROFILES if item["agent_id"] == "RO-02")
+    failed_peer = next(item for item in AGENT_PROFILES if item["agent_id"] == "MO-01")
+    rows = [
+        {
+            "agent_id": current["agent_id"], "agent_name": current["name"],
+            "status": "completed", "result": {"position": "insufficient_information"},
+        },
+        {
+            "agent_id": completed_peer["agent_id"], "agent_name": completed_peer["name"],
+            "status": "completed", "result": {"position": "conditional"},
+        },
+        {
+            "agent_id": failed_peer["agent_id"], "agent_name": failed_peer["name"],
+            "status": "failed", "result": {"position": "supports"},
+        },
+    ]
+
+    selected = mdt_rounds._select_peer_views(current, rows, "result")
+
+    assert [item["agent_id"] for item in selected] == ["RO-02"]
 
 
 def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
