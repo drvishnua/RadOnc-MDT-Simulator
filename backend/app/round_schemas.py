@@ -37,6 +37,10 @@ class RoundContribution(StrictModel):
     risk_flags: list[str] = Field(default_factory=list, max_length=8)
     confidence: float = Field(ge=0.0, le=1.0)
     case_data_integrity_flags: list[str] = Field(default_factory=list, max_length=20)
+    # Deterministic orchestration metadata: exact peer records supplied to this role.
+    source_peer_ids: list[str] = Field(default_factory=list, max_length=15)
+    # Generated round-qualified references are audited against the actual prompt inputs.
+    source_reference_integrity_flags: list[str] = Field(default_factory=list, max_length=20)
     safety_boundary: Literal["educational_simulation_only"] = "educational_simulation_only"
     not_a_treatment_instruction: Literal[True] = True
 
