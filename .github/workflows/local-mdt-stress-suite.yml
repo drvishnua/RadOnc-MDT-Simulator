@@ -83,7 +83,9 @@ jobs:
             # native stderr lines into terminating NativeCommandError records.
             # cmd.exe propagates the Python process exit code because Python is the
             # final command in this /c invocation.
-            $cmdLine = 'python scripts/run_mdt_stress_suite.py --case-ids ' + $env:STRESS_CASE_IDS + ' 1> "' + $stdoutLog + '" 2> "' + $stderrLog + '"'
+            # The wrapper samples GPU telemetry continuously while the suite runs.
+            # It writes stdout/stderr logs and telemetry CSV/JSON into runner_diagnostics.
+            $cmdLine = 'python scripts/run_mdt_stress_with_telemetry.py --case-ids ' + $env:STRESS_CASE_IDS
             & $env:ComSpec /d /c $cmdLine
             $stressExitCode = $LASTEXITCODE
           }
