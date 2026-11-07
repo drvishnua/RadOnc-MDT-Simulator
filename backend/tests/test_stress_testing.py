@@ -102,3 +102,75 @@ def test_case_audit_ignores_source_reference_flags_on_failed_rows():
     }
     findings = audit_case_outputs("MDT-006", case, rounds, {})
     assert not any("stale output" in item["finding"] for item in findings)
+
+
+
+def test_mdt006_oracles_pass_only_when_both_opinions_conditions_and_no_consensus_are_preserved():
+    cases = {item["case_id"]: item for item in load_stress_cases()}
+    item = cases["MDT-006"]
+    chair = {
+        "consensus_status": "insufficient_information",
+        "consensus_points": [],
+        "chair_conclusion": (
+            "The colorectal surgical note favours proceeding to a surgical assessment first, "
+            "conditional on complete local staging and resectability review. The medical oncology "
+            "note favours discussing a preoperative multimodality sequence, conditional on MRI "
+            "staging, metastatic work-up and fitness assessment. No final plan is established."
+        ),
+        "unresolved_disagreements": ["Both attributed opinions remain provisional."],
+    }
+    rounds = {
+        3: [{
+            "agent_id": "RO-01",
+            "status": "completed",
+            "result": {"substantive_challenges": [
+                "The source opinions require review against the missing staging and fitness data."
+            ]},
+        }]
+    }
+    findings = audit_case_outputs(
+        "MDT-006", item["case"], rounds, chair, item["oracle_checks"]
+    )
+    oracle_findings = [row for row in findings if row["source"].startswith("STRESS_ORACLE:")]
+    assert oracle_findings == []
+    assert not any(row["source"] == "R3:CHALLENGE_COVERAGE" for row in findings)
+
+
+def test_mdt006_oracles_flag_missing_attribution_conditions_and_false_consensus():
+    cases = {item["case_id"]: item for item in load_stress_cases()}
+    item = cases["MDT-006"]
+    chair = {
+        "consensus_status": "qualified_consensus",
+        "consensus_points": ["Proceed with a definitive pathway."],
+        "chair_conclusion": "The team unanimously agreed to proceed.",
+    }
+    findings = audit_case_outputs(
+        "MDT-006", item["case"], {}, chair, item["oracle_checks"]
+    )
+    oracle_sources = {row["source"] for row in findings if row["source"].startswith("STRESS_ORACLE:")}
+    assert oracle_sources == {
+        "STRESS_ORACLE:preserve_attributed_opinions",
+        "STRESS_ORACLE:no_false_consensus",
+        "STRESS_ORACLE:retain_conditions",
+    }
+    assert all(
+        row["severity"] == "hard_fail"
+        for row in findings if row["source"].startswith("STRESS_ORACLE:")
+    )
+
+
+def test_mdt006_requires_structured_r3_challenge_not_generic_risk_flags():
+    cases = {item["case_id"]: item for item in load_stress_cases()}
+    item = cases["MDT-006"]
+    rounds = {
+        3: [{
+            "agent_id": "RO-01",
+            "status": "completed",
+            "result": {
+                "risk_flags": ["The two source opinions remain provisional."],
+                "substantive_challenges": [],
+            },
+        }]
+    }
+    findings = audit_case_outputs("MDT-006", item["case"], rounds, {}, [])
+    assert any(row["source"] == "R3:CHALLENGE_COVERAGE" for row in findings)
