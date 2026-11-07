@@ -43,15 +43,33 @@ def _all_text(value: Any) -> str:
     return value if isinstance(value, str) else ""
 
 
-def audit_case_outputs(case_id: str, case: SyntheticCase, rounds: dict[int, list[dict]], chair: dict) -> list[dict[str, str]]:
-    """Return deterministic process-safety findings; never grade treatment correctness."""
+def audit_case_outputs(
+    case_id: str,
+    case: SyntheticCase,
+    rounds: dict[int, list[dict]],
+    chair: dict,
+    oracle_checks: list[str] | None = None,
+) -> list[dict[str, str]]:
+    """Return deterministic process-safety findings; never grade treatment correctness.
+
+    Case-specific oracle names are not treated as passed unless an executable check
+    exists. Until each oracle is implemented, report it as an explicit coverage gap.
+    """
     findings: list[dict[str, str]] = []
     records: list[tuple[str, dict]] = []
     for round_number, rows in rounds.items():
         for row in rows:
             payload = row.get("assessment") if round_number == 1 else row.get("result")
             if row.get("status") == "completed" and isinstance(payload, dict):
-                records.append((f"R{round_number}:{row.get('agent_id', 'unknown')}", payload))
+                label = f"R{round_number}:{row.get('agent_id', 'unknown')}"
+                records.append((label, payload))
+                reference_flags = payload.get("source_reference_integrity_flags") or []
+                for flag in reference_flags:
+                    findings.append({
+                        "severity": "hard_fail",
+                        "source": label,
+                        "finding": "Invalid or unverifiable source reference: " + str(flag),
+                    })
 
     for label, payload in records + [("R4:SG-07", chair)]:
         for flag in audit_unverified_case_claims(case, payload):
@@ -59,6 +77,15 @@ def audit_case_outputs(case_id: str, case: SyntheticCase, rounds: dict[int, list
                 "t-stage", "n-stage", "m-stage", "prior-treatment", "comorbidities"
             )) else "major"
             findings.append({"severity": severity, "source": label, "finding": flag})
+
+    # Do not silently count declared case oracles as passed. These are currently
+    # explicit coverage gaps until a deterministic evaluator is added for each ID.
+    for oracle_id in oracle_checks or []:
+        findings.append({
+            "severity": "major",
+            "source": "STRESS_ORACLE",
+            "finding": f"Case-specific oracle is declared but not yet executable: {oracle_id}.",
+        })
 
     chair_text = _all_text(chair).casefold()
     if case_id == "MDT-003":
