@@ -216,7 +216,8 @@ def mark_agent_running(run_id: str, agent_id: str) -> None:
         db.execute(
             """
             UPDATE agent_run_results
-            SET status = 'running', error_message = NULL, started_at = ?, completed_at = NULL
+            SET status = 'running', assessment_json = NULL, error_message = NULL,
+                started_at = ?, completed_at = NULL
             WHERE run_id = ? AND agent_id = ? AND status != 'completed'
             """,
             (now, run_id, agent_id),
@@ -298,7 +299,7 @@ def reset_interrupted_agents(run_id: str) -> None:
         db.execute(
             """
             UPDATE agent_run_results
-            SET status = 'queued', started_at = NULL, error_message = NULL
+            SET status = 'queued', assessment_json = NULL, started_at = NULL, error_message = NULL
             WHERE run_id = ? AND status = 'running'
             """,
             (run_id,),
@@ -523,8 +524,8 @@ def mark_round_agent_running(run_id: str, round_number: int, agent_id: str) -> N
         _ensure_round_tables(db)
         db.execute(
             """
-            UPDATE agent_round_results SET status = 'running', error_message = ?,
-                started_at = ?, completed_at = NULL
+            UPDATE agent_round_results SET status = 'running', result_json = NULL,
+                error_message = ?, started_at = ?, completed_at = NULL
             WHERE run_id = ? AND round_number = ? AND agent_id = ?
             """,
             (None, now, run_id, round_number, agent_id),
@@ -563,8 +564,8 @@ def save_round_failure(
         _ensure_round_tables(db)
         db.execute(
             """
-            UPDATE agent_round_results SET status = 'failed', error_message = ?,
-                completed_at = ?, duration_seconds = ?
+            UPDATE agent_round_results SET status = 'failed', result_json = NULL,
+                error_message = ?, completed_at = ?, duration_seconds = ?
             WHERE run_id = ? AND round_number = ? AND agent_id = ?
             """,
             (error_message[:500], now, duration_seconds, run_id, round_number, agent_id),
@@ -611,7 +612,7 @@ def reset_failed_round_agents(run_id: str, round_number: int) -> None:
         db.execute(
             """
             UPDATE agent_round_results
-            SET status = 'queued', error_message = NULL, started_at = NULL,
+            SET status = 'queued', result_json = NULL, error_message = NULL, started_at = NULL,
                 completed_at = NULL, duration_seconds = NULL
             WHERE run_id = ? AND round_number = ? AND status IN ('failed', 'running')
             """,
