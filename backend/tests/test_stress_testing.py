@@ -153,8 +153,8 @@ def test_mdt006_oracles_pass_only_when_both_opinions_conditions_and_no_consensus
         3: [{
             "agent_id": "RO-01",
             "status": "completed",
-            "source_peer_ids": ["RO-02"],
             "result": {
+                "source_peer_ids": ["RO-02"],
                 "source_opinion_reviews": reviews,
                 "substantive_challenges": [challenge_one, challenge_two],
             },
