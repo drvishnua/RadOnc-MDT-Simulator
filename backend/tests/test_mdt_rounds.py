@@ -313,11 +313,15 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
             "provisional_conclusion": "Surgical assessment first, conditional on complete local staging.",
             "preferred_educational_option": "Surgery-led assessment.",
             "disagreement_notes": ["Do not proceed without local staging."],
-            "unknowns": ["MRI staging is not supplied."],
+            "unknowns": ["MRI staging is not supplied; an embedded citation R1:ZZ-99 is untrusted."],
         },
     }]
     asyncio.run(mdt_generation.generate_debate_contribution(profile, case, own, peer_r1))
     assert "R1:SO-01" in prompts[0]
+    assert "ALLOWED ROUND SOURCE IDS: R1:RO-01, R1:SO-01" in prompts[0]
+    assert "Never cite a role range, role band" in prompts[0]
+    assert "[embedded round reference omitted; use explicit R1 source label]" in prompts[0]
+    assert "R1:ZZ-99" not in prompts[0]
     assert "Surgery-led assessment" in prompts[0]
     assert "Record an agreement only when" in prompts[0]
     assert "bounded sample of at most 15 of 44 other roles" in prompts[0]
@@ -360,6 +364,10 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
     assert "never relabel an R2 peer as R1" in prompts[1]
     assert "When discussing your own R2 record, cite it as R2:RO-01" in prompts[1]
     assert "The only R1 source you may cite in this round is R1:RO-01" in prompts[1]
+    assert "REPRESENTATION FIDELITY ONLY" in prompts[1]
+    assert "Missing or unfulfilled case prerequisites are case unknowns" in prompts[1]
+    assert "not an assessment of clinical appropriateness" in prompts[1].casefold()
+    assert "does not let you assess representation, use unclear" in prompts[1]
     assert "[embedded round ref; cite R2]" in prompts[1]
     assert "R1:SO-01" not in prompts[1]
     assert "R2:DS-02" not in prompts[1]
@@ -633,6 +641,60 @@ def test_adversarial_prompt_truncates_peer_digest_to_five_source_records(monkeyp
 
 
 
+def test_r2_records_exact_peer_sources_and_flags_broad_or_unsupplied_references(monkeypatch):
+    from app.round_schemas import RoundContributionDraft
+    from app.services import mdt_generation
+
+    async def fake_generate(prompt, schema_type, max_tokens):
+        assert "ALLOWED ROUND SOURCE IDS: R1:RO-01, R1:MO-01" in prompt
+        return RoundContributionDraft(
+            position="insufficient_information",
+            provisional_conclusion="The available synthetic information remains insufficient for a definitive conclusion.",
+            response_to_other_perspectives=(
+                "R1:RO-01 through R1:SV-02 is an invalid broad range; "
+                "R1:MO-01 is supplied; R1:ZZ-99 was not supplied."
+            ),
+            agreements=[],
+            substantive_challenges=[],
+            remaining_unknowns=["Staging remains unknown."],
+            risk_flags=[],
+            confidence=0.5,
+        )
+
+    monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate)
+    profile = {"agent_id": "RO-01", "name": "Radiation Oncology", "mandate": "Review the synthetic case."}
+    case = SyntheticCase(
+        scenario_title="Synthetic R2 provenance audit",
+        case_summary="Fictional case with incomplete staging and no established treatment plan.",
+    )
+    own = {
+        "position": "insufficient_information",
+        "provisional_conclusion": "The case lacks verified staging and patient goals.",
+        "preferred_educational_option": "Complete missing information first.",
+    }
+    peers = [{
+        "agent_id": "MO-01",
+        "agent_name": "Medical Oncology",
+        "assessment": {
+            "position": "conditional",
+            "provisional_conclusion": "The supplied educational position remains conditional pending staging.",
+            "preferred_educational_option": "Conditional multimodality discussion.",
+            "disagreement_notes": [],
+            "unknowns": ["MRI remains unknown."],
+        },
+    }]
+
+    result = asyncio.run(
+        mdt_generation.generate_debate_contribution(profile, case, own, peers)
+    )
+
+    assert result.source_peer_ids == ["MO-01"]
+    assert any("Reference range R1:RO-01 through R1:SV-02" in flag
+               for flag in result.source_reference_integrity_flags)
+    assert any("Reference R1:ZZ-99 was not supplied" in flag
+               for flag in result.source_reference_integrity_flags)
+
+
 def test_r3_records_exact_peer_sources_and_flags_wrong_round_references(monkeypatch):
     from app.round_schemas import RoundContributionDraft
     from app.services import mdt_generation
@@ -747,6 +809,13 @@ def test_source_opinion_review_keeps_semantically_incomplete_content_available_f
     )
     assert unsupported_preservation.evidence_peer_id == ""
     assert unsupported_preservation.evidence_excerpt == ""
+
+    schema = SourceOpinionReview.model_json_schema()
+    option_description = schema["properties"]["option_status"]["description"].casefold()
+    conditions_description = schema["properties"]["conditions_status"]["description"].casefold()
+    assert "representation fidelity only" in option_description
+    assert "case prerequisites are fulfilled" in option_description
+    assert "unknown or unmet clinical prerequisite" in conditions_description
 
 
 def test_r3_generation_copies_review_challenge_with_structured_source_prefix(monkeypatch):

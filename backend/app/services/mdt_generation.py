@@ -145,6 +145,15 @@ def _audit_source_references(payload: dict, allowed: set[tuple[str, str]]) -> li
     return findings
 
 
+def _compact_r1_text(value: str, limit: int) -> str:
+    """Keep the explicit R1 source label separate from round IDs embedded in peer prose."""
+    neutralized = _EMBEDDED_ROUND_REFERENCE_PATTERN.sub(
+        "[embedded round reference omitted; use explicit R1 source label]",
+        value,
+    )
+    return _compact(neutralized, limit)
+
+
 def _compact_r2_text(value: str, limit: int) -> str:
     """Keep the peer's R2 attribution but neutralize round IDs quoted inside that R2 text."""
     neutralized = _EMBEDDED_ROUND_REFERENCE_PATTERN.sub(
@@ -481,14 +490,14 @@ async def generate_debate_contribution(
             "source": f"R1:{peer['agent_id']}",
             "role": peer["agent_name"],
             "position": peer["assessment"].get("position", "unknown"),
-            "conclusion": _compact(peer["assessment"].get("provisional_conclusion", ""), 180),
-            "educational_option": _compact(peer["assessment"].get("preferred_educational_option", ""), 140),
+            "conclusion": _compact_r1_text(peer["assessment"].get("provisional_conclusion", ""), 180),
+            "educational_option": _compact_r1_text(peer["assessment"].get("preferred_educational_option", ""), 140),
             "disagreement_notes": [
-                _compact(item, 100)
+                _compact_r1_text(item, 100)
                 for item in (peer["assessment"].get("disagreement_notes") or [])[:2]
             ],
             "unknowns": [
-                _compact(item, 90)
+                _compact_r1_text(item, 90)
                 for item in (peer["assessment"].get("unknowns") or [])[:2]
             ],
         }
@@ -498,6 +507,13 @@ async def generate_debate_contribution(
         "position": own_independent_assessment.get("position"),
         "conclusion": _compact(own_independent_assessment.get("provisional_conclusion", ""), 240),
         "option": _compact(own_independent_assessment.get("preferred_educational_option", ""), 160),
+    }
+    allowed_source_ids = [
+        f"R1:{profile['agent_id']}",
+        *(f"R1:{peer['agent_id']}" for peer in peer_views),
+    ]
+    allowed_sources = {("R1", profile["agent_id"])} | {
+        ("R1", peer["agent_id"]) for peer in peer_views
     }
     prompt = (
         "ROUND 2 — STRUCTURED MDT DEBATE. You are the role below. First inspect the "
@@ -513,7 +529,16 @@ async def generate_debate_contribution(
         "For EACH attributed opinion, state whether its option and every condition are preserved, "
         "partly preserved, omitted, or unclear in the selected peer digest. If omitted or "
         "weakened, record a source-linked challenge; if the digest is insufficient, mark it "
-        "unclear rather than assuming preservation or agreement. Engage only with the peers "
+        "unclear rather than assuming preservation or agreement. "
+        f"ALLOWED ROUND SOURCE IDS: {', '.join(allowed_source_ids)}. "
+        "Use only these exact individual source IDs when citing case or peer statements. "
+        "Never cite a role range, role band, sequence of roles, or complete role directory; "
+        "never use 'through', 'to', hyphens, en dashes, or em dashes to join role IDs. "
+        "Never invent, infer, extrapolate, or cite an unsupplied ID. Round references embedded "
+        "inside peer narrative have been neutralised and are not citable; use only the explicit "
+        "source label attached to each supplied peer record. If a claim cannot be tied to one "
+        "listed source, state the limitation without inventing a citation. "
+        "Engage only with the peers "
         "actually supplied below, citing their exact R1:AGENT_ID source IDs. The digest is a "
         "bounded sample of at most 15 of 44 other roles, not the complete MDT; never say all "
         "roles or all peers agree, and never generalise sampled views to unshown roles. Record "
@@ -542,9 +567,6 @@ async def generate_debate_contribution(
         payload["position_changes"] = [f"Round 1 → Round 2: {previous_position} → {draft.position}. Rationale: {rationale}"]
     else:
         payload["position_changes"] = []
-    allowed_sources = {("R1", profile["agent_id"])} | {
-        ("R1", peer["agent_id"]) for peer in peer_views
-    }
     payload["source_peer_ids"] = [peer["agent_id"] for peer in peer_views]
     payload["source_reference_integrity_flags"] = _audit_source_references(payload, allowed_sources)
     return RoundContribution(
@@ -618,10 +640,20 @@ async def generate_adversarial_contribution(
         "its option, and every prerequisite. Compare each separately with your own saved R1/R2 "
         f"positions and the supplied R2 peer sample. Cite peer roles only with their exact R2:AGENT_ID labels from that sample; never relabel an R2 peer as R1. An R1 citation is permitted only for your own role's independent assessment. When discussing your own R2 record, cite it as R2:{profile['agent_id']}; do not reuse an R1 source ID merely because that ID appears inside your quoted R2 text. The only R1 source you may cite in this round is R1:{profile['agent_id']}. Never cite role ranges, a complete role directory, or an unsupplied role as evidence. Cite only individual source IDs listed under ALLOWED ROUND SOURCE IDS; if an earlier source is mentioned inside an R2 contribution and its original record was not supplied, attribute the statement to that R2 contribution instead. Do not invent or cite an unprovided role. Do not conflate different conditional options "
         "or treat shared missing investigations as agreement on a pathway. For each opinion, "
-        "state whether its option and conditions are preserved, partly preserved, omitted, or "
-        "cannot be assessed. A generic statement that staging is missing does not prove that an "
-        "option or condition was preserved. If an option/condition was omitted, weakened, "
-        "conflated, or misrepresented, make a source-linked challenge naming CASE:case_summary "
+        "assess REPRESENTATION FIDELITY ONLY: whether its option and conditions are faithfully "
+        "represented in the actual R2 contribution text supplied to you. This is not an assessment "
+        "of clinical appropriateness, eligibility, or whether the case satisfies the prerequisites. "
+        "A source opinion conditional on MRI, fitness, local staging, or another prerequisite remains "
+        "a represented conditional option when R2 retains that option and its conditional wording, "
+        "even when the prerequisite is missing or unknown in the case. Missing or unfulfilled case "
+        "prerequisites are case unknowns; they are NOT, by themselves, omissions of the option or "
+        "conditions from R2. Mark preserved when the supplied R2 text faithfully retains the option "
+        "or condition; partly_preserved when it retains only part; omitted only when the supplied R2 "
+        "text itself drops or materially distorts it; use unclear when the supplied material is "
+        "insufficient to assess. Assess only the supplied R2 records and never generalise a bounded "
+        "sample to all 45 roles. Do not treat an unknown clinical prerequisite as proof that an "
+        "option/condition was omitted. If an option/condition was actually omitted, weakened, "
+        "conflated, or misrepresented in supplied R2 text, make a source-linked challenge naming CASE:case_summary "
         "and the exact R2:AGENT_ID, the claim/condition, the data or reasoning gap, its possible "
         "effect on the educational synthesis, and what information would resolve it. Do not "
         "manufacture challenges; if the records do not support one, leave the challenge list "
@@ -644,13 +676,18 @@ async def generate_adversarial_contribution(
         "leave evidence_peer_id and evidence_excerpt empty. "
         "For MDT-006, return exactly two reviews: "
         "CASE:case_summary#1 for the colorectal surgical note and CASE:case_summary#2 for "
-        "the medical oncology note. Judge preservation only from the actual R1/R2 material "
-        "available to you; generic agreement that information is missing does not mean an "
-        "option or its conditions were preserved. Use preserved, partly_preserved, omitted, "
-        "or unclear. If either status is partly_preserved or omitted, write a source-linked "
-        "challenge in the review and copy it into substantive_challenges. Such a challenge "
-        "must cite CASE:case_summary and at least one supplied R2 peer ID. If status is unclear, "
-        "explain the limitation in review_basis and do not invent a challenge. For cases with "
+        "the medical oncology note. Compare each attributed option and its conditions with the "
+        "actual supplied R2 text, not with whether MRI, staging, fitness, or other prerequisites "
+        "are fulfilled in the case. If the conditional option and its prerequisites are retained "
+        "in R2, mark them preserved even though those prerequisites remain unknown; this does not "
+        "validate clinical suitability. Mark omitted or partly_preserved only when the supplied "
+        "R2 text itself omits or distorts that attributed content. If the bounded supplied sample "
+        "does not let you assess representation, use unclear and explain why; do not infer that "
+        "the whole MDT omitted the opinion. For an actual R2 representation omission or distortion, "
+        "write a source-linked challenge in the review and copy it into substantive_challenges. "
+        "Such a challenge must cite CASE:case_summary and at least one supplied R2 peer ID. If "
+        "status is unclear, explain the limitation in review_basis and do not invent a challenge. "
+        "For cases with "
         "no attributed source opinions, return an empty source_opinion_reviews list.\\n"
         f"ALLOWED ROUND SOURCE IDS: {', '.join(allowed_source_ids)}\\n"
         f"ROLE: {profile['name']}\\nMANDATE: {profile['mandate']}\\n"

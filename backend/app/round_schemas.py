@@ -30,13 +30,47 @@ class SourceOpinionReview(StrictModel):
     # as source_reference_integrity_flags; a weak review must not erase the whole role.
     source_id: str = Field(min_length=8, max_length=100)
     opinion_label: str = Field(default="", max_length=120)
-    option_status: Literal["preserved", "partly_preserved", "omitted", "unclear"]
-    conditions_status: Literal["preserved", "partly_preserved", "omitted", "unclear"]
-    review_basis: str = Field(default="", max_length=600)
+    option_status: Literal["preserved", "partly_preserved", "omitted", "unclear"] = Field(
+        description=(
+            "Representation fidelity only: whether the attributed option is faithfully retained "
+            "in the actual supplied Round-2 contribution text. This does not assess clinical "
+            "appropriateness, eligibility, or whether case prerequisites are fulfilled. A conditional "
+            "option remains represented when its option and conditional wording are retained, even "
+            "if the required MRI, staging, fitness, or other case information is missing. Use omitted "
+            "only when supplied Round-2 text itself drops or materially distorts the option; use "
+            "unclear when the supplied material is insufficient to assess."
+        )
+    )
+    conditions_status: Literal["preserved", "partly_preserved", "omitted", "unclear"] = Field(
+        description=(
+            "Representation fidelity only: whether the prerequisite/condition attached to the "
+            "attributed opinion is faithfully retained in the actual supplied Round-2 text. Do not "
+            "confuse representation with fulfilment: an unknown or unmet clinical prerequisite is "
+            "not an omission if Round 2 retains the condition. Use omitted only when the supplied "
+            "Round-2 text itself drops or materially changes the condition."
+        )
+    )
+    review_basis: str = Field(
+        default="",
+        max_length=600,
+        description=(
+            "Explain the comparison between the attributed source opinion and the supplied Round-2 "
+            "text. Separate representation fidelity from missing/unfulfilled case prerequisites; "
+            "do not infer clinical appropriateness."
+        ),
+    )
     source_reference_ids: list[str] = Field(default_factory=list, max_length=8)
     evidence_peer_id: str = Field(default="", max_length=100)
     evidence_excerpt: str = Field(default="", max_length=180)
-    challenge: str = Field(default="", max_length=700)
+    challenge: str = Field(
+        default="",
+        max_length=700,
+        description=(
+            "Source-linked challenge only when supplied Round-2 text actually omits, weakens, "
+            "conflates, or materially distorts the attributed option or condition. Do not create "
+            "a challenge solely because a clinical prerequisite is missing or unknown in the case."
+        ),
+    )
 
 
 class AdversarialContributionDraft(RoundContributionDraft):
