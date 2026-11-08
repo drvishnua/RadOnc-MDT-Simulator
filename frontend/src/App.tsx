@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { readDraft, writeDraft } from "./caseDraft.js";
+import { hasValidatedCase, shouldShowBatchPanel } from "./runRecovery.js";
 
 const CASE_DRAFT_KEY = "radonc-mdt-case-draft-v1";
 const LEGACY_CASE_KEY = "radonc-mdt-last-case";
@@ -617,8 +618,6 @@ function App() {
     if (!validatedCase) return;
     setBatchStarting(true);
     setBatchError("");
-    setBatchRun(null);
-    setBatchResults([]);
     try {
       const response = await fetch(API_BASE + "/api/runs", {
         method: "POST",
@@ -629,8 +628,14 @@ function App() {
       if (!response.ok) {
         throw new Error(typeof body.detail === "string" ? body.detail : "Unable to start the 45-agent run.");
       }
-      setBatchRun(body as BatchRunSummary);
-      await refreshBatchRun((body as BatchRunSummary).run_id);
+      const createdRun = body as BatchRunSummary;
+      setBatchRun(createdRun);
+      setBatchResults([]);
+      setRoundSummaries({});
+      setRoundResults({});
+      setFinalReport(null);
+      setRoundError("");
+      await refreshBatchRun(createdRun.run_id);
     } catch (error) {
       setBatchError(error instanceof Error ? error.message : "Unable to start the 45-agent run.");
     } finally {
@@ -700,13 +705,6 @@ function App() {
     setValidatedCase(null);
     setAgentAssessment(null);
     setAssessmentError("");
-    setBatchRun(null);
-    setBatchResults([]);
-    setBatchError("");
-    setRoundSummaries({});
-    setRoundResults({});
-    setFinalReport(null);
-    setRoundError("");
   }
 
   return (
@@ -999,7 +997,7 @@ function App() {
                 </p>
               </div>
             )}
-            {validation && validatedCase && (
+            {shouldShowBatchPanel(batchRun, validation, validatedCase) && (
               <section className="batch-run-panel">
                 <div className="batch-heading">
                   <div>
@@ -1011,16 +1009,28 @@ function App() {
                 <p className="panel-intro">
                   Each agent receives only the original synthetic case and its own role profile. Agents do not see one another's assessments. Results are saved locally as they finish.
                 </p>
+                {batchRun && (
+                  <div className="result-card" role="note">
+                    <strong>Saved MDT run · {batchRun.status.replaceAll("_", " ")}</strong>
+                    <p>Displayed contributions belong to the immutable case snapshot saved with this run. Editing the current draft does not change the saved run.</p>
+                    <p className="result-footnote">Run ID: {batchRun.run_id} · Case snapshot SHA-256: {batchRun.case_snapshot_sha256}</p>
+                  </div>
+                )}
                 <div className="batch-actions">
-                  <button
-                    className="button button-primary"
-                    type="button"
-                    onClick={() => void startAllAgents()}
-                    disabled={batchStarting || batchResuming || assessing || !runtime?.reachable || (batchRun !== null && ["queued", "running"].includes(batchRun.status))}
-                  >
-                    {batchStarting ? "Starting…" : "Run all 45 agents"}
-                    <span aria-hidden="true">→</span>
-                  </button>
+                  {hasValidatedCase(validation, validatedCase) && (
+                    <button
+                      className="button button-primary"
+                      type="button"
+                      onClick={() => void startAllAgents()}
+                      disabled={batchStarting || batchResuming || assessing || !runtime?.reachable || (batchRun !== null && ["queued", "running"].includes(batchRun.status))}
+                    >
+                      {batchStarting ? "Starting…" : "Run all 45 agents"}
+                      <span aria-hidden="true">→</span>
+                    </button>
+                  )}
+                  {batchRun && !hasValidatedCase(validation, validatedCase) && (
+                    <p className="batch-estimate-note">Validate the current case draft before starting a new 45-agent run. The saved run remains available below.</p>
+                  )}
                   {batchRun && batchResults.length > 0 && (
                     <button className="button button-quiet" type="button" onClick={downloadBatchResults}>
                       Export JSON
