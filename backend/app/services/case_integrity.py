@@ -104,9 +104,9 @@ def _unqualified_matches(pattern: re.Pattern[str], text: str) -> list[str]:
     """Return assertion-like matches, applying qualifiers only within the same clause."""
     findings: list[str] = []
     for match in pattern.finditer(text):
-        left = max((text.rfind(mark, 0, match.start()) for mark in ".!?;:\\n"), default=-1) + 1
+        left = max((text.rfind(mark, 0, match.start()) for mark in ".!?;:\n"), default=-1) + 1
         right = min(
-            (position for mark in ".!?;:\\n" if (position := text.find(mark, match.end())) >= 0),
+            (position for mark in ".!?;:\n" if (position := text.find(mark, match.end())) >= 0),
             default=len(text),
         )
         clause = text[left:right]
@@ -169,9 +169,9 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     # user-provided case summary rather than being relabelled as model inventions.
     if case.performance_status in (None, ""):
         pattern = re.compile(
-            r"\\b(?:ECOG(?:\\s*[- ]?PS|\\s+performance\\s+status)?|"
-            r"WHO(?:\\s+performance)?\\s+status)\\s*[:=]?\\s*[0-4]\\b|"
-            r"\\b(?:KPS|Karnofsky(?:\\s+Performance\\s+Status)?)\\s*[:=]?\\s*\\d{2,3}\\b",
+            r"\b(?:ECOG(?:\s*[- ]?PS|\s+performance\s+status)?|"
+            r"WHO(?:\s+performance)?\s+status)\s*[:=]?\s*[0-4]\b|"
+            r"\b(?:KPS|Karnofsky(?:\s+Performance\s+Status)?)\s*[:=]?\s*\d{2,3}\b",
             re.IGNORECASE,
         )
         matches = _unsupported_matches(pattern, text, source_text)
@@ -180,7 +180,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
 
     if case.clinical_n_stage is None:
         pattern = re.compile(
-            r"\\b(?:node[- ]negative|no (?:regional )?nodal (?:disease|involvement)|negative (?:regional )?nodes?)\\b",
+            r"\b(?:node[- ]negative|no (?:regional )?nodal (?:disease|involvement)|negative (?:regional )?nodes?)\b",
             re.IGNORECASE,
         )
         matches = _unsupported_matches(pattern, text, source_text)
@@ -189,7 +189,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
 
     if case.clinical_m_stage is None:
         pattern = re.compile(
-            r"\\b(?:no (?:evidence of )?(?:distant )?metastases?|no (?:evidence of )?(?:distant )?metastatic disease|without (?:distant )?metastases?|metastasis[- ]free|(?:distant )?metastases? (?:are|is) absent)\\b",
+            r"\b(?:no (?:evidence of )?(?:distant )?metastases?|no (?:evidence of )?(?:distant )?metastatic disease|without (?:distant )?metastases?|metastasis[- ]free|(?:distant )?metastases? (?:are|is) absent)\b",
             re.IGNORECASE,
         )
         matches = _unsupported_matches(pattern, text, source_text)
@@ -197,7 +197,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             flags.append("Generated narrative asserts absence of metastatic disease (" + ", ".join(matches[:3]) + "), but clinical_m_stage is not supplied; absence of a reported metastasis is not M0.")
 
     resectability_pattern = re.compile(
-        r"\\b(?:is|was|remains|appears|seems|deemed|considered)\\s+(?:clearly |technically |borderline )?(?:resectable|unresectable)\\b|\\b(?:resectable|unresectable)\\s+(?:tumou?r|disease|lesion|cancer)\\b|\\bnot resectable\\b",
+        r"\b(?:is|was|remains|appears|seems|deemed|considered)\s+(?:clearly |technically |borderline )?(?:resectable|unresectable)\b|\b(?:resectable|unresectable)\s+(?:tumou?r|disease|lesion|cancer)\b|\bnot resectable\b",
         re.IGNORECASE,
     )
     matches = _unsupported_matches(resectability_pattern, text, source_text)
@@ -206,7 +206,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
 
     if case.histology in (None, "") and case.pathology_summary in (None, ""):
         histology_pattern = re.compile(
-            r"\\b(?:squamous cell carcinoma|adenocarcinoma|small[- ]cell carcinoma|large[- ]cell carcinoma|urothelial carcinoma|neuroendocrine carcinoma|lymphoma|melanoma|sarcoma|SCC)\\b",
+            r"\b(?:squamous cell carcinoma|adenocarcinoma|small[- ]cell carcinoma|large[- ]cell carcinoma|urothelial carcinoma|neuroendocrine carcinoma|lymphoma|melanoma|sarcoma|SCC)\b",
             re.IGNORECASE,
         )
         matches = _unsupported_matches(histology_pattern, text, source_text)
@@ -215,7 +215,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
 
     if case.pathology_summary in (None, ""):
         pathology_pattern = re.compile(
-            r"\\b(?:p16|HPV|HER2|ER|PR|PD-L1|Ki-67)\\s*(?:positive|negative|high|low|[+-])\\b|\\b(?:grade|G)\\s*[1-4]\\b|\\b(?:lymphovascular|perineural) invasion\\b|\\b(?:positive|negative) margins?\\b",
+            r"\b(?:p16|HPV|HER2|ER|PR|PD-L1|Ki-67)\s*(?:positive|negative|high|low|[+-])\b|\b(?:grade|G)\s*[1-4]\b|\b(?:lymphovascular|perineural) invasion\b|\b(?:positive|negative) margins?\b",
             re.IGNORECASE,
         )
         matches = _unsupported_matches(pathology_pattern, text, source_text)
@@ -224,7 +224,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
 
     if case.imaging_summary in (None, ""):
         investigation_pattern = re.compile(
-            r"\\b(?:CT|MRI|PET(?:[- ]CT)?|ultrasound|USG|X[- ]ray|radiograph|bone scan|colonoscopy|endoscopy|bronchoscopy|cystoscopy|biopsy)\\s+(?:scan\\s+)?(?:shows?|demonstrates?|reveals?|confirms?|identifies?|detected|reported)\\s+[^.!?;\\n]{1,100}",
+            r"\b(?:CT|MRI|PET(?:[- ]CT)?|ultrasound|USG|X[- ]ray|radiograph|bone scan|colonoscopy|endoscopy|bronchoscopy|cystoscopy|biopsy)\s+(?:scan\s+)?(?:shows?|demonstrates?|reveals?|confirms?|identifies?|detected|reported)\s+[^.!?;\n]{1,100}",
             re.IGNORECASE,
         )
         matches = _unsupported_matches(investigation_pattern, text, source_text)
@@ -233,7 +233,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
 
     if not case.patient_goals:
         preference_pattern = re.compile(
-            r"\\bpatient(?:'s)?\\s+(?:prefers?|wishes?|wants?|chooses?|declines?|refuses?|agrees?|consents?|has chosen|does not want|doesn't want)[^.!?;\\n]{0,100}",
+            r"\bpatient(?:'s)?\s+(?:prefers?|wishes?|wants?|chooses?|declines?|refuses?|agrees?|consents?|has chosen|does not want|doesn't want)[^.!?;\n]{0,100}",
             re.IGNORECASE,
         )
         matches = _unsupported_matches(preference_pattern, text, source_text)
