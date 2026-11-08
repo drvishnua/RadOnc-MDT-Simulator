@@ -712,7 +712,7 @@ function App() {
       const persisted = writeSavedSingleAssessment(
         safeCaseDraftStorage(),
         SINGLE_ASSESSMENT_KEY,
-        validatedCase,
+        activeSavedCase.case,
         assessment,
         savedAt
       );

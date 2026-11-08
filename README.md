@@ -24,6 +24,8 @@ Position labels are descriptions, not votes. The system does not invent a majori
 ## Dashboard capabilities
 
 - Synthetic case validation and 45-role directory.
+- Generated synthetic patient IDs, immutable numbered case versions, and a patient/case-version library.
+- Patient-specific simulation history, with each run and standalone RO-01 result bound to its exact saved case version and hash.
 - Sequential local Ollama execution with progress and per-agent outputs.
 - One retry with a larger output budget for malformed structured responses, without rerunning successful agents.
 - Resume failed/interrupted work while retaining completed results.
@@ -37,6 +39,13 @@ Position labels are descriptions, not votes. The system does not invent a majori
 - GET /health
 - GET /api/runtime
 - GET /api/agents
+- GET /api/patients
+- POST /api/patients — save a new synthetic patient with case version 1
+- GET /api/patients/{patient_id} — patient versions and linked simulation history
+- POST /api/patients/{patient_id}/versions — append an immutable case version
+- POST /api/patients/{patient_id}/runs — start only from a saved case version
+- POST /api/patients/{patient_id}/versions/{case_version_id}/assess/RO-01 — generate and persist RO-01
+- GET /api/patients/{patient_id}/versions/{case_version_id}/assessments
 - POST /api/cases/validate
 - POST /api/agents/{agent_id}/assess
 - POST /api/runs
@@ -79,7 +88,7 @@ Evidence retrieval and citation verification are not connected yet. Evidence cla
 
 ## Safety and data boundaries
 
-- Synthetic cases only. Do not enter identifiable or real patient information.
+- Synthetic cases only. Do not enter identifiable or real patient information. The patient library uses generated synthetic IDs and is not intended to store names, medical record numbers, or other identifiers.
 - Not a medical device, clinical decision-support system, treatment-planning tool, or substitute for a qualified MDT.
 - Do not use outputs as diagnosis, prescriptions, dose instructions, contours, or treatment plans.
 - Model outputs may be incomplete or inaccurate; clinical claims require traceable evidence and qualified review.

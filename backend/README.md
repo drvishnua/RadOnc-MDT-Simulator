@@ -33,6 +33,13 @@ Tests:
 - GET /health — application mode and health
 - GET /api/runtime — Ollama reachability and installed model
 - GET /api/agents — all 45 role profiles
+- GET /api/patients — list saved synthetic patients
+- POST /api/patients — create patient and immutable case version 1
+- GET /api/patients/{patient_id} — case versions and linked run history
+- POST /api/patients/{patient_id}/versions — append an immutable case version
+- POST /api/patients/{patient_id}/runs — create a run from a verified saved case version
+- POST /api/patients/{patient_id}/versions/{case_version_id}/assess/RO-01 — run and persist RO-01
+- GET /api/patients/{patient_id}/versions/{case_version_id}/assessments — saved standalone assessments
 - POST /api/cases/validate — synthetic case schema validation
 - POST /api/agents/{agent_id}/assess — one Round-1 assessment
 - POST /api/runs — create and start a Round-1 batch
@@ -65,7 +72,7 @@ Prompts pass JSON Schema through Ollama's structured-output format field instead
 
 ## Persistence
 
-SQLite database: backend/data/simulation_runs.sqlite3. It stores the case snapshot, hash, round status, and individual outputs. The local database is excluded from Git. Do not delete it while work is active or before exporting results.
+SQLite database: backend/data/simulation_runs.sqlite3. It stores generated synthetic patient IDs, immutable case-version snapshots and hashes, patient-linked simulation IDs, round status, and individual outputs. Runs created through the patient API are linked to the exact patient and case version; older unlinked runs remain readable and are not silently assigned to a patient. The database migrates older run tables additively. The local database is excluded from Git. Do not delete it while work is active or before exporting results.
 
 ## Evidence and safety
 
