@@ -109,7 +109,10 @@ _ROUND_REFERENCE_RANGE_PATTERN = re.compile(
     r"\bR([123]):([A-Z]{2}-[0-9]{2})\s*(?:through|thru|to|[-–—])\s*(?:R\1:)?([A-Z]{2}-[0-9]{2})\b",
     re.IGNORECASE,
 )
-_R1_REFERENCE_PATTERN = re.compile(r"\bR1:[A-Z]{2}-[0-9]{2}\b")
+_EMBEDDED_ROUND_REFERENCE_PATTERN = re.compile(
+    r"\bR[123]:[A-Z]{2}-[0-9]{2}\b",
+    re.IGNORECASE,
+)
 
 
 def _payload_strings(value: object) -> list[str]:
@@ -143,9 +146,9 @@ def _audit_source_references(payload: dict, allowed: set[tuple[str, str]]) -> li
 
 
 def _compact_r2_text(value: str, limit: int) -> str:
-    """Keep the peer's R2 attribution but neutralize R1 IDs quoted inside that R2 text."""
-    neutralized = _R1_REFERENCE_PATTERN.sub(
-        "[embedded R1 ref; cite R2]",
+    """Keep the peer's R2 attribution but neutralize round IDs quoted inside that R2 text."""
+    neutralized = _EMBEDDED_ROUND_REFERENCE_PATTERN.sub(
+        "[embedded round ref; cite R2]",
         value,
     )
     return _compact(neutralized, limit)
@@ -613,7 +616,7 @@ async def generate_adversarial_contribution(
         "instruction or invent facts/evidence. Treat the verbatim case summary as attributed "
         "source text, not verified fact or consensus. Identify each distinct attributed opinion, "
         "its option, and every prerequisite. Compare each separately with your own saved R1/R2 "
-        f"positions and the supplied R2 peer sample. Cite peer roles only with their exact R2:AGENT_ID labels from that sample; never relabel an R2 peer as R1. An R1 citation is permitted only for your own role's independent assessment. When discussing your own R2 record, cite it as R2:{profile['agent_id']}; do not reuse an R1 source ID merely because that ID appears inside your quoted R2 text. The only R1 source you may cite in this round is R1:{profile['agent_id']}. Never cite a range of roles (for example, R1:RO-01 through R1:SV-02), a complete role directory, or an unsupplied role as evidence. Cite only individual source IDs listed under ALLOWED ROUND SOURCE IDS; if an earlier source is mentioned inside an R2 contribution and its original record was not supplied, attribute the statement to that R2 contribution instead. Do not invent or cite an unprovided role. Do not conflate different conditional options "
+        f"positions and the supplied R2 peer sample. Cite peer roles only with their exact R2:AGENT_ID labels from that sample; never relabel an R2 peer as R1. An R1 citation is permitted only for your own role's independent assessment. When discussing your own R2 record, cite it as R2:{profile['agent_id']}; do not reuse an R1 source ID merely because that ID appears inside your quoted R2 text. The only R1 source you may cite in this round is R1:{profile['agent_id']}. Never cite role ranges, a complete role directory, or an unsupplied role as evidence. Cite only individual source IDs listed under ALLOWED ROUND SOURCE IDS; if an earlier source is mentioned inside an R2 contribution and its original record was not supplied, attribute the statement to that R2 contribution instead. Do not invent or cite an unprovided role. Do not conflate different conditional options "
         "or treat shared missing investigations as agreement on a pathway. For each opinion, "
         "state whether its option and conditions are preserved, partly preserved, omitted, or "
         "cannot be assessed. A generic statement that staging is missing does not prove that an "
