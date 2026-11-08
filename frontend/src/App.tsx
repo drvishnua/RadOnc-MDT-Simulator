@@ -323,13 +323,29 @@ function readSavedBatch(): BatchRunSummary | null {
   }
 }
 
+function safeCaseDraftStorage(): Storage {
+  try {
+    return window.localStorage;
+  } catch {
+    // Accessing the localStorage property itself can throw in restricted browser contexts.
+    return {
+      length: 0,
+      clear() {},
+      getItem() { return null; },
+      key() { return null; },
+      removeItem() {},
+      setItem() { throw new Error("Browser storage is unavailable."); }
+    };
+  }
+}
+
 function App() {
   const [health, setHealth] = useState<Health | null>(null);
   const [runtime, setRuntime] = useState<Runtime | null>(null);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [connectionState, setConnectionState] = useState<"loading" | "connected" | "unavailable">("loading");
   const [form, setForm] = useState<typeof emptyForm>(() =>
-    readDraft(window.localStorage, CASE_DRAFT_KEY, LEGACY_CASE_KEY, emptyForm, legacySavedCaseToDraft)
+    readDraft(safeCaseDraftStorage(), CASE_DRAFT_KEY, LEGACY_CASE_KEY, emptyForm, legacySavedCaseToDraft)
   );
   // Validation is intentionally session-only: a restored draft must be revalidated.
   const [validation, setValidation] = useState<ValidationResult | null>(null);
@@ -471,7 +487,7 @@ function App() {
   useEffect(() => {
     // Persist editable raw strings independently of the validation snapshot.
     // If browser storage is unavailable, editing and validation remain usable in-session.
-    writeDraft(window.localStorage, CASE_DRAFT_KEY, LEGACY_CASE_KEY, form);
+    writeDraft(safeCaseDraftStorage(), CASE_DRAFT_KEY, LEGACY_CASE_KEY, form);
   }, [form]);
 
   async function refreshMdtRound(roundNumber: number, runId = batchRun?.run_id) {
