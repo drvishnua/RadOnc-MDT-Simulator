@@ -1,4 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
+import { readDraft, writeDraft } from "./caseDraft.js";
+
+const CASE_DRAFT_KEY = "radonc-mdt-case-draft-v1";
+const LEGACY_CASE_KEY = "radonc-mdt-last-case";
 import type { FormEvent } from "react";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
@@ -255,6 +259,32 @@ function readSavedCase(): SyntheticCasePayload | null {
   }
 }
 
+function legacySavedCaseToDraft(_value: unknown): typeof emptyForm | null {
+  const saved = readSavedCase();
+  if (!saved) return null;
+  return {
+    scenario_title: saved.scenario_title,
+    case_summary: saved.case_summary,
+    age_years: saved.age_years === null ? "" : String(saved.age_years),
+    sex_at_birth: saved.sex_at_birth ?? "",
+    primary_site: saved.primary_site ?? "",
+    histology: saved.histology ?? "",
+    clinical_t_stage: saved.clinical_t_stage ?? "",
+    clinical_n_stage: saved.clinical_n_stage ?? "",
+    clinical_m_stage: saved.clinical_m_stage ?? "",
+    stage_group: saved.stage_group ?? "",
+    performance_status: saved.performance_status ?? "",
+    pathology_summary: saved.pathology_summary ?? "",
+    imaging_summary: saved.imaging_summary ?? "",
+    relevant_comorbidities: saved.relevant_comorbidities.join("\\n"),
+    prior_treatment: saved.prior_treatment.join("\\n"),
+    patient_goals: saved.patient_goals.join("\\n"),
+    social_context: saved.social_context.join("\\n"),
+    resource_context: saved.resource_context.join("\\n"),
+    known_unknowns: saved.known_unknowns.join("\\n")
+  };
+}
+
 function readSavedBatch(): BatchRunSummary | null {
   const key = "radonc-mdt-active-batch";
   try {
@@ -298,41 +328,12 @@ function App() {
   const [runtime, setRuntime] = useState<Runtime | null>(null);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [connectionState, setConnectionState] = useState<"loading" | "connected" | "unavailable">("loading");
-  const [form, setForm] = useState(() => {
-    const saved = readSavedCase();
-    return saved ? {
-      scenario_title: saved.scenario_title,
-      case_summary: saved.case_summary,
-      age_years: saved.age_years === null ? "" : String(saved.age_years),
-      sex_at_birth: saved.sex_at_birth ?? "",
-      primary_site: saved.primary_site ?? "",
-      histology: saved.histology ?? "",
-      clinical_t_stage: saved.clinical_t_stage ?? "",
-      clinical_n_stage: saved.clinical_n_stage ?? "",
-      clinical_m_stage: saved.clinical_m_stage ?? "",
-      stage_group: saved.stage_group ?? "",
-      performance_status: saved.performance_status ?? "",
-      pathology_summary: saved.pathology_summary ?? "",
-      imaging_summary: saved.imaging_summary ?? "",
-      relevant_comorbidities: saved.relevant_comorbidities.join("\n"),
-      prior_treatment: saved.prior_treatment.join("\n"),
-      patient_goals: saved.patient_goals.join("\n"),
-      social_context: saved.social_context.join("\n"),
-      resource_context: saved.resource_context.join("\n"),
-      known_unknowns: saved.known_unknowns.join("\n")
-    } : emptyForm;
-  });
-  const [validation, setValidation] = useState<ValidationResult | null>(() => (
-    readSavedCase()
-      ? {
-          valid: true,
-          mode: "synthetic_educational_case",
-          warnings: [],
-          note: "This synthetic case was previously validated in this browser."
-        }
-      : null
-  ));
-  const [validatedCase, setValidatedCase] = useState<SyntheticCasePayload | null>(() => readSavedCase());
+  const [form, setForm] = useState<typeof emptyForm>(() =>
+    readDraft(window.localStorage, CASE_DRAFT_KEY, LEGACY_CASE_KEY, emptyForm, legacySavedCaseToDraft)
+  );
+  // Validation is intentionally session-only: a restored draft must be revalidated.
+  const [validation, setValidation] = useState<ValidationResult | null>(null);
+  const [validatedCase, setValidatedCase] = useState<SyntheticCasePayload | null>(null);
   const [validationError, setValidationError] = useState("");
   const [validating, setValidating] = useState(false);
   const [agentAssessment, setAgentAssessment] = useState<AgentAssessmentResult | null>(null);
@@ -468,16 +469,10 @@ function App() {
   }
 
   useEffect(() => {
-    try {
-      if (validatedCase) {
-        window.localStorage.setItem("radonc-mdt-last-case", JSON.stringify(validatedCase));
-      } else {
-        window.localStorage.removeItem("radonc-mdt-last-case");
-      }
-    } catch {
-      // Case and run data remain persisted by the local backend once a batch starts.
-    }
-  }, [validatedCase]);
+    // Persist editable raw strings independently of the validation snapshot.
+    // If browser storage is unavailable, editing and validation remain usable in-session.
+    writeDraft(window.localStorage, CASE_DRAFT_KEY, LEGACY_CASE_KEY, form);
+  }, [form]);
 
   async function refreshMdtRound(roundNumber: number, runId = batchRun?.run_id) {
     if (!runId) return;

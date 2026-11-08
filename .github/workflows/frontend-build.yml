@@ -77,6 +77,13 @@ jobs:
           npm install --no-audit --no-fund
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      - name: Test case draft persistence
+        working-directory: frontend
+        shell: powershell
+        run: |
+          npm test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Type-check and build
         working-directory: frontend
         shell: powershell
