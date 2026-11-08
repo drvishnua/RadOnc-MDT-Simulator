@@ -276,12 +276,12 @@ function legacySavedCaseToDraft(_value: unknown): typeof emptyForm | null {
     performance_status: saved.performance_status ?? "",
     pathology_summary: saved.pathology_summary ?? "",
     imaging_summary: saved.imaging_summary ?? "",
-    relevant_comorbidities: saved.relevant_comorbidities.join("\\n"),
-    prior_treatment: saved.prior_treatment.join("\\n"),
-    patient_goals: saved.patient_goals.join("\\n"),
-    social_context: saved.social_context.join("\\n"),
-    resource_context: saved.resource_context.join("\\n"),
-    known_unknowns: saved.known_unknowns.join("\\n")
+    relevant_comorbidities: saved.relevant_comorbidities.join("\n"),
+    prior_treatment: saved.prior_treatment.join("\n"),
+    patient_goals: saved.patient_goals.join("\n"),
+    social_context: saved.social_context.join("\n"),
+    resource_context: saved.resource_context.join("\n"),
+    known_unknowns: saved.known_unknowns.join("\n")
   };
 }
 
