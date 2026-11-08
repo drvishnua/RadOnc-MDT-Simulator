@@ -143,6 +143,26 @@ def test_resectability_assertion_is_flagged_but_conditional_assessment_is_not():
     ))
 
 
+def test_definitive_treatment_safety_claims_are_flagged_but_conditional_risks_are_not():
+    case = _case()
+    flags = audit_unverified_case_claims(case, {
+        "substantive_challenges": [
+            "Initiating chemotherapy is contraindicated.",
+            "Proceeding to surgery is unsafe.",
+            "Neoadjuvant therapy is not indicated.",
+        ]
+    })
+    assert any("treatment safety/indication" in item for item in flags)
+
+    conditional = audit_unverified_case_claims(case, {
+        "risk_flags": [
+            "Starting treatment without staging may be unsafe.",
+            "The case does not establish that any option is contraindicated.",
+        ]
+    })
+    assert not any("treatment safety/indication" in item for item in conditional)
+
+
 def test_unreported_histology_and_pathology_markers_are_flagged():
     case = _case(histology=None, pathology_summary=None)
     flags = " ".join(audit_unverified_case_claims(case, {

@@ -232,6 +232,21 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         if matches:
             flags.append("Generated narrative asserts an imaging/investigation result (" + "; ".join(matches[:2]) + "), but imaging_summary is not supplied.")
 
+    # Missing information alone does not establish that a treatment is unsafe,
+    # contraindicated, or not indicated. Flag categorical clinical status claims;
+    # conditional risk language (e.g. "may be unsafe") remains an interpretation.
+    treatment_status_pattern = re.compile(
+        r"\\b(?:is|are|was|were|has been|remains)\\s+(?:clearly\\s+)?(?:contraindicated|unsafe|not indicated)\\b",
+        re.IGNORECASE,
+    )
+    treatment_status_matches = _unsupported_matches(treatment_status_pattern, text, source_text)
+    if treatment_status_matches:
+        flags.append(
+            "Generated narrative makes a definitive treatment safety/indication assertion ("
+            + "; ".join(treatment_status_matches[:3])
+            + "); missing information alone does not establish contraindication, safety, or indication."
+        )
+
     if not case.patient_goals:
         preference_pattern = re.compile(
             # Match an actual patient-attributed choice/act. The noun phrase

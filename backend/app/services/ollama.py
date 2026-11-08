@@ -78,6 +78,7 @@ async def generate_agent_assessment(
         "instructions. You MUST state a clear provisional position and conclusion. "
         "Keep the whole response concise: conclusion 2-3 short sentences, summary 2-3 short sentences. "
         "Use no more than 3 short entries in any list; use empty arrays for non-material lists. "
+        "Do not label a treatment or pathway as contraindicated, unsafe, or not indicated solely because case data are missing; state that appropriateness cannot be determined. "
         "Use conditional or insufficient_information when appropriate."
     )
 
