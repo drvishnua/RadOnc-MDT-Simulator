@@ -82,6 +82,16 @@ def _create_complete_round1(monkeypatch, tmp_path):
     assert response.status_code == 200
     run_id = response.json()["run_id"]
     assert client.get(f"/api/runs/{run_id}").json()["completed_count"] == 45
+
+    # A fresh dashboard mount must be able to retrieve saved R1 progress and contributions.
+    r1_summary = client.get(f"/api/runs/{run_id}").json()
+    r1_results_response = client.get(f"/api/runs/{run_id}/results")
+    assert r1_summary["completed_count"] == 45
+    assert r1_summary["progress_percent"] == 100.0
+    assert r1_results_response.status_code == 200
+    r1_results = r1_results_response.json()["results"]
+    assert len(r1_results) == 45
+    assert all(item["status"] == "completed" and item["assessment"] is not None for item in r1_results)
     return run_id
 
 
@@ -112,17 +122,44 @@ def test_four_rounds_require_full_previous_round_and_preserve_all_roles(monkeypa
     r2_summary = client.get(f"/api/runs/{run_id}/rounds/2").json()
     assert r2_summary["status"] == "completed"
     assert r2_summary["completed_count"] == 45
+    # Re-fetch after the round has finished, as the frontend does after a refresh.
+    r2_results_response = client.get(f"/api/runs/{run_id}/rounds/2/results")
+    assert r2_results_response.status_code == 200
+    r2_results = r2_results_response.json()["results"]
+    assert len(r2_results) == 45
+    assert all(item["status"] == "completed" and item["result"]["position"] == "conditional" for item in r2_results)
 
     r3 = client.post(f"/api/runs/{run_id}/rounds/3")
     assert r3.status_code == 200
     r3_summary = client.get(f"/api/runs/{run_id}/rounds/3").json()
     assert r3_summary["status"] == "completed"
     assert r3_summary["completed_count"] == 45
+    r3_results_response = client.get(f"/api/runs/{run_id}/rounds/3/results")
+    assert r3_results_response.status_code == 200
+    r3_results = r3_results_response.json()["results"]
+    assert len(r3_results) == 45
+    assert all(item["status"] == "completed" and item["result"]["position"] == "conditional" for item in r3_results)
 
     r4 = client.post(f"/api/runs/{run_id}/rounds/4")
     assert r4.status_code == 200
+
+    # The Chair record and report must survive a second independent retrieval.
+    r4_summary_response = client.get(f"/api/runs/{run_id}/rounds/4")
+    r4_results_response = client.get(f"/api/runs/{run_id}/rounds/4/results")
+    assert r4_summary_response.status_code == 200
+    assert r4_summary_response.json()["status"] == "completed"
+    assert r4_results_response.status_code == 200
+    r4_results = r4_results_response.json()["results"]
+    assert len(r4_results) == 1
+    assert r4_results[0]["agent_id"] == "SG-07"
+    assert r4_results[0]["status"] == "completed"
+    assert r4_results[0]["result"]["report_title"] == "MDT Chair Synthesis: Larynx — Squamous cell carcinoma"
+
     report = client.get(f"/api/runs/{run_id}/report")
+    reloaded_report = client.get(f"/api/runs/{run_id}/report")
     assert report.status_code == 200
+    assert reloaded_report.status_code == 200
+    assert report.json() == reloaded_report.json()
     assert report.json()["not_a_treatment_instruction"] is True
     assert report.json()["evidence_retrieval_connected"] is False
     assert report.json()["report_title"] == "MDT Chair Synthesis: Larynx — Squamous cell carcinoma"
