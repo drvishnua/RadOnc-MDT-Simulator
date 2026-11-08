@@ -603,7 +603,7 @@ function App() {
     }
   }
 
-  function clearPatientEntry() {
+  function clearPatientEntry(clearLinkedResults = false) {
     setForm({ ...emptyForm });
     setValidation(null);
     setValidatedCase(null);
@@ -613,21 +613,26 @@ function App() {
     setSelectedCaseVersionId("");
     setActiveSavedCase(null);
     setSelectedPatientRunId("");
-    setSavedSingleAssessment(null);
     setAssessmentError("");
     setAssessmentPersistenceWarning("");
-    setBatchRun(null);
-    setBatchResults([]);
-    setRoundSummaries({});
-    setRoundResults({});
-    setFinalReport(null);
-    setBatchError("");
-    setRoundError("");
+    if (clearLinkedResults) {
+      setSavedSingleAssessment(null);
+      setBatchRun(null);
+      setBatchResults([]);
+      setRoundSummaries({});
+      setRoundResults({});
+      setFinalReport(null);
+      setBatchError("");
+      setRoundError("");
+      try { window.localStorage.removeItem("radonc-mdt-active-batch"); } catch { /* Storage may be unavailable. */ }
+    }
     try { window.localStorage.removeItem(CASE_DRAFT_KEY); } catch { /* Storage may be unavailable. */ }
   }
 
   async function deleteSelectedPatient() {
     if (!loadedPatient || patientBusy) return;
+    const patientId = loadedPatient.patient_id;
+    const clearCurrentRun = batchRun?.patient_id === patientId;
     const confirmed = window.confirm(
       `Permanently delete ${loadedPatient.patient_identifier}? This also removes its saved case versions and all linked MDT simulation results. The serial number will not be reused.`
     );
@@ -635,10 +640,10 @@ function App() {
     setPatientBusy(true);
     setPatientError("");
     try {
-      const response = await fetch(API_BASE + "/api/patients/" + loadedPatient.patient_id, { method: "DELETE" });
+      const response = await fetch(API_BASE + "/api/patients/" + patientId, { method: "DELETE" });
       const body = await response.json() as { detail?: string };
       if (!response.ok) throw new Error(body.detail ?? "Unable to delete the patient record.");
-      clearPatientEntry();
+      clearPatientEntry(clearCurrentRun);
       await refreshPatients();
     } catch (error) {
       setPatientError(error instanceof Error ? error.message : "Unable to delete the patient record.");
@@ -1303,7 +1308,7 @@ function App() {
               </details>
 
               <div className="form-footer">
-                <span className="form-note">No patient name or medical record number fields are provided.</span>
+                <span className="form-note">Use fictional training aliases only. Do not enter real names, medical record numbers, contact details or other identifying information.</span>
                 <button className="button button-primary" type="submit" disabled={validating || connectionState !== "connected"}>
                   {validating ? "Validating…" : "Validate patient details"}
                   <span aria-hidden="true">→</span>
