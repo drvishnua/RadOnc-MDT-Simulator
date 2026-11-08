@@ -367,7 +367,7 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
     assert "R1:RO-01 through R1:SV-02" not in prompts[1]
     assert "local staging prerequisite remains unresolved" in prompts[1]
     assert '"round1_source":"R1:RO-01"' in prompts[1]
-    assert "Never cite a range of roles" in prompts[1]
+    assert "Never cite role ranges" in prompts[1]
     assert "Cite only individual source IDs listed under ALLOWED ROUND SOURCE IDS" in prompts[1]
     assert "source_opinion_reviews" in prompts[1]
     assert "source_reference_ids" in prompts[1]
