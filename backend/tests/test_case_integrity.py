@@ -157,7 +157,7 @@ def test_definitive_treatment_safety_claims_are_flagged_but_conditional_risks_ar
     conditional = audit_unverified_case_claims(case, {
         "risk_flags": [
             "Starting treatment without staging may be unsafe.",
-            "The case does not establish that any option is contraindicated.",
+            "The case does not establish whether any option may be contraindicated.",
         ]
     })
     assert not any("treatment safety/indication" in item for item in conditional)
