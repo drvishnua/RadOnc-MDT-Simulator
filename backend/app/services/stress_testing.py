@@ -205,6 +205,13 @@ def audit_case_outputs(
                     )
                     continue
                 supplied_peer_ids = result.get("source_peer_ids") or row.get("source_peer_ids") or []
+                supplied_peer_refs = {f"R2:{peer_id}" for peer_id in supplied_peer_ids}
+                allowed_review_refs = {
+                    source_id,
+                    f"R1:{row.get('agent_id', '')}",
+                    f"R2:{row.get('agent_id', '')}",
+                    *supplied_peer_refs,
+                }
                 substantive_challenges = result.get("substantive_challenges") or []
                 for source_id, review in review_map.items():
                     if not str(review.get("review_basis") or "").strip():
@@ -224,6 +231,17 @@ def audit_case_outputs(
                             "major",
                         )
                         continue
+                    reference_ids = review.get("source_reference_ids") or []
+                    invalid_references = sorted(set(reference_ids) - allowed_review_refs)
+                    if source_id not in reference_ids or not any(
+                        reference_id in supplied_peer_refs for reference_id in reference_ids
+                    ) or invalid_references:
+                        add_oracle_finding(
+                            oracle_id,
+                            f"{row.get('agent_id')} review for {source_id} lacks its attributed CASE source "
+                            "and a valid supplied R2 peer in source_reference_ids, or cites an unprovided ID.",
+                            "major",
+                        )
                     if statuses.intersection({"partly_preserved", "omitted"}):
                         challenge = str(review.get("challenge") or "").strip()
                         if not challenge:
@@ -234,20 +252,14 @@ def audit_case_outputs(
                                 "major",
                             )
                             continue
-                        if "CASE:case_summary" not in challenge or not any(
-                            f"R2:{peer_id}" in challenge for peer_id in supplied_peer_ids
-                        ):
-                            add_oracle_finding(
-                                oracle_id,
-                                f"{row.get('agent_id')} challenge for {source_id} does not cite "
-                                "the case source and an R2 peer actually supplied to that role.",
-                                "major",
-                            )
-                        if challenge not in substantive_challenges:
+                        canonical_challenge = (
+                            "[Sources: " + "; ".join(reference_ids) + "] " + challenge
+                        )
+                        if canonical_challenge not in substantive_challenges:
                             add_oracle_finding(
                                 oracle_id,
                                 f"{row.get('agent_id')} review challenge for {source_id} was not "
-                                "copied into the canonical substantive_challenges field.",
+                                "copied with its structured source references into substantive_challenges.",
                                 "major",
                             )
     if case_id == "MDT-003":

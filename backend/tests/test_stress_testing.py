@@ -138,6 +138,7 @@ def test_mdt006_oracles_pass_only_when_both_opinions_conditions_and_no_consensus
             "option_status": "omitted",
             "conditions_status": "omitted",
             "review_basis": "The supplied peer digest does not mention this option or its prerequisites.",
+            "source_reference_ids": ["CASE:case_summary#1", "R2:RO-02"],
             "challenge": challenge_one,
         },
         {
@@ -146,6 +147,7 @@ def test_mdt006_oracles_pass_only_when_both_opinions_conditions_and_no_consensus
             "option_status": "omitted",
             "conditions_status": "omitted",
             "review_basis": "The supplied peer digest does not mention this option or its prerequisites.",
+            "source_reference_ids": ["CASE:case_summary#2", "R2:RO-02"],
             "challenge": challenge_two,
         },
     ]
@@ -252,6 +254,7 @@ def test_mdt006_flags_missing_challenge_when_review_says_option_was_omitted():
                         "option_status": "omitted",
                         "conditions_status": "omitted",
                         "review_basis": "The supplied peer digest does not discuss the opinion.",
+                        "source_reference_ids": ["CASE:case_summary#1", "R2:RO-02"],
                         "challenge": "",
                     },
                     {
@@ -260,6 +263,7 @@ def test_mdt006_flags_missing_challenge_when_review_says_option_was_omitted():
                         "option_status": "preserved",
                         "conditions_status": "preserved",
                         "review_basis": "The supplied peer digest explicitly discusses this option and its prerequisites.",
+                        "source_reference_ids": ["CASE:case_summary#2", "R2:RO-02"],
                         "challenge": "",
                     },
                 ],
@@ -274,4 +278,56 @@ def test_mdt006_flags_missing_challenge_when_review_says_option_was_omitted():
         "without recording the required source-linked challenge" in row["finding"]
         for row in findings
         if row["source"] == "STRESS_ORACLE:review_attributed_opinions"
+    )
+
+
+def test_mdt006_oracle_rejects_unprovided_structured_review_source_ids():
+    cases = {item["case_id"]: item for item in load_stress_cases()}
+    item = cases["MDT-006"]
+    chair = {
+        "consensus_status": "insufficient_information",
+        "consensus_points": [],
+        "chair_conclusion": "No final educational pathway is established from the supplied case.",
+    }
+    challenge = "The source opinion is not represented in the supplied R2 peer material."
+    reviews = [
+        {
+            "source_id": "CASE:case_summary#1",
+            "opinion_label": "colorectal surgical note",
+            "option_status": "omitted",
+            "conditions_status": "omitted",
+            "review_basis": "The R2 peer material does not preserve the stated option.",
+            "source_reference_ids": ["CASE:case_summary#1", "R2:RO-99"],
+            "challenge": challenge,
+        },
+        {
+            "source_id": "CASE:case_summary#2",
+            "opinion_label": "medical oncology note",
+            "option_status": "preserved",
+            "conditions_status": "preserved",
+            "review_basis": "The R2 peer material explicitly preserves the stated option and conditions.",
+            "source_reference_ids": ["CASE:case_summary#2", "R2:RO-02"],
+            "challenge": "",
+        },
+    ]
+    rounds = {
+        3: [{
+            "agent_id": "RO-01",
+            "status": "completed",
+            "result": {
+                "source_peer_ids": ["RO-02"],
+                "source_opinion_reviews": reviews,
+                "substantive_challenges": [
+                    "[Sources: CASE:case_summary#1; R2:RO-99] " + challenge
+                ],
+            },
+        }]
+    }
+    findings = audit_case_outputs(
+        "MDT-006", item["case"], rounds, chair, ["review_attributed_opinions"]
+    )
+    assert any(
+        row["source"] == "STRESS_ORACLE:review_attributed_opinions"
+        and "unprovided ID" in row["finding"]
+        for row in findings
     )

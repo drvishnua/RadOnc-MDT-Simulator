@@ -601,7 +601,11 @@ async def generate_adversarial_contribution(
         "agree. Preserve uncertainty, conditions, and minority views. Risk flags are not "
         "substitutes for source-linked challenges. For every distinct attributed source opinion, "
         "populate source_opinion_reviews with its source ID, option_status, conditions_status, "
-        "and a concise review_basis. For MDT-006, return exactly two reviews: "
+        "a concise review_basis, and source_reference_ids. For each review, source_reference_ids "
+        "must include that review's exact CASE source ID and at least one exact R2:AGENT_ID from "
+        "the supplied peer sample. Use only IDs in ALLOWED ROUND SOURCE IDS; never invent an ID. "
+        "These structured IDs are the machine-readable provenance for the review and challenge. "
+        "For MDT-006, return exactly two reviews: "
         "CASE:case_summary#1 for the colorectal surgical note and CASE:case_summary#2 for "
         "the medical oncology note. Judge preservation only from the actual R1/R2 material "
         "available to you; generic agreement that information is missing does not mean an "
@@ -623,13 +627,41 @@ async def generate_adversarial_contribution(
     )
     draft = await _generate_structured(prompt, AdversarialContributionDraft, max_tokens)
     payload = draft.model_dump()
-    # Keep the canonical R3 challenge field in sync with the structured review.
-    # This copies model-authored challenges; it does not create or infer new ones.
+    allowed_peer_source_ids = {f"R2:{peer['agent_id']}" for peer in peer_debate_views[:5]}
+    allowed_review_source_ids = {
+        f"R1:{profile['agent_id']}",
+        f"R2:{profile['agent_id']}",
+        *allowed_peer_source_ids,
+    }
+    review_reference_flags: list[str] = []
+    # Preserve model-authored review challenges, but attach their explicit structured
+    # source IDs before adding them to the canonical Chair-facing challenge field.
     challenges = list(payload.get("substantive_challenges") or [])
     for review in payload.get("source_opinion_reviews") or []:
-        challenge = review.get("challenge") if isinstance(review, dict) else ""
-        if isinstance(challenge, str) and challenge.strip() and challenge not in challenges:
-            challenges.append(challenge)
+        if not isinstance(review, dict):
+            continue
+        source_id = str(review.get("source_id") or "")
+        reference_ids = review.get("source_reference_ids") or []
+        if source_id not in reference_ids:
+            review_reference_flags.append(
+                f"Review for {source_id or 'unknown source'} omits its attributed CASE source ID."
+            )
+        if not any(reference_id in allowed_peer_source_ids for reference_id in reference_ids):
+            review_reference_flags.append(
+                f"Review for {source_id or 'unknown source'} does not cite an R2 peer actually supplied to this role."
+            )
+        invalid_ids = sorted(set(reference_ids) - ({source_id} | allowed_review_source_ids))
+        if invalid_ids:
+            review_reference_flags.append(
+                f"Review for {source_id or 'unknown source'} cites source IDs not supplied to this role: "
+                + ", ".join(invalid_ids[:4]) + "."
+            )
+        challenge = review.get("challenge") or ""
+        if isinstance(challenge, str) and challenge.strip():
+            source_prefix = "[Sources: " + "; ".join(reference_ids) + "] "
+            canonical_challenge = source_prefix + challenge
+            if canonical_challenge not in challenges:
+                challenges.append(canonical_challenge)
     payload["substantive_challenges"] = challenges[:8]
     previous_position = own_debate_contribution.get("position", "unknown")
     if draft.position != previous_position:
@@ -641,7 +673,10 @@ async def generate_adversarial_contribution(
         ("R2", peer["agent_id"]) for peer in peer_debate_views[:5]
     }
     payload["source_peer_ids"] = [peer["agent_id"] for peer in peer_debate_views[:5]]
-    payload["source_reference_integrity_flags"] = _audit_source_references(payload, allowed_sources)
+    payload["source_reference_integrity_flags"] = (
+        _audit_source_references(payload, allowed_sources)
+        + review_reference_flags
+    )[:20]
     return RoundContribution(
         agent_id=profile["agent_id"],
         round_number=3,

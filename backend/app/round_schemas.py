@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from app.schemas import StrictModel
 
@@ -30,7 +30,21 @@ class SourceOpinionReview(StrictModel):
     option_status: Literal["preserved", "partly_preserved", "omitted", "unclear"]
     conditions_status: Literal["preserved", "partly_preserved", "omitted", "unclear"]
     review_basis: str = Field(min_length=20, max_length=600)
+    source_reference_ids: list[str] = Field(min_length=2, max_length=8)
     challenge: str = Field(default="", max_length=700)
+
+    @model_validator(mode="after")
+    def require_attributed_case_and_peer_sources(self) -> "SourceOpinionReview":
+        if self.source_id not in self.source_reference_ids:
+            raise ValueError("source_reference_ids must include this review's attributed case source.")
+        if not any(source_id.startswith("R2:") for source_id in self.source_reference_ids):
+            raise ValueError("source_reference_ids must include an R2 peer source.")
+        if (
+            self.option_status in {"partly_preserved", "omitted"}
+            or self.conditions_status in {"partly_preserved", "omitted"}
+        ) and not self.challenge.strip():
+            raise ValueError("An omitted or partly preserved opinion requires a substantive challenge.")
+        return self
 
 
 class AdversarialContributionDraft(RoundContributionDraft):

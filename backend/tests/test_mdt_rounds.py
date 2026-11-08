@@ -363,6 +363,8 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
     assert "Never cite a range of roles" in prompts[1]
     assert "Cite only individual source IDs listed under ALLOWED ROUND SOURCE IDS" in prompts[1]
     assert "source_opinion_reviews" in prompts[1]
+    assert "source_reference_ids" in prompts[1]
+    assert "exact CASE source ID and at least one exact R2:AGENT_ID" in prompts[1]
     assert "CASE:case_summary#1" in prompts[1]
     assert "CASE:case_summary#2" in prompts[1]
     assert "ALLOWED ROUND SOURCE IDS" in prompts[1]
@@ -713,3 +715,26 @@ def test_chair_report_surfaces_round_source_reference_integrity_flags():
         "Round 3 source-reference audit" in item and "R1:SO-01" in item
         for item in report.unresolved_disagreements
     )
+
+
+def test_source_opinion_review_requires_structured_case_and_peer_references():
+    import pytest
+    from pydantic import ValidationError
+    from app.round_schemas import SourceOpinionReview
+
+    base = {
+        "source_id": "CASE:case_summary#1",
+        "opinion_label": "colorectal surgical note",
+        "option_status": "omitted",
+        "conditions_status": "partly_preserved",
+        "review_basis": "The supplied peer material does not preserve the option or all conditions.",
+        "source_reference_ids": ["CASE:case_summary#1", "R2:RO-02"],
+        "challenge": "The option and conditions are not represented in the supplied debate record.",
+    }
+    assert SourceOpinionReview(**base).source_reference_ids == [
+        "CASE:case_summary#1", "R2:RO-02"
+    ]
+    with pytest.raises(ValidationError):
+        SourceOpinionReview(**{**base, "source_reference_ids": ["R2:RO-02"]})
+    with pytest.raises(ValidationError):
+        SourceOpinionReview(**{**base, "challenge": ""})
