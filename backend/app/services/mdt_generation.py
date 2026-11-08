@@ -145,7 +145,7 @@ def _audit_source_references(payload: dict, allowed: set[tuple[str, str]]) -> li
 def _compact_r2_text(value: str, limit: int) -> str:
     """Keep the peer's R2 attribution but neutralize R1 IDs quoted inside that R2 text."""
     neutralized = _R1_REFERENCE_PATTERN.sub(
-        "[embedded R1 citation; attribute via R2 peer]",
+        "[embedded R1 ref; cite R2]",
         value,
     )
     return _compact(neutralized, limit)
