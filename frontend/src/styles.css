@@ -116,6 +116,16 @@ input::placeholder, textarea::placeholder { color: #6f8096; }
 input:focus, textarea:focus, select:focus { border-color: rgba(117, 211, 191, .7); outline: none; }
 textarea { resize: vertical; min-height: 110px; line-height: 1.55; }
 .field-row { display: grid; grid-template-columns: .65fr 1.35fr; gap: 12px; }
+.structured-fields {
+  padding: 12px; border: 1px solid var(--line); border-radius: 9px;
+  background: rgba(11, 22, 37, .32);
+}
+.structured-fields summary { cursor: pointer; color: #d7e4ef; font-size: 11px; font-weight: 700; }
+.structured-fields > p { margin: 9px 0 12px; color: #8fa1b6; font-size: 10px; line-height: 1.6; }
+.structured-fields-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+.structured-fields-grid .full-width { grid-column: 1 / -1; }
+.structured-fields textarea { min-height: 82px; }
+.structured-fields textarea.structured-list-input { min-height: 66px; }
 .form-footer { display: flex; justify-content: space-between; align-items: center; gap: 14px; margin-top: 2px; }
 .form-note { max-width: 240px; color: #8091a7; font-size: 10px; line-height: 1.45; }
 .button { display: inline-flex; align-items: center; justify-content: center; gap: 13px; min-height: 38px; padding: 0 14px; border: 1px solid transparent; border-radius: 8px; cursor: pointer; font-size: 11px; font-weight: 700; transition: background .15s ease, opacity .15s ease; }
@@ -155,6 +165,8 @@ textarea { resize: vertical; min-height: 110px; line-height: 1.55; }
   .agent-list { max-height: 460px; }
 }
 @media (max-width: 620px) {
+  .structured-fields-grid { grid-template-columns: 1fr; }
+  .structured-fields-grid .full-width { grid-column: auto; }
   .topbar { height: 68px; padding: 0 17px; }
   .environment-pill { display: none; }
   .main-content { padding: 38px 16px 20px; }

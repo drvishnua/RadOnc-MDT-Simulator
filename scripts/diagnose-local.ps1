@@ -81,6 +81,7 @@ $edgeCandidates = @(
 )
 $edgeExe = $edgeCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
 $reactMounted = $null
+$structuredFieldsPresent = $null
 if ($edgeExe) {
     $tempDir = Join-Path $env:RUNNER_TEMP ("radonc-edge-" + [Guid]::NewGuid().ToString("N"))
     New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
@@ -113,6 +114,18 @@ if ($edgeExe) {
             Write-Host "REACT_TOPBAR_MOUNTED=$hasTopbar"
             Write-Host "REACT_HERO_MOUNTED=$hasHero"
             Write-Host "REACT_STATUS_GRID_MOUNTED=$hasStatusGrid"
+            $requiredStructuredLabels = @(
+                "Sex at birth", "Performance status", "Clinical T stage", "Clinical N stage",
+                "Clinical M stage", "Stage group", "Pathology summary", "Imaging summary",
+                "Relevant comorbidities", "Prior treatment", "Patient goals", "Social context",
+                "Resource context", "Known unknowns"
+            )
+            $missingStructuredLabels = @($requiredStructuredLabels | Where-Object { -not $dom.Contains($_) })
+            $structuredFieldsPresent = ($missingStructuredLabels.Count -eq 0)
+            Write-Host "STRUCTURED_CASE_FIELDS_PRESENT=$structuredFieldsPresent"
+            if ($missingStructuredLabels.Count -gt 0) {
+                Write-Host ("MISSING_STRUCTURED_CASE_FIELDS=" + ($missingStructuredLabels -join ", "))
+            }
             Write-Host "EDGE_DOM_HEAD=$($dom.Substring(0,[Math]::Min(1400,$dom.Length)))"
         }
     } else {
@@ -153,5 +166,8 @@ if (-not ($viteOk -and $entryOk -and $appModuleOk -and $stylesOk)) {
 }
 if ($null -ne $reactMounted -and -not $reactMounted) {
     throw "Headless Edge loaded the page but React did not mount .app-shell. Inspect the DOM and browser errors above."
+}
+if ($null -ne $structuredFieldsPresent -and -not $structuredFieldsPresent) {
+    throw "The case workspace is missing one or more backend-supported structured case fields."
 }
 Write-Host "LOCAL_APP_DIAGNOSTIC_COMPLETED"

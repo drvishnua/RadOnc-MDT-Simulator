@@ -20,6 +20,10 @@
 | Database | SQLite | Case snapshots, run/round statuses, per-agent outputs |
 | Tests | Pytest + TypeScript/Vite build | Schema, orchestration, persistence, and UI validation |
 
+## Case-data entry and preservation
+
+The frontend exposes every structured field supported by the backend schema: age, sex at birth, primary site, histology, clinical T/N/M stage, stage group, performance status, pathology and imaging summaries, comorbidities, prior treatment, patient goals, social context, resource context, and known unknowns. Additional structured fields are grouped in an optional expandable section. Legacy browser-saved cases are restored with newly introduced fields left unknown/empty. The original free-text case summary is preserved verbatim; the application does not silently reconcile conflicts between narrative and structured fields. Blank fields mean not reported, not negative.
+
 ## Four-round execution
 
 1. Round 1 runs all 45 independent roles; no agent sees another's output.

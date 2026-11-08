@@ -31,6 +31,35 @@ def test_synthetic_case_validation_accepts_minimal_case() -> None:
     assert any("Age is not supplied" in warning for warning in body["warnings"])
 
 
+def test_synthetic_case_validation_accepts_full_structured_case() -> None:
+    response = client.post(
+        "/api/cases/validate",
+        json={
+            "scenario_title": "Synthetic structured rectal case",
+            "case_summary": "Fictional case for complete structured-field validation.",
+            "age_years": 60,
+            "sex_at_birth": "Female",
+            "primary_site": "Rectum",
+            "histology": "Adenocarcinoma",
+            "clinical_t_stage": "cT2",
+            "clinical_n_stage": "cN1",
+            "clinical_m_stage": "cM1",
+            "stage_group": "IVA",
+            "performance_status": "ECOG 1",
+            "pathology_summary": "Synthetic biopsy summary.",
+            "imaging_summary": "Synthetic imaging summary.",
+            "relevant_comorbidities": ["Hypertension"],
+            "prior_treatment": ["Diagnostic biopsy"],
+            "patient_goals": ["Preserve function"],
+            "social_context": ["Lives independently"],
+            "resource_context": ["MRI available"],
+            "known_unknowns": ["Further review of imaging is pending"],
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["valid"] is True
+
+
 def test_case_schema_rejects_identifying_extra_fields() -> None:
     response = client.post(
         "/api/cases/validate",

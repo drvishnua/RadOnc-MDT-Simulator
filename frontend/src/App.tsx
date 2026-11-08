@@ -38,8 +38,22 @@ type SyntheticCasePayload = {
   scenario_title: string;
   case_summary: string;
   age_years: number | null;
+  sex_at_birth: string | null;
   primary_site: string | null;
   histology: string | null;
+  clinical_t_stage: string | null;
+  clinical_n_stage: string | null;
+  clinical_m_stage: string | null;
+  stage_group: string | null;
+  performance_status: string | null;
+  pathology_summary: string | null;
+  imaging_summary: string | null;
+  relevant_comorbidities: string[];
+  prior_treatment: string[];
+  patient_goals: string[];
+  social_context: string[];
+  resource_context: string[];
+  known_unknowns: string[];
 };
 
 type AgentAssessmentResult = {
@@ -149,9 +163,42 @@ const emptyForm = {
   scenario_title: "Synthetic head-and-neck case",
   case_summary: "",
   age_years: "",
+  sex_at_birth: "",
   primary_site: "",
-  histology: ""
+  histology: "",
+  clinical_t_stage: "",
+  clinical_n_stage: "",
+  clinical_m_stage: "",
+  stage_group: "",
+  performance_status: "",
+  pathology_summary: "",
+  imaging_summary: "",
+  relevant_comorbidities: "",
+  prior_treatment: "",
+  patient_goals: "",
+  social_context: "",
+  resource_context: "",
+  known_unknowns: ""
 };
+
+function optionalText(value: string): string | null {
+  const cleaned = value.trim();
+  return cleaned ? cleaned : null;
+}
+
+function linesToList(value: string): string[] {
+  return value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
+}
+
+function savedOptionalText(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
+function savedStringList(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
+}
 
 function readSavedCase(): SyntheticCasePayload | null {
   const key = "radonc-mdt-last-case";
@@ -184,8 +231,22 @@ function readSavedCase(): SyntheticCasePayload | null {
       scenario_title: value.scenario_title as string,
       case_summary: value.case_summary as string,
       age_years: value.age_years as number | null,
+      sex_at_birth: savedOptionalText(value.sex_at_birth),
       primary_site: value.primary_site as string | null,
-      histology: value.histology as string | null
+      histology: value.histology as string | null,
+      clinical_t_stage: savedOptionalText(value.clinical_t_stage),
+      clinical_n_stage: savedOptionalText(value.clinical_n_stage),
+      clinical_m_stage: savedOptionalText(value.clinical_m_stage),
+      stage_group: savedOptionalText(value.stage_group),
+      performance_status: savedOptionalText(value.performance_status),
+      pathology_summary: savedOptionalText(value.pathology_summary),
+      imaging_summary: savedOptionalText(value.imaging_summary),
+      relevant_comorbidities: savedStringList(value.relevant_comorbidities),
+      prior_treatment: savedStringList(value.prior_treatment),
+      patient_goals: savedStringList(value.patient_goals),
+      social_context: savedStringList(value.social_context),
+      resource_context: savedStringList(value.resource_context),
+      known_unknowns: savedStringList(value.known_unknowns)
     };
   } catch (error) {
     console.warn("[RadOnc] Could not restore the saved synthetic case; starting clean.", error);
@@ -243,8 +304,22 @@ function App() {
       scenario_title: saved.scenario_title,
       case_summary: saved.case_summary,
       age_years: saved.age_years === null ? "" : String(saved.age_years),
+      sex_at_birth: saved.sex_at_birth ?? "",
       primary_site: saved.primary_site ?? "",
-      histology: saved.histology ?? ""
+      histology: saved.histology ?? "",
+      clinical_t_stage: saved.clinical_t_stage ?? "",
+      clinical_n_stage: saved.clinical_n_stage ?? "",
+      clinical_m_stage: saved.clinical_m_stage ?? "",
+      stage_group: saved.stage_group ?? "",
+      performance_status: saved.performance_status ?? "",
+      pathology_summary: saved.pathology_summary ?? "",
+      imaging_summary: saved.imaging_summary ?? "",
+      relevant_comorbidities: saved.relevant_comorbidities.join("\n"),
+      prior_treatment: saved.prior_treatment.join("\n"),
+      patient_goals: saved.patient_goals.join("\n"),
+      social_context: saved.social_context.join("\n"),
+      resource_context: saved.resource_context.join("\n"),
+      known_unknowns: saved.known_unknowns.join("\n")
     } : emptyForm;
   });
   const [validation, setValidation] = useState<ValidationResult | null>(() => (
@@ -327,8 +402,22 @@ function App() {
       scenario_title: form.scenario_title,
       case_summary: form.case_summary,
       age_years: form.age_years.trim() === "" ? null : Number(form.age_years),
-      primary_site: form.primary_site || null,
-      histology: form.histology || null
+      sex_at_birth: optionalText(form.sex_at_birth),
+      primary_site: optionalText(form.primary_site),
+      histology: optionalText(form.histology),
+      clinical_t_stage: optionalText(form.clinical_t_stage),
+      clinical_n_stage: optionalText(form.clinical_n_stage),
+      clinical_m_stage: optionalText(form.clinical_m_stage),
+      stage_group: optionalText(form.stage_group),
+      performance_status: optionalText(form.performance_status),
+      pathology_summary: optionalText(form.pathology_summary),
+      imaging_summary: optionalText(form.imaging_summary),
+      relevant_comorbidities: linesToList(form.relevant_comorbidities),
+      prior_treatment: linesToList(form.prior_treatment),
+      patient_goals: linesToList(form.patient_goals),
+      social_context: linesToList(form.social_context),
+      resource_context: linesToList(form.resource_context),
+      known_unknowns: linesToList(form.known_unknowns)
     };
 
     try {
@@ -727,6 +816,7 @@ function App() {
                     type="number"
                     min="0"
                     max="120"
+                    step="1"
                     value={form.age_years}
                     onChange={(event) => updateField("age_years", event.target.value)}
                     placeholder="Unknown"
@@ -750,6 +840,73 @@ function App() {
                   placeholder="e.g. Squamous cell carcinoma"
                 />
               </label>
+
+              <details className="structured-fields">
+                <summary>Additional structured case details (optional)</summary>
+                <p>
+                  Enter only documented information. Blank means not reported, not negative.
+                  Keep the original narrative above unchanged; discrepancies are flagged rather
+                  than automatically reconciled. Do not infer stage, fitness or patient goals.
+                </p>
+                <div className="structured-fields-grid">
+                  <label>
+                    Sex at birth
+                    <input value={form.sex_at_birth} onChange={(event) => updateField("sex_at_birth", event.target.value)} placeholder="Not reported" />
+                  </label>
+                  <label>
+                    Performance status
+                    <input value={form.performance_status} onChange={(event) => updateField("performance_status", event.target.value)} placeholder="e.g. ECOG 1, if documented" />
+                  </label>
+                  <label>
+                    Clinical T stage
+                    <input value={form.clinical_t_stage} onChange={(event) => updateField("clinical_t_stage", event.target.value)} placeholder="e.g. cT2, if documented" />
+                  </label>
+                  <label>
+                    Clinical N stage
+                    <input value={form.clinical_n_stage} onChange={(event) => updateField("clinical_n_stage", event.target.value)} placeholder="e.g. cN1, if documented" />
+                  </label>
+                  <label>
+                    Clinical M stage
+                    <input value={form.clinical_m_stage} onChange={(event) => updateField("clinical_m_stage", event.target.value)} placeholder="e.g. cM1, if documented" />
+                  </label>
+                  <label>
+                    Stage group
+                    <input value={form.stage_group} onChange={(event) => updateField("stage_group", event.target.value)} placeholder="Only if explicitly documented" />
+                  </label>
+                  <label className="full-width">
+                    Pathology summary
+                    <textarea rows={3} value={form.pathology_summary} onChange={(event) => updateField("pathology_summary", event.target.value)} placeholder="Documented pathology details only; leave blank if not supplied." />
+                  </label>
+                  <label className="full-width">
+                    Imaging summary
+                    <textarea rows={3} value={form.imaging_summary} onChange={(event) => updateField("imaging_summary", event.target.value)} placeholder="Documented imaging findings only; do not infer N or M status." />
+                  </label>
+                  <label>
+                    Relevant comorbidities
+                    <textarea className="structured-list-input" rows={2} value={form.relevant_comorbidities} onChange={(event) => updateField("relevant_comorbidities", event.target.value)} placeholder="One documented item per line" />
+                  </label>
+                  <label>
+                    Prior treatment
+                    <textarea className="structured-list-input" rows={2} value={form.prior_treatment} onChange={(event) => updateField("prior_treatment", event.target.value)} placeholder="One documented item per line" />
+                  </label>
+                  <label>
+                    Patient goals
+                    <textarea className="structured-list-input" rows={2} value={form.patient_goals} onChange={(event) => updateField("patient_goals", event.target.value)} placeholder="Patient-stated goals only; one per line" />
+                  </label>
+                  <label>
+                    Social context
+                    <textarea className="structured-list-input" rows={2} value={form.social_context} onChange={(event) => updateField("social_context", event.target.value)} placeholder="One documented item per line" />
+                  </label>
+                  <label>
+                    Resource context
+                    <textarea className="structured-list-input" rows={2} value={form.resource_context} onChange={(event) => updateField("resource_context", event.target.value)} placeholder="One documented item per line" />
+                  </label>
+                  <label className="full-width">
+                    Known unknowns
+                    <textarea className="structured-list-input" rows={2} value={form.known_unknowns} onChange={(event) => updateField("known_unknowns", event.target.value)} placeholder="One outstanding question or missing investigation per line" />
+                  </label>
+                </div>
+              </details>
 
               <div className="form-footer">
                 <span className="form-note">No patient name or medical record number fields are provided.</span>
