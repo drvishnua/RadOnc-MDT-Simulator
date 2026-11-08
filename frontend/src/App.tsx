@@ -632,7 +632,7 @@ function App() {
   async function deleteSelectedPatient() {
     if (!loadedPatient || patientBusy) return;
     const patientId = loadedPatient.patient_id;
-    const clearCurrentRun = batchRun?.patient_id === patientId;
+    const clearCurrentRun = batchRun?.patient_id === patientId || savedSingleAssessment?.patient_id === patientId;
     const confirmed = window.confirm(
       `Permanently delete ${loadedPatient.patient_identifier}? This also removes its saved case versions and all linked MDT simulation results. The serial number will not be reused.`
     );
@@ -1159,7 +1159,7 @@ function App() {
                 </div>
               )}
               <div className="batch-actions">
-                <button className="button button-quiet" type="button" onClick={clearPatientEntry} disabled={patientBusy}>Clear unsaved form and selection</button>
+                <button className="button button-quiet" type="button" onClick={() => clearPatientEntry()} disabled={patientBusy}>Clear unsaved form and selection</button>
               </div>
               {patientError && <p className="error-text" role="alert">{patientError}</p>}
               {patientRecords.length === 0 && <p className="result-footnote">No training patients registered yet. Complete the fictional patient and clinical details below, validate, then save the record.</p>}
