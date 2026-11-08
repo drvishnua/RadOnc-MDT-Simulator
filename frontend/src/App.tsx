@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { readDraft, writeDraft } from "./caseDraft.js";
+import { readSavedSingleAssessment, writeSavedSingleAssessment } from "./singleAssessmentStorage.js";
 import { hasValidatedCase, shouldShowBatchPanel } from "./runRecovery.js";
 
 const CASE_DRAFT_KEY = "radonc-mdt-case-draft-v1";
 const LEGACY_CASE_KEY = "radonc-mdt-last-case";
+const SINGLE_ASSESSMENT_KEY = "radonc-mdt-ro01-assessment-v1";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
 
@@ -78,6 +80,13 @@ type AgentAssessmentResult = {
   case_data_integrity_flags?: string[];
   safety_boundary: string;
   not_a_treatment_instruction: boolean;
+};
+
+type SavedSingleAssessment = {
+  version: 1;
+  saved_at: string;
+  case_snapshot: SyntheticCasePayload;
+  assessment: AgentAssessmentResult;
 };
 
 type BatchRunSummary = {
@@ -353,7 +362,11 @@ function App() {
   const [validatedCase, setValidatedCase] = useState<SyntheticCasePayload | null>(null);
   const [validationError, setValidationError] = useState("");
   const [validating, setValidating] = useState(false);
-  const [agentAssessment, setAgentAssessment] = useState<AgentAssessmentResult | null>(null);
+  const [savedSingleAssessment, setSavedSingleAssessment] = useState<SavedSingleAssessment | null>(() =>
+    readSavedSingleAssessment(safeCaseDraftStorage(), SINGLE_ASSESSMENT_KEY) as SavedSingleAssessment | null
+  );
+  const [assessmentPersistenceWarning, setAssessmentPersistenceWarning] = useState("");
+  const agentAssessment = savedSingleAssessment?.assessment ?? null;
   const [assessmentError, setAssessmentError] = useState("");
   const [assessing, setAssessing] = useState(false);
   const [batchRun, setBatchRun] = useState<BatchRunSummary | null>(() => readSavedBatch());
@@ -453,7 +466,6 @@ function App() {
       }
       setValidation(body as ValidationResult);
       setValidatedCase(payload);
-      setAgentAssessment(null);
       setAssessmentError("");
     } catch (error) {
       setValidationError(error instanceof Error ? error.message : "Unable to reach the local API.");
@@ -466,7 +478,7 @@ function App() {
     if (!validatedCase) return;
     setAssessing(true);
     setAssessmentError("");
-    setAgentAssessment(null);
+    setAssessmentPersistenceWarning("");
     try {
       const response = await fetch(API_BASE + "/api/agents/RO-01/assess", {
         method: "POST",
@@ -477,7 +489,25 @@ function App() {
       if (!response.ok) {
         throw new Error(typeof body.detail === "string" ? body.detail : "The local model could not produce a valid assessment.");
       }
-      setAgentAssessment(body as AgentAssessmentResult);
+      const assessment = body as AgentAssessmentResult;
+      const savedAt = new Date().toISOString();
+      const savedRecord: SavedSingleAssessment = {
+        version: 1,
+        saved_at: savedAt,
+        case_snapshot: validatedCase,
+        assessment
+      };
+      setSavedSingleAssessment(savedRecord);
+      const persisted = writeSavedSingleAssessment(
+        safeCaseDraftStorage(),
+        SINGLE_ASSESSMENT_KEY,
+        validatedCase,
+        assessment,
+        savedAt
+      );
+      setAssessmentPersistenceWarning(
+        persisted ? "" : "Browser storage is unavailable or full. This result will remain visible only until this page is closed."
+      );
     } catch (error) {
       setAssessmentError(error instanceof Error ? error.message : "Unable to complete the local assessment.");
     } finally {
@@ -703,7 +733,6 @@ function App() {
     setForm((current) => ({ ...current, [field]: value }));
     setValidation(null);
     setValidatedCase(null);
-    setAgentAssessment(null);
     setAssessmentError("");
   }
 
@@ -965,6 +994,37 @@ function App() {
                   <strong>RO-01 · Guideline-focused Radiation Oncologist</strong>
                   <span>Round {agentAssessment.round_number}</span>
                 </div>
+                {savedSingleAssessment && (
+                  <>
+                    <p className="result-footnote">
+                      Saved {new Date(savedSingleAssessment.saved_at).toLocaleString()} · assessed case:
+                      {" "}{savedSingleAssessment.case_snapshot.scenario_title}. This result remains tied to
+                      its saved case snapshot; editing the current draft does not alter the assessment.
+                    </p>
+                    <details className="structured-fields">
+                      <summary>View the exact case snapshot used for this assessment</summary>
+                      <p>{savedSingleAssessment.case_snapshot.case_summary}</p>
+                    </details>
+                    {assessmentPersistenceWarning && (
+                      <p className="error-text" role="status">{assessmentPersistenceWarning}</p>
+                    )}
+                    <button
+                      className="button button-quiet"
+                      type="button"
+                      onClick={() => {
+                        try {
+                          safeCaseDraftStorage().removeItem(SINGLE_ASSESSMENT_KEY);
+                        } catch {
+                          // The in-memory result can still be cleared if storage is unavailable.
+                        }
+                        setSavedSingleAssessment(null);
+                        setAssessmentPersistenceWarning("");
+                      }}
+                    >
+                      Clear saved RO-01 result
+                    </button>
+                  </>
+                )}
                 <div className="assessment-conclusion">
                   <strong>Provisional conclusion · {agentAssessment.position.replaceAll("_", " ")}</strong>
                   <p>{agentAssessment.provisional_conclusion}</p>
