@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.agent_schemas import AgentAssessment
 from app.agents.catalog import AGENT_PROFILES, EXPECTED_AGENT_COUNT
 from app.config import APP_NAME, APP_VERSION
-from app.schemas import AgentAssessmentRequest, BatchRunRequest, CaseValidationResult, SyntheticCase
+from app.schemas import AgentAssessmentRequest, BatchRunRequest, CaseValidationResult, PatientRunRequest, SyntheticCase
 from app.services.case_integrity import build_case_validation_warnings
 from app.services import run_store
 from app.services.batch_runner import batch_is_running, run_independent_assessments, validate_resume_state
@@ -101,6 +101,95 @@ async def assess_with_agent(
             status_code=502,
             detail="The local model output did not meet the required educational assessment schema.",
         ) from exc
+
+
+
+
+@app.get("/api/patients")
+async def list_synthetic_patients() -> dict[str, object]:
+    return {"patients": run_store.list_patients(), "synthetic_data_only": True}
+
+
+@app.post("/api/patients")
+async def create_synthetic_patient(case: SyntheticCase) -> dict[str, object]:
+    """Save a new synthetic patient and immutable case version 1."""
+    return run_store.create_patient(case)
+
+
+@app.get("/api/patients/{patient_id}")
+async def get_synthetic_patient(patient_id: str) -> dict[str, object]:
+    try:
+        return run_store.get_patient(patient_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Synthetic patient not found.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=500, detail="Saved case-version integrity check failed.") from exc
+
+
+@app.post("/api/patients/{patient_id}/versions")
+async def save_synthetic_case_version(patient_id: str, case: SyntheticCase) -> dict[str, object]:
+    """Append a new case version without changing any prior snapshot or run."""
+    try:
+        return run_store.create_case_version(patient_id, case)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Synthetic patient not found.") from exc
+
+
+@app.post("/api/patients/{patient_id}/runs")
+async def create_patient_simulation(
+    patient_id: str,
+    request: PatientRunRequest,
+    background_tasks: BackgroundTasks,
+) -> dict[str, object]:
+    """Run only a case version already saved under this synthetic patient."""
+    if batch_is_running() or round_is_running():
+        raise HTTPException(status_code=409, detail="Another local model run is already active.")
+    try:
+        record = run_store.create_run_for_case_version(patient_id, request.case_version_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Patient or saved case version not found.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    background_tasks.add_task(run_independent_assessments, record["run_id"])
+    return record
+
+
+@app.post("/api/patients/{patient_id}/versions/{case_version_id}/assess/RO-01")
+async def assess_saved_patient_case(patient_id: str, case_version_id: str) -> dict[str, object]:
+    """Generate and persist the standalone RO-01 assessment against a saved version."""
+    if batch_is_running() or round_is_running():
+        raise HTTPException(status_code=409, detail="Another local model run is already active.")
+    try:
+        version = run_store.get_patient_case_version(patient_id, case_version_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Patient or saved case version not found.") from exc
+    profile = next(item for item in AGENT_PROFILES if item["agent_id"] == "RO-01")
+    case = SyntheticCase.model_validate(version["case"])
+    try:
+        assessment = await generate_agent_assessment(profile=profile, case=case, round_number=1)
+    except OllamaUnavailable as exc:
+        raise HTTPException(status_code=503, detail="The local Ollama service is unavailable.") from exc
+    except AgentGenerationError as exc:
+        logger.warning("Saved-case RO-01 generation rejected: %s", exc)
+        raise HTTPException(status_code=502, detail="The local model output did not meet the required educational assessment schema.") from exc
+    return run_store.save_patient_assessment(
+        patient_id, case_version_id, "RO-01", 1,
+        assessment.model_dump_json(exclude_none=True),
+    )
+
+
+@app.get("/api/patients/{patient_id}/versions/{case_version_id}/assessments")
+async def get_saved_patient_assessments(patient_id: str, case_version_id: str) -> dict[str, object]:
+    try:
+        return {
+            "patient_id": patient_id,
+            "case_version_id": case_version_id,
+            "assessments": run_store.list_patient_assessments(patient_id, case_version_id),
+        }
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Patient or saved case version not found.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=500, detail="Saved case-version integrity check failed.") from exc
 
 
 @app.post("/api/runs")

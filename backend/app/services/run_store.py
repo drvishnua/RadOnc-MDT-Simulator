@@ -49,8 +49,40 @@ def initialize_database() -> None:
                 status TEXT NOT NULL,
                 total_agents INTEGER NOT NULL,
                 current_agent_id TEXT,
+                patient_id TEXT,
+                case_version_id TEXT,
+                case_version_number INTEGER,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS synthetic_patients (
+                patient_id TEXT PRIMARY KEY,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS patient_case_versions (
+                case_version_id TEXT PRIMARY KEY,
+                patient_id TEXT NOT NULL,
+                version_number INTEGER NOT NULL CHECK(version_number > 0),
+                case_json TEXT NOT NULL,
+                case_snapshot_sha256 TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                UNIQUE(patient_id, version_number),
+                FOREIGN KEY (patient_id) REFERENCES synthetic_patients(patient_id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE IF NOT EXISTS patient_case_assessments (
+                assessment_id TEXT PRIMARY KEY,
+                patient_id TEXT NOT NULL,
+                case_version_id TEXT NOT NULL,
+                agent_id TEXT NOT NULL,
+                round_number INTEGER NOT NULL,
+                assessment_json TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (patient_id) REFERENCES synthetic_patients(patient_id) ON DELETE CASCADE,
+                FOREIGN KEY (case_version_id) REFERENCES patient_case_versions(case_version_id) ON DELETE CASCADE
             );
 
             CREATE TABLE IF NOT EXISTS agent_run_results (
@@ -70,22 +102,229 @@ def initialize_database() -> None:
 
             CREATE INDEX IF NOT EXISTS idx_agent_run_results_run_status
             ON agent_run_results(run_id, status);
+
+            CREATE INDEX IF NOT EXISTS idx_patient_case_versions_patient
+            ON patient_case_versions(patient_id, version_number DESC);
+            CREATE INDEX IF NOT EXISTS idx_patient_assessments_version
+            ON patient_case_assessments(case_version_id, created_at DESC);
             """
+        )
+        # Additive migration for databases created before patient-linked simulations.
+        run_columns = {row["name"] for row in db.execute("PRAGMA table_info(simulation_runs)")}
+        for column, sql_type in (
+            ("patient_id", "TEXT"),
+            ("case_version_id", "TEXT"),
+            ("case_version_number", "INTEGER"),
+        ):
+            if column not in run_columns:
+                db.execute(f"ALTER TABLE simulation_runs ADD COLUMN {column} {sql_type}")
+        db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_simulation_runs_patient "
+            "ON simulation_runs(patient_id, created_at DESC)"
         )
 
 
-def create_run(case: SyntheticCase) -> dict[str, Any]:
+def _case_json_and_hash(case: SyntheticCase) -> tuple[str, str]:
+    case_json = case.model_dump_json(exclude_none=True)
+    return case_json, hashlib.sha256(case_json.encode("utf-8")).hexdigest()
+
+
+def create_patient(case: SyntheticCase) -> dict[str, Any]:
+    """Create a synthetic patient and immutable case version 1 in one transaction."""
+    initialize_database()
+    patient_id = "SYN-" + uuid.uuid4().hex[:12].upper()
+    case_version_id = str(uuid.uuid4())
+    now = _now()
+    case_json, digest = _case_json_and_hash(case)
+    with _connect() as db:
+        db.execute("BEGIN IMMEDIATE")
+        db.execute(
+            "INSERT INTO synthetic_patients(patient_id, created_at, updated_at) VALUES (?, ?, ?)",
+            (patient_id, now, now),
+        )
+        db.execute(
+            """INSERT INTO patient_case_versions
+            (case_version_id, patient_id, version_number, case_json, case_snapshot_sha256, created_at)
+            VALUES (?, ?, 1, ?, ?, ?)""",
+            (case_version_id, patient_id, case_json, digest, now),
+        )
+    return get_patient(patient_id)
+
+
+def create_case_version(patient_id: str, case: SyntheticCase) -> dict[str, Any]:
+    """Append a new immutable version; previous snapshots are never overwritten."""
+    initialize_database()
+    case_version_id = str(uuid.uuid4())
+    now = _now()
+    case_json, digest = _case_json_and_hash(case)
+    with _connect() as db:
+        db.execute("BEGIN IMMEDIATE")
+        patient = db.execute(
+            "SELECT patient_id FROM synthetic_patients WHERE patient_id = ?", (patient_id,)
+        ).fetchone()
+        if patient is None:
+            raise KeyError(patient_id)
+        version_number = db.execute(
+            "SELECT COALESCE(MAX(version_number), 0) + 1 AS next_version "
+            "FROM patient_case_versions WHERE patient_id = ?", (patient_id,)
+        ).fetchone()["next_version"]
+        db.execute(
+            """INSERT INTO patient_case_versions
+            (case_version_id, patient_id, version_number, case_json, case_snapshot_sha256, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)""",
+            (case_version_id, patient_id, version_number, case_json, digest, now),
+        )
+        db.execute(
+            "UPDATE synthetic_patients SET updated_at = ? WHERE patient_id = ?",
+            (now, patient_id),
+        )
+    return get_patient(patient_id)
+
+
+def _version_record(row: sqlite3.Row) -> dict[str, Any]:
+    case_json = str(row["case_json"])
+    digest = hashlib.sha256(case_json.encode("utf-8")).hexdigest()
+    if digest != row["case_snapshot_sha256"]:
+        raise ValueError("Saved case-version hash verification failed.")
+    case = SyntheticCase.model_validate_json(case_json)
+    return {
+        "case_version_id": row["case_version_id"],
+        "patient_id": row["patient_id"],
+        "version_number": row["version_number"],
+        "case_snapshot_sha256": digest,
+        "created_at": row["created_at"],
+        "case": case.model_dump(exclude_none=True),
+    }
+
+
+def get_patient_case_version(patient_id: str, case_version_id: str) -> dict[str, Any]:
+    initialize_database()
+    with _connect() as db:
+        row = db.execute(
+            """SELECT * FROM patient_case_versions
+            WHERE patient_id = ? AND case_version_id = ?""",
+            (patient_id, case_version_id),
+        ).fetchone()
+    if row is None:
+        raise KeyError((patient_id, case_version_id))
+    return _version_record(row)
+
+
+def get_patient(patient_id: str) -> dict[str, Any]:
+    initialize_database()
+    with _connect() as db:
+        patient = db.execute(
+            "SELECT * FROM synthetic_patients WHERE patient_id = ?", (patient_id,)
+        ).fetchone()
+        if patient is None:
+            raise KeyError(patient_id)
+        version_rows = db.execute(
+            "SELECT * FROM patient_case_versions WHERE patient_id = ? ORDER BY version_number DESC",
+            (patient_id,),
+        ).fetchall()
+        run_ids = [row["run_id"] for row in db.execute(
+            "SELECT run_id FROM simulation_runs WHERE patient_id = ? ORDER BY created_at DESC",
+            (patient_id,),
+        ).fetchall()]
+    return {
+        "patient_id": patient["patient_id"],
+        "created_at": patient["created_at"],
+        "updated_at": patient["updated_at"],
+        "versions": [_version_record(row) for row in version_rows],
+        "runs": [get_run(run_id) for run_id in run_ids],
+    }
+
+
+def list_patients() -> list[dict[str, Any]]:
+    initialize_database()
+    with _connect() as db:
+        patient_ids = [row["patient_id"] for row in db.execute(
+            "SELECT patient_id FROM synthetic_patients ORDER BY updated_at DESC, patient_id"
+        ).fetchall()]
+    patients = []
+    for patient_id in patient_ids:
+        detail = get_patient(patient_id)
+        latest = detail["versions"][0] if detail["versions"] else None
+        patients.append({
+            "patient_id": detail["patient_id"],
+            "created_at": detail["created_at"],
+            "updated_at": detail["updated_at"],
+            "version_count": len(detail["versions"]),
+            "simulation_count": len(detail["runs"]),
+            "latest_case_version_id": latest["case_version_id"] if latest else None,
+            "latest_version_number": latest["version_number"] if latest else None,
+            "scenario_title": latest["case"]["scenario_title"] if latest else "No saved case",
+        })
+    return patients
+
+
+def create_run_for_case_version(patient_id: str, case_version_id: str) -> dict[str, Any]:
+    """Create a run only from the stored, hash-verified patient case version."""
+    version = get_patient_case_version(patient_id, case_version_id)
+    case = SyntheticCase.model_validate(version["case"])
+    return create_run(
+        case,
+        patient_id=patient_id,
+        case_version_id=case_version_id,
+        case_version_number=version["version_number"],
+    )
+
+
+def save_patient_assessment(
+    patient_id: str, case_version_id: str, agent_id: str, round_number: int,
+    assessment_json: str,
+) -> dict[str, Any]:
+    get_patient_case_version(patient_id, case_version_id)
+    record_id = str(uuid.uuid4())
+    created_at = _now()
+    with _connect() as db:
+        db.execute(
+            """INSERT INTO patient_case_assessments
+            (assessment_id, patient_id, case_version_id, agent_id, round_number, assessment_json, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (record_id, patient_id, case_version_id, agent_id, round_number, assessment_json, created_at),
+        )
+    return {
+        "assessment_id": record_id, "patient_id": patient_id,
+        "case_version_id": case_version_id, "agent_id": agent_id,
+        "round_number": round_number, "created_at": created_at,
+        "assessment": json.loads(assessment_json),
+    }
+
+
+def list_patient_assessments(patient_id: str, case_version_id: str) -> list[dict[str, Any]]:
+    get_patient_case_version(patient_id, case_version_id)
+    with _connect() as db:
+        rows = db.execute(
+            """SELECT * FROM patient_case_assessments
+            WHERE patient_id = ? AND case_version_id = ? ORDER BY created_at DESC, rowid DESC""",
+            (patient_id, case_version_id),
+        ).fetchall()
+    return [{
+        "assessment_id": row["assessment_id"], "patient_id": row["patient_id"],
+        "case_version_id": row["case_version_id"], "agent_id": row["agent_id"],
+        "round_number": row["round_number"], "created_at": row["created_at"],
+        "assessment": json.loads(row["assessment_json"]),
+    } for row in rows]
+
+
+def create_run(case: SyntheticCase, *, patient_id: str | None = None,
+               case_version_id: str | None = None,
+               case_version_number: int | None = None) -> dict[str, Any]:
     initialize_database()
     run_id = str(uuid.uuid4())
     now = _now()
+    case_json, _ = _case_json_and_hash(case)
     with _connect() as db:
         db.execute(
             """
             INSERT INTO simulation_runs
-            (run_id, case_json, status, total_agents, current_agent_id, created_at, updated_at)
-            VALUES (?, ?, 'queued', ?, NULL, ?, ?)
+            (run_id, case_json, status, total_agents, current_agent_id,
+             patient_id, case_version_id, case_version_number, created_at, updated_at)
+            VALUES (?, ?, 'queued', ?, NULL, ?, ?, ?, ?, ?)
             """,
-            (run_id, case.model_dump_json(exclude_none=True), len(AGENT_PROFILES), now, now),
+            (run_id, case_json, len(AGENT_PROFILES), patient_id, case_version_id,
+             case_version_number, now, now),
         )
         db.executemany(
             """
@@ -143,6 +382,9 @@ def get_run(run_id: str) -> dict[str, Any]:
     finished = completed + failed
     return {
         "run_id": row["run_id"],
+        "patient_id": row["patient_id"],
+        "case_version_id": row["case_version_id"],
+        "case_version_number": row["case_version_number"],
         "status": row["status"],
         "total_agents": total,
         "completed_count": completed,

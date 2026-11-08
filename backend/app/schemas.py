@@ -64,3 +64,13 @@ class AgentAssessmentRequest(StrictModel):
 
 class BatchRunRequest(StrictModel):
     case: SyntheticCase
+
+
+class PatientRunRequest(StrictModel):
+    """Start a simulation from an already-saved immutable patient case version."""
+
+    case_version_id: str = Field(
+        min_length=36,
+        max_length=36,
+        pattern=r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+    )
