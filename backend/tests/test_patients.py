@@ -8,8 +8,8 @@ from app.services import run_store
 client = TestClient(app)
 
 
-def _case(title="Synthetic patient case", summary="Fictional case used only for patient persistence tests."):
-    return {"scenario_title": title, "case_summary": summary, "primary_site": "Test site"}
+def _case(title="Training patient case", summary="Fictional case used only for patient persistence tests."):
+    return {"patient_name": "Training Example", "scenario_title": title, "case_summary": summary, "primary_site": "Test site"}
 
 
 def test_patient_creation_and_case_version_history_are_immutable(monkeypatch, tmp_path):
@@ -18,14 +18,14 @@ def test_patient_creation_and_case_version_history_are_immutable(monkeypatch, tm
     assert created.status_code == 200
     patient = created.json()
     patient_id = patient["patient_id"]
-    assert patient_id.startswith("SYN-")
+    assert patient["patient_identifier"] == "RAD-000001"
     assert len(patient["versions"]) == 1
     first = patient["versions"][0]
     assert first["version_number"] == 1
-    assert first["case"]["scenario_title"] == "Synthetic patient case"
+    assert first["case"]["scenario_title"] == "Training patient case"
     assert first["case_snapshot_sha256"]
 
-    changed = _case("Synthetic patient case — updated", "A revised fictional case version for the same synthetic patient.")
+    changed = _case("Training patient case — updated", "A revised fictional case version for the same training patient.")
     saved = client.post(f"/api/patients/{patient_id}/versions", json=changed)
     assert saved.status_code == 200
     detail = saved.json()
@@ -86,10 +86,10 @@ def test_saved_ro01_assessment_is_attached_to_exact_patient_case_version(monkeyp
 
     async def fake_generate(profile, case, round_number):
         assert profile["agent_id"] == "RO-01"
-        assert case.scenario_title == "Synthetic patient case"
+        assert case.scenario_title == "Training patient case"
         return AgentAssessment(
             agent_id="RO-01", round_number=round_number, position="conditional",
-            provisional_conclusion="A conditional educational assessment for a saved synthetic case.",
+            provisional_conclusion="A conditional educational assessment for a saved training case.",
             preferred_educational_option="No option can be preferred until missing details are clarified.",
             perspective_summary="Mock assessment persisted for a patient case version.", confidence=0.5,
             evidence_gaps=["Evidence retrieval is not connected."],
@@ -139,3 +139,44 @@ def test_old_database_gets_additive_patient_columns_without_losing_runs(monkeypa
     assert restored["run_id"] == "legacy-run"
     assert restored["patient_id"] is None
     assert restored["case_version_id"] is None
+
+
+def test_patient_serials_are_sequential_never_reused_and_delete_cascades(monkeypatch, tmp_path):
+    monkeypatch.setattr(run_store, "DB_PATH", tmp_path / "patient_delete.sqlite3")
+
+    async def no_inference(run_id):
+        return None
+
+    monkeypatch.setattr("app.main.run_independent_assessments", no_inference)
+    first = client.post("/api/patients", json=_case("First training case")).json()
+    second = client.post("/api/patients", json=_case("Second training case")).json()
+    assert first["patient_identifier"] == "RAD-000001"
+    assert second["patient_identifier"] == "RAD-000002"
+
+    version = first["versions"][0]
+    run_response = client.post(
+        f"/api/patients/{first['patient_id']}/runs",
+        json={"case_version_id": version["case_version_id"]},
+    )
+    assert run_response.status_code == 200
+    run_id = run_response.json()["run_id"]
+
+    deleted = client.delete(f"/api/patients/{first['patient_id']}")
+    assert deleted.status_code == 200
+    assert client.get(f"/api/patients/{first['patient_id']}").status_code == 404
+    assert client.get(f"/api/runs/{run_id}").status_code == 404
+
+    third = client.post("/api/patients", json=_case("Third training case")).json()
+    assert third["patient_identifier"] == "RAD-000003"
+    remaining = client.get("/api/patients").json()["patients"]
+    assert [item["patient_identifier"] for item in remaining] == ["RAD-000003", "RAD-000002"]
+
+
+
+def test_patient_registration_requires_training_name(monkeypatch, tmp_path):
+    monkeypatch.setattr(run_store, "DB_PATH", tmp_path / "patient_name.sqlite3")
+    response = client.post("/api/patients", json={
+        "scenario_title": "Training case",
+        "case_summary": "A sufficiently detailed fictional training summary."
+    })
+    assert response.status_code == 422

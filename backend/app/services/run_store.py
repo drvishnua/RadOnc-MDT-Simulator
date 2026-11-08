@@ -62,6 +62,13 @@ def initialize_database() -> None:
                 updated_at TEXT NOT NULL
             );
 
+            -- Keep allocations after deletion; training IDs are never reissued.
+            CREATE TABLE IF NOT EXISTS patient_registry_numbers (
+                registry_number INTEGER PRIMARY KEY AUTOINCREMENT,
+                patient_id TEXT NOT NULL UNIQUE,
+                created_at TEXT NOT NULL
+            );
+
             CREATE TABLE IF NOT EXISTS patient_case_versions (
                 case_version_id TEXT PRIMARY KEY,
                 patient_id TEXT NOT NULL,
@@ -122,6 +129,15 @@ def initialize_database() -> None:
             "CREATE INDEX IF NOT EXISTS idx_simulation_runs_patient "
             "ON simulation_runs(patient_id, created_at DESC)"
         )
+        # Assign stable numbers to older records in creation order.
+        legacy_patients = db.execute(
+            "SELECT patient_id, created_at FROM synthetic_patients ORDER BY created_at, patient_id"
+        ).fetchall()
+        for legacy_patient in legacy_patients:
+            db.execute(
+                "INSERT OR IGNORE INTO patient_registry_numbers(patient_id, created_at) VALUES (?, ?)",
+                (legacy_patient["patient_id"], legacy_patient["created_at"]),
+            )
 
 
 def _case_json_and_hash(case: SyntheticCase) -> tuple[str, str]:
@@ -130,9 +146,9 @@ def _case_json_and_hash(case: SyntheticCase) -> tuple[str, str]:
 
 
 def create_patient(case: SyntheticCase) -> dict[str, Any]:
-    """Create a synthetic patient and immutable case version 1 in one transaction."""
+    """Create a fictional training patient and immutable case version 1 atomically."""
     initialize_database()
-    patient_id = "SYN-" + uuid.uuid4().hex[:12].upper()
+    patient_id = str(uuid.uuid4())
     case_version_id = str(uuid.uuid4())
     now = _now()
     case_json, digest = _case_json_and_hash(case)
@@ -141,6 +157,10 @@ def create_patient(case: SyntheticCase) -> dict[str, Any]:
         db.execute(
             "INSERT INTO synthetic_patients(patient_id, created_at, updated_at) VALUES (?, ?, ?)",
             (patient_id, now, now),
+        )
+        db.execute(
+            "INSERT INTO patient_registry_numbers(patient_id, created_at) VALUES (?, ?)",
+            (patient_id, now),
         )
         db.execute(
             """INSERT INTO patient_case_versions
@@ -218,6 +238,10 @@ def get_patient(patient_id: str) -> dict[str, Any]:
         ).fetchone()
         if patient is None:
             raise KeyError(patient_id)
+        registry_row = db.execute(
+            "SELECT registry_number FROM patient_registry_numbers WHERE patient_id = ?",
+            (patient_id,),
+        ).fetchone()
         version_rows = db.execute(
             "SELECT * FROM patient_case_versions WHERE patient_id = ? ORDER BY version_number DESC",
             (patient_id,),
@@ -228,6 +252,7 @@ def get_patient(patient_id: str) -> dict[str, Any]:
         ).fetchall()]
     return {
         "patient_id": patient["patient_id"],
+        "patient_identifier": f"RAD-{int(registry_row['registry_number']):06d}" if registry_row else None,
         "created_at": patient["created_at"],
         "updated_at": patient["updated_at"],
         "versions": [_version_record(row) for row in version_rows],
@@ -247,6 +272,10 @@ def list_patients() -> list[dict[str, Any]]:
         latest = detail["versions"][0] if detail["versions"] else None
         patients.append({
             "patient_id": detail["patient_id"],
+            "patient_identifier": detail["patient_identifier"],
+            "patient_name": latest["case"].get("patient_name") if latest else None,
+            "age_years": latest["case"].get("age_years") if latest else None,
+            "stage_group": latest["case"].get("stage_group") if latest else None,
             "created_at": detail["created_at"],
             "updated_at": detail["updated_at"],
             "version_count": len(detail["versions"]),
@@ -256,6 +285,24 @@ def list_patients() -> list[dict[str, Any]]:
             "scenario_title": latest["case"]["scenario_title"] if latest else "No saved case",
         })
     return patients
+
+
+def delete_patient(patient_id: str) -> None:
+    """Delete a training record and linked simulation outputs; never recycle its serial."""
+    initialize_database()
+    with _connect() as db:
+        db.execute("BEGIN IMMEDIATE")
+        existing = db.execute(
+            "SELECT patient_id FROM synthetic_patients WHERE patient_id = ?", (patient_id,)
+        ).fetchone()
+        if existing is None:
+            raise KeyError(patient_id)
+        run_ids = [row["run_id"] for row in db.execute(
+            "SELECT run_id FROM simulation_runs WHERE patient_id = ?", (patient_id,)
+        ).fetchall()]
+        for run_id in run_ids:
+            db.execute("DELETE FROM simulation_runs WHERE run_id = ?", (run_id,))
+        db.execute("DELETE FROM synthetic_patients WHERE patient_id = ?", (patient_id,))
 
 
 def create_run_for_case_version(patient_id: str, case_version_id: str) -> dict[str, Any]:

@@ -1,4 +1,4 @@
-"""Strict request and response schemas for synthetic educational cases."""
+"""Strict request and response schemas for educational MDT training cases."""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ class StrictModel(BaseModel):
 class SyntheticCase(StrictModel):
     """A deliberately non-identifying case representation for simulation."""
 
+    patient_name: str | None = Field(default=None, min_length=2, max_length=120)
     scenario_title: str = Field(min_length=3, max_length=160)
     case_summary: str = Field(min_length=10, max_length=12000)
     age_years: int | None = Field(default=None, ge=0, le=120)
@@ -25,6 +26,9 @@ class SyntheticCase(StrictModel):
     performance_status: str | None = Field(default=None, max_length=80)
     pathology_summary: str | None = Field(default=None, max_length=6000)
     imaging_summary: str | None = Field(default=None, max_length=6000)
+    current_medications: list[str] = Field(default_factory=list, max_length=40)
+    known_allergies: list[str] = Field(default_factory=list, max_length=40)
+    relevant_investigations: list[str] = Field(default_factory=list, max_length=60)
     relevant_comorbidities: list[str] = Field(default_factory=list, max_length=30)
     prior_treatment: list[str] = Field(default_factory=list, max_length=30)
     patient_goals: list[str] = Field(default_factory=list, max_length=30)
@@ -39,6 +43,9 @@ class SyntheticCase(StrictModel):
         "social_context",
         "resource_context",
         "known_unknowns",
+        "current_medications",
+        "known_allergies",
+        "relevant_investigations",
     )
     @classmethod
     def reject_blank_list_items(cls, values: list[str]) -> list[str]:

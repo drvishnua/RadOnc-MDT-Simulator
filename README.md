@@ -23,7 +23,8 @@ Position labels are descriptions, not votes. The system does not invent a majori
 
 ## Dashboard capabilities
 
-- Synthetic case validation and 45-role directory.
+- Fictional training patient registry with sequential local IDs, structured clinical details, version history and linked simulations.
+- Case validation and 45-role directory.
 - Generated synthetic patient IDs, immutable numbered case versions, and a patient/case-version library.
 - Patient-specific simulation history, with each run and standalone RO-01 result bound to its exact saved case version and hash.
 - Sequential local Ollama execution with progress and per-agent outputs.
@@ -88,7 +89,7 @@ Evidence retrieval and citation verification are not connected yet. Evidence cla
 
 ## Safety and data boundaries
 
-- Synthetic cases only. Do not enter identifiable or real patient information. The patient library uses generated synthetic IDs and is not intended to store names, medical record numbers, or other identifiers.
+- Fictional training records only. Do not enter real patient identifiers or real patient health information. Local RAD serials are training identifiers, not hospital medical-record numbers; this application does not register patients with a hospital.
 - Not a medical device, clinical decision-support system, treatment-planning tool, or substitute for a qualified MDT.
 - Do not use outputs as diagnosis, prescriptions, dose instructions, contours, or treatment plans.
 - Model outputs may be incomplete or inaccurate; clinical claims require traceable evidence and qualified review.

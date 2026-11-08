@@ -1,9 +1,11 @@
 /** Small, storage-agnostic persistence helpers for the editable case draft. */
 function isDraft(value, defaults) {
-  return value !== null &&
-    typeof value === "object" &&
-    !Array.isArray(value) &&
-    Object.keys(defaults).every((key) => typeof value[key] === "string");
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
+  const allowed = Object.keys(defaults);
+  const entries = Object.entries(value);
+  // Accept a previous form schema when most original fields still exist, but reject tiny fragments.
+  return entries.length >= Math.ceil(allowed.length * 0.7) &&
+    entries.every(([key, item]) => allowed.includes(key) && typeof item === "string");
 }
 
 export function readDraft(storage, key, legacyKey, defaults, migrateLegacy) {
@@ -11,13 +13,13 @@ export function readDraft(storage, key, legacyKey, defaults, migrateLegacy) {
     const rawDraft = storage.getItem(key);
     if (rawDraft !== null) {
       const parsed = JSON.parse(rawDraft);
-      if (isDraft(parsed, defaults)) return parsed;
+      if (isDraft(parsed, defaults)) return { ...defaults, ...parsed };
     }
 
     const rawLegacy = storage.getItem(legacyKey);
     if (rawLegacy !== null) {
       const migrated = migrateLegacy(JSON.parse(rawLegacy));
-      if (isDraft(migrated, defaults)) return migrated;
+      if (isDraft(migrated, defaults)) return { ...defaults, ...migrated };
     }
   } catch {
     // Storage may be unavailable or contain malformed/incompatible data.

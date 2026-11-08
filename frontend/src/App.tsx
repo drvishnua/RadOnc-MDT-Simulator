@@ -42,6 +42,7 @@ type ValidationResult = {
 };
 
 type SyntheticCasePayload = {
+  patient_name?: string | null;
   scenario_title: string;
   case_summary: string;
   age_years: number | null;
@@ -55,6 +56,9 @@ type SyntheticCasePayload = {
   performance_status: string | null;
   pathology_summary: string | null;
   imaging_summary: string | null;
+  current_medications?: string[];
+  known_allergies?: string[];
+  relevant_investigations?: string[];
   relevant_comorbidities: string[];
   prior_treatment: string[];
   patient_goals: string[];
@@ -112,6 +116,10 @@ type BatchRunSummary = {
 
 type PatientRecordSummary = {
   patient_id: string;
+  patient_identifier: string;
+  patient_name: string | null;
+  age_years: number | null;
+  stage_group: string | null;
   created_at: string;
   updated_at: string;
   version_count: number;
@@ -132,13 +140,14 @@ type PatientCaseVersion = {
 
 type PatientDetail = {
   patient_id: string;
+  patient_identifier: string;
   created_at: string;
   updated_at: string;
   versions: PatientCaseVersion[];
   runs: BatchRunSummary[];
 };
 
-type ActiveSavedCase = PatientCaseVersion & { patient_id: string };
+type ActiveSavedCase = PatientCaseVersion & { patient_id: string; patient_identifier: string };
 
 type PatientAssessmentRecord = {
   assessment_id: string;
@@ -219,7 +228,8 @@ type FinalMDTReport = {
 };
 
 const emptyForm = {
-  scenario_title: "Synthetic head-and-neck case",
+  patient_name: "",
+  scenario_title: "Head-and-neck oncology case",
   case_summary: "",
   age_years: "",
   sex_at_birth: "",
@@ -232,6 +242,9 @@ const emptyForm = {
   performance_status: "",
   pathology_summary: "",
   imaging_summary: "",
+  current_medications: "",
+  known_allergies: "",
+  relevant_investigations: "",
   relevant_comorbidities: "",
   prior_treatment: "",
   patient_goals: "",
@@ -242,6 +255,7 @@ const emptyForm = {
 
 function caseSnapshotToForm(snapshot: SyntheticCasePayload): typeof emptyForm {
   return {
+    patient_name: snapshot.patient_name ?? "",
     scenario_title: snapshot.scenario_title ?? emptyForm.scenario_title,
     case_summary: snapshot.case_summary ?? "",
     age_years: snapshot.age_years === null || snapshot.age_years === undefined ? "" : String(snapshot.age_years),
@@ -255,6 +269,9 @@ function caseSnapshotToForm(snapshot: SyntheticCasePayload): typeof emptyForm {
     performance_status: snapshot.performance_status ?? "",
     pathology_summary: snapshot.pathology_summary ?? "",
     imaging_summary: snapshot.imaging_summary ?? "",
+    current_medications: (snapshot.current_medications ?? []).join("\\n"),
+    known_allergies: (snapshot.known_allergies ?? []).join("\\n"),
+    relevant_investigations: (snapshot.relevant_investigations ?? []).join("\\n"),
     relevant_comorbidities: (snapshot.relevant_comorbidities ?? []).join("\\n"),
     prior_treatment: (snapshot.prior_treatment ?? []).join("\\n"),
     patient_goals: (snapshot.patient_goals ?? []).join("\\n"),
@@ -305,12 +322,13 @@ function readSavedCase(): SyntheticCasePayload | null {
       (value.histology === null || typeof value.histology === "string");
 
     if (!valid) {
-      console.warn("[RadOnc] Discarding an incompatible saved synthetic case.");
+      console.warn("[RadOnc] Discarding an incompatible saved training case.");
       window.localStorage.removeItem(key);
       return null;
     }
 
     return {
+      patient_name: savedOptionalText(value.patient_name),
       scenario_title: value.scenario_title as string,
       case_summary: value.case_summary as string,
       age_years: value.age_years as number | null,
@@ -324,6 +342,9 @@ function readSavedCase(): SyntheticCasePayload | null {
       performance_status: savedOptionalText(value.performance_status),
       pathology_summary: savedOptionalText(value.pathology_summary),
       imaging_summary: savedOptionalText(value.imaging_summary),
+      current_medications: savedStringList(value.current_medications),
+      known_allergies: savedStringList(value.known_allergies),
+      relevant_investigations: savedStringList(value.relevant_investigations),
       relevant_comorbidities: savedStringList(value.relevant_comorbidities),
       prior_treatment: savedStringList(value.prior_treatment),
       patient_goals: savedStringList(value.patient_goals),
@@ -332,7 +353,7 @@ function readSavedCase(): SyntheticCasePayload | null {
       known_unknowns: savedStringList(value.known_unknowns)
     };
   } catch (error) {
-    console.warn("[RadOnc] Could not restore the saved synthetic case; starting clean.", error);
+    console.warn("[RadOnc] Could not restore the saved training case; starting clean.", error);
     try { window.localStorage.removeItem(key); } catch { /* Storage may be unavailable. */ }
     return null;
   }
@@ -340,28 +361,7 @@ function readSavedCase(): SyntheticCasePayload | null {
 
 function legacySavedCaseToDraft(_value: unknown): typeof emptyForm | null {
   const saved = readSavedCase();
-  if (!saved) return null;
-  return {
-    scenario_title: saved.scenario_title,
-    case_summary: saved.case_summary,
-    age_years: saved.age_years === null ? "" : String(saved.age_years),
-    sex_at_birth: saved.sex_at_birth ?? "",
-    primary_site: saved.primary_site ?? "",
-    histology: saved.histology ?? "",
-    clinical_t_stage: saved.clinical_t_stage ?? "",
-    clinical_n_stage: saved.clinical_n_stage ?? "",
-    clinical_m_stage: saved.clinical_m_stage ?? "",
-    stage_group: saved.stage_group ?? "",
-    performance_status: saved.performance_status ?? "",
-    pathology_summary: saved.pathology_summary ?? "",
-    imaging_summary: saved.imaging_summary ?? "",
-    relevant_comorbidities: saved.relevant_comorbidities.join("\n"),
-    prior_treatment: saved.prior_treatment.join("\n"),
-    patient_goals: saved.patient_goals.join("\n"),
-    social_context: saved.social_context.join("\n"),
-    resource_context: saved.resource_context.join("\n"),
-    known_unknowns: saved.known_unknowns.join("\n")
-  };
+  return saved ? caseSnapshotToForm(saved) : null;
 }
 
 function readSavedBatch(): BatchRunSummary | null {
@@ -492,11 +492,11 @@ function App() {
   async function refreshPatients() {
     try {
       const response = await fetch(API_BASE + "/api/patients");
-      if (!response.ok) throw new Error("Unable to load the synthetic patient library.");
+      if (!response.ok) throw new Error("Unable to load the patient registry.");
       const body = await response.json() as { patients: PatientRecordSummary[] };
       setPatientRecords(body.patients);
     } catch (error) {
-      setPatientError(error instanceof Error ? error.message : "Unable to load saved synthetic patients.");
+      setPatientError(error instanceof Error ? error.message : "Unable to load patient records.");
     }
   }
 
@@ -506,7 +506,7 @@ function App() {
     setLoadedPatient(detail);
     setSelectedPatientId(detail.patient_id);
     setSelectedCaseVersionId(version.case_version_id);
-    setActiveSavedCase({ ...version, patient_id: detail.patient_id });
+    setActiveSavedCase({ ...version, patient_id: detail.patient_id, patient_identifier: detail.patient_identifier });
     setForm(caseSnapshotToForm(version.case));
     setValidation(null);
     setValidatedCase(null);
@@ -552,7 +552,7 @@ function App() {
     try {
       const response = await fetch(API_BASE + "/api/patients/" + selectedPatientId);
       const body = await response.json() as PatientDetail & { detail?: string };
-      if (!response.ok) throw new Error(body.detail ?? "Unable to load the selected synthetic patient.");
+      if (!response.ok) throw new Error(body.detail ?? "Unable to load the selected patient.");
       const latest = body.versions[0];
       if (!latest) throw new Error("This patient has no saved case versions.");
       await loadPatientVersion(body, latest.case_version_id);
@@ -581,6 +581,7 @@ function App() {
     setPatientBusy(true);
     setPatientError("");
     try {
+      if (!validatedCase.patient_name) throw new Error("Enter a fictional patient name before saving.");
       const url = createNewPatient
         ? API_BASE + "/api/patients"
         : API_BASE + "/api/patients/" + loadedPatient!.patient_id + "/versions";
@@ -590,13 +591,57 @@ function App() {
         body: JSON.stringify(validatedCase)
       });
       const body = await response.json() as PatientDetail & { detail?: string };
-      if (!response.ok) throw new Error(body.detail ?? "The synthetic case could not be saved.");
+      if (!response.ok) throw new Error(body.detail ?? "The patient case could not be saved.");
       const latest = body.versions[0];
       if (!latest) throw new Error("The saved patient record did not return a case version.");
       await refreshPatients();
       await loadPatientVersion(body, latest.case_version_id);
     } catch (error) {
-      setPatientError(error instanceof Error ? error.message : "Unable to save the synthetic patient case.");
+      setPatientError(error instanceof Error ? error.message : "Unable to save the patient case.");
+    } finally {
+      setPatientBusy(false);
+    }
+  }
+
+  function clearPatientEntry() {
+    setForm({ ...emptyForm });
+    setValidation(null);
+    setValidatedCase(null);
+    setValidationError("");
+    setSelectedPatientId("");
+    setLoadedPatient(null);
+    setSelectedCaseVersionId("");
+    setActiveSavedCase(null);
+    setSelectedPatientRunId("");
+    setSavedSingleAssessment(null);
+    setAssessmentError("");
+    setAssessmentPersistenceWarning("");
+    setBatchRun(null);
+    setBatchResults([]);
+    setRoundSummaries({});
+    setRoundResults({});
+    setFinalReport(null);
+    setBatchError("");
+    setRoundError("");
+    try { window.localStorage.removeItem(CASE_DRAFT_KEY); } catch { /* Storage may be unavailable. */ }
+  }
+
+  async function deleteSelectedPatient() {
+    if (!loadedPatient || patientBusy) return;
+    const confirmed = window.confirm(
+      `Permanently delete ${loadedPatient.patient_identifier}? This also removes its saved case versions and all linked MDT simulation results. The serial number will not be reused.`
+    );
+    if (!confirmed) return;
+    setPatientBusy(true);
+    setPatientError("");
+    try {
+      const response = await fetch(API_BASE + "/api/patients/" + loadedPatient.patient_id, { method: "DELETE" });
+      const body = await response.json() as { detail?: string };
+      if (!response.ok) throw new Error(body.detail ?? "Unable to delete the patient record.");
+      clearPatientEntry();
+      await refreshPatients();
+    } catch (error) {
+      setPatientError(error instanceof Error ? error.message : "Unable to delete the patient record.");
     } finally {
       setPatientBusy(false);
     }
@@ -639,6 +684,7 @@ function App() {
     setValidating(true);
 
     const payload: SyntheticCasePayload = {
+      patient_name: optionalText(form.patient_name),
       scenario_title: form.scenario_title,
       case_summary: form.case_summary,
       age_years: form.age_years.trim() === "" ? null : Number(form.age_years),
@@ -652,6 +698,9 @@ function App() {
       performance_status: optionalText(form.performance_status),
       pathology_summary: optionalText(form.pathology_summary),
       imaging_summary: optionalText(form.imaging_summary),
+      current_medications: linesToList(form.current_medications),
+      known_allergies: linesToList(form.known_allergies),
+      relevant_investigations: linesToList(form.relevant_investigations),
       relevant_comorbidities: linesToList(form.relevant_comorbidities),
       prior_treatment: linesToList(form.prior_treatment),
       patient_goals: linesToList(form.patient_goals),
@@ -928,7 +977,7 @@ function App() {
         adversarial_review: roundResults[3] ?? [],
         chair_synthesis: finalReport,
         round_status: roundSummaries,
-        notice: "Synthetic educational simulation only. Evidence retrieval is not connected; no clinical decision support is provided."
+        notice: "Fictional training simulation only. Evidence retrieval is not connected; no clinical decision support is provided."
       };
       const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
@@ -974,7 +1023,7 @@ function App() {
       <main className="main-content">
         <section className="hero">
           <div className="hero-copy">
-            <p className="eyebrow">EDUCATION · SYNTHETIC CASES · LOCAL AI</p>
+            <p className="eyebrow">ONCOLOGY EDUCATION · TRAINING RECORDS · LOCAL AI</p>
             <h1>Explore the case from<br /><em>every MDT perspective.</em></h1>
             <p className="hero-description">
               A structured learning workspace for multidisciplinary oncology discussion,
@@ -994,7 +1043,7 @@ function App() {
           <span className="safety-icon">!</span>
           <div>
             <strong>Educational simulation only</strong>
-            <p>Use synthetic cases only. This prototype is not a medical device, clinical decision-support system, or substitute for a qualified MDT.</p>
+            <p>Use fictional training records only. Do not enter real patient information. This prototype is not a hospital registration system, medical device, or clinical decision-support system; it is not a substitute for a qualified MDT.</p>
           </div>
         </section>
 
@@ -1030,7 +1079,7 @@ function App() {
             <div className="panel-heading">
               <div>
                 <p className="eyebrow">01 / CASE WORKSPACE</p>
-                <h2>Prepare a synthetic case</h2>
+                <h2>Patient registration and case entry</h2>
               </div>
               <span className="panel-index">CASE INPUT</span>
             </div>
@@ -1038,17 +1087,17 @@ function App() {
               Enter fictional training details. Validation checks the data structure only; it does not assess diagnosis or treatment.
             </p>
 
-            <div className="result-card patient-library" aria-label="Synthetic patient library">
-              <strong>Saved synthetic patient library</strong>
-              <p>Save or load a synthetic patient before starting an assessment or MDT simulation. Patient IDs are generated automatically; do not enter real patient identifiers.</p>
+            <div className="result-card patient-library" aria-label="Training patient registry">
+              <strong>Patient Registry</strong>
+              <p>Register or load a fictional training patient. Its local ID is generated sequentially (RAD-000001, RAD-000002, …); it is not a hospital medical-record number and does not register anyone with a hospital.</p>
               <div className="field-row">
                 <label>
-                  Saved synthetic patient
+                  Registered patient
                   <select value={selectedPatientId} onChange={(event) => setSelectedPatientId(event.target.value)}>
-                    <option value="">Select a saved synthetic patient</option>
+                    <option value="">Select a patient record</option>
                     {patientRecords.map((patient) => (
                       <option key={patient.patient_id} value={patient.patient_id}>
-                        {patient.patient_id} · {patient.scenario_title} · v{patient.latest_version_number ?? "—"}
+                        {patient.patient_identifier} · {patient.patient_name ?? "Name not recorded"} · {patient.age_years ?? "Age unknown"} · {patient.scenario_title} · {patient.stage_group ?? "Stage not recorded"} · v{patient.latest_version_number ?? "—"}
                       </option>
                     ))}
                   </select>
@@ -1059,7 +1108,7 @@ function App() {
               </div>
               {loadedPatient && (
                 <>
-                  <p className="result-footnote">Loaded patient: {loadedPatient.patient_id} · {loadedPatient.versions.length} immutable case version(s) · {loadedPatient.runs.length} linked simulation(s).</p>
+                  <p className="result-footnote">Loaded patient: {loadedPatient.patient_identifier} · {loadedPatient.versions.length} immutable case version(s) · {loadedPatient.runs.length} linked simulation(s).</p>
                   <div className="field-row">
                     <label>
                       Saved case version
@@ -1096,27 +1145,42 @@ function App() {
                 </>
               )}
               {activeSavedCase && (
-                <p className="result-footnote">Active simulation snapshot: {activeSavedCase.patient_id} · Version {activeSavedCase.version_number} · SHA-256 {activeSavedCase.case_snapshot_sha256}. Editing this form detaches it from this saved version until you save a new version.</p>
+                <p className="result-footnote">Active simulation snapshot: {activeSavedCase.patient_identifier} · Version {activeSavedCase.version_number} · SHA-256 {activeSavedCase.case_snapshot_sha256}. Editing this form detaches it from this saved version until you save a new version.</p>
               )}
+              {loadedPatient && (
+                <div className="batch-actions">
+                  <button className="button button-secondary" type="button" onClick={() => void deleteSelectedPatient()} disabled={patientBusy}>
+                    {patientBusy ? "Working…" : "Delete patient and linked results"}
+                  </button>
+                </div>
+              )}
+              <div className="batch-actions">
+                <button className="button button-quiet" type="button" onClick={clearPatientEntry} disabled={patientBusy}>Clear unsaved form and selection</button>
+              </div>
               {patientError && <p className="error-text" role="alert">{patientError}</p>}
-              {patientRecords.length === 0 && <p className="result-footnote">No synthetic patients saved yet. Validate a case below, then save it as a new synthetic patient.</p>}
+              {patientRecords.length === 0 && <p className="result-footnote">No training patients registered yet. Complete the fictional patient and clinical details below, validate, then save the record.</p>}
             </div>
 
             <form onSubmit={validateSyntheticCase} className="case-form">
               <label>
-                Scenario title
+                Fictional patient name <span className="required-mark">*</span>
+                <input required minLength={2} maxLength={120} value={form.patient_name} onChange={(event) => updateField("patient_name", event.target.value)} placeholder="Use a fictional name or training alias" />
+              </label>
+
+              <label>
+                Diagnosis / MDT case title
                 <input
                   required
                   minLength={3}
                   maxLength={160}
                   value={form.scenario_title}
                   onChange={(event) => updateField("scenario_title", event.target.value)}
-                  placeholder="e.g. Synthetic oropharyngeal case"
+                  placeholder="e.g. Oropharyngeal carcinoma"
                 />
               </label>
 
               <label>
-                Case summary <span className="required-mark">*</span>
+                Clinical summary <span className="required-mark">*</span>
                 <textarea
                   required
                   minLength={10}
@@ -1124,7 +1188,7 @@ function App() {
                   rows={5}
                   value={form.case_summary}
                   onChange={(event) => updateField("case_summary", event.target.value)}
-                  placeholder="Describe the fictional presentation and relevant context. Do not include real patient information."
+                  placeholder="Describe the training presentation and relevant context. Do not include real patient information."
                 />
               </label>
 
@@ -1201,6 +1265,18 @@ function App() {
                     <textarea rows={3} value={form.imaging_summary} onChange={(event) => updateField("imaging_summary", event.target.value)} placeholder="Documented imaging findings only; do not infer N or M status." />
                   </label>
                   <label>
+                    Current medications
+                    <textarea className="structured-list-input" rows={2} value={form.current_medications} onChange={(event) => updateField("current_medications", event.target.value)} placeholder="Documented medicines only; one per line" />
+                  </label>
+                  <label>
+                    Known allergies
+                    <textarea className="structured-list-input" rows={2} value={form.known_allergies} onChange={(event) => updateField("known_allergies", event.target.value)} placeholder="Documented allergies only; one per line" />
+                  </label>
+                  <label className="full-width">
+                    Relevant investigations
+                    <textarea className="structured-list-input" rows={3} value={form.relevant_investigations} onChange={(event) => updateField("relevant_investigations", event.target.value)} placeholder="Investigation name, date and documented result; one per line" />
+                  </label>
+                  <label>
                     Relevant comorbidities
                     <textarea className="structured-list-input" rows={2} value={form.relevant_comorbidities} onChange={(event) => updateField("relevant_comorbidities", event.target.value)} placeholder="One documented item per line" />
                   </label>
@@ -1230,7 +1306,7 @@ function App() {
               <div className="form-footer">
                 <span className="form-note">No patient name or medical record number fields are provided.</span>
                 <button className="button button-primary" type="submit" disabled={validating || connectionState !== "connected"}>
-                  {validating ? "Validating…" : "Validate synthetic case"}
+                  {validating ? "Validating…" : "Validate patient details"}
                   <span aria-hidden="true">→</span>
                 </button>
               </div>
@@ -1238,15 +1314,15 @@ function App() {
 
             {validation && validatedCase && (
               <div className="patient-save-actions result-card">
-                <strong>Save this validated case</strong>
-                <p>Simulation is enabled only for a saved case version. Saving an edit creates a new version; prior versions and results are not overwritten.</p>
+                <strong>Save patient record</strong>
+                <p>MDT simulation is enabled only for a saved patient record. Saving changes creates a new immutable version; previous versions and results remain unchanged.</p>
                 <div className="batch-actions">
                   <button className="button button-primary" type="button" onClick={() => void savePatientCase(true)} disabled={patientBusy}>
-                    Save as new synthetic patient
+                    Register new patient
                   </button>
                   {loadedPatient && (
                     <button className="button button-secondary" type="button" onClick={() => void savePatientCase(false)} disabled={patientBusy || selectedPatientId !== loadedPatient.patient_id || activeSavedCase !== null}>
-                      Save new version of {loadedPatient.patient_id}
+                      Save new version of {loadedPatient.patient_identifier}
                     </button>
                   )}
                 </div>
@@ -1267,7 +1343,7 @@ function App() {
               <div className="assessment-launch">
                 <div>
                   <strong>Try one local agent</strong>
-                  <p>Run the guideline-focused Radiation Oncology perspective (RO-01) on {activeSavedCase.patient_id}, case version {activeSavedCase.version_number}. The result is saved in the patient record.</p>
+                  <p>Run the guideline-focused Radiation Oncology perspective (RO-01) on {activeSavedCase.patient_identifier}, case version {activeSavedCase.version_number}. The result is saved in the patient record.</p>
                 </div>
                 <button
                   className="button button-secondary"
@@ -1306,7 +1382,7 @@ function App() {
                     {assessmentPersistenceWarning && (
                       <p className="error-text" role="status">{assessmentPersistenceWarning}</p>
                     )}
-                    <p className="result-footnote">Backend record: {savedSingleAssessment.patient_id ?? "legacy local cache"} · case version {savedSingleAssessment.case_version_id ?? "not linked"}.</p>
+                    <p className="result-footnote">Backend record: {loadedPatient?.patient_identifier ?? "legacy saved result"} · case version {savedSingleAssessment.case_version_id ?? "not linked"}.</p>
                   </>
                 )}
                 <div className="assessment-conclusion">
@@ -1351,13 +1427,13 @@ function App() {
                   <span className="count-chip">45 REQUIRED</span>
                 </div>
                 <p className="panel-intro">
-                  Each agent receives only the original synthetic case and its own role profile. Agents do not see one another's assessments. Results are saved locally as they finish.
+                  Each agent receives only the saved training case snapshot and its own role profile. Agents do not see one another's assessments. Results are saved locally as they finish.
                 </p>
                 {batchRun && (
                   <div className="result-card" role="note">
                     <strong>Saved MDT run · {batchRun.status.replaceAll("_", " ")}</strong>
                     <p>Displayed contributions belong to the immutable case snapshot saved with this run. Editing the current draft does not change the saved run.</p>
-                    <p className="result-footnote">Run ID: {batchRun.run_id} · Patient: {batchRun.patient_id ?? "legacy unlinked run"} · Case version: {batchRun.case_version_number ?? "not linked"} · SHA-256: {batchRun.case_snapshot_sha256}</p>
+                    <p className="result-footnote">Run ID: {batchRun.run_id} · Patient: {loadedPatient?.patient_identifier ?? (batchRun.patient_id ? "linked patient" : "legacy unlinked run")} · Case version: {batchRun.case_version_number ?? "not linked"} · SHA-256: {batchRun.case_snapshot_sha256}</p>
                   </div>
                 )}
                 <div className="batch-actions">
@@ -1373,7 +1449,7 @@ function App() {
                     </button>
                   )}
                   {!activeSavedCase && !batchRun && (
-                    <p className="batch-estimate-note">Save a validated case as a synthetic patient, or load an existing patient and case version, before starting a new 45-agent run.</p>
+                    <p className="batch-estimate-note">Save a validated patient record, or load an existing patient and case version, before starting a new 45-agent run.</p>
                   )}
                   {batchRun && batchResults.length > 0 && (
                     <button className="button button-quiet" type="button" onClick={downloadBatchResults}>
@@ -1681,7 +1757,7 @@ function App() {
 
         <footer className="footer">
           <span>RADONC MDT SIMULATOR <span className="footer-separator">/</span> LOCAL-FIRST PROTOTYPE</span>
-          <span>Research and education only · Synthetic data only</span>
+          <span>Research and education only · Fictional training data only</span>
         </footer>
       </main>
     </div>

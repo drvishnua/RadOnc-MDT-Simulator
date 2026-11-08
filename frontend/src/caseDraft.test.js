@@ -60,3 +60,41 @@ test("storage access failures return defaults without throwing", () => {
   const storage = { getItem() { throw new Error("storage disabled"); } };
   assert.deepEqual(readDraft(storage, "draft", "legacy", defaults, () => null), defaults);
 });
+
+test("preserves a previous form schema and fills newly added fields from defaults", () => {
+  const expandedDefaults = {
+    ...defaults,
+    patient_name: "",
+    sex_at_birth: "",
+    primary_site: "",
+    histology: "",
+    clinical_t_stage: "",
+    clinical_n_stage: "",
+    clinical_m_stage: "",
+    stage_group: "",
+    performance_status: "",
+    pathology_summary: "",
+    imaging_summary: "",
+    relevant_comorbidities: "",
+    prior_treatment: "",
+    patient_goals: "",
+    social_context: "",
+    resource_context: "",
+    current_medications: "",
+    known_allergies: "",
+    relevant_investigations: ""
+  };
+  const previousDraft = { ...expandedDefaults };
+  delete previousDraft.patient_name;
+  delete previousDraft.current_medications;
+  delete previousDraft.known_allergies;
+  delete previousDraft.relevant_investigations;
+  previousDraft.case_summary = "unsaved case text";
+  const storage = memoryStorage({ draft: JSON.stringify(previousDraft) });
+  const restored = readDraft(storage, "draft", "legacy", expandedDefaults, () => null);
+  assert.equal(restored.case_summary, "unsaved case text");
+  assert.equal(restored.patient_name, "");
+  assert.equal(restored.current_medications, "");
+  assert.equal(restored.known_allergies, "");
+  assert.equal(restored.relevant_investigations, "");
+});

@@ -106,33 +106,49 @@ async def assess_with_agent(
 
 
 @app.get("/api/patients")
-async def list_synthetic_patients() -> dict[str, object]:
-    return {"patients": run_store.list_patients(), "synthetic_data_only": True}
+async def list_training_patients() -> dict[str, object]:
+    return {"patients": run_store.list_patients(), "training_records_only": True}
 
 
 @app.post("/api/patients")
-async def create_synthetic_patient(case: SyntheticCase) -> dict[str, object]:
-    """Save a new synthetic patient and immutable case version 1."""
+async def create_training_patient(case: SyntheticCase) -> dict[str, object]:
+    """Save a fictional training patient and immutable case version 1."""
+    if not case.patient_name:
+        raise HTTPException(status_code=422, detail="Enter a fictional patient name before saving.")
     return run_store.create_patient(case)
 
 
 @app.get("/api/patients/{patient_id}")
-async def get_synthetic_patient(patient_id: str) -> dict[str, object]:
+async def get_training_patient(patient_id: str) -> dict[str, object]:
     try:
         return run_store.get_patient(patient_id)
     except KeyError as exc:
-        raise HTTPException(status_code=404, detail="Synthetic patient not found.") from exc
+        raise HTTPException(status_code=404, detail="Patient record not found.") from exc
     except ValueError as exc:
         raise HTTPException(status_code=500, detail="Saved case-version integrity check failed.") from exc
 
 
 @app.post("/api/patients/{patient_id}/versions")
-async def save_synthetic_case_version(patient_id: str, case: SyntheticCase) -> dict[str, object]:
+async def save_training_case_version(patient_id: str, case: SyntheticCase) -> dict[str, object]:
     """Append a new case version without changing any prior snapshot or run."""
+    if not case.patient_name:
+        raise HTTPException(status_code=422, detail="Enter a fictional patient name before saving.")
     try:
         return run_store.create_case_version(patient_id, case)
     except KeyError as exc:
-        raise HTTPException(status_code=404, detail="Synthetic patient not found.") from exc
+        raise HTTPException(status_code=404, detail="Patient record not found.") from exc
+
+
+@app.delete("/api/patients/{patient_id}")
+async def delete_training_patient(patient_id: str) -> dict[str, object]:
+    """Delete a training patient and its linked simulation outputs."""
+    if batch_is_running() or round_is_running():
+        raise HTTPException(status_code=409, detail="Wait until active MDT inference has stopped before deleting a patient.")
+    try:
+        run_store.delete_patient(patient_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Patient record not found.") from exc
+    return {"deleted": True, "patient_id": patient_id}
 
 
 @app.post("/api/patients/{patient_id}/runs")
