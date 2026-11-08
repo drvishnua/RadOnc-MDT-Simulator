@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
+import type { FormEvent } from "react";
 import { readDraft, writeDraft } from "./caseDraft.js";
 
 const CASE_DRAFT_KEY = "radonc-mdt-case-draft-v1";
 const LEGACY_CASE_KEY = "radonc-mdt-last-case";
-import type { FormEvent } from "react";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
 
