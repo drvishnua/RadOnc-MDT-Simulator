@@ -204,7 +204,7 @@ def audit_case_outputs(
                         "major",
                     )
                     continue
-                supplied_peer_ids = row.get("source_peer_ids") or []
+                supplied_peer_ids = result.get("source_peer_ids") or row.get("source_peer_ids") or []
                 substantive_challenges = result.get("substantive_challenges") or []
                 for source_id, review in review_map.items():
                     if not str(review.get("review_basis") or "").strip():
