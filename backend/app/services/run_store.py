@@ -142,6 +142,25 @@ def initialize_database() -> None:
                 SELECT 1 FROM patient_registry_numbers AS n WHERE n.patient_id = p.patient_id
             ) ORDER BY p.created_at, p.patient_id"""
         )
+        # Migrate names written into case JSON by the short-lived earlier schema.
+        legacy_profiles = db.execute(
+            """SELECT p.patient_id, p.patient_name, v.case_json
+            FROM synthetic_patients AS p
+            LEFT JOIN patient_case_versions AS v ON v.case_version_id = (
+                SELECT latest.case_version_id FROM patient_case_versions AS latest
+                WHERE latest.patient_id = p.patient_id
+                ORDER BY latest.version_number DESC LIMIT 1
+            )"""
+        ).fetchall()
+        for profile in legacy_profiles:
+            if not profile["patient_name"] and profile["case_json"]:
+                legacy_case = json.loads(profile["case_json"])
+                legacy_name = legacy_case.get("patient_name")
+                if isinstance(legacy_name, str) and legacy_name.strip():
+                    db.execute(
+                        "UPDATE synthetic_patients SET patient_name = ? WHERE patient_id = ?",
+                        (legacy_name.strip(), profile["patient_id"]),
+                    )
 
 
 def _case_json_and_hash(case: SyntheticCase) -> tuple[str, str]:
@@ -210,7 +229,11 @@ def _version_record(row: sqlite3.Row) -> dict[str, Any]:
     digest = hashlib.sha256(case_json.encode("utf-8")).hexdigest()
     if digest != row["case_snapshot_sha256"]:
         raise ValueError("Saved case-version hash verification failed.")
-    case = SyntheticCase.model_validate_json(case_json)
+    case_data = json.loads(case_json)
+    # Earlier registry prototype versions embedded the display name in the case JSON.
+    # Keep its original bytes/hash for audit, but exclude the name from all agent payloads.
+    case_data.pop("patient_name", None)
+    case = SyntheticCase.model_validate(case_data)
     return {
         "case_version_id": row["case_version_id"],
         "patient_id": row["patient_id"],

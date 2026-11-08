@@ -184,3 +184,41 @@ def test_patient_registration_requires_training_name(monkeypatch, tmp_path):
     monkeypatch.setattr(run_store, "DB_PATH", tmp_path / "patient_name.sqlite3")
     response = client.post("/api/patients", json={"case": _case()})
     assert response.status_code == 422
+
+
+def test_legacy_embedded_patient_name_migrates_out_of_case_payload(monkeypatch, tmp_path):
+    import hashlib
+    import json
+    import sqlite3
+    import uuid
+
+    db_path = tmp_path / "legacy_patient_name.sqlite3"
+    monkeypatch.setattr(run_store, "DB_PATH", db_path)
+    run_store.initialize_database()
+
+    patient_id = str(uuid.uuid4())
+    version_id = str(uuid.uuid4())
+    now = "2026-01-01T00:00:00+00:00"
+    legacy_case = {**_case(), "patient_name": "Legacy Training Name"}
+    case_json = json.dumps(legacy_case, separators=(",", ":"), sort_keys=True)
+    digest = hashlib.sha256(case_json.encode("utf-8")).hexdigest()
+    with sqlite3.connect(db_path) as db:
+        db.execute(
+            "INSERT INTO synthetic_patients(patient_id, patient_name, created_at, updated_at) VALUES (?, NULL, ?, ?)",
+            (patient_id, now, now),
+        )
+        db.execute(
+            "INSERT INTO patient_registry_numbers(patient_id, created_at) VALUES (?, ?)",
+            (patient_id, now),
+        )
+        db.execute(
+            """INSERT INTO patient_case_versions
+            (case_version_id, patient_id, version_number, case_json, case_snapshot_sha256, created_at)
+            VALUES (?, ?, 1, ?, ?, ?)""",
+            (version_id, patient_id, case_json, digest, now),
+        )
+
+    restored = run_store.get_patient(patient_id)
+    assert restored["patient_name"] == "Legacy Training Name"
+    assert "patient_name" not in restored["versions"][0]["case"]
+    assert restored["versions"][0]["case_snapshot_sha256"] == digest
