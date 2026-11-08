@@ -110,7 +110,8 @@ def _unqualified_matches(pattern: re.Pattern[str], text: str) -> list[str]:
             default=len(text),
         )
         clause = text[left:right]
-        if _QUALIFIER.search(clause) or "?" in clause:
+        ends_with_question = right < len(text) and text[right] == "?"
+        if _QUALIFIER.search(clause) or ends_with_question:
             continue
         token = match.group(0).strip()
         if token and token.casefold() not in {item.casefold() for item in findings}:
@@ -233,7 +234,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
 
     if not case.patient_goals:
         preference_pattern = re.compile(
-            r"\bpatient(?:'s)?\s+(?:prefers?|wishes?|wants?|chooses?|declines?|refuses?|agrees?|consents?|has chosen|does not want|doesn't want)[^.!?;\n]{0,100}",
+            r"\bpatient(?:'s)?\s+(?:prefers?|wishes?|wants?|chooses?|declines?|refuses?|agrees?|consents?|has chosen|does not want|doesn't want)\b[^.!?;\n]{0,100}",
             re.IGNORECASE,
         )
         matches = _unsupported_matches(preference_pattern, text, source_text)

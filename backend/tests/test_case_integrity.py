@@ -177,3 +177,17 @@ def test_clause_local_qualifier_does_not_hide_a_separate_unsupported_assertion()
         "provisional_conclusion": "M0 is not confirmed. The patient is node-negative."
     })
     assert any("node-negative" in item for item in flags)
+
+
+def test_clinical_questions_are_not_treated_as_assertions():
+    case = _case()
+    assert audit_unverified_case_claims(case, {
+        "unknowns": ["Is ECOG 0 documented?", "Could the tumour be T1N0?"]
+    }) == []
+
+
+def test_patient_preferences_wording_is_not_misread_as_a_patient_choice():
+    case = _case(patient_goals=[])
+    assert not any("patient preference/decision" in item for item in audit_unverified_case_claims(
+        case, {"unknowns": ["The patient's preferences should be elicited."]}
+    ))
