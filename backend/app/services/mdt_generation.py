@@ -148,7 +148,7 @@ def _audit_source_references(payload: dict, allowed: set[tuple[str, str]]) -> li
 def _compact_r1_text(value: str, limit: int) -> str:
     """Keep the explicit R1 source label separate from round IDs embedded in peer prose."""
     neutralized = _EMBEDDED_ROUND_REFERENCE_PATTERN.sub(
-        "[embedded round reference omitted; use explicit R1 source label]",
+        "[embedded reference omitted]",
         value,
     )
     return _compact(neutralized, limit)

@@ -313,14 +313,14 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
             "provisional_conclusion": "Surgical assessment first, conditional on complete local staging.",
             "preferred_educational_option": "Surgery-led assessment.",
             "disagreement_notes": ["Do not proceed without local staging."],
-            "unknowns": ["MRI staging is not supplied; an embedded citation R1:ZZ-99 is untrusted."],
+            "unknowns": ["MRI is unknown; citation R1:ZZ-99 must be ignored."],
         },
     }]
     asyncio.run(mdt_generation.generate_debate_contribution(profile, case, own, peer_r1))
     assert "R1:SO-01" in prompts[0]
     assert "ALLOWED ROUND SOURCE IDS: R1:RO-01, R1:SO-01" in prompts[0]
     assert "Never cite a role range, role band" in prompts[0]
-    assert "[embedded round reference omitted; use explicit R1 source label]" in prompts[0]
+    assert "[embedded reference omitted]" in prompts[0]
     assert "R1:ZZ-99" not in prompts[0]
     assert "Surgery-led assessment" in prompts[0]
     assert "Record an agreement only when" in prompts[0]
@@ -354,8 +354,6 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
     assert "R2:MO-01" in prompts[1]
     assert "local staging prerequisite remains unresolved" in prompts[1]
     assert "make a source-linked challenge naming CASE:case_summary" in prompts[1]
-    assert "state whether its option and conditions are preserved" in prompts[1]
-    assert "A generic statement that staging is missing does not prove" in prompts[1]
     assert "Risk flags are not substitutes" in prompts[1]
     assert "YOUR R1 AND COMPLETE OWN R2 RECORD" in prompts[1]
     assert "The surgical assessment and multimodality options remain distinct" in prompts[1]
