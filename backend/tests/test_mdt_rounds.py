@@ -738,3 +738,83 @@ def test_source_opinion_review_requires_structured_case_and_peer_references():
         SourceOpinionReview(**{**base, "source_reference_ids": ["R2:RO-02"]})
     with pytest.raises(ValidationError):
         SourceOpinionReview(**{**base, "challenge": ""})
+
+
+def test_r3_generation_copies_review_challenge_with_structured_source_prefix(monkeypatch):
+    from app.round_schemas import AdversarialContributionDraft, SourceOpinionReview
+    from app.services import mdt_generation
+
+    async def fake_generate(prompt, schema_type, max_tokens):
+        assert "CASE:case_summary#1" in prompt
+        assert "R2:MO-01" in prompt
+        return AdversarialContributionDraft(
+            position="conditional",
+            provisional_conclusion="The educational view remains conditional pending adequate source review.",
+            response_to_other_perspectives="The source opinions are reviewed separately and no ungrounded agreement is inferred.",
+            agreements=[],
+            substantive_challenges=[],
+            remaining_unknowns=["The case information remains incomplete."],
+            risk_flags=[],
+            confidence=0.5,
+            source_opinion_reviews=[
+                SourceOpinionReview(
+                    source_id="CASE:case_summary#1",
+                    opinion_label="colorectal surgical note",
+                    option_status="omitted",
+                    conditions_status="partly_preserved",
+                    review_basis="The supplied debate digest does not retain the option and each prerequisite.",
+                    source_reference_ids=["CASE:case_summary#1", "R2:MO-01"],
+                    challenge="The surgical-assessment option and its conditions are not retained in the supplied peer record.",
+                ),
+                SourceOpinionReview(
+                    source_id="CASE:case_summary#2",
+                    opinion_label="medical oncology note",
+                    option_status="unclear",
+                    conditions_status="unclear",
+                    review_basis="The supplied debate sample does not contain enough detail to assess this opinion.",
+                    source_reference_ids=["CASE:case_summary#2", "R2:MO-01"],
+                    challenge="",
+                ),
+            ],
+        )
+
+    monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate)
+    profile = {"agent_id": "RO-01", "name": "Radiation Oncology", "mandate": "Review the synthetic case."}
+    case = SyntheticCase(
+        scenario_title="Synthetic structured-review citation test",
+        case_summary="Fictional case with two attributed source opinions and incomplete staging.",
+    )
+    own_r1 = {
+        "position": "conditional",
+        "provisional_conclusion": "The independent view remains conditional on missing information.",
+        "preferred_educational_option": "No educational option can be preferred yet.",
+    }
+    own_r2 = {
+        "position": "conditional",
+        "provisional_conclusion": "The debate position remains conditional pending missing details.",
+        "response_to_other_perspectives": "The source material is incomplete and no common option is established.",
+    }
+    peers = [{
+        "agent_id": "MO-01",
+        "agent_name": "Medical Oncology",
+        "result": {
+            "position": "conditional",
+            "provisional_conclusion": "The supplied peer record remains provisional and conditional.",
+            "response_to_other_perspectives": "The sample does not settle the outstanding option.",
+            "agreements": [],
+            "substantive_challenges": [],
+            "risk_flags": [],
+            "position_changes": [],
+        },
+    }]
+
+    result = asyncio.run(
+        mdt_generation.generate_adversarial_contribution(profile, case, own_r1, own_r2, peers)
+    )
+    expected = (
+        "[Sources: CASE:case_summary#1; R2:MO-01] "
+        "The surgical-assessment option and its conditions are not retained in the supplied peer record."
+    )
+    assert expected in result.substantive_challenges
+    assert result.source_reference_integrity_flags == []
+    assert result.source_peer_ids == ["MO-01"]

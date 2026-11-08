@@ -158,7 +158,10 @@ def test_mdt006_oracles_pass_only_when_both_opinions_conditions_and_no_consensus
             "result": {
                 "source_peer_ids": ["RO-02"],
                 "source_opinion_reviews": reviews,
-                "substantive_challenges": [challenge_one, challenge_two],
+                "substantive_challenges": [
+                    "[Sources: CASE:case_summary#1; R2:RO-02] " + challenge_one,
+                    "[Sources: CASE:case_summary#2; R2:RO-02] " + challenge_two,
+                ],
             },
         }]
     }
