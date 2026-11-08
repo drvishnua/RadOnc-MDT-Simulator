@@ -58,6 +58,7 @@ def initialize_database() -> None:
 
             CREATE TABLE IF NOT EXISTS synthetic_patients (
                 patient_id TEXT PRIMARY KEY,
+                patient_name TEXT,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             );
@@ -129,15 +130,18 @@ def initialize_database() -> None:
             "CREATE INDEX IF NOT EXISTS idx_simulation_runs_patient "
             "ON simulation_runs(patient_id, created_at DESC)"
         )
-        # Assign stable numbers to older records in creation order.
-        legacy_patients = db.execute(
-            "SELECT patient_id, created_at FROM synthetic_patients ORDER BY created_at, patient_id"
-        ).fetchall()
-        for legacy_patient in legacy_patients:
-            db.execute(
-                "INSERT OR IGNORE INTO patient_registry_numbers(patient_id, created_at) VALUES (?, ?)",
-                (legacy_patient["patient_id"], legacy_patient["created_at"]),
-            )
+        patient_columns = {row["name"] for row in db.execute("PRAGMA table_info(synthetic_patients)")}
+        if "patient_name" not in patient_columns:
+            db.execute("ALTER TABLE synthetic_patients ADD COLUMN patient_name TEXT")
+        # Only insert genuinely missing allocations: INSERT OR IGNORE would still
+        # advance SQLite AUTOINCREMENT for conflicts on every initialization.
+        db.execute(
+            """INSERT INTO patient_registry_numbers(patient_id, created_at)
+            SELECT p.patient_id, p.created_at FROM synthetic_patients AS p
+            WHERE NOT EXISTS (
+                SELECT 1 FROM patient_registry_numbers AS n WHERE n.patient_id = p.patient_id
+            ) ORDER BY p.created_at, p.patient_id"""
+        )
 
 
 def _case_json_and_hash(case: SyntheticCase) -> tuple[str, str]:
@@ -145,7 +149,7 @@ def _case_json_and_hash(case: SyntheticCase) -> tuple[str, str]:
     return case_json, hashlib.sha256(case_json.encode("utf-8")).hexdigest()
 
 
-def create_patient(case: SyntheticCase) -> dict[str, Any]:
+def create_patient(patient_name: str, case: SyntheticCase) -> dict[str, Any]:
     """Create a fictional training patient and immutable case version 1 atomically."""
     initialize_database()
     patient_id = str(uuid.uuid4())
@@ -155,8 +159,8 @@ def create_patient(case: SyntheticCase) -> dict[str, Any]:
     with _connect() as db:
         db.execute("BEGIN IMMEDIATE")
         db.execute(
-            "INSERT INTO synthetic_patients(patient_id, created_at, updated_at) VALUES (?, ?, ?)",
-            (patient_id, now, now),
+            "INSERT INTO synthetic_patients(patient_id, patient_name, created_at, updated_at) VALUES (?, ?, ?, ?)",
+            (patient_id, patient_name, now, now),
         )
         db.execute(
             "INSERT INTO patient_registry_numbers(patient_id, created_at) VALUES (?, ?)",
@@ -171,8 +175,8 @@ def create_patient(case: SyntheticCase) -> dict[str, Any]:
     return get_patient(patient_id)
 
 
-def create_case_version(patient_id: str, case: SyntheticCase) -> dict[str, Any]:
-    """Append a new immutable version; previous snapshots are never overwritten."""
+def create_case_version(patient_id: str, patient_name: str, case: SyntheticCase) -> dict[str, Any]:
+    """Update registry name and append an immutable case version atomically."""
     initialize_database()
     case_version_id = str(uuid.uuid4())
     now = _now()
@@ -195,8 +199,8 @@ def create_case_version(patient_id: str, case: SyntheticCase) -> dict[str, Any]:
             (case_version_id, patient_id, version_number, case_json, digest, now),
         )
         db.execute(
-            "UPDATE synthetic_patients SET updated_at = ? WHERE patient_id = ?",
-            (now, patient_id),
+            "UPDATE synthetic_patients SET patient_name = ?, updated_at = ? WHERE patient_id = ?",
+            (patient_name, now, patient_id),
         )
     return get_patient(patient_id)
 
@@ -253,6 +257,7 @@ def get_patient(patient_id: str) -> dict[str, Any]:
     return {
         "patient_id": patient["patient_id"],
         "patient_identifier": f"RAD-{int(registry_row['registry_number']):06d}" if registry_row else None,
+        "patient_name": patient["patient_name"],
         "created_at": patient["created_at"],
         "updated_at": patient["updated_at"],
         "versions": [_version_record(row) for row in version_rows],
@@ -273,7 +278,7 @@ def list_patients() -> list[dict[str, Any]]:
         patients.append({
             "patient_id": detail["patient_id"],
             "patient_identifier": detail["patient_identifier"],
-            "patient_name": latest["case"].get("patient_name") if latest else None,
+            "patient_name": detail["patient_name"],
             "age_years": latest["case"].get("age_years") if latest else None,
             "stage_group": latest["case"].get("stage_group") if latest else None,
             "created_at": detail["created_at"],

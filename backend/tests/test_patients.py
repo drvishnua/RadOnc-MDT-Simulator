@@ -9,12 +9,16 @@ client = TestClient(app)
 
 
 def _case(title="Training patient case", summary="Fictional case used only for patient persistence tests."):
-    return {"patient_name": "Training Example", "scenario_title": title, "case_summary": summary, "primary_site": "Test site"}
+    return {"scenario_title": title, "case_summary": summary, "primary_site": "Test site"}
+
+
+def _registration(case=None, name="Training Example"):
+    return {"patient_name": name, "case": case or _case()}
 
 
 def test_patient_creation_and_case_version_history_are_immutable(monkeypatch, tmp_path):
     monkeypatch.setattr(run_store, "DB_PATH", tmp_path / "patients.sqlite3")
-    created = client.post("/api/patients", json=_case())
+    created = client.post("/api/patients", json=_registration())
     assert created.status_code == 200
     patient = created.json()
     patient_id = patient["patient_id"]
@@ -23,10 +27,12 @@ def test_patient_creation_and_case_version_history_are_immutable(monkeypatch, tm
     first = patient["versions"][0]
     assert first["version_number"] == 1
     assert first["case"]["scenario_title"] == "Training patient case"
+    assert "patient_name" not in first["case"]
+    assert patient["patient_name"] == "Training Example"
     assert first["case_snapshot_sha256"]
 
     changed = _case("Training patient case — updated", "A revised fictional case version for the same training patient.")
-    saved = client.post(f"/api/patients/{patient_id}/versions", json=changed)
+    saved = client.post(f"/api/patients/{patient_id}/versions", json=_registration(changed, "Training Example Updated"))
     assert saved.status_code == 200
     detail = saved.json()
     assert len(detail["versions"]) == 2
@@ -39,6 +45,7 @@ def test_patient_creation_and_case_version_history_are_immutable(monkeypatch, tm
     listed = client.get("/api/patients")
     assert listed.status_code == 200
     assert listed.json()["patients"][0]["patient_id"] == patient_id
+    assert listed.json()["patients"][0]["patient_name"] == "Training Example Updated"
     assert listed.json()["patients"][0]["version_count"] == 2
 
 
@@ -49,7 +56,7 @@ def test_patient_run_uses_saved_version_and_keeps_legacy_runs_unlinked(monkeypat
         return None
 
     monkeypatch.setattr("app.main.run_independent_assessments", no_inference)
-    patient = client.post("/api/patients", json=_case()).json()
+    patient = client.post("/api/patients", json=_registration()).json()
     version = patient["versions"][0]
     response = client.post(
         f"/api/patients/{patient['patient_id']}/runs",
@@ -72,8 +79,8 @@ def test_patient_run_uses_saved_version_and_keeps_legacy_runs_unlinked(monkeypat
 
 def test_patient_run_rejects_a_version_owned_by_another_patient(monkeypatch, tmp_path):
     monkeypatch.setattr(run_store, "DB_PATH", tmp_path / "patient_scope.sqlite3")
-    first = client.post("/api/patients", json=_case("Synthetic patient one")).json()
-    second = client.post("/api/patients", json=_case("Synthetic patient two")).json()
+    first = client.post("/api/patients", json=_registration(_case("Training patient one"))).json()
+    second = client.post("/api/patients", json=_registration(_case("Training patient two"))).json()
     response = client.post(
         f"/api/patients/{first['patient_id']}/runs",
         json={"case_version_id": second["versions"][0]["case_version_id"]},
@@ -96,7 +103,7 @@ def test_saved_ro01_assessment_is_attached_to_exact_patient_case_version(monkeyp
         )
 
     monkeypatch.setattr("app.main.generate_agent_assessment", fake_generate)
-    patient = client.post("/api/patients", json=_case()).json()
+    patient = client.post("/api/patients", json=_registration()).json()
     version = patient["versions"][0]
     result = client.post(
         f"/api/patients/{patient['patient_id']}/versions/{version['case_version_id']}/assess/RO-01"
@@ -148,8 +155,8 @@ def test_patient_serials_are_sequential_never_reused_and_delete_cascades(monkeyp
         return None
 
     monkeypatch.setattr("app.main.run_independent_assessments", no_inference)
-    first = client.post("/api/patients", json=_case("First training case")).json()
-    second = client.post("/api/patients", json=_case("Second training case")).json()
+    first = client.post("/api/patients", json=_registration(_case("First training case"))).json()
+    second = client.post("/api/patients", json=_registration(_case("Second training case"))).json()
     assert first["patient_identifier"] == "RAD-000001"
     assert second["patient_identifier"] == "RAD-000002"
 
@@ -166,7 +173,7 @@ def test_patient_serials_are_sequential_never_reused_and_delete_cascades(monkeyp
     assert client.get(f"/api/patients/{first['patient_id']}").status_code == 404
     assert client.get(f"/api/runs/{run_id}").status_code == 404
 
-    third = client.post("/api/patients", json=_case("Third training case")).json()
+    third = client.post("/api/patients", json=_registration(_case("Third training case"))).json()
     assert third["patient_identifier"] == "RAD-000003"
     remaining = client.get("/api/patients").json()["patients"]
     assert [item["patient_identifier"] for item in remaining] == ["RAD-000003", "RAD-000002"]
@@ -175,8 +182,5 @@ def test_patient_serials_are_sequential_never_reused_and_delete_cascades(monkeyp
 
 def test_patient_registration_requires_training_name(monkeypatch, tmp_path):
     monkeypatch.setattr(run_store, "DB_PATH", tmp_path / "patient_name.sqlite3")
-    response = client.post("/api/patients", json={
-        "scenario_title": "Training case",
-        "case_summary": "A sufficiently detailed fictional training summary."
-    })
+    response = client.post("/api/patients", json={"case": _case()})
     assert response.status_code == 422

@@ -10,7 +10,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.agent_schemas import AgentAssessment
 from app.agents.catalog import AGENT_PROFILES, EXPECTED_AGENT_COUNT
 from app.config import APP_NAME, APP_VERSION
-from app.schemas import AgentAssessmentRequest, BatchRunRequest, CaseValidationResult, PatientRunRequest, SyntheticCase
+from app.schemas import (
+    AgentAssessmentRequest, BatchRunRequest, CaseValidationResult,
+    PatientCaseUpdateRequest, PatientRegistrationRequest, PatientRunRequest, SyntheticCase,
+)
 from app.services.case_integrity import build_case_validation_warnings
 from app.services import run_store
 from app.services.batch_runner import batch_is_running, run_independent_assessments, validate_resume_state
@@ -111,11 +114,9 @@ async def list_training_patients() -> dict[str, object]:
 
 
 @app.post("/api/patients")
-async def create_training_patient(case: SyntheticCase) -> dict[str, object]:
-    """Save a fictional training patient and immutable case version 1."""
-    if not case.patient_name:
-        raise HTTPException(status_code=422, detail="Enter a fictional patient name before saving.")
-    return run_store.create_patient(case)
+async def create_training_patient(request: PatientRegistrationRequest) -> dict[str, object]:
+    """Save a fictional registry profile and a separate de-identified case snapshot."""
+    return run_store.create_patient(request.patient_name, request.case)
 
 
 @app.get("/api/patients/{patient_id}")
@@ -129,12 +130,10 @@ async def get_training_patient(patient_id: str) -> dict[str, object]:
 
 
 @app.post("/api/patients/{patient_id}/versions")
-async def save_training_case_version(patient_id: str, case: SyntheticCase) -> dict[str, object]:
-    """Append a new case version without changing any prior snapshot or run."""
-    if not case.patient_name:
-        raise HTTPException(status_code=422, detail="Enter a fictional patient name before saving.")
+async def save_training_case_version(patient_id: str, request: PatientCaseUpdateRequest) -> dict[str, object]:
+    """Update the registry profile and append a new immutable case version."""
     try:
-        return run_store.create_case_version(patient_id, case)
+        return run_store.create_case_version(patient_id, request.patient_name, request.case)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="Patient record not found.") from exc
 

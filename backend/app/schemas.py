@@ -10,9 +10,8 @@ class StrictModel(BaseModel):
 
 
 class SyntheticCase(StrictModel):
-    """A deliberately non-identifying case representation for simulation."""
+    """De-identified clinical case payload passed to specialist agents."""
 
-    patient_name: str | None = Field(default=None, min_length=2, max_length=120)
     scenario_title: str = Field(min_length=3, max_length=160)
     case_summary: str = Field(min_length=10, max_length=12000)
     age_years: int | None = Field(default=None, ge=0, le=120)
@@ -53,6 +52,20 @@ class SyntheticCase(StrictModel):
         if any(not item for item in cleaned):
             raise ValueError("List items must not be blank.")
         return cleaned
+
+
+class PatientRegistrationRequest(StrictModel):
+    """Registry identity plus a separate de-identified clinical case."""
+
+    patient_name: str = Field(min_length=2, max_length=120)
+    case: SyntheticCase
+
+
+class PatientCaseUpdateRequest(StrictModel):
+    """Update registry identity and append a de-identified clinical case version."""
+
+    patient_name: str = Field(min_length=2, max_length=120)
+    case: SyntheticCase
 
 
 class CaseValidationResult(StrictModel):

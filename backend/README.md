@@ -34,10 +34,10 @@ Tests:
 - GET /api/runtime — Ollama reachability and installed model
 - GET /api/agents — all 45 role profiles
 - GET /api/patients — list registered training patients
-- POST /api/patients — create a training patient with a sequential local ID and immutable case version 1
+- POST /api/patients — create a training registry profile with a sequential local ID and separate de-identified case version 1
 - DELETE /api/patients/{patient_id} — delete a training patient and its linked simulation results
 - GET /api/patients/{patient_id} — case versions and linked run history
-- POST /api/patients/{patient_id}/versions — append an immutable clinical case version
+- POST /api/patients/{patient_id}/versions — update registry name and append an immutable de-identified clinical case version
 - POST /api/patients/{patient_id}/runs — create a run from a verified saved case version
 - POST /api/patients/{patient_id}/versions/{case_version_id}/assess/RO-01 — run and persist RO-01
 - GET /api/patients/{patient_id}/versions/{case_version_id}/assessments — saved standalone assessments

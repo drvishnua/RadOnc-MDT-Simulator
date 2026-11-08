@@ -42,7 +42,6 @@ type ValidationResult = {
 };
 
 type SyntheticCasePayload = {
-  patient_name?: string | null;
   scenario_title: string;
   case_summary: string;
   age_years: number | null;
@@ -141,6 +140,7 @@ type PatientCaseVersion = {
 type PatientDetail = {
   patient_id: string;
   patient_identifier: string;
+  patient_name: string | null;
   created_at: string;
   updated_at: string;
   versions: PatientCaseVersion[];
@@ -255,7 +255,7 @@ const emptyForm = {
 
 function caseSnapshotToForm(snapshot: SyntheticCasePayload): typeof emptyForm {
   return {
-    patient_name: snapshot.patient_name ?? "",
+    patient_name: "",
     scenario_title: snapshot.scenario_title ?? emptyForm.scenario_title,
     case_summary: snapshot.case_summary ?? "",
     age_years: snapshot.age_years === null || snapshot.age_years === undefined ? "" : String(snapshot.age_years),
@@ -328,7 +328,6 @@ function readSavedCase(): SyntheticCasePayload | null {
     }
 
     return {
-      patient_name: savedOptionalText(value.patient_name),
       scenario_title: value.scenario_title as string,
       case_summary: value.case_summary as string,
       age_years: value.age_years as number | null,
@@ -507,7 +506,7 @@ function App() {
     setSelectedPatientId(detail.patient_id);
     setSelectedCaseVersionId(version.case_version_id);
     setActiveSavedCase({ ...version, patient_id: detail.patient_id, patient_identifier: detail.patient_identifier });
-    setForm(caseSnapshotToForm(version.case));
+    setForm({ ...caseSnapshotToForm(version.case), patient_name: detail.patient_name ?? "" });
     setValidation(null);
     setValidatedCase(null);
     setValidationError("");
@@ -581,14 +580,15 @@ function App() {
     setPatientBusy(true);
     setPatientError("");
     try {
-      if (!validatedCase.patient_name) throw new Error("Enter a fictional patient name before saving.");
+      const patientName = form.patient_name.trim();
+      if (patientName.length < 2) throw new Error("Enter a fictional training name before saving.");
       const url = createNewPatient
         ? API_BASE + "/api/patients"
         : API_BASE + "/api/patients/" + loadedPatient!.patient_id + "/versions";
       const response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(validatedCase)
+        body: JSON.stringify({ patient_name: patientName, case: validatedCase })
       });
       const body = await response.json() as PatientDetail & { detail?: string };
       if (!response.ok) throw new Error(body.detail ?? "The patient case could not be saved.");
@@ -684,7 +684,6 @@ function App() {
     setValidating(true);
 
     const payload: SyntheticCasePayload = {
-      patient_name: optionalText(form.patient_name),
       scenario_title: form.scenario_title,
       case_summary: form.case_summary,
       age_years: form.age_years.trim() === "" ? null : Number(form.age_years),
