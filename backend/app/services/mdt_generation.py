@@ -105,27 +105,50 @@ def _position_counts(rows: list[dict], field: str) -> Counter:
 
 
 _ROUND_REFERENCE_PATTERN = re.compile(r"\bR([123]):([A-Z]{2}-[0-9]{2})\b")
+_ROUND_REFERENCE_RANGE_PATTERN = re.compile(
+    r"\bR([123]):([A-Z]{2}-[0-9]{2})\s*(?:through|thru|to|[-–—])\s*(?:R\1:)?([A-Z]{2}-[0-9]{2})\b",
+    re.IGNORECASE,
+)
+_R1_REFERENCE_PATTERN = re.compile(r"\bR1:[A-Z]{2}-[0-9]{2}\b")
+
+
+def _payload_strings(value: object) -> list[str]:
+    """Collect every generated string, including nested structured review fields."""
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, dict):
+        return [item for nested in value.values() for item in _payload_strings(nested)]
+    if isinstance(value, (list, tuple)):
+        return [item for nested in value for item in _payload_strings(nested)]
+    return []
 
 
 def _audit_source_references(payload: dict, allowed: set[tuple[str, str]]) -> list[str]:
-    """Flag round-qualified citations that were not present in this role's inputs.
-
-    Generated text is preserved verbatim. This audit records provenance defects rather
-    than silently rewriting a model-generated citation.
-    """
-    values: list[str] = []
-    for value in payload.values():
-        if isinstance(value, str):
-            values.append(value)
-        elif isinstance(value, list):
-            values.extend(item for item in value if isinstance(item, str))
-    references = sorted(set(_ROUND_REFERENCE_PATTERN.findall(" ".join(values))))
-    return [
+    """Flag unsupplied citations and non-specific role ranges without rewriting output."""
+    text = " ".join(_payload_strings(payload))
+    findings: list[str] = []
+    ranges = sorted(set(_ROUND_REFERENCE_RANGE_PATTERN.findall(text)))
+    for round_number, first_agent, last_agent in ranges:
+        findings.append(
+            f"Reference range R{round_number}:{first_agent} through R{round_number}:{last_agent} "
+            "is not an attributable individual source citation."
+        )
+    references = sorted(set(_ROUND_REFERENCE_PATTERN.findall(text)))
+    findings.extend(
         f"Reference R{round_number}:{agent_id} was not supplied as an attributable source to this contribution."
         for round_number, agent_id in references
         if (f"R{round_number}", agent_id) not in allowed
-    ]
+    )
+    return findings
 
+
+def _compact_r2_text(value: str, limit: int) -> str:
+    """Keep the peer's R2 attribution but neutralize R1 IDs quoted inside that R2 text."""
+    neutralized = _R1_REFERENCE_PATTERN.sub(
+        "[embedded R1 citation; attribute via R2 peer]",
+        value,
+    )
+    return _compact(neutralized, limit)
 
 def _unique_strings(values: list[str], limit: int = 12) -> list[str]:
     output: list[str] = []
@@ -544,39 +567,41 @@ async def generate_adversarial_contribution(
             "source": f"R2:{peer['agent_id']}",
             "role": peer["agent_name"],
             "position": peer["result"].get("position", "unknown"),
-            "conclusion": _compact(peer["result"].get("provisional_conclusion", ""), 110),
-            "response": _compact(peer["result"].get("response_to_other_perspectives", ""), 100),
+            "conclusion": _compact_r2_text(peer["result"].get("provisional_conclusion", ""), 110),
+            "response": _compact_r2_text(peer["result"].get("response_to_other_perspectives", ""), 100),
             "agreements": [
-                _compact(item, 70)
+                _compact_r2_text(item, 70)
                 for item in (peer["result"].get("agreements") or [])[:1]
             ],
             "challenges": [
-                _compact(item, 90)
+                _compact_r2_text(item, 90)
                 for item in (peer["result"].get("substantive_challenges") or [])[:1]
             ],
             "risks": [
-                _compact(item, 70)
+                _compact_r2_text(item, 70)
                 for item in (peer["result"].get("risk_flags") or [])[:1]
             ],
             "position_changes": [
-                _compact(item, 90)
+                _compact_r2_text(item, 90)
                 for item in (peer["result"].get("position_changes") or [])[:1]
             ],
         }
         for peer in peer_debate_views[:5]
     ]
     own = {
+        "round1_source": f"R1:{profile['agent_id']}",
         "round1_position": own_independent_assessment.get("position"),
         "round1_conclusion": _compact(own_independent_assessment.get("provisional_conclusion", ""), 150),
         "round1_option": _compact(own_independent_assessment.get("preferred_educational_option", ""), 140),
+        "round2_source": f"R2:{profile['agent_id']}",
         "round2_position": own_debate_contribution.get("position"),
-        "round2_conclusion": _compact(own_debate_contribution.get("provisional_conclusion", ""), 160),
-        "round2_response": _compact(own_debate_contribution.get("response_to_other_perspectives", ""), 220),
-        "round2_agreements": [_compact(item, 100) for item in (own_debate_contribution.get("agreements") or [])[:2]],
-        "round2_challenges": [_compact(item, 120) for item in (own_debate_contribution.get("substantive_challenges") or [])[:2]],
-        "round2_position_changes": [_compact(item, 100) for item in (own_debate_contribution.get("position_changes") or [])[:1]],
-        "round2_unknowns": [_compact(item, 90) for item in (own_debate_contribution.get("remaining_unknowns") or [])[:2]],
-        "round2_risks": [_compact(item, 90) for item in (own_debate_contribution.get("risk_flags") or [])[:2]],
+        "round2_conclusion": _compact_r2_text(own_debate_contribution.get("provisional_conclusion", ""), 160),
+        "round2_response": _compact_r2_text(own_debate_contribution.get("response_to_other_perspectives", ""), 220),
+        "round2_agreements": [_compact_r2_text(item, 100) for item in (own_debate_contribution.get("agreements") or [])[:2]],
+        "round2_challenges": [_compact_r2_text(item, 120) for item in (own_debate_contribution.get("substantive_challenges") or [])[:2]],
+        "round2_position_changes": [_compact_r2_text(item, 100) for item in (own_debate_contribution.get("position_changes") or [])[:1]],
+        "round2_unknowns": [_compact_r2_text(item, 90) for item in (own_debate_contribution.get("remaining_unknowns") or [])[:2]],
+        "round2_risks": [_compact_r2_text(item, 90) for item in (own_debate_contribution.get("risk_flags") or [])[:2]],
     }
     allowed_source_ids = [
         f"R1:{profile['agent_id']}",

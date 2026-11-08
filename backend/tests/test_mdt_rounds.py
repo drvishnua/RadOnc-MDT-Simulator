@@ -360,6 +360,8 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
     assert "never relabel an R2 peer as R1" in prompts[1]
     assert "When discussing your own R2 record, cite it as R2:RO-01" in prompts[1]
     assert "The only R1 source you may cite in this round is R1:RO-01" in prompts[1]
+    assert "[embedded R1 citation; attribute via R2 peer]" in prompts[1]
+    assert '"round1_source":"R1:RO-01"' in prompts[1]
     assert "Never cite a range of roles" in prompts[1]
     assert "Cite only individual source IDs listed under ALLOWED ROUND SOURCE IDS" in prompts[1]
     assert "source_opinion_reviews" in prompts[1]
@@ -637,7 +639,7 @@ def test_r3_records_exact_peer_sources_and_flags_wrong_round_references(monkeypa
             provisional_conclusion="The available synthetic information remains insufficient for a definitive conclusion.",
             response_to_other_perspectives=(
                 "R1:RO-01 is my own independent record; R1:SO-01 was not supplied here; "
-                "R2:MO-01 is a selected debate source."
+                "R1:RO-02 through R1:SV-02 is an invalid range; R2:MO-01 is a selected debate source."
             ),
             agreements=[],
             substantive_challenges=[],
@@ -684,9 +686,8 @@ def test_r3_records_exact_peer_sources_and_flags_wrong_round_references(monkeypa
 
     assert result.source_peer_ids == ["MO-01"]
     assert result.response_to_other_perspectives.startswith("R1:RO-01")
-    assert result.source_reference_integrity_flags == [
-        "Reference R1:SO-01 was not supplied as an attributable source to this contribution."
-    ]
+    assert any("R1:SO-01" in flag and "not supplied" in flag for flag in result.source_reference_integrity_flags)
+    assert any("Reference range R1:RO-02 through R1:SV-02" in flag for flag in result.source_reference_integrity_flags)
 
 
 def test_chair_report_surfaces_round_source_reference_integrity_flags():
