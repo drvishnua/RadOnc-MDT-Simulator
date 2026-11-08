@@ -101,15 +101,30 @@ _QUALIFIER = re.compile(
 
 
 def _unqualified_matches(pattern: re.Pattern[str], text: str) -> list[str]:
+    """Return assertion-like matches, applying qualifiers only within the same clause."""
     findings: list[str] = []
     for match in pattern.finditer(text):
-        context = text[max(0, match.start() - 100):min(len(text), match.end() + 70)]
-        if _QUALIFIER.search(context):
+        left = max((text.rfind(mark, 0, match.start()) for mark in ".!?;:\\n"), default=-1) + 1
+        right = min(
+            (position for mark in ".!?;:\\n" if (position := text.find(mark, match.end())) >= 0),
+            default=len(text),
+        )
+        clause = text[left:right]
+        if _QUALIFIER.search(clause) or "?" in clause:
             continue
-        token = match.group(0)
-        if token not in findings:
+        token = match.group(0).strip()
+        if token and token.casefold() not in {item.casefold() for item in findings}:
             findings.append(token)
     return findings
+
+
+def _unsupported_matches(pattern: re.Pattern[str], generated_text: str, source_text: str) -> list[str]:
+    """Keep exact assertion snippets not already present in the supplied case text."""
+    source_matches = {item.casefold() for item in _unqualified_matches(pattern, source_text)}
+    return [
+        item for item in _unqualified_matches(pattern, generated_text)
+        if item.casefold() not in source_matches
+    ]
 
 
 def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[str, Any]) -> list[str]:
@@ -148,6 +163,82 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         matches = _unqualified_matches(re.compile(r"\b(?:no prior treatment|treatment[- ]na[iï]ve|never treated)\b", re.IGNORECASE), text)
         if matches:
             flags.append("Generated narrative treats prior treatment as absent, but the structured prior-treatment list is not reported.")
+
+    # High-specificity assertion checks. Questions and qualified uncertainty are not
+    # treated as findings. Exact matching source snippets remain attributed to the
+    # user-provided case summary rather than being relabelled as model inventions.
+    if case.performance_status in (None, ""):
+        pattern = re.compile(
+            r"\\b(?:ECOG(?:\\s*[- ]?PS|\\s+performance\\s+status)?|"
+            r"WHO(?:\\s+performance)?\\s+status)\\s*[:=]?\\s*[0-4]\\b|"
+            r"\\b(?:KPS|Karnofsky(?:\\s+Performance\\s+Status)?)\\s*[:=]?\\s*\\d{2,3}\\b",
+            re.IGNORECASE,
+        )
+        matches = _unsupported_matches(pattern, text, source_text)
+        if matches:
+            flags.append("Generated narrative assigns a performance-status score (" + ", ".join(matches[:3]) + "), but performance_status is not supplied in the structured case.")
+
+    if case.clinical_n_stage is None:
+        pattern = re.compile(
+            r"\\b(?:node[- ]negative|no (?:regional )?nodal (?:disease|involvement)|negative (?:regional )?nodes?)\\b",
+            re.IGNORECASE,
+        )
+        matches = _unsupported_matches(pattern, text, source_text)
+        if matches:
+            flags.append("Generated narrative asserts node-negative status (" + ", ".join(matches[:3]) + "), but clinical_n_stage is not supplied.")
+
+    if case.clinical_m_stage is None:
+        pattern = re.compile(
+            r"\\b(?:no (?:evidence of )?(?:distant )?metastases?|no (?:evidence of )?(?:distant )?metastatic disease|without (?:distant )?metastases?|metastasis[- ]free|(?:distant )?metastases? (?:are|is) absent)\\b",
+            re.IGNORECASE,
+        )
+        matches = _unsupported_matches(pattern, text, source_text)
+        if matches:
+            flags.append("Generated narrative asserts absence of metastatic disease (" + ", ".join(matches[:3]) + "), but clinical_m_stage is not supplied; absence of a reported metastasis is not M0.")
+
+    resectability_pattern = re.compile(
+        r"\\b(?:is|was|remains|appears|seems|deemed|considered)\\s+(?:clearly |technically |borderline )?(?:resectable|unresectable)\\b|\\b(?:resectable|unresectable)\\s+(?:tumou?r|disease|lesion|cancer)\\b|\\bnot resectable\\b",
+        re.IGNORECASE,
+    )
+    matches = _unsupported_matches(resectability_pattern, text, source_text)
+    if matches:
+        flags.append("Generated narrative asserts resectability status (" + ", ".join(matches[:3]) + "), which is not explicitly documented in the supplied case.")
+
+    if case.histology in (None, "") and case.pathology_summary in (None, ""):
+        histology_pattern = re.compile(
+            r"\\b(?:squamous cell carcinoma|adenocarcinoma|small[- ]cell carcinoma|large[- ]cell carcinoma|urothelial carcinoma|neuroendocrine carcinoma|lymphoma|melanoma|sarcoma|SCC)\\b",
+            re.IGNORECASE,
+        )
+        matches = _unsupported_matches(histology_pattern, text, source_text)
+        if matches:
+            flags.append("Generated narrative asserts a histological diagnosis (" + ", ".join(matches[:3]) + "), but histology/pathology is not supplied as a structured case finding.")
+
+    if case.pathology_summary in (None, ""):
+        pathology_pattern = re.compile(
+            r"\\b(?:p16|HPV|HER2|ER|PR|PD-L1|Ki-67)\\s*(?:positive|negative|high|low|[+-])\\b|\\b(?:grade|G)\\s*[1-4]\\b|\\b(?:lymphovascular|perineural) invasion\\b|\\b(?:positive|negative) margins?\\b",
+            re.IGNORECASE,
+        )
+        matches = _unsupported_matches(pathology_pattern, text, source_text)
+        if matches:
+            flags.append("Generated narrative asserts a specific pathology/biomarker finding (" + ", ".join(matches[:3]) + "), but pathology_summary is not supplied.")
+
+    if case.imaging_summary in (None, ""):
+        investigation_pattern = re.compile(
+            r"\\b(?:CT|MRI|PET(?:[- ]CT)?|ultrasound|USG|X[- ]ray|radiograph|bone scan|colonoscopy|endoscopy|bronchoscopy|cystoscopy|biopsy)\\s+(?:scan\\s+)?(?:shows?|demonstrates?|reveals?|confirms?|identifies?|detected|reported)\\s+[^.!?;\\n]{1,100}",
+            re.IGNORECASE,
+        )
+        matches = _unsupported_matches(investigation_pattern, text, source_text)
+        if matches:
+            flags.append("Generated narrative asserts an imaging/investigation result (" + "; ".join(matches[:2]) + "), but imaging_summary is not supplied.")
+
+    if not case.patient_goals:
+        preference_pattern = re.compile(
+            r"\\bpatient(?:'s)?\\s+(?:prefers?|wishes?|wants?|chooses?|declines?|refuses?|agrees?|consents?|has chosen|does not want|doesn't want)[^.!?;\\n]{0,100}",
+            re.IGNORECASE,
+        )
+        matches = _unsupported_matches(preference_pattern, text, source_text)
+        if matches:
+            flags.append("Generated narrative attributes a patient preference/decision (" + "; ".join(matches[:2]) + "), but patient_goals are not supplied.")
     return flags[:20]
 
 

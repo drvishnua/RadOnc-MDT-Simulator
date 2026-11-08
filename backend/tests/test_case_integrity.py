@@ -106,3 +106,74 @@ def test_unqualified_m1_assertion_is_still_flagged():
     case = _case()
     flags = audit_unverified_case_claims(case, {"provisional_conclusion": "The patient has M1 disease."})
     assert any("M-stage" in item for item in flags)
+
+
+def test_unreported_performance_status_is_flagged_but_question_or_source_record_is_not():
+    case = _case()
+    assert any("performance-status" in item for item in audit_unverified_case_claims(
+        case, {"provisional_conclusion": "The patient has ECOG 0."}
+    ))
+    assert audit_unverified_case_claims(
+        case, {"risk_flags": ["ECOG 0 is not documented and must not be assumed."]}
+    ) == []
+    source_case = _case(case_summary="Synthetic case; ECOG 1 documented in referral text.")
+    assert not any("performance-status" in item for item in audit_unverified_case_claims(
+        source_case, {"provisional_conclusion": "The recorded ECOG 1 is noted."}
+    ))
+
+
+def test_unreported_node_and_metastatic_negative_assertions_are_flagged():
+    flags = " ".join(audit_unverified_case_claims(_case(), {
+        "provisional_conclusion": "The patient is node-negative with no distant metastases."
+    })).casefold()
+    assert "node-negative" in flags
+    assert "absence of metastatic disease" in flags
+    assert audit_unverified_case_claims(_case(), {
+        "risk_flags": ["Nodal status is unknown; M0 cannot be assumed."]
+    }) == []
+
+
+def test_resectability_assertion_is_flagged_but_conditional_assessment_is_not():
+    case = _case()
+    assert any("resectability status" in item for item in audit_unverified_case_claims(
+        case, {"provisional_conclusion": "The tumour is resectable."}
+    ))
+    assert not any("resectability status" in item for item in audit_unverified_case_claims(
+        case, {"risk_flags": ["Resectability requires formal review and cannot be assumed."]}
+    ))
+
+
+def test_unreported_histology_and_pathology_markers_are_flagged():
+    case = _case(histology=None, pathology_summary=None)
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "Biopsy confirms squamous cell carcinoma, p16 positive, grade 2."
+    })).casefold()
+    assert "histological diagnosis" in flags
+    assert "pathology/biomarker finding" in flags
+
+
+def test_unreported_investigation_results_are_flagged_but_requested_tests_are_not():
+    case = _case(imaging_summary=None)
+    assert any("imaging/investigation result" in item for item in audit_unverified_case_claims(
+        case, {"provisional_conclusion": "MRI shows a suspicious cervical node."}
+    ))
+    assert not any("imaging/investigation result" in item for item in audit_unverified_case_claims(
+        case, {"unknowns": ["MRI staging is required; no imaging result is supplied."]}
+    ))
+
+
+def test_undocumented_patient_preference_is_flagged_but_elicitation_is_not():
+    case = _case(patient_goals=[])
+    assert any("patient preference/decision" in item for item in audit_unverified_case_claims(
+        case, {"provisional_conclusion": "The patient prefers surgery."}
+    ))
+    assert not any("patient preference/decision" in item for item in audit_unverified_case_claims(
+        case, {"unknowns": ["The patient's preferences should be elicited."]}
+    ))
+
+
+def test_clause_local_qualifier_does_not_hide_a_separate_unsupported_assertion():
+    flags = audit_unverified_case_claims(_case(), {
+        "provisional_conclusion": "M0 is not confirmed. The patient is node-negative."
+    })
+    assert any("node-negative" in item for item in flags)
