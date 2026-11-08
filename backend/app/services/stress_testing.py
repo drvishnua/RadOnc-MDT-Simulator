@@ -206,14 +206,14 @@ def audit_case_outputs(
                     continue
                 supplied_peer_ids = result.get("source_peer_ids") or row.get("source_peer_ids") or []
                 supplied_peer_refs = {f"R2:{peer_id}" for peer_id in supplied_peer_ids}
-                allowed_review_refs = {
-                    source_id,
-                    f"R1:{row.get('agent_id', '')}",
-                    f"R2:{row.get('agent_id', '')}",
-                    *supplied_peer_refs,
-                }
                 substantive_challenges = result.get("substantive_challenges") or []
                 for source_id, review in review_map.items():
+                    allowed_review_refs = {
+                        source_id,
+                        f"R1:{row.get('agent_id', '')}",
+                        f"R2:{row.get('agent_id', '')}",
+                        *supplied_peer_refs,
+                    }
                     if not str(review.get("review_basis") or "").strip():
                         add_oracle_finding(
                             oracle_id,
