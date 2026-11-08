@@ -31,6 +31,8 @@ class SourceOpinionReview(StrictModel):
     conditions_status: Literal["preserved", "partly_preserved", "omitted", "unclear"]
     review_basis: str = Field(min_length=20, max_length=600)
     source_reference_ids: list[str] = Field(min_length=2, max_length=8)
+    evidence_peer_id: str = Field(default="", pattern=r"^(?:R2:[A-Z]{2}-[0-9]{2})?$")
+    evidence_excerpt: str = Field(default="", max_length=180)
     challenge: str = Field(default="", max_length=700)
 
     @model_validator(mode="after")
@@ -39,6 +41,18 @@ class SourceOpinionReview(StrictModel):
             raise ValueError("source_reference_ids must include this review's attributed case source.")
         if not any(source_id.startswith("R2:") for source_id in self.source_reference_ids):
             raise ValueError("source_reference_ids must include an R2 peer source.")
+        preservation_claimed = (
+            self.option_status in {"preserved", "partly_preserved"}
+            or self.conditions_status in {"preserved", "partly_preserved"}
+        )
+        if preservation_claimed and (
+            not self.evidence_peer_id or len(self.evidence_excerpt.strip()) < 12
+        ):
+            raise ValueError(
+                "A preserved or partly preserved element requires an exact R2 peer ID and verbatim supporting excerpt."
+            )
+        if self.evidence_peer_id and self.evidence_peer_id not in self.source_reference_ids:
+            raise ValueError("evidence_peer_id must also appear in source_reference_ids.")
         if (
             self.option_status in {"partly_preserved", "omitted"}
             or self.conditions_status in {"partly_preserved", "omitted"}

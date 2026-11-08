@@ -605,6 +605,14 @@ async def generate_adversarial_contribution(
         "must include that review's exact CASE source ID and at least one exact R2:AGENT_ID from "
         "the supplied peer sample. Use only IDs in ALLOWED ROUND SOURCE IDS; never invent an ID. "
         "These structured IDs are the machine-readable provenance for the review and challenge. "
+        "Whenever option_status or conditions_status is preserved or partly_preserved, provide "
+        "evidence_peer_id as one of the exact supplied R2 peer IDs and evidence_excerpt as a short "
+        "verbatim excerpt copied from that peer's supplied conclusion, response, agreement, challenge, "
+        "risk, or position-change text. The excerpt must directly support the particular element you "
+        "say was retained; do not quote generic missing-information language as proof that an option "
+        "was preserved. Do not paraphrase or invent excerpts. If no supplied peer text supports a "
+        "retained element, use omitted or unclear rather than preserved. Omitted/unclear reviews may "
+        "leave evidence_peer_id and evidence_excerpt empty. "
         "For MDT-006, return exactly two reviews: "
         "CASE:case_summary#1 for the colorectal surgical note and CASE:case_summary#2 for "
         "the medical oncology note. Judge preservation only from the actual R1/R2 material "
@@ -656,6 +664,33 @@ async def generate_adversarial_contribution(
                 f"Review for {source_id or 'unknown source'} cites source IDs not supplied to this role: "
                 + ", ".join(invalid_ids[:4]) + "."
             )
+        statuses = {
+            review.get("option_status"),
+            review.get("conditions_status"),
+        }
+        if statuses.intersection({"preserved", "partly_preserved"}):
+            evidence_peer_id = str(review.get("evidence_peer_id") or "")
+            evidence_excerpt = str(review.get("evidence_excerpt") or "").strip()
+            peer = next(
+                (item for item in peers if item.get("source") == evidence_peer_id),
+                None,
+            )
+            peer_texts = []
+            if peer:
+                for key in ("conclusion", "response"):
+                    if isinstance(peer.get(key), str):
+                        peer_texts.append(peer[key])
+                for key in ("agreements", "challenges", "risks", "position_changes"):
+                    peer_texts.extend(
+                        value for value in (peer.get(key) or []) if isinstance(value, str)
+                    )
+            if not peer or evidence_peer_id not in reference_ids or not evidence_excerpt or not any(
+                evidence_excerpt in value for value in peer_texts
+            ):
+                review_reference_flags.append(
+                    f"Review for {source_id or 'unknown source'} has no exact supporting excerpt "
+                    "from the cited R2 peer material actually supplied to this role."
+                )
         challenge = review.get("challenge") or ""
         if isinstance(challenge, str) and challenge.strip():
             source_prefix = "[Sources: " + "; ".join(reference_ids) + "] "

@@ -242,6 +242,52 @@ def audit_case_outputs(
                             "and a valid supplied R2 peer in source_reference_ids, or cites an unprovided ID.",
                             "major",
                         )
+                    if statuses.intersection({"preserved", "partly_preserved"}):
+                        evidence_peer_id = str(review.get("evidence_peer_id") or "")
+                        evidence_excerpt = str(review.get("evidence_excerpt") or "").strip()
+                        peer_row = next(
+                            (
+                                peer
+                                for peer in rounds.get(2, [])
+                                if peer.get("status") == "completed"
+                                and peer.get("agent_id") == evidence_peer_id.removeprefix("R2:")
+                            ),
+                            None,
+                        )
+                        peer_result = (peer_row or {}).get("result") or {}
+                        candidates = []
+                        for field, limit in (
+                            ("provisional_conclusion", 110),
+                            ("response_to_other_perspectives", 100),
+                        ):
+                            value = peer_result.get(field)
+                            if isinstance(value, str):
+                                compacted = " ".join(value.split())
+                                candidates.append(compacted if len(compacted) <= limit else compacted[: limit - 1].rstrip() + "…")
+                        for field, limit in (
+                            ("agreements", 70),
+                            ("substantive_challenges", 90),
+                            ("risk_flags", 70),
+                            ("position_changes", 90),
+                        ):
+                            values = peer_result.get(field) or []
+                            for value in values[:1]:
+                                if isinstance(value, str):
+                                    compacted = " ".join(value.split())
+                                    candidates.append(compacted if len(compacted) <= limit else compacted[: limit - 1].rstrip() + "…")
+                        if (
+                            not evidence_peer_id
+                            or evidence_peer_id not in supplied_peer_refs
+                            or evidence_peer_id not in reference_ids
+                            or len(evidence_excerpt) < 12
+                            or not any(evidence_excerpt in candidate for candidate in candidates)
+                        ):
+                            add_oracle_finding(
+                                oracle_id,
+                                f"{row.get('agent_id')} review for {source_id} claims preserved content "
+                                "without a verbatim excerpt from an actually supplied R2 peer contribution.",
+                                "major",
+                            )
                     if statuses.intersection({"partly_preserved", "omitted"}):
                         challenge = str(review.get("challenge") or "").strip()
                         if not challenge:

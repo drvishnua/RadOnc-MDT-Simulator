@@ -762,8 +762,10 @@ def test_r3_generation_copies_review_challenge_with_structured_source_prefix(mon
                     opinion_label="colorectal surgical note",
                     option_status="omitted",
                     conditions_status="partly_preserved",
-                    review_basis="The supplied debate digest does not retain the option and each prerequisite.",
+                    review_basis="The supplied debate digest retains one staging prerequisite but not the full option.",
                     source_reference_ids=["CASE:case_summary#1", "R2:MO-01"],
+                    evidence_peer_id="R2:MO-01",
+                    evidence_excerpt="The sample does not settle the outstanding option.",
                     challenge="The surgical-assessment option and its conditions are not retained in the supplied peer record.",
                 ),
                 SourceOpinionReview(
@@ -818,3 +820,25 @@ def test_r3_generation_copies_review_challenge_with_structured_source_prefix(mon
     assert expected in result.substantive_challenges
     assert result.source_reference_integrity_flags == []
     assert result.source_peer_ids == ["MO-01"]
+
+
+def test_source_opinion_review_requires_verbatim_peer_excerpt_when_claiming_preservation():
+    import pytest
+    from pydantic import ValidationError
+    from app.round_schemas import SourceOpinionReview
+
+    base = {
+        "source_id": "CASE:case_summary#1",
+        "opinion_label": "colorectal surgical note",
+        "option_status": "preserved",
+        "conditions_status": "unclear",
+        "review_basis": "The supplied peer digest explicitly retains the surgical assessment option.",
+        "source_reference_ids": ["CASE:case_summary#1", "R2:RO-02"],
+        "evidence_peer_id": "R2:RO-02",
+        "evidence_excerpt": "surgical assessment first",
+    }
+    assert SourceOpinionReview(**base).evidence_excerpt == "surgical assessment first"
+    with pytest.raises(ValidationError):
+        SourceOpinionReview(**{**base, "evidence_excerpt": ""})
+    with pytest.raises(ValidationError):
+        SourceOpinionReview(**{**base, "evidence_peer_id": "R2:RO-03"})
