@@ -24,7 +24,7 @@
 
 1. Round 1 runs all 45 independent roles; no agent sees another's output.
 2. Round 2 runs all 45 roles again, each receiving its own Round-1 view and a bounded digest of selected cross-specialty peer positions.
-3. Round 3 runs all 45 roles again, each receiving their earlier views and a bounded digest of peer debate contributions; it challenges assumptions, uncertainty, patient/context, feasibility, resources, and governance. Where a case contains attributed source opinions, R3 records structured per-opinion option/condition preservation statuses, a review basis, and explicit source IDs. Every review names its original case-text source and at least one actual R2 peer supplied to that role. If an option or condition is marked preserved/partly preserved, the review must also identify the supplied R2 peer and provide a short verbatim excerpt; the backend checks the excerpt against the exact peer digest shown to the role, and the stress oracle rechecks it against the persisted R2 contribution. If an option or prerequisite is omitted/weakened, the review must include a source-linked challenge. The canonical R3 challenge is prefixed with its structured source IDs and retained for Chair reconciliation.
+3. Round 3 runs all 45 roles again, each receiving their earlier views and a bounded digest of peer debate contributions; it challenges assumptions, uncertainty, patient/context, feasibility, resources, and governance. Where a case contains attributed source opinions, R3 records structured per-opinion option/condition preservation statuses, a review basis, and explicit source IDs. Every review should identify its original case-text source and at least one actual R2 peer supplied to that role. If an option or condition is marked preserved/partly preserved, the review should also identify the supplied R2 peer and provide a short verbatim excerpt; the backend checks the excerpt against the exact peer digest shown to the role, and the stress oracle rechecks it against the persisted R2 contribution. If an option or prerequisite is omitted/weakened, the review should include a source-linked challenge. These are quality requirements, not schema-level reasons to discard an otherwise parseable role output: missing/invalid references, evidence excerpts, or challenges are retained as deterministic source-reference integrity flags and checked by the stress oracle. The canonical R3 challenge is prefixed with its structured source IDs and retained for Chair reconciliation.
 4. Round 4 runs SG-07, the MDT Chair, over compact digests of all stored contributions from Rounds 1–3.
 
 The full outputs are preserved in SQLite. The bounded digest is a context-window optimization: every role contributes in each stage, but every role does not receive all 44 full-length peer outputs.
@@ -55,8 +55,8 @@ A run stores:
 - Agent and round statuses
 - Independent assessments
 - Debate contributions
-- Adversarial review contributions, including structured attributed-opinion reviews, source IDs, and preserved-evidence excerpts
-- Canonical source-prefixed challenges and source-reference integrity findings
+- Adversarial review contributions, including structured attributed-opinion reviews, source IDs, evidence excerpts, and semantic quality flags
+- Canonical source-prefixed challenges and source-reference integrity findings, including incomplete model-authored metadata
 - Final Chair synthesis after reconciliation
 - Errors, timestamps, and durations
 
@@ -64,7 +64,7 @@ The JSON export includes the parsed case snapshot, exact serialized case JSON, c
 
 ## Validation state
 
-An earlier full local-Ollama execution completed 136 generations (45 + 45 + 45 + 1) with zero failures/retries in 798.63 seconds. This run preceded later Chair and provenance changes and is historical baseline evidence only. At code commit `9388dbfffe27572a38abceda7dcd491787e79f42`, GitHub CI reported 82 backend tests passed (1 deprecation warning), frontend type-check/build success, and Windows source-sync plus local-app diagnostic success. These CI checks do not establish live four-round execution or clinical accuracy. A fresh local-model run with strict Chair, source-reference, and evidence-excerpt assertions is still required on the target laptop.
+An earlier full local-Ollama execution completed 136 generations (45 + 45 + 45 + 1) with zero failures/retries in 798.63 seconds; it preceded later Chair and provenance changes and is historical baseline evidence only. At code commit `ae759ad701948893734e9ed3a89fefb0998d39bc`, GitHub CI reported 82 backend tests passed (1 deprecation warning), frontend type-check/build success, and Windows source-sync plus local-app diagnostic success. A subsequent targeted MDT-006 live run on preceding code/request commit `b6c14a0229f77a657292fca7777ff795e85616fa` completed R1 and R2 at 45/45, but only 13/45 R3 outputs passed schema validation; R4 did not run. The artifact showed the parser was rejecting incomplete review metadata before deterministic integrity findings could be saved. The corrective commit now retains parseable reviews and records those omissions as source-reference integrity flags. This is a corrective engineering change, not evidence of successful live validation or clinical accuracy. A fresh exact-commit MDT-006 execution with strict Chair, source-reference, and evidence-excerpt assertions remains required.
 
 ## Evidence integration
 
