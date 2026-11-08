@@ -26,6 +26,7 @@ def test_patient_creation_and_case_version_history_are_immutable(monkeypatch, tm
     assert len(patient["versions"]) == 1
     first = patient["versions"][0]
     assert first["version_number"] == 1
+    assert first["patient_name"] == "Training Example"
     assert first["case"]["scenario_title"] == "Training patient case"
     assert "patient_name" not in first["case"]
     assert patient["patient_name"] == "Training Example"
@@ -37,8 +38,10 @@ def test_patient_creation_and_case_version_history_are_immutable(monkeypatch, tm
     detail = saved.json()
     assert len(detail["versions"]) == 2
     assert detail["versions"][0]["version_number"] == 2
+    assert detail["versions"][0]["patient_name"] == "Training Example Updated"
     assert detail["versions"][0]["case"]["scenario_title"] == changed["scenario_title"]
     original_after = next(v for v in detail["versions"] if v["case_version_id"] == first["case_version_id"])
+    assert original_after["patient_name"] == "Training Example"
     assert original_after["case"] == first["case"]
     assert original_after["case_snapshot_sha256"] == first["case_snapshot_sha256"]
 
@@ -220,5 +223,64 @@ def test_legacy_embedded_patient_name_migrates_out_of_case_payload(monkeypatch, 
 
     restored = run_store.get_patient(patient_id)
     assert restored["patient_name"] == "Legacy Training Name"
+    assert restored["versions"][0]["patient_name"] == "Legacy Training Name"
     assert "patient_name" not in restored["versions"][0]["case"]
     assert restored["versions"][0]["case_snapshot_sha256"] == digest
+
+
+def test_existing_case_versions_migrate_with_their_best_available_registry_names(monkeypatch, tmp_path):
+    import hashlib
+    import json
+    import sqlite3
+    import uuid
+
+    db_path = tmp_path / "legacy_version_names.sqlite3"
+    monkeypatch.setattr(run_store, "DB_PATH", db_path)
+    patient_id = str(uuid.uuid4())
+    first_version_id = str(uuid.uuid4())
+    second_version_id = str(uuid.uuid4())
+    now = "2026-01-01T00:00:00+00:00"
+    historical_case = {**_case("Historical version"), "patient_name": "Historic Training Name"}
+    current_case = _case("Current version")
+    first_json = json.dumps(historical_case, separators=(",", ":"), sort_keys=True)
+    second_json = json.dumps(current_case, separators=(",", ":"), sort_keys=True)
+
+    with sqlite3.connect(db_path) as db:
+        db.execute("""CREATE TABLE synthetic_patients (
+            patient_id TEXT PRIMARY KEY, patient_name TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+        )""")
+        # Reproduce the old schema, which had no per-version registry name.
+        db.execute("""CREATE TABLE patient_case_versions (
+            case_version_id TEXT PRIMARY KEY, patient_id TEXT NOT NULL,
+            version_number INTEGER NOT NULL CHECK(version_number > 0),
+            case_json TEXT NOT NULL, case_snapshot_sha256 TEXT NOT NULL, created_at TEXT NOT NULL,
+            UNIQUE(patient_id, version_number),
+            FOREIGN KEY (patient_id) REFERENCES synthetic_patients(patient_id) ON DELETE CASCADE
+        )""")
+        db.execute(
+            "INSERT INTO synthetic_patients VALUES (?, ?, ?, ?)",
+            (patient_id, "Current Registry Name", now, now),
+        )
+        db.executemany(
+            """INSERT INTO patient_case_versions
+            (case_version_id, patient_id, version_number, case_json, case_snapshot_sha256, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)""",
+            [
+                (first_version_id, patient_id, 1, first_json,
+                 hashlib.sha256(first_json.encode("utf-8")).hexdigest(), now),
+                (second_version_id, patient_id, 2, second_json,
+                 hashlib.sha256(second_json.encode("utf-8")).hexdigest(), now),
+            ],
+        )
+
+    run_store.initialize_database()
+    detail = run_store.get_patient(patient_id)
+    first = next(v for v in detail["versions"] if v["case_version_id"] == first_version_id)
+    second = next(v for v in detail["versions"] if v["case_version_id"] == second_version_id)
+
+    assert detail["patient_name"] == "Current Registry Name"
+    assert first["patient_name"] == "Historic Training Name"
+    assert second["patient_name"] == "Current Registry Name"
+    assert "patient_name" not in first["case"]
+    assert first["case_snapshot_sha256"] == hashlib.sha256(first_json.encode("utf-8")).hexdigest()
+

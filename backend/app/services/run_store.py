@@ -73,6 +73,7 @@ def initialize_database() -> None:
             CREATE TABLE IF NOT EXISTS patient_case_versions (
                 case_version_id TEXT PRIMARY KEY,
                 patient_id TEXT NOT NULL,
+                patient_name TEXT,
                 version_number INTEGER NOT NULL CHECK(version_number > 0),
                 case_json TEXT NOT NULL,
                 case_snapshot_sha256 TEXT NOT NULL,
@@ -133,6 +134,9 @@ def initialize_database() -> None:
         patient_columns = {row["name"] for row in db.execute("PRAGMA table_info(synthetic_patients)")}
         if "patient_name" not in patient_columns:
             db.execute("ALTER TABLE synthetic_patients ADD COLUMN patient_name TEXT")
+        version_columns = {row["name"] for row in db.execute("PRAGMA table_info(patient_case_versions)")}
+        if "patient_name" not in version_columns:
+            db.execute("ALTER TABLE patient_case_versions ADD COLUMN patient_name TEXT")
         # Only insert genuinely missing allocations: INSERT OR IGNORE would still
         # advance SQLite AUTOINCREMENT for conflicts on every initialization.
         db.execute(
@@ -162,6 +166,29 @@ def initialize_database() -> None:
                         (legacy_name.strip(), profile["patient_id"]),
                     )
 
+        # Backfill version-specific display names without changing the original
+        # case JSON or its hash. Embedded legacy names are the strongest source;
+        # versions without one receive the current registry name as best available.
+        version_profiles = db.execute(
+            """SELECT v.case_version_id, v.case_json, p.patient_name AS registry_name
+            FROM patient_case_versions AS v
+            JOIN synthetic_patients AS p ON p.patient_id = v.patient_id
+            WHERE v.patient_name IS NULL OR TRIM(v.patient_name) = ''"""
+        ).fetchall()
+        for version in version_profiles:
+            version_case = json.loads(version["case_json"])
+            embedded_name = version_case.get("patient_name")
+            version_name = (
+                embedded_name.strip()
+                if isinstance(embedded_name, str) and embedded_name.strip()
+                else (version["registry_name"] or "").strip()
+            )
+            if version_name:
+                db.execute(
+                    "UPDATE patient_case_versions SET patient_name = ? WHERE case_version_id = ?",
+                    (version_name, version["case_version_id"]),
+                )
+
 
 def _case_json_and_hash(case: SyntheticCase) -> tuple[str, str]:
     case_json = case.model_dump_json(exclude_none=True)
@@ -187,9 +214,9 @@ def create_patient(patient_name: str, case: SyntheticCase) -> dict[str, Any]:
         )
         db.execute(
             """INSERT INTO patient_case_versions
-            (case_version_id, patient_id, version_number, case_json, case_snapshot_sha256, created_at)
-            VALUES (?, ?, 1, ?, ?, ?)""",
-            (case_version_id, patient_id, case_json, digest, now),
+            (case_version_id, patient_id, patient_name, version_number, case_json, case_snapshot_sha256, created_at)
+            VALUES (?, ?, ?, 1, ?, ?, ?)""",
+            (case_version_id, patient_id, patient_name, case_json, digest, now),
         )
     return get_patient(patient_id)
 
@@ -213,9 +240,9 @@ def create_case_version(patient_id: str, patient_name: str, case: SyntheticCase)
         ).fetchone()["next_version"]
         db.execute(
             """INSERT INTO patient_case_versions
-            (case_version_id, patient_id, version_number, case_json, case_snapshot_sha256, created_at)
-            VALUES (?, ?, ?, ?, ?, ?)""",
-            (case_version_id, patient_id, version_number, case_json, digest, now),
+            (case_version_id, patient_id, patient_name, version_number, case_json, case_snapshot_sha256, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (case_version_id, patient_id, patient_name, version_number, case_json, digest, now),
         )
         db.execute(
             "UPDATE synthetic_patients SET patient_name = ?, updated_at = ? WHERE patient_id = ?",
@@ -237,6 +264,7 @@ def _version_record(row: sqlite3.Row) -> dict[str, Any]:
     return {
         "case_version_id": row["case_version_id"],
         "patient_id": row["patient_id"],
+        "patient_name": row["patient_name"],
         "version_number": row["version_number"],
         "case_snapshot_sha256": digest,
         "created_at": row["created_at"],

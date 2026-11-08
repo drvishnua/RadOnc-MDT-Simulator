@@ -3,6 +3,7 @@ import type { FormEvent } from "react";
 import { readDraft, writeDraft } from "./caseDraft.js";
 import { readSavedSingleAssessment, writeSavedSingleAssessment } from "./singleAssessmentStorage.js";
 import { shouldShowBatchPanel } from "./runRecovery.js";
+import { patientVersionDisplayName } from "./patientVersionName.js";
 
 const CASE_DRAFT_KEY = "radonc-mdt-case-draft-v1";
 const LEGACY_CASE_KEY = "radonc-mdt-last-case";
@@ -131,6 +132,7 @@ type PatientRecordSummary = {
 type PatientCaseVersion = {
   case_version_id: string;
   patient_id: string;
+  patient_name: string | null;
   version_number: number;
   case_snapshot_sha256: string;
   created_at: string;
@@ -506,7 +508,10 @@ function App() {
     setSelectedPatientId(detail.patient_id);
     setSelectedCaseVersionId(version.case_version_id);
     setActiveSavedCase({ ...version, patient_id: detail.patient_id, patient_identifier: detail.patient_identifier });
-    setForm({ ...caseSnapshotToForm(version.case), patient_name: detail.patient_name ?? "" });
+    setForm({
+      ...caseSnapshotToForm(version.case),
+      patient_name: patientVersionDisplayName(version, detail.patient_name)
+    });
     setValidation(null);
     setValidatedCase(null);
     setValidationError("");
