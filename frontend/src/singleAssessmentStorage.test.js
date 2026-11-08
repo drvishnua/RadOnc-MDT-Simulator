@@ -107,3 +107,22 @@ test("does not throw when browser storage is unavailable or full", () => {
     unavailable, "assessment", caseSnapshot, assessment, "2026-11-09T10:00:00.000Z"
   ), false);
 });
+
+test("editing and saving the case draft does not overwrite the saved RO-01 result", () => {
+  const storage = memoryStorage();
+  const savedAt = "2026-11-09T10:00:00.000Z";
+  assert.equal(writeSavedSingleAssessment(storage, "ro01", caseSnapshot, assessment, savedAt), true);
+
+  // This mirrors the app's independent draft key and write path.
+  storage.setItem("case-draft", JSON.stringify({
+    scenario_title: "Edited synthetic draft",
+    case_summary: "The current editable draft has changed."
+  }));
+
+  assert.deepEqual(readSavedSingleAssessment(storage, "ro01"), {
+    version: 1,
+    saved_at: savedAt,
+    case_snapshot: caseSnapshot,
+    assessment
+  });
+});
