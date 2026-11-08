@@ -726,8 +726,8 @@ def test_source_opinion_review_requires_structured_case_and_peer_references():
         "source_id": "CASE:case_summary#1",
         "opinion_label": "colorectal surgical note",
         "option_status": "omitted",
-        "conditions_status": "partly_preserved",
-        "review_basis": "The supplied peer material does not preserve the option or all conditions.",
+        "conditions_status": "omitted",
+        "review_basis": "The supplied peer material does not preserve the option or its conditions.",
         "source_reference_ids": ["CASE:case_summary#1", "R2:RO-02"],
         "challenge": "The option and conditions are not represented in the supplied debate record.",
     }
