@@ -650,6 +650,37 @@ async def generate_adversarial_contribution(
             continue
         source_id = str(review.get("source_id") or "")
         reference_ids = review.get("source_reference_ids") or []
+        statuses = {
+            review.get("option_status"),
+            review.get("conditions_status"),
+        }
+        # Small local models sometimes place a correctly source-labelled challenge in
+        # substantive_challenges but leave the corresponding review.challenge blank.
+        # Recover it only when exactly one challenge names this CASE source and one
+        # actually supplied R2 peer, and both IDs are also present in this review's
+        # structured references. Ambiguous/unreferenced prose remains unassigned and
+        # is still flagged below; no challenge text or citation is invented.
+        if statuses.intersection({"partly_preserved", "omitted"}) and not str(review.get("challenge") or "").strip():
+            candidate_bodies: dict[str, str] = {}
+            for candidate in challenges:
+                if not isinstance(candidate, str) or len(candidate) > 700:
+                    continue
+                case_refs = set(re.findall(r"\bCASE:case_summary#\d+\b", candidate))
+                peer_refs = set(re.findall(r"\bR2:[A-Z]{2}-[0-9]{2}\b", candidate))
+                round_refs = set(_ROUND_REFERENCE_PATTERN.findall(candidate))
+                if (
+                    case_refs == {source_id}
+                    and len(peer_refs) == 1
+                    and peer_refs.issubset(allowed_peer_source_ids)
+                    and peer_refs.issubset(set(reference_ids))
+                    and all(round_number == "2" and f"R2:{agent_id}" in peer_refs
+                            for round_number, agent_id in round_refs)
+                ):
+                    body = re.sub(r"^\[Sources:\s*[^\]]+\]\s*", "", candidate).strip()
+                    if body:
+                        candidate_bodies[body] = body
+            if len(candidate_bodies) == 1:
+                review["challenge"] = next(iter(candidate_bodies))
         if source_id not in reference_ids:
             review_reference_flags.append(
                 f"Review for {source_id or 'unknown source'} omits its attributed CASE source ID."

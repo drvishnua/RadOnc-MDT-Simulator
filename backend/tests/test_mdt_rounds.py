@@ -825,6 +825,78 @@ def test_r3_generation_copies_review_challenge_with_structured_source_prefix(mon
     assert result.source_peer_ids == ["MO-01"]
 
 
+def test_r3_generation_recovers_only_explicitly_source_linked_review_challenge(monkeypatch):
+    from app.round_schemas import AdversarialContributionDraft, SourceOpinionReview
+    from app.services import mdt_generation
+
+    async def fake_generate(prompt, schema_type, max_tokens):
+        return AdversarialContributionDraft(
+            position="insufficient_information",
+            provisional_conclusion="The available synthetic information remains insufficient for a definitive conclusion.",
+            response_to_other_perspectives="The review retains uncertainty and does not infer a treatment sequence.",
+            agreements=[],
+            substantive_challenges=[
+                "[Sources: CASE:case_summary#1; R2:MO-01] The surgical-assessment option is omitted because the supplied peer record does not preserve its stated prerequisite."
+            ],
+            remaining_unknowns=["Local staging and resectability remain unknown."],
+            risk_flags=[],
+            confidence=0.4,
+            source_opinion_reviews=[
+                SourceOpinionReview(
+                    source_id="CASE:case_summary#1",
+                    opinion_label="colorectal surgical note",
+                    option_status="omitted",
+                    conditions_status="omitted",
+                    review_basis="The supplied peer record does not preserve the attributed option or its prerequisite.",
+                    source_reference_ids=["CASE:case_summary#1", "R2:MO-01"],
+                    challenge="",
+                ),
+                SourceOpinionReview(
+                    source_id="CASE:case_summary#2",
+                    opinion_label="medical oncology note",
+                    option_status="unclear",
+                    conditions_status="unclear",
+                    review_basis="The supplied peer record does not permit a separate assessment.",
+                    source_reference_ids=["CASE:case_summary#2", "R2:MO-01"],
+                    challenge="",
+                ),
+            ],
+        )
+
+    monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate)
+    profile = {"agent_id": "RO-01", "name": "Radiation Oncology", "mandate": "Review the synthetic case."}
+    case = SyntheticCase(
+        scenario_title="Synthetic source-linked challenge recovery",
+        case_summary="Fictional case with two attributed conditional opinions and incomplete staging.",
+    )
+    own_r1 = {"position": "insufficient_information", "provisional_conclusion": "The case is incomplete.", "preferred_educational_option": "No option yet."}
+    own_r2 = {"position": "insufficient_information", "provisional_conclusion": "The debate remains unresolved.", "response_to_other_perspectives": "No common pathway is established."}
+    peers = [{
+        "agent_id": "MO-01",
+        "agent_name": "Medical Oncology",
+        "result": {
+            "position": "insufficient_information",
+            "provisional_conclusion": "The supplied peer record does not preserve the surgical prerequisite.",
+            "response_to_other_perspectives": "Local staging remains unknown.",
+            "agreements": [],
+            "substantive_challenges": [],
+            "risk_flags": [],
+            "position_changes": [],
+        },
+    }]
+
+    result = asyncio.run(
+        mdt_generation.generate_adversarial_contribution(profile, case, own_r1, own_r2, peers)
+    )
+    recovered = result.source_opinion_reviews[0]
+    assert recovered.challenge.startswith("The surgical-assessment option is omitted")
+    assert (
+        "[Sources: CASE:case_summary#1; R2:MO-01] " + recovered.challenge
+    ) in result.substantive_challenges
+    assert result.source_opinion_reviews[1].challenge == ""
+    assert not any("CASE:case_summary#1" in flag and "source-linked challenge" in flag for flag in result.source_reference_integrity_flags)
+
+
 def test_r3_generation_flags_missing_verbatim_peer_evidence_without_dropping_role(monkeypatch):
     from app.round_schemas import AdversarialContributionDraft, SourceOpinionReview
     from app.services import mdt_generation

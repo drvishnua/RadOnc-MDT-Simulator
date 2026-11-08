@@ -170,6 +170,12 @@ def test_undocumented_patient_preference_is_flagged_but_elicitation_is_not():
     assert not any("patient preference/decision" in item for item in audit_unverified_case_claims(
         case, {"unknowns": ["The patient's preferences should be elicited."]}
     ))
+    assert not any("patient preference/decision" in item for item in audit_unverified_case_claims(
+        case, {"unknowns": ["Obtain explicit patient consent regarding potential treatment sequences."]}
+    ))
+    assert not any("patient preference/decision" in item for item in audit_unverified_case_claims(
+        case, {"governance": ["Patient consent must be obtained before any real-world decision."]}
+    ))
 
 
 def test_clause_local_qualifier_does_not_hide_a_separate_unsupported_assertion():

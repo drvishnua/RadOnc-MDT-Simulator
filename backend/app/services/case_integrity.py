@@ -234,7 +234,10 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
 
     if not case.patient_goals:
         preference_pattern = re.compile(
-            r"\bpatient(?:'s)?\s+(?:prefers?|wishes?|wants?|chooses?|declines?|refuses?|agrees?|consents?|has chosen|does not want|doesn't want)\b[^.!?;\n]{0,100}",
+            # Match an actual patient-attributed choice/act. The noun phrase
+            # "obtain patient consent" is a recommendation to elicit consent,
+            # not evidence that the patient has already consented.
+            r"\bpatient(?:'s)?\s+(?:prefers?|wishes?|wants?|chooses?|declines?|refuses?|agrees?|consents\b|has chosen|has consented|does not want|doesn't want)\b[^.!?;\n]{0,100}",
             re.IGNORECASE,
         )
         matches = _unsupported_matches(preference_pattern, text, source_text)
