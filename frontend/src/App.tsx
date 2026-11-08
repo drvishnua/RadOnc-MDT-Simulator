@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { readDraft, writeDraft } from "./caseDraft.js";
 import { readSavedSingleAssessment, writeSavedSingleAssessment } from "./singleAssessmentStorage.js";
-import { hasValidatedCase, shouldShowBatchPanel } from "./runRecovery.js";
+import { shouldShowBatchPanel } from "./runRecovery.js";
 
 const CASE_DRAFT_KEY = "radonc-mdt-case-draft-v1";
 const LEGACY_CASE_KEY = "radonc-mdt-last-case";
@@ -87,6 +87,8 @@ type SavedSingleAssessment = {
   saved_at: string;
   case_snapshot: SyntheticCasePayload;
   assessment: AgentAssessmentResult;
+  patient_id?: string;
+  case_version_id?: string;
 };
 
 type BatchRunSummary = {
@@ -103,6 +105,49 @@ type BatchRunSummary = {
   created_at: string;
   updated_at: string;
   case_snapshot_sha256: string;
+  patient_id?: string | null;
+  case_version_id?: string | null;
+  case_version_number?: number | null;
+};
+
+type PatientRecordSummary = {
+  patient_id: string;
+  created_at: string;
+  updated_at: string;
+  version_count: number;
+  simulation_count: number;
+  latest_case_version_id: string | null;
+  latest_version_number: number | null;
+  scenario_title: string;
+};
+
+type PatientCaseVersion = {
+  case_version_id: string;
+  patient_id: string;
+  version_number: number;
+  case_snapshot_sha256: string;
+  created_at: string;
+  case: SyntheticCasePayload;
+};
+
+type PatientDetail = {
+  patient_id: string;
+  created_at: string;
+  updated_at: string;
+  versions: PatientCaseVersion[];
+  runs: BatchRunSummary[];
+};
+
+type ActiveSavedCase = PatientCaseVersion & { patient_id: string };
+
+type PatientAssessmentRecord = {
+  assessment_id: string;
+  patient_id: string;
+  case_version_id: string;
+  agent_id: string;
+  round_number: number;
+  created_at: string;
+  assessment: AgentAssessmentResult;
 };
 
 type BatchAgentResult = {
@@ -194,6 +239,30 @@ const emptyForm = {
   resource_context: "",
   known_unknowns: ""
 };
+
+function caseSnapshotToForm(snapshot: SyntheticCasePayload): typeof emptyForm {
+  return {
+    scenario_title: snapshot.scenario_title ?? emptyForm.scenario_title,
+    case_summary: snapshot.case_summary ?? "",
+    age_years: snapshot.age_years === null || snapshot.age_years === undefined ? "" : String(snapshot.age_years),
+    sex_at_birth: snapshot.sex_at_birth ?? "",
+    primary_site: snapshot.primary_site ?? "",
+    histology: snapshot.histology ?? "",
+    clinical_t_stage: snapshot.clinical_t_stage ?? "",
+    clinical_n_stage: snapshot.clinical_n_stage ?? "",
+    clinical_m_stage: snapshot.clinical_m_stage ?? "",
+    stage_group: snapshot.stage_group ?? "",
+    performance_status: snapshot.performance_status ?? "",
+    pathology_summary: snapshot.pathology_summary ?? "",
+    imaging_summary: snapshot.imaging_summary ?? "",
+    relevant_comorbidities: (snapshot.relevant_comorbidities ?? []).join("\\n"),
+    prior_treatment: (snapshot.prior_treatment ?? []).join("\\n"),
+    patient_goals: (snapshot.patient_goals ?? []).join("\\n"),
+    social_context: (snapshot.social_context ?? []).join("\\n"),
+    resource_context: (snapshot.resource_context ?? []).join("\\n"),
+    known_unknowns: (snapshot.known_unknowns ?? []).join("\\n")
+  };
+}
 
 function optionalText(value: string): string | null {
   const cleaned = value.trim();
@@ -354,6 +423,14 @@ function App() {
   const [runtime, setRuntime] = useState<Runtime | null>(null);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [connectionState, setConnectionState] = useState<"loading" | "connected" | "unavailable">("loading");
+  const [patientRecords, setPatientRecords] = useState<PatientRecordSummary[]>([]);
+  const [selectedPatientId, setSelectedPatientId] = useState("");
+  const [loadedPatient, setLoadedPatient] = useState<PatientDetail | null>(null);
+  const [selectedCaseVersionId, setSelectedCaseVersionId] = useState("");
+  const [activeSavedCase, setActiveSavedCase] = useState<ActiveSavedCase | null>(null);
+  const [selectedPatientRunId, setSelectedPatientRunId] = useState("");
+  const [patientBusy, setPatientBusy] = useState(false);
+  const [patientError, setPatientError] = useState("");
   const [form, setForm] = useState<typeof emptyForm>(() =>
     readDraft(safeCaseDraftStorage(), CASE_DRAFT_KEY, LEGACY_CASE_KEY, emptyForm, legacySavedCaseToDraft)
   );
@@ -366,7 +443,10 @@ function App() {
     readSavedSingleAssessment(safeCaseDraftStorage(), SINGLE_ASSESSMENT_KEY) as SavedSingleAssessment | null
   );
   const [assessmentPersistenceWarning, setAssessmentPersistenceWarning] = useState("");
-  const agentAssessment = savedSingleAssessment?.assessment ?? null;
+  const agentAssessment = savedSingleAssessment && activeSavedCase &&
+    JSON.stringify(savedSingleAssessment.case_snapshot) === JSON.stringify(activeSavedCase.case)
+      ? savedSingleAssessment.assessment
+      : null;
   const [assessmentError, setAssessmentError] = useState("");
   const [assessing, setAssessing] = useState(false);
   const [batchRun, setBatchRun] = useState<BatchRunSummary | null>(() => readSavedBatch());
@@ -407,8 +487,137 @@ function App() {
     }
   }
 
+
+
+  async function refreshPatients() {
+    try {
+      const response = await fetch(API_BASE + "/api/patients");
+      if (!response.ok) throw new Error("Unable to load the synthetic patient library.");
+      const body = await response.json() as { patients: PatientRecordSummary[] };
+      setPatientRecords(body.patients);
+    } catch (error) {
+      setPatientError(error instanceof Error ? error.message : "Unable to load saved synthetic patients.");
+    }
+  }
+
+  async function loadPatientVersion(detail: PatientDetail, versionId: string) {
+    const version = detail.versions.find((item) => item.case_version_id === versionId);
+    if (!version) throw new Error("The selected saved case version was not found for this patient.");
+    setLoadedPatient(detail);
+    setSelectedPatientId(detail.patient_id);
+    setSelectedCaseVersionId(version.case_version_id);
+    setActiveSavedCase({ ...version, patient_id: detail.patient_id });
+    setForm(caseSnapshotToForm(version.case));
+    setValidation(null);
+    setValidatedCase(null);
+    setValidationError("");
+    setAssessmentError("");
+    setAssessmentPersistenceWarning("");
+
+    const assessmentResponse = await fetch(
+      API_BASE + "/api/patients/" + detail.patient_id + "/versions/" + version.case_version_id + "/assessments"
+    );
+    if (!assessmentResponse.ok) throw new Error("The saved RO-01 assessment history could not be loaded.");
+    const assessmentBody = await assessmentResponse.json() as { assessments: PatientAssessmentRecord[] };
+    const latestRo01 = assessmentBody.assessments.find((item) => item.agent_id === "RO-01");
+    setSavedSingleAssessment(latestRo01 ? {
+      version: 1,
+      saved_at: latestRo01.created_at,
+      case_snapshot: version.case,
+      assessment: latestRo01.assessment,
+      patient_id: detail.patient_id,
+      case_version_id: version.case_version_id
+    } : null);
+
+    const matchingRuns = detail.runs.filter((run) => run.case_version_id === version.case_version_id);
+    const latestRun = matchingRuns[0];
+    setSelectedPatientRunId(latestRun?.run_id ?? "");
+    if (latestRun) {
+      await refreshBatchRun(latestRun.run_id);
+    } else {
+      setBatchRun(null);
+      setBatchResults([]);
+      setRoundSummaries({});
+      setRoundResults({});
+      setFinalReport(null);
+      setBatchError("");
+      setRoundError("");
+    }
+  }
+
+  async function loadSelectedPatient() {
+    if (!selectedPatientId) return;
+    setPatientBusy(true);
+    setPatientError("");
+    try {
+      const response = await fetch(API_BASE + "/api/patients/" + selectedPatientId);
+      const body = await response.json() as PatientDetail & { detail?: string };
+      if (!response.ok) throw new Error(body.detail ?? "Unable to load the selected synthetic patient.");
+      const latest = body.versions[0];
+      if (!latest) throw new Error("This patient has no saved case versions.");
+      await loadPatientVersion(body, latest.case_version_id);
+    } catch (error) {
+      setPatientError(error instanceof Error ? error.message : "Unable to load the selected patient.");
+    } finally {
+      setPatientBusy(false);
+    }
+  }
+
+  async function loadSelectedCaseVersion() {
+    if (!loadedPatient || !selectedCaseVersionId) return;
+    setPatientBusy(true);
+    setPatientError("");
+    try {
+      await loadPatientVersion(loadedPatient, selectedCaseVersionId);
+    } catch (error) {
+      setPatientError(error instanceof Error ? error.message : "Unable to load the selected case version.");
+    } finally {
+      setPatientBusy(false);
+    }
+  }
+
+  async function savePatientCase(createNewPatient: boolean) {
+    if (!validation?.valid || !validatedCase || (!createNewPatient && !loadedPatient)) return;
+    setPatientBusy(true);
+    setPatientError("");
+    try {
+      const url = createNewPatient
+        ? API_BASE + "/api/patients"
+        : API_BASE + "/api/patients/" + loadedPatient!.patient_id + "/versions";
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(validatedCase)
+      });
+      const body = await response.json() as PatientDetail & { detail?: string };
+      if (!response.ok) throw new Error(body.detail ?? "The synthetic case could not be saved.");
+      const latest = body.versions[0];
+      if (!latest) throw new Error("The saved patient record did not return a case version.");
+      await refreshPatients();
+      await loadPatientVersion(body, latest.case_version_id);
+    } catch (error) {
+      setPatientError(error instanceof Error ? error.message : "Unable to save the synthetic patient case.");
+    } finally {
+      setPatientBusy(false);
+    }
+  }
+
+  async function loadSelectedPatientRun() {
+    if (!selectedPatientRunId) return;
+    setPatientBusy(true);
+    setPatientError("");
+    try {
+      await refreshBatchRun(selectedPatientRunId);
+    } catch (error) {
+      setPatientError(error instanceof Error ? error.message : "Unable to load the selected simulation.");
+    } finally {
+      setPatientBusy(false);
+    }
+  }
+
   useEffect(() => {
     void refreshStatus();
+    void refreshPatients();
   }, []);
 
   const categories = useMemo(
@@ -475,27 +684,29 @@ function App() {
   }
 
   async function runAgentAssessment() {
-    if (!validatedCase) return;
+    if (!activeSavedCase) return;
     setAssessing(true);
     setAssessmentError("");
     setAssessmentPersistenceWarning("");
     try {
-      const response = await fetch(API_BASE + "/api/agents/RO-01/assess", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ case: validatedCase, round_number: 1 })
-      });
+      const response = await fetch(
+        API_BASE + "/api/patients/" + activeSavedCase.patient_id + "/versions/" + activeSavedCase.case_version_id + "/assess/RO-01",
+        { method: "POST" }
+      );
       const body = await response.json();
       if (!response.ok) {
         throw new Error(typeof body.detail === "string" ? body.detail : "The local model could not produce a valid assessment.");
       }
-      const assessment = body as AgentAssessmentResult;
-      const savedAt = new Date().toISOString();
+      const savedResponse = body as { assessment: AgentAssessmentResult; created_at: string };
+      const assessment = savedResponse.assessment;
+      const savedAt = savedResponse.created_at;
       const savedRecord: SavedSingleAssessment = {
         version: 1,
         saved_at: savedAt,
-        case_snapshot: validatedCase,
-        assessment
+        case_snapshot: activeSavedCase.case,
+        assessment,
+        patient_id: activeSavedCase.patient_id,
+        case_version_id: activeSavedCase.case_version_id
       };
       setSavedSingleAssessment(savedRecord);
       const persisted = writeSavedSingleAssessment(
@@ -506,7 +717,7 @@ function App() {
         savedAt
       );
       setAssessmentPersistenceWarning(
-        persisted ? "" : "Browser storage is unavailable or full. This result will remain visible only until this page is closed."
+        persisted ? "" : "The assessment is saved in the backend patient record; the optional browser cache was unavailable."
       );
     } catch (error) {
       setAssessmentError(error instanceof Error ? error.message : "Unable to complete the local assessment.");
@@ -645,14 +856,14 @@ function App() {
   }, [batchRun?.run_id, batchRun?.status]);
 
   async function startAllAgents() {
-    if (!validatedCase) return;
+    if (!activeSavedCase) return;
     setBatchStarting(true);
     setBatchError("");
     try {
-      const response = await fetch(API_BASE + "/api/runs", {
+      const response = await fetch(API_BASE + "/api/patients/" + activeSavedCase.patient_id + "/runs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ case: validatedCase })
+        body: JSON.stringify({ case_version_id: activeSavedCase.case_version_id })
       });
       const body = await response.json();
       if (!response.ok) {
@@ -665,6 +876,10 @@ function App() {
       setRoundResults({});
       setFinalReport(null);
       setRoundError("");
+      setSelectedPatientRunId(createdRun.run_id);
+      const patientResponse = await fetch(API_BASE + "/api/patients/" + activeSavedCase.patient_id);
+      if (patientResponse.ok) setLoadedPatient(await patientResponse.json() as PatientDetail);
+      await refreshPatients();
       await refreshBatchRun(createdRun.run_id);
     } catch (error) {
       setBatchError(error instanceof Error ? error.message : "Unable to start the 45-agent run.");
@@ -733,6 +948,8 @@ function App() {
     setForm((current) => ({ ...current, [field]: value }));
     setValidation(null);
     setValidatedCase(null);
+    setActiveSavedCase(null);
+    setSelectedCaseVersionId("");
     setAssessmentError("");
   }
 
@@ -820,6 +1037,70 @@ function App() {
             <p className="panel-intro">
               Enter fictional training details. Validation checks the data structure only; it does not assess diagnosis or treatment.
             </p>
+
+            <div className="result-card patient-library" aria-label="Synthetic patient library">
+              <strong>Saved synthetic patient library</strong>
+              <p>Save or load a synthetic patient before starting an assessment or MDT simulation. Patient IDs are generated automatically; do not enter real patient identifiers.</p>
+              <div className="field-row">
+                <label>
+                  Saved synthetic patient
+                  <select value={selectedPatientId} onChange={(event) => setSelectedPatientId(event.target.value)}>
+                    <option value="">Select a saved synthetic patient</option>
+                    {patientRecords.map((patient) => (
+                      <option key={patient.patient_id} value={patient.patient_id}>
+                        {patient.patient_id} · {patient.scenario_title} · v{patient.latest_version_number ?? "—"}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button className="button button-secondary" type="button" onClick={() => void loadSelectedPatient()} disabled={!selectedPatientId || patientBusy}>
+                  {patientBusy ? "Loading…" : "Load patient"}
+                </button>
+              </div>
+              {loadedPatient && (
+                <>
+                  <p className="result-footnote">Loaded patient: {loadedPatient.patient_id} · {loadedPatient.versions.length} immutable case version(s) · {loadedPatient.runs.length} linked simulation(s).</p>
+                  <div className="field-row">
+                    <label>
+                      Saved case version
+                      <select value={selectedCaseVersionId} onChange={(event) => setSelectedCaseVersionId(event.target.value)}>
+                        {loadedPatient.versions.map((version) => (
+                          <option key={version.case_version_id} value={version.case_version_id}>
+                            Version {version.version_number} · {version.case.scenario_title}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <button className="button button-secondary" type="button" onClick={() => void loadSelectedCaseVersion()} disabled={!selectedCaseVersionId || patientBusy}>
+                      Load version
+                    </button>
+                  </div>
+                  {loadedPatient.runs.length > 0 && (
+                    <div className="field-row">
+                      <label>
+                        Simulation history
+                        <select value={selectedPatientRunId} onChange={(event) => setSelectedPatientRunId(event.target.value)}>
+                          <option value="">Select a linked simulation</option>
+                          {loadedPatient.runs.map((run) => (
+                            <option key={run.run_id} value={run.run_id}>
+                              {run.run_id.slice(0, 8)} · Version {run.case_version_number ?? "legacy"} · {run.status}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <button className="button button-secondary" type="button" onClick={() => void loadSelectedPatientRun()} disabled={!selectedPatientRunId || patientBusy}>
+                        Open results
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+              {activeSavedCase && (
+                <p className="result-footnote">Active simulation snapshot: {activeSavedCase.patient_id} · Version {activeSavedCase.version_number} · SHA-256 {activeSavedCase.case_snapshot_sha256}. Editing this form detaches it from this saved version until you save a new version.</p>
+              )}
+              {patientError && <p className="error-text" role="alert">{patientError}</p>}
+              {patientRecords.length === 0 && <p className="result-footnote">No synthetic patients saved yet. Validate a case below, then save it as a new synthetic patient.</p>}
+            </div>
 
             <form onSubmit={validateSyntheticCase} className="case-form">
               <label>
@@ -955,6 +1236,23 @@ function App() {
               </div>
             </form>
 
+            {validation && validatedCase && (
+              <div className="patient-save-actions result-card">
+                <strong>Save this validated case</strong>
+                <p>Simulation is enabled only for a saved case version. Saving an edit creates a new version; prior versions and results are not overwritten.</p>
+                <div className="batch-actions">
+                  <button className="button button-primary" type="button" onClick={() => void savePatientCase(true)} disabled={patientBusy}>
+                    Save as new synthetic patient
+                  </button>
+                  {loadedPatient && (
+                    <button className="button button-secondary" type="button" onClick={() => void savePatientCase(false)} disabled={patientBusy || selectedPatientId !== loadedPatient.patient_id || activeSavedCase !== null}>
+                      Save new version of {loadedPatient.patient_id}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
             {validation && (
               <div className="result-card result-success" role="status">
                 <strong>Case structure valid</strong>
@@ -965,11 +1263,11 @@ function App() {
                 <p className="result-footnote">Case structure is validated. Once all 45 independent assessments finish, the debate, adversarial review and Chair synthesis stages become available below.</p>
               </div>
             )}
-            {validation && validatedCase && (
+            {activeSavedCase && (
               <div className="assessment-launch">
                 <div>
                   <strong>Try one local agent</strong>
-                  <p>Run the guideline-focused Radiation Oncology perspective (RO-01) on this synthetic case using Ollama on this laptop.</p>
+                  <p>Run the guideline-focused Radiation Oncology perspective (RO-01) on {activeSavedCase.patient_id}, case version {activeSavedCase.version_number}. The result is saved in the patient record.</p>
                 </div>
                 <button
                   className="button button-secondary"
@@ -1008,21 +1306,7 @@ function App() {
                     {assessmentPersistenceWarning && (
                       <p className="error-text" role="status">{assessmentPersistenceWarning}</p>
                     )}
-                    <button
-                      className="button button-quiet"
-                      type="button"
-                      onClick={() => {
-                        try {
-                          safeCaseDraftStorage().removeItem(SINGLE_ASSESSMENT_KEY);
-                        } catch {
-                          // The in-memory result can still be cleared if storage is unavailable.
-                        }
-                        setSavedSingleAssessment(null);
-                        setAssessmentPersistenceWarning("");
-                      }}
-                    >
-                      Clear saved RO-01 result
-                    </button>
+                    <p className="result-footnote">Backend record: {savedSingleAssessment.patient_id ?? "legacy local cache"} · case version {savedSingleAssessment.case_version_id ?? "not linked"}.</p>
                   </>
                 )}
                 <div className="assessment-conclusion">
@@ -1057,7 +1341,7 @@ function App() {
                 </p>
               </div>
             )}
-            {shouldShowBatchPanel(batchRun, validation, validatedCase) && (
+            {(shouldShowBatchPanel(batchRun, validation, validatedCase) || activeSavedCase !== null) && (
               <section className="batch-run-panel">
                 <div className="batch-heading">
                   <div>
@@ -1073,11 +1357,11 @@ function App() {
                   <div className="result-card" role="note">
                     <strong>Saved MDT run · {batchRun.status.replaceAll("_", " ")}</strong>
                     <p>Displayed contributions belong to the immutable case snapshot saved with this run. Editing the current draft does not change the saved run.</p>
-                    <p className="result-footnote">Run ID: {batchRun.run_id} · Case snapshot SHA-256: {batchRun.case_snapshot_sha256}</p>
+                    <p className="result-footnote">Run ID: {batchRun.run_id} · Patient: {batchRun.patient_id ?? "legacy unlinked run"} · Case version: {batchRun.case_version_number ?? "not linked"} · SHA-256: {batchRun.case_snapshot_sha256}</p>
                   </div>
                 )}
                 <div className="batch-actions">
-                  {hasValidatedCase(validation, validatedCase) && (
+                  {activeSavedCase && (
                     <button
                       className="button button-primary"
                       type="button"
@@ -1088,8 +1372,8 @@ function App() {
                       <span aria-hidden="true">→</span>
                     </button>
                   )}
-                  {batchRun && !hasValidatedCase(validation, validatedCase) && (
-                    <p className="batch-estimate-note">Validate the current case draft before starting a new 45-agent run. The saved run remains available below.</p>
+                  {!activeSavedCase && !batchRun && (
+                    <p className="batch-estimate-note">Save a validated case as a synthetic patient, or load an existing patient and case version, before starting a new 45-agent run.</p>
                   )}
                   {batchRun && batchResults.length > 0 && (
                     <button className="button button-quiet" type="button" onClick={downloadBatchResults}>
