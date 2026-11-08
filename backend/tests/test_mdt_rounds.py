@@ -717,27 +717,30 @@ def test_chair_report_surfaces_round_source_reference_integrity_flags():
     )
 
 
-def test_source_opinion_review_requires_structured_case_and_peer_references():
-    import pytest
-    from pydantic import ValidationError
+def test_source_opinion_review_keeps_semantically_incomplete_content_available_for_audit():
     from app.round_schemas import SourceOpinionReview
 
-    base = {
-        "source_id": "CASE:case_summary#1",
-        "opinion_label": "colorectal surgical note",
-        "option_status": "omitted",
-        "conditions_status": "omitted",
-        "review_basis": "The supplied peer material does not preserve the option or its conditions.",
-        "source_reference_ids": ["CASE:case_summary#1", "R2:RO-02"],
-        "challenge": "The option and conditions are not represented in the supplied debate record.",
-    }
-    assert SourceOpinionReview(**base).source_reference_ids == [
-        "CASE:case_summary#1", "R2:RO-02"
-    ]
-    with pytest.raises(ValidationError):
-        SourceOpinionReview(**{**base, "source_reference_ids": ["R2:RO-02"]})
-    with pytest.raises(ValidationError):
-        SourceOpinionReview(**{**base, "challenge": ""})
+    incomplete = SourceOpinionReview(
+        source_id="CASE:case_summary#1",
+        opinion_label="colorectal surgical note",
+        option_status="omitted",
+        conditions_status="partly_preserved",
+        review_basis="The source text is not adequately represented in the peer digest.",
+        source_reference_ids=["R2:RO-02"],
+        challenge="",
+    )
+    assert incomplete.source_reference_ids == ["R2:RO-02"]
+    assert incomplete.challenge == ""
+
+    unsupported_preservation = SourceOpinionReview(
+        source_id="CASE:case_summary#2",
+        opinion_label="medical oncology note",
+        option_status="preserved",
+        conditions_status="preserved",
+        review_basis="The output claims preservation but provides no checkable evidence.",
+    )
+    assert unsupported_preservation.evidence_peer_id == ""
+    assert unsupported_preservation.evidence_excerpt == ""
 
 
 def test_r3_generation_copies_review_challenge_with_structured_source_prefix(monkeypatch):
@@ -765,7 +768,7 @@ def test_r3_generation_copies_review_challenge_with_structured_source_prefix(mon
                     review_basis="The supplied debate digest retains one staging prerequisite but not the full option.",
                     source_reference_ids=["CASE:case_summary#1", "R2:MO-01"],
                     evidence_peer_id="R2:MO-01",
-                    evidence_excerpt="The sample does not settle the outstanding option.",
+                    evidence_excerpt="Local staging remains a prerequisite for surgical assessment.",
                     challenge="The surgical-assessment option and its conditions are not retained in the supplied peer record.",
                 ),
                 SourceOpinionReview(
@@ -802,7 +805,7 @@ def test_r3_generation_copies_review_challenge_with_structured_source_prefix(mon
         "result": {
             "position": "conditional",
             "provisional_conclusion": "The supplied peer record remains provisional and conditional.",
-            "response_to_other_perspectives": "The sample does not settle the outstanding option.",
+            "response_to_other_perspectives": "Local staging remains a prerequisite for surgical assessment.",
             "agreements": [],
             "substantive_challenges": [],
             "risk_flags": [],
@@ -822,23 +825,72 @@ def test_r3_generation_copies_review_challenge_with_structured_source_prefix(mon
     assert result.source_peer_ids == ["MO-01"]
 
 
-def test_source_opinion_review_requires_verbatim_peer_excerpt_when_claiming_preservation():
-    import pytest
-    from pydantic import ValidationError
-    from app.round_schemas import SourceOpinionReview
+def test_r3_generation_flags_missing_verbatim_peer_evidence_without_dropping_role(monkeypatch):
+    from app.round_schemas import AdversarialContributionDraft, SourceOpinionReview
+    from app.services import mdt_generation
 
-    base = {
-        "source_id": "CASE:case_summary#1",
-        "opinion_label": "colorectal surgical note",
-        "option_status": "preserved",
-        "conditions_status": "unclear",
-        "review_basis": "The supplied peer digest explicitly retains the surgical assessment option.",
-        "source_reference_ids": ["CASE:case_summary#1", "R2:RO-02"],
-        "evidence_peer_id": "R2:RO-02",
-        "evidence_excerpt": "surgical assessment first",
-    }
-    assert SourceOpinionReview(**base).evidence_excerpt == "surgical assessment first"
-    with pytest.raises(ValidationError):
-        SourceOpinionReview(**{**base, "evidence_excerpt": ""})
-    with pytest.raises(ValidationError):
-        SourceOpinionReview(**{**base, "evidence_peer_id": "R2:RO-03"})
+    async def fake_generate(prompt, schema_type, max_tokens):
+        return AdversarialContributionDraft(
+            position="conditional",
+            provisional_conclusion="The educational position remains conditional because the source material is incomplete.",
+            response_to_other_perspectives="The supplied peer views are not sufficient to establish preservation of either attributed option.",
+            agreements=[],
+            substantive_challenges=[],
+            remaining_unknowns=["The source-linked treatment prerequisites remain unresolved."],
+            risk_flags=[],
+            confidence=0.4,
+            source_opinion_reviews=[
+                SourceOpinionReview(
+                    source_id="CASE:case_summary#1",
+                    opinion_label="colorectal surgical note",
+                    option_status="omitted",
+                    conditions_status="partly_preserved",
+                    review_basis="The option is not preserved in the selected peer digest.",
+                    source_reference_ids=["R2:MO-01"],
+                    challenge="",
+                ),
+                SourceOpinionReview(
+                    source_id="CASE:case_summary#2",
+                    opinion_label="medical oncology note",
+                    option_status="preserved",
+                    conditions_status="unclear",
+                    review_basis="The output claims preservation but quotes no supplied evidence.",
+                    source_reference_ids=["CASE:case_summary#2", "R2:MO-01"],
+                    evidence_peer_id="R2:MO-01",
+                    evidence_excerpt="This invented excerpt does not appear in the peer digest.",
+                    challenge="",
+                ),
+            ],
+        )
+
+    monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate)
+    profile = {"agent_id": "RO-01", "name": "Radiation Oncology", "mandate": "Review the synthetic case."}
+    case = SyntheticCase(
+        scenario_title="Synthetic incomplete R3 review test",
+        case_summary="Fictional case with two source opinions and incomplete staging.",
+    )
+    own_r1 = {"position": "conditional", "provisional_conclusion": "The independent position remains conditional pending case information."}
+    own_r2 = {"position": "conditional", "provisional_conclusion": "The debate position remains conditional pending case information."}
+    peers = [{
+        "agent_id": "MO-01",
+        "agent_name": "Medical Oncology",
+        "result": {
+            "position": "conditional",
+            "provisional_conclusion": "The selected peer has a conditional view.",
+            "response_to_other_perspectives": "No exact quotation supporting the claimed preservation is present.",
+            "agreements": [],
+            "substantive_challenges": [],
+            "risk_flags": [],
+            "position_changes": [],
+        },
+    }]
+
+    result = asyncio.run(
+        mdt_generation.generate_adversarial_contribution(profile, case, own_r1, own_r2, peers)
+    )
+    assert result.agent_id == "RO-01"
+    assert result.source_reference_integrity_flags
+    flags = " ".join(result.source_reference_integrity_flags)
+    assert "omits its attributed CASE source ID" in flags
+    assert "omitted or partly preserved but provides no source-linked challenge" in flags
+    assert "no exact supporting excerpt" in flags

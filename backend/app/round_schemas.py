@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field
 
 from app.schemas import StrictModel
 
@@ -25,40 +25,18 @@ class RoundContributionDraft(StrictModel):
 
 
 class SourceOpinionReview(StrictModel):
+    # Keep model-authored content parseable even when its provenance is incomplete.
+    # Semantic requirements are checked deterministically after parsing and persisted
+    # as source_reference_integrity_flags; a weak review must not erase the whole role.
     source_id: str = Field(min_length=8, max_length=100)
-    opinion_label: str = Field(min_length=4, max_length=120)
+    opinion_label: str = Field(default="", max_length=120)
     option_status: Literal["preserved", "partly_preserved", "omitted", "unclear"]
     conditions_status: Literal["preserved", "partly_preserved", "omitted", "unclear"]
-    review_basis: str = Field(min_length=20, max_length=600)
-    source_reference_ids: list[str] = Field(min_length=2, max_length=8)
-    evidence_peer_id: str = Field(default="", pattern=r"^(?:R2:[A-Z]{2}-[0-9]{2})?$")
+    review_basis: str = Field(default="", max_length=600)
+    source_reference_ids: list[str] = Field(default_factory=list, max_length=8)
+    evidence_peer_id: str = Field(default="", max_length=100)
     evidence_excerpt: str = Field(default="", max_length=180)
     challenge: str = Field(default="", max_length=700)
-
-    @model_validator(mode="after")
-    def require_attributed_case_and_peer_sources(self) -> "SourceOpinionReview":
-        if self.source_id not in self.source_reference_ids:
-            raise ValueError("source_reference_ids must include this review's attributed case source.")
-        if not any(source_id.startswith("R2:") for source_id in self.source_reference_ids):
-            raise ValueError("source_reference_ids must include an R2 peer source.")
-        preservation_claimed = (
-            self.option_status in {"preserved", "partly_preserved"}
-            or self.conditions_status in {"preserved", "partly_preserved"}
-        )
-        if preservation_claimed and (
-            not self.evidence_peer_id or len(self.evidence_excerpt.strip()) < 12
-        ):
-            raise ValueError(
-                "A preserved or partly preserved element requires an exact R2 peer ID and verbatim supporting excerpt."
-            )
-        if self.evidence_peer_id and self.evidence_peer_id not in self.source_reference_ids:
-            raise ValueError("evidence_peer_id must also appear in source_reference_ids.")
-        if (
-            self.option_status in {"partly_preserved", "omitted"}
-            or self.conditions_status in {"partly_preserved", "omitted"}
-        ) and not self.challenge.strip():
-            raise ValueError("An omitted or partly preserved opinion requires a substantive challenge.")
-        return self
 
 
 class AdversarialContributionDraft(RoundContributionDraft):

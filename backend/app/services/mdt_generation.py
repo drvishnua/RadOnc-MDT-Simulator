@@ -668,6 +668,12 @@ async def generate_adversarial_contribution(
             review.get("option_status"),
             review.get("conditions_status"),
         }
+        challenge = str(review.get("challenge") or "").strip()
+        if statuses.intersection({"partly_preserved", "omitted"}) and not challenge:
+            review_reference_flags.append(
+                f"Review for {source_id or 'unknown source'} marks an option/condition omitted "
+                "or partly preserved but provides no source-linked challenge."
+            )
         if statuses.intersection({"preserved", "partly_preserved"}):
             evidence_peer_id = str(review.get("evidence_peer_id") or "")
             evidence_excerpt = str(review.get("evidence_excerpt") or "").strip()
@@ -691,8 +697,7 @@ async def generate_adversarial_contribution(
                     f"Review for {source_id or 'unknown source'} has no exact supporting excerpt "
                     "from the cited R2 peer material actually supplied to this role."
                 )
-        challenge = review.get("challenge") or ""
-        if isinstance(challenge, str) and challenge.strip():
+        if challenge:
             source_prefix = "[Sources: " + "; ".join(reference_ids) + "] "
             canonical_challenge = source_prefix + challenge
             if canonical_challenge not in challenges:
