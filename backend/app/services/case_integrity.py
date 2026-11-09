@@ -70,7 +70,7 @@ def build_source_case_facts(case: SyntheticCase) -> list[str]:
 def build_case_report_title(case: SyntheticCase) -> str:
     """Build a neutral title from verified fields only; never let the model add stage."""
     parts = [value.strip() for value in (case.primary_site, case.histology) if isinstance(value, str) and value.strip()]
-    description = " — ".join(parts) if parts else "Synthetic case; primary site/histology not supplied"
+    description = " — ".join(parts) if parts else "Case details not supplied"
     return ("MDT Chair Synthesis: " + description)[:180]
 
 
