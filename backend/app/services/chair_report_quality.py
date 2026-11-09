@@ -358,6 +358,33 @@ def ensure_chair_report_completeness(
         integrity_flags=quarantine_flags,
     )
 
+    # Reconstruct source-linked challenge entries from the actual saved R2/R3 rows.
+    # This makes the final boundary independently reconcile challenges rather than
+    # trusting an earlier Chair draft/reconciliation string.
+    saved_challenge_items: list[str] = []
+    for round_number, rows in ((2, round2_rows), (3, round3_rows)):
+        for row, item in _entries(rows, "result"):
+            role_id = str(row.get("agent_id") or "unknown-role")
+            role_name = str(row.get("agent_name") or "Role")
+            safe_challenges = _safe_role_text_items(
+                case,
+                item,
+                "substantive_challenges",
+                quarantine_flags,
+                f"R{round_number} {role_id} substantive challenge",
+            )
+            for challenge in safe_challenges:
+                cleaned = " ".join(challenge.split())
+                if len(cleaned) > 260:
+                    cleaned = cleaned[:259].rstrip() + "…"
+                saved_challenge_items.append(
+                    f"Round {round_number} recorded challenge — {role_id} ({role_name}): {cleaned}"
+                )
+    data["unresolved_disagreements"] = _unique(
+        [*(data.get("unresolved_disagreements") or []), *saved_challenge_items],
+        SECTION_LIMITS["unresolved_disagreements"],
+    )
+
     if not data["unresolved_disagreements"]:
         if len(final_counts) > 1:
             distribution = ", ".join(
