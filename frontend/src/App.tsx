@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { readDraft, writeDraft, listToMultilineText, multilineTextToList } from "./caseDraft.js";
 import { readSavedSingleAssessment, writeSavedSingleAssessment } from "./singleAssessmentStorage.js";
-import { shouldShowBatchPanel } from "./runRecovery.js";
+import { hasCompletedIndependentAssessments, shouldShowBatchPanel } from "./runRecovery.js";
 import { patientVersionDisplayName } from "./patientVersionName.js";
 import { formatElapsedDuration } from "./roundTiming.js";
 
@@ -813,9 +813,15 @@ function App() {
       const body = (await resultResponse.json()) as { results: RoundAgentResult[] };
       setRoundSummaries((current) => ({ ...current, [roundNumber]: summary }));
       setRoundResults((current) => ({ ...current, [roundNumber]: body.results }));
-      if (roundNumber === 4 && summary.status === "completed") {
-        const reportResponse = await fetch(API_BASE + "/api/runs/" + runId + "/report");
-        if (reportResponse.ok) setFinalReport((await reportResponse.json()) as FinalMDTReport);
+      if (roundNumber === 4 && ["completed", "completed_with_errors"].includes(summary.status)) {
+        // R1 marks the parent run complete before the remaining MDT rounds finish.
+        // Refresh the parent only at the terminal Chair stage to capture mdt_finished_at
+        // and the correct overall status without losing the R2–R4 retry panel.
+        await refreshBatchRun(runId);
+        if (summary.status === "completed") {
+          const reportResponse = await fetch(API_BASE + "/api/runs/" + runId + "/report");
+          if (reportResponse.ok) setFinalReport((await reportResponse.json()) as FinalMDTReport);
+        }
       }
     } catch (error) {
       setRoundError(error instanceof Error ? error.message : "Unable to refresh MDT round.");
@@ -846,11 +852,10 @@ function App() {
   }
 
   useEffect(() => {
-    if (batchRun?.status === "completed") {
-      void refreshMdtRound(2, batchRun.run_id);
-      void refreshMdtRound(3, batchRun.run_id);
-      void refreshMdtRound(4, batchRun.run_id);
-    }
+    if (!hasCompletedIndependentAssessments(batchRun)) return;
+    void refreshMdtRound(2, batchRun.run_id);
+    void refreshMdtRound(3, batchRun.run_id);
+    void refreshMdtRound(4, batchRun.run_id);
   }, [batchRun?.run_id, batchRun?.status]);
 
   useEffect(() => {
@@ -1578,7 +1583,7 @@ function App() {
                 <p className="result-footnote">All outputs are simulated educational perspectives, not clinician opinions or treatment instructions. No evidence retrieval is connected yet.</p>
               </section>
             )}
-            {batchRun?.status === "completed" && (
+            {hasCompletedIndependentAssessments(batchRun) && (
               <section className="mdt-rounds-panel">
                 <div className="batch-heading">
                   <div>
@@ -1597,7 +1602,7 @@ function App() {
                   const summary = roundSummaries[roundNumber];
                   const roundElapsed = formatElapsedDuration(summary?.started_at, summary?.finished_at);
                   const isPreviousComplete = roundNumber === 2
-                    ? batchRun.status === "completed" && batchRun.completed_count === 45 && batchRun.failed_count === 0
+                    ? hasCompletedIndependentAssessments(batchRun)
                     : roundSummaries[roundNumber - 1]?.status === "completed";
                   const isRetryable = summary?.status === "completed_with_errors";
                   const title = roundNumber === 2 ? "MDT debate" : roundNumber === 3 ? "Adversarial review" : "MDT Chair synthesis";
