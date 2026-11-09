@@ -1157,3 +1157,31 @@ def test_completion_timestamp_columns_migrate_existing_sqlite_database(monkeypat
 
     assert "mdt_finished_at" in run_columns
     assert {"started_at", "finished_at"}.issubset(round_columns)
+
+
+
+def test_chair_report_uses_neutral_case_wording_and_retains_education_boundary():
+    case = SyntheticCase(
+        scenario_title="Neutral wording regression test",
+        case_summary="Fictional training case used to test report wording only.",
+    )
+    rows1 = _chair_rows("assessment", ["insufficient_information"] * 45)
+    rows2 = _chair_rows("result", ["insufficient_information"] * 45)
+    rows3 = _chair_rows("result", ["insufficient_information"] * 45)
+    report = reconcile_chair_report_draft(
+        "neutral-wording-regression", case, rows1, rows2, rows3, _chair_draft()
+    )
+
+    user_visible = [
+        report.report_title,
+        report.chair_conclusion,
+        report.overall_educational_synthesis,
+        report.chair_reflection,
+        *report.governance_and_safeguarding_considerations,
+        *report.evidence_limitations,
+    ]
+    assert all("synthetic" not in item.casefold() for item in user_visible)
+    assert "supplied case" in report.chair_conclusion.casefold()
+    assert any("educational simulation only" in item.casefold()
+               for item in report.governance_and_safeguarding_considerations)
+    assert report.not_a_treatment_instruction is True
