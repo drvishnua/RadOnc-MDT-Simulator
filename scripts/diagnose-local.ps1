@@ -25,6 +25,7 @@ foreach ($relative in @(
     "frontend\index.html",
     "frontend\src\main.tsx",
     "frontend\src\App.tsx",
+    "frontend\src\roundTiming.js",
     "frontend\src\styles.css",
     "frontend\node_modules\vite\bin\vite.js",
     "backend\app\main.py"
@@ -52,8 +53,16 @@ function Test-Endpoint([string]$Name,[string]$Uri) {
         Write-Host ("ENDPOINT {0} STATUS={1} TYPE={2} LENGTH={3}" -f $Name,[int]$response.StatusCode,$response.Headers["Content-Type"],$body.Length)
         if ($Name -eq "VITE_ROOT") {
             Write-Host ("VITE_ROOT_HTML=" + $body.Substring(0,[Math]::Min(900,$body.Length)))
-        } elseif ($Name -eq "VITE_ENTRY" -or $Name -eq "VITE_APP_MODULE") {
+        } elseif ($Name -eq "VITE_ENTRY" -or $Name -eq "VITE_APP_MODULE" -or $Name -eq "VITE_TIMING_MODULE") {
             Write-Host ("{0}_HEAD={1}" -f $Name,$body.Substring(0,[Math]::Min(1800,$body.Length)))
+            if ($Name -eq "VITE_APP_MODULE" -and $body -match "Failed to resolve import|Internal server error") {
+                Write-Host "VITE_APP_MODULE_TRANSFORM_ERROR=True"
+                return $false
+            }
+            if ($Name -eq "VITE_TIMING_MODULE" -and ($body -notmatch "formatElapsedDuration" -or $body -match "Failed to resolve import|Internal server error")) {
+                Write-Host "VITE_TIMING_MODULE_TRANSFORM_ERROR=True"
+                return $false
+            }
         } elseif ($Name -like "BACKEND_*") {
             Write-Host ("{0}_BODY={1}" -f $Name,$body.Substring(0,[Math]::Min(1200,$body.Length)))
         }
@@ -69,6 +78,7 @@ Write-Host "=== HTTP ENDPOINTS ==="
 $viteOk = Test-Endpoint "VITE_ROOT" "http://127.0.0.1:5173/"
 $entryOk = Test-Endpoint "VITE_ENTRY" "http://127.0.0.1:5173/src/main.tsx"
 $appModuleOk = Test-Endpoint "VITE_APP_MODULE" "http://127.0.0.1:5173/src/App.tsx"
+$timingModuleOk = Test-Endpoint "VITE_TIMING_MODULE" "http://127.0.0.1:5173/src/roundTiming.js"
 $stylesOk = Test-Endpoint "VITE_STYLES" "http://127.0.0.1:5173/src/styles.css"
 $apiOk = Test-Endpoint "BACKEND_HEALTH" "http://127.0.0.1:8000/health"
 $runtimeOk = Test-Endpoint "BACKEND_RUNTIME" "http://127.0.0.1:8000/api/runtime"
@@ -145,7 +155,7 @@ if ($edgeExe) {
     Write-Host "EDGE_HEADLESS_CHECK_SKIPPED: Microsoft Edge executable not found."
 }
 
-Write-Host "=== LOCAL LOG TAILS ==="
+Write-Host "=== LOCAL LOG TAILS (MAY INCLUDE HISTORICAL ENTRIES) ==="
 $logDir = Join-Path $SourceRoot ".local-logs"
 foreach ($name in @("frontend.stderr.log","frontend.stdout.log","backend.stderr.log","backend.stdout.log")) {
     $path = Join-Path $logDir $name
@@ -161,8 +171,8 @@ try {
     Write-Host "OLLAMA_UNREACHABLE: $($_.Exception.Message)"
 }
 
-if (-not ($viteOk -and $entryOk -and $appModuleOk -and $stylesOk)) {
-    throw "The Vite frontend is not serving all expected modules."
+if (-not ($viteOk -and $entryOk -and $appModuleOk -and $timingModuleOk -and $stylesOk)) {
+    throw "The Vite frontend is not serving all expected modules, including roundTiming.js."
 }
 if ($null -ne $reactMounted -and -not $reactMounted) {
     throw "Headless Edge loaded the page but React did not mount .app-shell. Inspect the DOM and browser errors above."
