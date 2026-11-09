@@ -100,13 +100,26 @@ _QUALIFIER = re.compile(
 )
 
 
+# Sentence punctuation alone is too broad: a qualifier for one assertion must
+# not suppress a separate assertion later in the sentence. Treat commas and
+# contrast markers as clause boundaries while keeping a qualifier attached to
+# the assertion in its own clause.
+_CLAUSE_BOUNDARY = re.compile(
+    r"[.!?;:\\n,]|\\b(?:but|however|whereas|while|although|yet|nevertheless)\\b",
+    re.IGNORECASE,
+)
+
+
 def _unqualified_matches(pattern: re.Pattern[str], text: str) -> list[str]:
     """Return assertion-like matches, applying qualifiers only within the same clause."""
     findings: list[str] = []
     for match in pattern.finditer(text):
-        left = max((text.rfind(mark, 0, match.start()) for mark in ".!?;:\n"), default=-1) + 1
+        left = max(
+            (boundary.end() for boundary in _CLAUSE_BOUNDARY.finditer(text, 0, match.start())),
+            default=0,
+        )
         right = min(
-            (position for mark in ".!?;:\n" if (position := text.find(mark, match.end())) >= 0),
+            (boundary.start() for boundary in _CLAUSE_BOUNDARY.finditer(text, match.end())),
             default=len(text),
         )
         clause = text[left:right]
