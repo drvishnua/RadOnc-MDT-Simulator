@@ -14,7 +14,7 @@ def test_health_endpoint_is_educational_only() -> None:
     assert response.json()["mode"] == "education_simulation_only"
 
 
-def test_synthetic_case_validation_accepts_minimal_case() -> None:
+def test_fictional_case_validation_accepts_minimal_case() -> None:
     response = client.post(
         "/api/cases/validate",
         json={
@@ -27,7 +27,7 @@ def test_synthetic_case_validation_accepts_minimal_case() -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["valid"] is True
-    assert body["mode"] == "synthetic_educational_case"
+    assert body["mode"] == "fictional_educational_case"
     assert any("Age is not supplied" in warning for warning in body["warnings"])
 
 
