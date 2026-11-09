@@ -3,7 +3,7 @@
 **Last verified:** 9 November 2026
 **Repository:** `drvishnua/RadOnc-MDT-Simulator`
 **Development branch:** `feature/four-round-mdt-and-performance`
-**Verified code snapshot:** `8a318900f9a661116dba2130b118d924741bfcfe`
+**Verified code snapshot:** `d6f7421f6c38862f5ca171b1023e94ac3fdcfb06`
 **PR #1:** open, draft, unmerged; targets `main`.
 
 This document distinguishes code/CI verification from local runtime loading, full live inference, GPU attribution and clinical validation. A passing CI workflow is not evidence of clinical accuracy.
@@ -22,10 +22,11 @@ This document distinguishes code/CI verification from local runtime loading, ful
 | Case-data integrity | Expanded | Pattern-based audits cover unsupported age/stage-group/T/N/M assertions and explicit age/sex/TNM/stage-group discrepancies; qualifiers are scoped to clauses. This is not exhaustive semantic contradiction detection |
 | Case validation | Implemented | Completeness warnings are non-blocking; unknown fields remain unknown. Conflicts are warnings and must not be silently reconciled |
 | Frontend case restore | Corrected | Structured list values are converted to actual newline-delimited form text and parsed with the same helper; round-trip unit tests added |
-| Frontend | CI passed | Launcher syntax/compatibility checks, case-draft persistence tests, TypeScript check and Vite production build on the verified code snapshot |
+| Frontend | CI passed | 28 Node tests, launcher syntax/compatibility checks, TypeScript check and Vite production build on the verified code snapshot |
 | Backend | CI passed | 114 passed, 1 warning on the verified code snapshot; warning is the existing Starlette/httpx TestClient deprecation |
 | Local source mirror | Older snapshot only | Last Windows self-hosted sync verified `Source` at `aa0e90b7...`; current code snapshot `8a318900...` is not yet verified in the local mirror |
 | Running local backend | Restart not verified | Uvicorn was not restarted during the last local diagnostic. A source copy does not reload Python modules. Do not assume the live backend has loaded the latest source until services are restarted and rechecked |
+| Dashboard MDT timing | Implemented | Displays latest-attempt durations for R2–R4 and wall-clock elapsed time from run creation through the end of R4; includes pauses between rounds and is not pure inference time |
 | Concurrency | 1 | Keep sequential generation; do not increase without measured quality and throughput evidence |
 | Model selection | Baseline retained | `qwen3.5:4b` remains the configured baseline. Candidate models are described in `docs/MODEL_BENCHMARK_PLAN.md`; no candidate has been installed or benchmarked |
 
@@ -64,11 +65,11 @@ The complete browser UI flow (create → validate → save → refresh → resto
 
 ## Validation record
 
-### CI on exact code snapshot `8a318900f9a661116dba2130b118d924741bfcfe`
+### CI on exact code snapshot `d6f7421f6c38862f5ca171b1023e94ac3fdcfb06`
 
-- [Backend Tests — run 42578931373](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42578931373): success; **114 passed, 1 warning** (the existing Starlette/httpx TestClient deprecation).
-- [Frontend Build — run 42578931319](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42578931319): success; PowerShell launcher parsing, Node compatibility, case-draft persistence tests, TypeScript check and Vite production build passed.
-- A regression test verifies Chair report text uses neutral case terminology while retaining the education-only and no-treatment-instruction boundary. The API validation mode now uses `fictional_educational_case`.
+- [Backend Tests — run 42581653317](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42581653317): success; **114 passed, 1 warning** (the existing Starlette/httpx TestClient deprecation).
+- [Frontend Build — run 42581653276](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42581653276): success; **28 tests passed**, PowerShell launcher parsing, Node compatibility, TypeScript check and Vite production build passed.
+- Dashboard timing display has regression coverage for valid, zero, long, missing, invalid and reversed intervals. The parent run is refreshed at the terminal Chair state so the full-MDT duration updates without hiding retry controls after a Chair error.
 
 ### Local source/runtime verification
 
