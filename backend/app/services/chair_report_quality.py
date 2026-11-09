@@ -224,9 +224,11 @@ def build_source_opinion_review_coverage(
                 f"R3 source-opinion reviews from {role_id} are not a list and were excluded."
             )
             continue
+        # RoundContribution serializes source_peer_ids inside the saved result
+        # payload, not beside the outer database row metadata.
         supplied_peer_refs = {
             f"R2:{str(peer_id).strip().upper()}"
-            for peer_id in (row.get("source_peer_ids") or [])
+            for peer_id in (result.get("source_peer_ids") or [])
             if isinstance(peer_id, str) and peer_id.strip()
         }
         for review in reviews:
