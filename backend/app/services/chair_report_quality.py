@@ -252,6 +252,24 @@ def build_source_opinion_review_coverage(
                     "contiguous excerpt from the saved case_summary."
                 )
                 continue
+            # Detect inconsistent source-ID mappings before citation validation.
+            # An invalidly cited review must not hide a conflicting excerpt assignment
+            # made elsewhere for the same source ID.
+            prior_excerpt = id_to_excerpt.get(source_id)
+            if prior_excerpt is not None and prior_excerpt != excerpt:
+                conflicting_ids.add(source_id)
+                integrity.append(
+                    f"R3 source identifier {source_id} maps to more than one exact case-summary excerpt."
+                )
+            prior_id = excerpt_to_id.get(excerpt)
+            if prior_id is not None and prior_id != source_id:
+                conflicting_ids.update({prior_id, source_id})
+                integrity.append(
+                    f"An exact case-summary excerpt is assigned both {prior_id} and {source_id}."
+                )
+            id_to_excerpt[source_id] = excerpt
+            excerpt_to_id[excerpt] = source_id
+
             reference_ids = {
                 str(reference).strip()
                 for reference in (review.get("source_reference_ids") or [])
@@ -269,24 +287,16 @@ def build_source_opinion_review_coverage(
                 )
                 continue
 
-            prior_excerpt = id_to_excerpt.get(source_id)
-            if prior_excerpt is not None and prior_excerpt != excerpt:
-                conflicting_ids.add(source_id)
-                integrity.append(
-                    f"R3 source identifier {source_id} maps to more than one exact case-summary excerpt."
-                )
-            prior_id = excerpt_to_id.get(excerpt)
-            if prior_id is not None and prior_id != source_id:
-                conflicting_ids.update({prior_id, source_id})
-                integrity.append(
-                    f"An exact case-summary excerpt is assigned both {prior_id} and {source_id}."
-                )
-            id_to_excerpt[source_id] = excerpt
-            excerpt_to_id[excerpt] = source_id
             roles_by_source[source_id][role_id].append(review)
             label = " ".join(str(review.get("opinion_label") or "").split())
             if label:
-                labels_by_source[source_id].add(label)
+                if _is_positive_consensus_claim(label):
+                    integrity.append(
+                        f"R3 source-opinion review {source_id} from {role_id} has a model-reported "
+                        "opinion label containing a positive consensus assertion; the label was withheld."
+                    )
+                else:
+                    labels_by_source[source_id].add(label)
 
     valid_numbers = sorted(
         int(match.group(1))
