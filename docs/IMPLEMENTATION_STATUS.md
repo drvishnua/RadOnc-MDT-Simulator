@@ -3,7 +3,7 @@
 **Last verified:** 9 November 2026
 **Repository:** `drvishnua/RadOnc-MDT-Simulator`
 **Development branch:** `feature/four-round-mdt-and-performance`
-**Verified code snapshot:** `aa0e90b7ec6fbbea9fc359c98f2deefdad2cf902`
+**Verified code snapshot:** `8a318900f9a661116dba2130b118d924741bfcfe`
 **PR #1:** open, draft, unmerged; targets `main`.
 
 This document distinguishes code/CI verification from local runtime loading, full live inference, GPU attribution and clinical validation. A passing CI workflow is not evidence of clinical accuracy.
@@ -19,13 +19,13 @@ This document distinguishes code/CI verification from local runtime loading, ful
 | R3 adversarial review | Implemented | Source-bound representation/omission checks and schema/prompt constraints are covered by backend tests; latest full live validation predates these changes |
 | R4 Chair | Implemented | Saved R1–R3 reconciliation, source-derived role history, distinct-role counts and conservative consensus handling have regression coverage. Missing primary-site/histology title fallback is neutral (“Case details not supplied”); no fresh live Chair report on this code snapshot |
 | Patient registry | Implemented | SQLite registry, sequential local RAD identifiers, immutable case versions, per-version patient-name preservation, linked runs/assessments and delete cascade have backend tests |
-| Case-data integrity | Expanded | Pattern-based audits now cover unsupported age/stage-group/T/N/M and other previously implemented claim classes; explicit age/sex/TNM/stage-group discrepancies are surfaced. This is not exhaustive semantic contradiction detection |
+| Case-data integrity | Expanded | Pattern-based audits cover unsupported age/stage-group/T/N/M assertions and explicit age/sex/TNM/stage-group discrepancies; qualifiers are scoped to clauses. This is not exhaustive semantic contradiction detection |
 | Case validation | Implemented | Completeness warnings are non-blocking; unknown fields remain unknown. Conflicts are warnings and must not be silently reconciled |
 | Frontend case restore | Corrected | Structured list values are converted to actual newline-delimited form text and parsed with the same helper; round-trip unit tests added |
 | Frontend | CI passed | Launcher syntax/compatibility checks, case-draft persistence tests, TypeScript check and Vite production build on the verified code snapshot |
-| Backend | CI passed | 113 passed, 1 warning on the verified code snapshot; warning is the existing Starlette/httpx TestClient deprecation |
-| Local source mirror | Synced | Windows self-hosted workflow verified `Source` manifest at the same code SHA `aa0e90b7...`; local health, Ollama, React shell and structured-case diagnostics completed |
-| Running local backend | Restart not verified | Uvicorn was still running as its prior process during diagnostics. A source copy does not reload Python modules. Do not assume the live backend has loaded the latest source until services are restarted and rechecked |
+| Backend | CI passed | 114 passed, 1 warning on the verified code snapshot; warning is the existing Starlette/httpx TestClient deprecation |
+| Local source mirror | Older snapshot only | Last Windows self-hosted sync verified `Source` at `aa0e90b7...`; current code snapshot `8a318900...` is not yet verified in the local mirror |
+| Running local backend | Restart not verified | Uvicorn was not restarted during the last local diagnostic. A source copy does not reload Python modules. Do not assume the live backend has loaded the latest source until services are restarted and rechecked |
 | Concurrency | 1 | Keep sequential generation; do not increase without measured quality and throughput evidence |
 | Model selection | Baseline retained | `qwen3.5:4b` remains the configured baseline. Candidate models are described in `docs/MODEL_BENCHMARK_PLAN.md`; no candidate has been installed or benchmarked |
 
@@ -64,23 +64,26 @@ The complete browser UI flow (create → validate → save → refresh → resto
 
 ## Validation record
 
-### CI and source sync on exact code snapshot `aa0e90b7ec6fbbea9fc359c98f2deefdad2cf902`
+### CI on exact code snapshot `8a318900f9a661116dba2130b118d924741bfcfe`
 
-- [Backend Tests — run 42576728875](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42576728875): success; **113 passed, 1 warning** (the existing Starlette/httpx TestClient deprecation).
-- [Frontend Build — run 42576728810](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42576728810): success; launcher PowerShell syntax and Node compatibility, case-draft persistence tests, TypeScript checking and Vite production build passed.
-- [Local Source sync and diagnostic — run 42576725334](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42576725334): success; local manifest verified as `feature/four-round-mdt-and-performance @ aa0e90b7ec6fbbea9fc359c98f2deefdad2cf902`. FastAPI health, Ollama reachability, React app-shell mounting and structured case-field checks completed.
+- [Backend Tests — run 42578931373](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42578931373): success; **114 passed, 1 warning** (the existing Starlette/httpx TestClient deprecation).
+- [Frontend Build — run 42578931319](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42578931319): success; PowerShell launcher parsing, Node compatibility, case-draft persistence tests, TypeScript check and Vite production build passed.
+- A regression test verifies Chair report text uses neutral case terminology while retaining the education-only and no-treatment-instruction boundary. The API validation mode now uses `fictional_educational_case`.
 
-The push-triggered duplicate backend/frontend jobs were cancelled by workflow concurrency controls; the PR-triggered checks above are authoritative for this code SHA.
+### Local source/runtime verification
+
+- [Last Local Source sync and diagnostic — run 42576725334](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42576725334): success; manifest read back as `feature/four-round-mdt-and-performance @ aa0e90b7ec6fbbea9fc359c98f2deefdad2cf902`.
+- The current verified code snapshot `8a318900f9a661116dba2130b118d924741bfcfe` has **not** yet been verified in the local `Source` manifest.
+- The older diagnostic checked FastAPI health, Ollama reachability, React shell mounting and structured case-field presence. It did not restart the existing Uvicorn process.
+- Full browser create/validate/save/refresh/restore/edit/delete acceptance, browser console/network review and current-head backend module reload remain outstanding.
 
 ### Persisted execution timing
 
-- `simulation_runs.mdt_finished_at` records the terminal completion time of the full four-round MDT when Round 4 finishes, including a terminal `completed_with_errors` state. It remains null before Round 4 finishes.
-- `round_runs.started_at` and `round_runs.finished_at` record the round execution interval exposed through the round summary API.
-- Existing SQLite databases receive additive column migrations. A regression test covers migration from the previous schema.
-- Retrying a failed/interrupted round resets that round's attempt timestamps. Retrying Round 4 also clears the prior parent `mdt_finished_at`, which is set again after the retry reaches a terminal state.
-- `simulation_runs.created_at` is the start reference for elapsed time from run creation; there is no separately measured first-token timestamp. Retried-round timing reflects the latest attempt, not cumulative time across retries.
-
-The self-hosted diagnostic read back the exact local `Source` manifest and confirmed health/runtime/agent/patient endpoint responses, Ollama reachability, React shell mounting and structured case-field presence. It does **not** restart Uvicorn. Therefore, a source mirror at the new SHA is not proof that a pre-existing Uvicorn process has loaded the new Python modules. Full browser create/validate/save/refresh/restore/edit/delete acceptance, browser console/network inspection and runtime process reload remain outstanding.
+- `simulation_runs.mdt_finished_at` records terminal completion of the full four-round MDT when Round 4 finishes, including terminal `completed_with_errors`; it stays null before Round 4 ends.
+- `round_runs.started_at` and `round_runs.finished_at` expose each round interval.
+- Existing SQLite databases receive additive column migrations; regression tests cover migration, completion and Chair retry.
+- Retrying Round 4 clears the earlier parent finish time before setting it again on terminal completion.
+- `simulation_runs.created_at` is the overall elapsed-time start reference. First-token timing is not measured; round timestamps reflect the latest attempt rather than cumulative retry time.
 
 ### Historical live MDT-006 validation — audit did not pass
 
