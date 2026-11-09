@@ -76,7 +76,7 @@ The following CI checks ran against exact code snapshot `8a318900f9a661116dba213
 
 - **Backend CI:** [run 42578931373](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42578931373) — success; **114 passed, 1 warning** (the existing Starlette/httpx TestClient deprecation).
 - **Frontend CI:** [run 42578931319](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42578931319) — success; PowerShell launcher syntax, Node compatibility, case-draft persistence tests, TypeScript checking and Vite production build passed.
-- **Terminology:** generated Chair report text, agent prompts, API descriptions, validation metadata and user documentation now use “fictional training case” / “educational simulation” language instead of “synthetic case”. Internal Python/schema/DB identifiers remain unchanged for compatibility. The education-only/no-clinical-decision boundary is retained.
+- **Terminology:** generated Chair report text, agent prompts, API descriptions, validation metadata and user documentation consistently use “fictional training case” / “educational simulation” language. Internal Python/schema/DB identifiers remain unchanged for compatibility. The education-only/no-clinical-decision boundary is retained.
 
 ### Local source/runtime verification
 
