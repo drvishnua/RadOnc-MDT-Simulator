@@ -145,6 +145,50 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         if matches:
             flags.append("Generated narrative contains M-stage terminology (" + ", ".join(matches[:4]) + "), but clinical_m_stage is not supplied in the case snapshot.")
     source_text = case.case_summary.casefold()
+
+    # Explicit age assertions are audited separately from general demographic language.
+    # Do not flag an age already stated in the user-provided free-text source.
+    if case.age_years is None:
+        age_pattern = re.compile(
+            r"\\b(?:(\\d{1,3})\\s*[- ]?(?:year|yr)s?[- ]old|"
+            r"aged\\s+(\\d{1,3})|age\\s*[:=]\\s*(\\d{1,3})|"
+            r"(\\d{1,3})\\s*y/o)\\b",
+            re.IGNORECASE,
+        )
+        source_ages = {match for match in age_pattern.findall(source_text) for match in match if match}
+        generated_ages = {
+            match for match in age_pattern.findall(text) for match in match if match
+        }
+        unsupported_ages = sorted(generated_ages - source_ages)
+        if unsupported_ages:
+            flags.append(
+                "Generated narrative assigns an age ("
+                + ", ".join(unsupported_ages[:4])
+                + "), but age_years is not supplied in the structured case or explicitly recorded in the source summary."
+            )
+
+    # A stage group is distinct from T/N/M components. It must not be inferred
+    # from an incomplete TNM record or from a site/histology description.
+    if case.stage_group in (None, ""):
+        stage_group_pattern = re.compile(
+            r"\\b(?:clinical\\s+)?stage\\s*(?:group\\s*)?(IV|III|II|I|[1-4])(?:[ABC])?\\b",
+            re.IGNORECASE,
+        )
+        source_stage_groups = {
+            match.group(0).casefold()
+            for match in stage_group_pattern.finditer(source_text)
+        }
+        generated_stage_groups = {
+            match.group(0).casefold()
+            for match in stage_group_pattern.finditer(text)
+        }
+        unsupported_stage_groups = sorted(generated_stage_groups - source_stage_groups)
+        if unsupported_stage_groups:
+            flags.append(
+                "Generated narrative assigns a stage group ("
+                + ", ".join(unsupported_stage_groups[:4])
+                + "), but stage_group is not supplied in the structured case or explicitly recorded in the source summary."
+            )
     sex_is_reported_in_source = bool(
         re.search(
             r"\b(?:male|female|man|woman|boy|girl)\b|\b(?:sex|gender)\s*[:=]\s*(?:male|female)\b",
@@ -280,6 +324,66 @@ def build_case_validation_warnings(case: SyntheticCase) -> list[str]:
     if empty_fields:
         warnings.append("Empty structured lists are not confirmed negatives; these fields are not reported: " + ", ".join(empty_fields) + ". Review the raw case summary before interpreting them.")
     summary = case.case_summary.casefold()
+
+    # Explicit contradictions are warnings for human reconciliation; neither
+    # the structured field nor free text is silently preferred.
+    age_pattern = re.compile(
+        r"\\b(?:(\\d{1,3})\\s*[- ]?(?:year|yr)s?[- ]old|"
+        r"aged\\s+(\\d{1,3})|age\\s*[:=]\\s*(\\d{1,3})|"
+        r"(\\d{1,3})\\s*y/o)\\b",
+        re.IGNORECASE,
+    )
+    text_ages = {
+        int(value)
+        for match in age_pattern.findall(summary)
+        for value in match
+        if value
+    }
+    if case.age_years is not None and text_ages and text_ages != {case.age_years}:
+        warnings.append(
+            f"Structured age_years is {case.age_years}, but free text explicitly states age(s) "
+            + ", ".join(str(value) for value in sorted(text_ages))
+            + "; preserve both and reconcile before simulation."
+        )
+
+    if case.sex_at_birth:
+        structured_sex = case.sex_at_birth.casefold()
+        text_male = bool(re.search(r"\\b(?:male|man|boy)\\b", summary))
+        text_female = bool(re.search(r"\\b(?:female|woman|girl)\\b", summary))
+        if (("male" in structured_sex and "female" not in structured_sex and text_female)
+                or ("female" in structured_sex and text_male)):
+            warnings.append(
+                "Structured sex_at_birth conflicts with an explicit sex descriptor in free text; preserve both and reconcile before simulation."
+            )
+
+    if case.stage_group:
+        stage_group_pattern = re.compile(
+            r"\\b(?:clinical\\s+)?stage\\s*(?:group\\s*)?(IV|III|II|I|[1-4])(?:[ABC])?\\b",
+            re.IGNORECASE,
+        )
+        text_stage_groups = {
+            match.group(0).casefold()
+            for match in stage_group_pattern.finditer(summary)
+        }
+        if text_stage_groups and not any(
+            case.stage_group.casefold() in value or value in case.stage_group.casefold()
+            for value in text_stage_groups
+        ):
+            warnings.append(
+                "Structured stage_group conflicts with an explicit stage-group statement in free text; preserve both and reconcile before simulation."
+            )
+
+    for field, label, pattern in (
+        ("clinical_t_stage", "T stage", re.compile(r"\\b(?:c|p|yc|yp)?T(?:is|x|0|[1-4][a-d]?)\\b", re.IGNORECASE)),
+        ("clinical_n_stage", "N stage", re.compile(r"\\b(?:c|p|yc|yp)?N(?:x|0|[1-3])\\b", re.IGNORECASE)),
+        ("clinical_m_stage", "M stage", re.compile(r"\\b(?:c|p|yc|yp)?M(?:x|0|1)\\b", re.IGNORECASE)),
+    ):
+        structured_value = getattr(case, field)
+        text_values = {match.group(0).casefold() for match in pattern.finditer(summary)}
+        if structured_value and text_values and structured_value.casefold() not in text_values:
+            warnings.append(
+                f"Structured {label} conflicts with an explicit {label} statement in free text; preserve both and reconcile before simulation."
+            )
     if not case.relevant_comorbidities:
         if re.search(r"\b(dm|diabetes|diabetic)\b", summary):
             warnings.append("The free-text summary mentions diabetes/DM, but relevant_comorbidities is empty; reconcile the fields before simulation.")
