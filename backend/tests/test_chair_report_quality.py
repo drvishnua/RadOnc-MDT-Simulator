@@ -834,3 +834,38 @@ def test_high_volume_source_excerpt_failures_are_summarised_by_distinct_role():
     ) in joined_flags
     assert "from RO-01 lacks an exact contiguous excerpt" in joined_flags
 
+def test_final_chair_report_keeps_high_volume_source_excerpt_audit_visible():
+    case = SyntheticCase(
+        scenario_title="High-volume source-excerpt final-boundary regression",
+        case_summary="Referral note records two conditional options pending staging.",
+    )
+    round1 = _rows("assessment", ["insufficient_information"] * 45)
+    round2 = _rows("result", ["insufficient_information"] * 45)
+    round3 = _rows("result", ["insufficient_information"] * 45)
+
+    for index in range(30):
+        role_id = f"RO-{index + 1:02d}"
+        peer_id = f"RO-{index + 11:02d}"
+        round3[index]["result"]["source_peer_ids"] = [peer_id]
+        round3[index]["result"]["source_opinion_reviews"] = [{
+            "source_id": "CASE:case_summary#1",
+            "opinion_label": "Unverified attributed opinion",
+            "source_excerpt": f"Paraphrased source excerpt for {role_id}.",
+            "option_status": "unclear",
+            "conditions_status": "unclear",
+            "source_reference_ids": ["CASE:case_summary#1", f"R2:{peer_id}"],
+        }]
+
+    report = ensure_chair_report_completeness(
+        _empty_report(), case, round1, round2, round3
+    )
+    flags = " ".join(report.case_data_integrity_flags)
+
+    assert (
+        "R3 source-opinion exact-excerpt audit: 30 finding(s) across "
+        "30 distinct role(s)"
+    ) in flags
+    assert "from RO-01 lacks an exact contiguous excerpt" in flags
+    assert "from RO-03 lacks an exact contiguous excerpt" in flags
+    assert len(report.case_data_integrity_flags) <= SECTION_LIMITS["case_data_integrity_flags"]
+
