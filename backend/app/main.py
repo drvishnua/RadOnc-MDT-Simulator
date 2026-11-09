@@ -1,4 +1,4 @@
-"""Initial API surface: runtime, agent catalogue, and synthetic case assessment."""
+"""Initial API surface: runtime, agent catalogue, and educational case assessment."""
 
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ app = FastAPI(
     title=APP_NAME,
     version=APP_VERSION,
     description=(
-        "Educational simulation backend. Synthetic cases only; not clinical decision support."
+        "Educational simulation backend. Fictional training cases only; not clinical decision support."
     ),
 )
 
@@ -156,7 +156,7 @@ async def create_patient_simulation(
     request: PatientRunRequest,
     background_tasks: BackgroundTasks,
 ) -> dict[str, object]:
-    """Run only a case version already saved under this synthetic patient."""
+    """Run only a case version already saved under this training record."""
     if batch_is_running() or round_is_running():
         raise HTTPException(status_code=409, detail="Another local model run is already active.")
     try:
@@ -229,7 +229,7 @@ async def get_independent_batch(run_id: str) -> dict[str, object]:
 
 @app.get("/api/runs/{run_id}/case")
 async def get_run_case_snapshot(run_id: str) -> dict[str, object]:
-    """Return the exact synthetic case snapshot saved when this run was created."""
+    """Return the exact case snapshot saved when this run was created."""
     try:
         case_json = run_store.get_case_json(run_id)
         case = run_store.get_case(run_id)
