@@ -413,8 +413,8 @@ def build_case_validation_warnings(case: SyntheticCase) -> list[str]:
         # boundaries. Capture those components from the complete TNM expression.
         if field in {"clinical_n_stage", "clinical_m_stage"}:
             combined_tnm = re.compile(
-                r"\\b(?:c|p|yc|yp)?T(?:is|x|0|[1-4][a-d]?)"
-                r"(N(?:x|0|[1-3]))?(M(?:x|0|1))?\\b",
+                r"\b(?:c|p|yc|yp)?T(?:is|x|0|[1-4][a-d]?)"
+                r"(N(?:x|0|[1-3]))?(M(?:x|0|1))?\b",
                 re.IGNORECASE,
             )
             component_index = 1 if field == "clinical_n_stage" else 2
