@@ -191,6 +191,163 @@ def count_distinct_role_positions(rows: list[dict], field: str, round_label: str
 def _position_counts(rows: list[dict], field: str, round_label: str = "Round", integrity_flags: list[str] | None = None) -> Counter:
     return count_distinct_role_positions(rows, field, round_label, integrity_flags)
 
+_SOURCE_OPINION_SOURCE_ID_PATTERN = re.compile(r"^CASE:case_summary#([1-9][0-9]*)$")
+_SOURCE_OPINION_STATUSES = {"preserved", "partly_preserved", "omitted", "unclear"}
+
+
+def build_source_opinion_review_coverage(
+    round3_rows: list[dict],
+    case_summary: str,
+) -> tuple[list[str], list[str]]:
+    """Rebuild source-opinion review coverage from distinct, completed saved R3 roles.
+
+    Statuses are model-reported representation labels only. They are not clinical
+    findings, evidence of prerequisite fulfilment, votes, or consensus.
+    """
+    integrity: list[str] = []
+    entries = _distinct_role_entries(
+        round3_rows, "result", "Round 3", integrity
+    )
+    id_to_excerpt: dict[str, str] = {}
+    excerpt_to_id: dict[str, str] = {}
+    roles_by_source: dict[str, dict[str, list[dict]]] = defaultdict(
+        lambda: defaultdict(list)
+    )
+    conflicting_ids: set[str] = set()
+
+    for row, result in entries:
+        role_id = str(row.get("agent_id") or "").strip().upper()
+        reviews = result.get("source_opinion_reviews") or []
+        if not isinstance(reviews, (list, tuple)):
+            integrity.append(
+                f"R3 source-opinion reviews from {role_id} are not a list and were excluded."
+            )
+            continue
+        supplied_peer_refs = {
+            f"R2:{str(peer_id).strip().upper()}"
+            for peer_id in (row.get("source_peer_ids") or [])
+            if isinstance(peer_id, str) and peer_id.strip()
+        }
+        for review in reviews:
+            if not isinstance(review, dict):
+                integrity.append(
+                    f"R3 source-opinion review from {role_id} is not a structured object and was excluded."
+                )
+                continue
+            source_id = str(review.get("source_id") or "").strip()
+            excerpt = str(review.get("source_excerpt") or "")
+            match = _SOURCE_OPINION_SOURCE_ID_PATTERN.fullmatch(source_id)
+            if not match:
+                integrity.append(
+                    f"R3 source-opinion review from {role_id} has invalid source identifier "
+                    f"{source_id or '(missing)'}; expected CASE:case_summary#N."
+                )
+                continue
+            if not excerpt or excerpt not in case_summary:
+                integrity.append(
+                    f"R3 source-opinion review {source_id} from {role_id} lacks an exact "
+                    "contiguous excerpt from the saved case_summary."
+                )
+                continue
+            reference_ids = {
+                str(reference).strip()
+                for reference in (review.get("source_reference_ids") or [])
+                if isinstance(reference, str) and reference.strip()
+            }
+            if source_id not in reference_ids:
+                integrity.append(
+                    f"R3 source-opinion review {source_id} from {role_id} omits its exact CASE source ID."
+                )
+                continue
+            if not (reference_ids & supplied_peer_refs):
+                integrity.append(
+                    f"R3 source-opinion review {source_id} from {role_id} does not cite an R2 peer "
+                    "recorded as supplied to that role."
+                )
+                continue
+
+            prior_excerpt = id_to_excerpt.get(source_id)
+            if prior_excerpt is not None and prior_excerpt != excerpt:
+                conflicting_ids.add(source_id)
+                integrity.append(
+                    f"R3 source identifier {source_id} maps to more than one exact case-summary excerpt."
+                )
+            prior_id = excerpt_to_id.get(excerpt)
+            if prior_id is not None and prior_id != source_id:
+                conflicting_ids.update({prior_id, source_id})
+                integrity.append(
+                    f"An exact case-summary excerpt is assigned both {prior_id} and {source_id}."
+                )
+            id_to_excerpt[source_id] = excerpt
+            excerpt_to_id[excerpt] = source_id
+            roles_by_source[source_id][role_id].append(review)
+
+    valid_numbers = sorted(
+        int(match.group(1))
+        for source_id in id_to_excerpt
+        if (match := _SOURCE_OPINION_SOURCE_ID_PATTERN.fullmatch(source_id))
+    )
+    if valid_numbers and valid_numbers != list(range(1, max(valid_numbers) + 1)):
+        integrity.append(
+            "R3 source-opinion identifiers are not sequential from CASE:case_summary#1; "
+            "one or more attributed source identifiers may be missing or inconsistently numbered."
+        )
+
+    coverage: list[str] = []
+    for source_id in sorted(
+        roles_by_source,
+        key=lambda value: int(_SOURCE_OPINION_SOURCE_ID_PATTERN.fullmatch(value).group(1)),
+    ):
+        if source_id in conflicting_ids:
+            integrity.append(
+                f"R3 coverage for {source_id} was excluded because its identifier-to-excerpt mapping conflicts."
+            )
+            continue
+
+        option_counts: Counter = Counter()
+        condition_counts: Counter = Counter()
+        for role_id, reviews in sorted(roles_by_source[source_id].items()):
+            if len(reviews) > 1:
+                integrity.append(
+                    f"R3 source-opinion review {source_id} has {len(reviews)} records for "
+                    f"distinct role {role_id}; each status is counted at most once."
+                )
+            for field, counts, label in (
+                ("option_status", option_counts, "option"),
+                ("conditions_status", condition_counts, "condition"),
+            ):
+                statuses = {
+                    str(review.get(field) or "").strip()
+                    for review in reviews
+                }
+                invalid = statuses - _SOURCE_OPINION_STATUSES
+                if invalid:
+                    integrity.append(
+                        f"R3 source-opinion review {source_id} from {role_id} has missing or "
+                        f"invalid {label} status {sorted(invalid)}; excluded from that status count."
+                    )
+                    continue
+                if len(statuses) > 1:
+                    integrity.append(
+                        f"R3 source-opinion review {source_id} has conflicting {label} statuses "
+                        f"for {role_id}; that role was excluded from the {label} status count."
+                    )
+                    continue
+                if statuses:
+                    counts[next(iter(statuses))] += 1
+
+        coverage.append(
+            "R3 source-opinion review coverage (distinct completed roles; model-reported "
+            "representation labels only, not clinical findings or consensus) — "
+            f"{source_id}: {len(roles_by_source[source_id])}/{len(entries)} roles supplied "
+            "an exact source-bound review; option status role counts "
+            f"{dict(sorted(option_counts.items()))}; condition status role counts "
+            f"{dict(sorted(condition_counts.items()))}."
+        )
+
+    return coverage, _unique(integrity, 45)
+
+
 
 def _format_position_counts(counts: Counter) -> str:
     total = sum(counts.values())
