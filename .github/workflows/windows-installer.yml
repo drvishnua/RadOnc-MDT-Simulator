@@ -111,7 +111,7 @@ jobs:
           $stderr = Join-Path $env:RUNNER_TEMP "radonc-installed.stderr.log"
           $process = Start-Process -FilePath $exe -WorkingDirectory $installDir -PassThru -WindowStyle Hidden -RedirectStandardOutput $stdout -RedirectStandardError $stderr
 
-          $http = $null
+          $webClient = $null
           try {
             $health = $null
             for ($attempt = 0; $attempt -lt 45; $attempt++) {
@@ -133,17 +133,15 @@ jobs:
               throw "Installed executable did not return its health response. $details"
             }
 
-            $http = [System.Net.Http.HttpClient]::new()
-            $pageResponse = $http.GetAsync("http://127.0.0.1:18765/").GetAwaiter().GetResult()
-            $pageContent = $pageResponse.Content.ReadAsStringAsync().GetAwaiter().GetResult()
-            if (-not $pageResponse.IsSuccessStatusCode -or $pageContent -notmatch 'id="root"') {
+            $webClient = New-Object System.Net.WebClient
+            $pageContent = $webClient.DownloadString("http://127.0.0.1:18765/")
+            if ($pageContent -notmatch 'id="root"') {
               throw "Installed frontend index did not load."
             }
             $scriptMatch = [regex]::Match($pageContent, 'src="(?<asset>/assets/[^"]+\.js)"')
             if (-not $scriptMatch.Success) { throw "Built JavaScript asset was not referenced by index.html." }
-            $assetResponse = $http.GetAsync("http://127.0.0.1:18765" + $scriptMatch.Groups["asset"].Value).GetAwaiter().GetResult()
-            $assetContent = $assetResponse.Content.ReadAsStringAsync().GetAwaiter().GetResult()
-            if (-not $assetResponse.IsSuccessStatusCode -or $assetContent.Length -lt 1000) {
+            $assetContent = $webClient.DownloadString("http://127.0.0.1:18765" + $scriptMatch.Groups["asset"].Value)
+            if ($assetContent.Length -lt 1000) {
               throw "Built frontend JavaScript asset was not served."
             }
 
@@ -162,7 +160,7 @@ jobs:
             Write-Host "USER_DATA_DATABASE_PATH_OK"
             Write-Host "No Ollama request or model inference was performed."
           } finally {
-            if ($http) { $http.Dispose() }
+            if ($webClient) { $webClient.Dispose() }
             if ($process -and -not $process.HasExited) {
               Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
             }
