@@ -182,6 +182,13 @@ async function selectOptionByText(labelText, optionText) {
   return evaluate(expression);
 }
 
+async function waitForValidationReady() {
+  await waitForExpression(
+    "(() => { const button = [...document.querySelectorAll('button')].find(node => (node.innerText || '').trim().startsWith('Validate patient details')); return !!button && !button.disabled; })()",
+    "backend connectivity and the case-validation form to become ready"
+  );
+}
+
 async function clickButton(textPrefix) {
   const expression =
     "(() => {" +
@@ -261,6 +268,7 @@ try {
   await setLabelValue("Fictional patient name", originalName);
   await setLabelValue("Diagnosis / MDT case title", originalTitle);
   await setLabelValue("Clinical summary", originalSummary);
+  await waitForValidationReady();
   await clickButton("Validate patient details");
   await waitForExpression(
     "[...document.querySelectorAll('.result-card')].some(node => (node.innerText || '').includes('Case structure valid'))",
@@ -292,6 +300,7 @@ try {
 
   await setLabelValue("Fictional patient name", updatedName);
   await setLabelValue("Clinical summary", updatedSummary);
+  await waitForValidationReady();
   await clickButton("Validate patient details");
   await waitForExpression(
     "[...document.querySelectorAll('button')].some(node => (node.innerText || '').trim().startsWith('Save new version of " + patientIdentifier + "') && !node.disabled)",
