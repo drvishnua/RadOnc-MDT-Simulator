@@ -596,31 +596,65 @@ def ensure_chair_report_completeness(
                     stored_integrity_flags.append(f"R{round_number} {role_id}: {flag}")
 
     # Do not let the Chair draft decide whether persisted source-reference audit
-    # findings are visible. Summarise their distinct-role incidence deterministically.
+    # findings are visible. Collect flags from every completed source row (including
+    # duplicate rows), but count role incidence only once per canonical role ID.
     for round_number, rows in ((2, round2_rows), (3, round3_rows)):
         distinct_entries = _distinct_role_entries(
             rows, "result", f"Round {round_number}", quarantine_flags
         )
-        flagged_roles = [
-            (row, item)
-            for row, item in distinct_entries
-            if any(
-                isinstance(flag, str) and flag.strip()
-                for flag in (item.get("source_reference_integrity_flags") or [])
-            )
-        ]
-        if flagged_roles:
-            total_flags = sum(
-                1
-                for _, item in flagged_roles
-                for flag in (item.get("source_reference_integrity_flags") or [])
+        all_role_ids: set[str] = set()
+        flags_by_role: dict[str, set[str]] = defaultdict(set)
+        roles_by_flag: dict[str, set[str]] = defaultdict(set)
+        unidentified_flag_records = 0
+        for row, item in _entries(rows, "result"):
+            raw_role_id = str(row.get("agent_id") or "").strip()
+            role_id = raw_role_id.upper()
+            if role_id:
+                all_role_ids.add(role_id)
+            raw_flags = item.get("source_reference_integrity_flags") or []
+            if not isinstance(raw_flags, (list, tuple)):
+                if raw_flags:
+                    quarantine_flags.append(
+                        f"Round {round_number} {role_id or 'unknown-role'} has malformed "
+                        "source_reference_integrity_flags; the original saved payload was retained."
+                    )
+                continue
+            clean_flags = {
+                " ".join(flag.split())
+                for flag in raw_flags
                 if isinstance(flag, str) and flag.strip()
-            )
+            }
+            if not clean_flags:
+                continue
+            if not role_id:
+                unidentified_flag_records += 1
+                continue
+            flags_by_role[role_id].update(clean_flags)
+            for flag in clean_flags:
+                roles_by_flag[flag].add(role_id)
+
+        flagged_role_ids = set(flags_by_role)
+        if flagged_role_ids:
+            total_flags = sum(len(values) for values in flags_by_role.values())
             stored_integrity_flags.append(
-                f"Round {round_number} source-reference audit: {len(flagged_roles)}/"
-                f"{len(distinct_entries)} distinct completed roles have {total_flags} "
-                "saved source-reference integrity finding(s); inspect the original "
-                "role records for the individual details."
+                f"Round {round_number} source-reference audit: {len(flagged_role_ids)}/"
+                f"{len(all_role_ids)} distinct completed roles have {total_flags} "
+                "unique saved source-reference integrity finding(s)."
+            )
+            for flag, role_ids in sorted(roles_by_flag.items()):
+                shown_roles = sorted(role_ids)
+                role_note = ", ".join(shown_roles[:8])
+                if len(shown_roles) > 8:
+                    role_note += f", and {len(shown_roles) - 8} more"
+                stored_integrity_flags.append(
+                    f"Round {round_number} source-reference detail "
+                    f"({len(role_ids)} distinct role(s): {role_note}): {flag}"
+                )
+        if unidentified_flag_records:
+            stored_integrity_flags.append(
+                f"Round {round_number} has source-reference integrity flags in "
+                f"{unidentified_flag_records} completed record(s) without an agent_id; "
+                "those findings cannot be attributed to a distinct role."
             )
 
     # No proposition-level support exists in the saved contribution schema.
