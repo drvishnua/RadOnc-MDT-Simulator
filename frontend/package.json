@@ -7,7 +7,7 @@
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "node --test src/caseDraft.test.js src/runRecovery.test.js src/singleAssessmentStorage.test.js src/patientVersionName.test.js"
+    "test": "node --test src/caseDraft.test.js src/runRecovery.test.js src/singleAssessmentStorage.test.js src/patientVersionName.test.js src/roundTiming.test.js"
   },
   "dependencies": {
     "react": "19.1.1",
