@@ -513,3 +513,66 @@ def test_conflicting_duplicate_role_positions_are_excluded_and_flagged():
         and "excluded" in item
         for item in report.case_data_integrity_flags
     )
+
+def test_positive_model_consensus_claims_are_quarantined_across_chair_sections():
+    case = SyntheticCase(
+        scenario_title="Positive consensus quarantine regression",
+        case_summary="Fictional incomplete case for testing the Chair consensus boundary.",
+    )
+    report_draft = _empty_report().model_copy(update={
+        "unresolved_disagreements": [
+            "All 45 roles unanimously agree surgery is the appropriate educational pathway."
+        ],
+        "major_uncertainties": [
+            "The majority supports surgery as the appropriate pathway."
+        ],
+    })
+    round1 = _rows("assessment", ["insufficient_information"] * 45)
+    round2 = _rows("result", ["insufficient_information"] * 45)
+    round3 = _rows("result", ["insufficient_information"] * 45)
+    round1[0]["assessment"]["unknowns"] = [
+        "Every role agreed that surgery should proceed."
+    ]
+    round2[0]["result"]["agreements"] = [
+        "All roles unanimously support surgery."
+    ]
+    round3[-1]["result"]["position"] = "supports"
+    round3[-1]["result"]["provisional_conclusion"] = (
+        "All 45 roles unanimously agree surgery is the appropriate pathway."
+    )
+
+    report = ensure_chair_report_completeness(
+        report_draft, case, round1, round2, round3
+    )
+    rendered = " ".join([
+        *report.unresolved_disagreements,
+        *report.major_uncertainties,
+        *report.recorded_agreements,
+        *report.minority_and_dissenting_views,
+    ]).casefold()
+
+    assert "all 45 roles unanimously agree" not in rendered
+    assert "the majority supports surgery" not in rendered
+    assert "every role agreed" not in rendered
+    assert "all roles unanimously support" not in rendered
+    assert "round 3: supports" in rendered
+    assert "positive consensus assertion withheld" in " ".join(report.case_data_integrity_flags).casefold()
+    assert any("no proposition-level consensus" in item.casefold() for item in report.unresolved_disagreements)
+
+
+def test_explicit_negative_consensus_statements_are_not_quarantined_as_positive_claims():
+    case = SyntheticCase(
+        scenario_title="Negative consensus wording regression",
+        case_summary="Fictional incomplete case for testing.",
+    )
+    draft = _empty_report().model_copy(update={
+        "unresolved_disagreements": ["No consensus was reached because positions remained non-uniform."]
+    })
+    rows1 = _rows("assessment", ["insufficient_information"] * 45)
+    rows2 = _rows("result", ["insufficient_information"] * 45)
+    rows3 = _rows("result", ["insufficient_information"] * 45)
+
+    report = ensure_chair_report_completeness(draft, case, rows1, rows2, rows3)
+
+    assert any("No consensus was reached" in item for item in report.unresolved_disagreements)
+

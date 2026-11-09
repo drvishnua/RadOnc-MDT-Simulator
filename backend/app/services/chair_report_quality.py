@@ -66,6 +66,30 @@ def validate_consensus_points(report: dict) -> None:
         )
 
 
+_POSITIVE_CONSENSUS_PATTERN = re.compile(
+    r"\b(?:unanimous(?:ly)?|all\s+(?:\d+\s+)?roles?|every\s+role|all\s+specialists|"
+    r"the\s+majority|majority|most\s+(?:roles|specialists))\b.{0,120}\b"
+    r"(?:agree(?:s|d)?|support(?:s|ed)?|endorse(?:s|d)?|approve(?:s|ed)?|"
+    r"recommend(?:s|ed)?|back(?:s|ed)?|favour(?:s|ed)?|favor(?:s|ed)?)\b"
+    r"|\b(?:consensus|unanimity)\s+(?:was|has\s+been|is)\s+"
+    r"(?:reached|achieved|established|confirmed)\b",
+    re.IGNORECASE,
+)
+_NEGATED_CONSENSUS_PATTERN = re.compile(
+    r"\b(?:no|not|never|without|cannot|could\s+not|did\s+not|has\s+not|was\s+not)\b"
+    r"[^.!?;]{0,100}\b(?:consensus|unanimity|unanimous\s+agreement|majority\s+agreement)\b",
+    re.IGNORECASE,
+)
+
+
+def _is_positive_consensus_claim(value: str) -> bool:
+    """Reject model-authored positive agreement claims without proposition provenance."""
+    return bool(
+        _POSITIVE_CONSENSUS_PATTERN.search(value)
+        and not _NEGATED_CONSENSUS_PATTERN.search(value)
+    )
+
+
 def _note_quarantined_claims(
     integrity_flags: list[str] | None,
     source_label: str,
@@ -92,6 +116,13 @@ def _safe_text_items(
         return safe
     for value in values:
         if not isinstance(value, str) or not value.strip():
+            continue
+        if _is_positive_consensus_claim(value):
+            _note_quarantined_claims(
+                integrity_flags,
+                source_label,
+                ["Positive model-authored consensus assertion withheld; proposition-level consensus is not established by the saved report contract."],
+            )
             continue
         findings = audit_unverified_case_claims(case, {field: value})
         if findings:
@@ -199,7 +230,14 @@ def _minority_history(
             record["positions"].append(position)
             conclusion = " ".join(str(item.get("provisional_conclusion") or "").split())
             withheld = False
-            if conclusion and case is not None:
+            if conclusion and _is_positive_consensus_claim(conclusion):
+                withheld = True
+                _note_quarantined_claims(
+                    integrity_flags,
+                    f"R{round_number} {agent_id} minority-history conclusion",
+                    ["Positive consensus assertion withheld; one role's text cannot establish shared proposition-level agreement."],
+                )
+            if conclusion and not withheld and case is not None:
                 findings = audit_unverified_case_claims(case, {"provisional_conclusion": conclusion})
                 if findings:
                     withheld = True
@@ -301,6 +339,13 @@ def build_recorded_agreements(
                 if not cleaned or key in seen:
                     continue
                 seen.add(key)
+                if _is_positive_consensus_claim(cleaned):
+                    _note_quarantined_claims(
+                        integrity_flags,
+                        f"R{round_number} {role_id} agreement",
+                        ["Positive consensus assertion withheld; this role-authored statement is not evidence of agreement by other roles."],
+                    )
+                    continue
                 if case is not None:
                     findings = audit_unverified_case_claims(case, {"agreement": cleaned})
                     if findings:
