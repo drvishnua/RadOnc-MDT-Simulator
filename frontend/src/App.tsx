@@ -852,10 +852,11 @@ function App() {
   }
 
   useEffect(() => {
-    if (!hasCompletedIndependentAssessments(batchRun)) return;
-    void refreshMdtRound(2, batchRun.run_id);
-    void refreshMdtRound(3, batchRun.run_id);
-    void refreshMdtRound(4, batchRun.run_id);
+    if (!batchRun || !hasCompletedIndependentAssessments(batchRun)) return;
+    const runId = batchRun.run_id;
+    void refreshMdtRound(2, runId);
+    void refreshMdtRound(3, runId);
+    void refreshMdtRound(4, runId);
   }, [batchRun?.run_id, batchRun?.status]);
 
   useEffect(() => {
@@ -1593,9 +1594,9 @@ function App() {
                   <span className="count-chip">45 ROLES</span>
                 </div>
                 <p className="panel-intro">The debate and review stages ask each role to respond independently to a compact digest of other perspectives. Round 4 produces a chair synthesis that retains dissent and states the evidence limitations.</p>
-                {formatElapsedDuration(batchRun.created_at, batchRun.mdt_finished_at) && (
+                {formatElapsedDuration(batchRun?.created_at, batchRun?.mdt_finished_at) && (
                   <p className="result-footnote">
-                    Full MDT elapsed time: {formatElapsedDuration(batchRun.created_at, batchRun.mdt_finished_at)} from run creation through Chair completion, including any pauses between rounds.
+                    Full MDT elapsed time: {formatElapsedDuration(batchRun?.created_at, batchRun?.mdt_finished_at)} from run creation through Chair completion, including any pauses between rounds.
                   </p>
                 )}
                 {[2, 3, 4].map((roundNumber) => {
