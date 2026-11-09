@@ -388,3 +388,9 @@ def test_comma_separated_question_remains_a_question_not_an_assertion():
         "risk_flags": ["Could this be T1, or should the team obtain further staging?"]
     })
     assert flags == []
+
+
+
+def test_missing_site_and_histology_title_uses_neutral_incomplete_label():
+    case = _case(primary_site=None, histology=None)
+    assert build_case_report_title(case) == "MDT Chair Synthesis: Case details not supplied"
