@@ -19,15 +19,50 @@ New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 
 function Test-ExpectedBackendProcess($Process) {
     if (-not $Process -or $Process.Name -ine "python.exe") { return $false }
-    if ([string]::IsNullOrWhiteSpace([string]$Process.ExecutablePath)) { return $false }
-    $actualExe = [IO.Path]::GetFullPath([string]$Process.ExecutablePath)
+
     $expectedExe = [IO.Path]::GetFullPath($VenvPython)
     $command = [string]$Process.CommandLine
+    if ([string]::IsNullOrWhiteSpace($command)) { return $false }
+
+    # Derive the executable from the first command-line token. WMI's
+    # ExecutablePath can be blank for processes owned by another session.
+    $commandExe = $null
+    $arguments = $null
+    if ($command.StartsWith('"')) {
+        $closingQuote = $command.IndexOf('"', 1)
+        if ($closingQuote -lt 2) { return $false }
+        $commandExe = $command.Substring(1, $closingQuote - 1)
+        $arguments = $command.Substring($closingQuote + 1)
+    } else {
+        $firstSpace = $command.IndexOf(' ')
+        if ($firstSpace -lt 1) { return $false }
+        $commandExe = $command.Substring(0, $firstSpace)
+        $arguments = $command.Substring($firstSpace + 1)
+    }
+
+    try {
+        $commandExe = [IO.Path]::GetFullPath($commandExe)
+    } catch {
+        return $false
+    }
+    if ($commandExe -ine $expectedExe) { return $false }
+
+    # When WMI supplies ExecutablePath, require it to agree as an additional
+    # identity check; do not reject solely because WMI omits it.
+    if (-not [string]::IsNullOrWhiteSpace([string]$Process.ExecutablePath)) {
+        try {
+            if ([IO.Path]::GetFullPath([string]$Process.ExecutablePath) -ine $expectedExe) {
+                return $false
+            }
+        } catch {
+            return $false
+        }
+    }
+
     return (
-        $actualExe -ieq $expectedExe -and
-        $command -match '(?i)(?:^|\s)-m\s+uvicorn\s+app\.main:app(?:\s|$)' -and
-        $command -match '(?i)--host\s+127\.0\.0\.1(?:\s|$)' -and
-        $command -match '(?i)--port\s+8000(?:\s|$)'
+        $arguments -match '(?i)(?:^|\s)-m\s+uvicorn\s+app\.main:app(?:\s|$)' -and
+        $arguments -match '(?i)--host\s+127\.0\.0\.1(?:\s|$)' -and
+        $arguments -match '(?i)--port\s+8000(?:\s|$)'
     )
 }
 
@@ -96,6 +131,9 @@ except Exception as error:
 
     $listenerProcess = $processById[[int]$listenerPids[0]]
     if (-not (Test-ExpectedBackendProcess $listenerProcess)) {
+        Write-Host "Port 8000 listener candidate did not match the guarded Source backend identity:"
+        Write-Host "PID=$($listenerProcess.ProcessId) NAME=$($listenerProcess.Name) EXECUTABLE=$($listenerProcess.ExecutablePath)"
+        Write-Host "COMMAND=$($listenerProcess.CommandLine)"
         throw "Port 8000 is not owned by the expected Source backend Uvicorn process. Refusing to stop it."
     }
 
