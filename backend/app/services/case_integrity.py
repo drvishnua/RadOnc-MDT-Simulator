@@ -105,7 +105,7 @@ _QUALIFIER = re.compile(
 # contrast markers as clause boundaries while keeping a qualifier attached to
 # the assertion in its own clause.
 _CLAUSE_BOUNDARY = re.compile(
-    r"[.!?;:\\n,]|\\b(?:but|however|whereas|while|although|yet|nevertheless)\\b",
+    r"[.!?;:\n,]|\b(?:but|however|whereas|while|although|yet|nevertheless)\b",
     re.IGNORECASE,
 )
 
