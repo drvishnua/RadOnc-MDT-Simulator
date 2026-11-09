@@ -3,6 +3,7 @@ from app.schemas import SyntheticCase
 from app.services.chair_report_quality import (
     SECTION_LIMITS,
     ensure_chair_report_completeness,
+    validate_consensus_points,
 )
 
 
@@ -63,6 +64,46 @@ def _assert_all_sections_are_explicit(report: FinalMDTReport) -> None:
         assert payload[field], f"{field} must contain findings or an explicit absence note"
         assert all(isinstance(item, str) and item.strip() for item in payload[field])
         assert len(payload[field]) <= SECTION_LIMITS[field]
+
+
+def test_empty_consensus_points_are_valid_until_proposition_level_support_exists():
+    validate_consensus_points({"consensus_points": []})
+
+
+def test_nonempty_consensus_points_are_rejected_without_proposition_level_provenance():
+    import pytest
+
+    with pytest.raises(ValueError, match="proposition-level support"):
+        validate_consensus_points({"consensus_points": ["Unverified agreement"]})
+
+
+def test_chair_uncertainties_exclude_unverified_role_assertions_but_keep_unknowns():
+    case = SyntheticCase(
+        scenario_title="Chair case-integrity quarantine test",
+        case_summary="1x1 cm growth involving right vocal cord and anterior commissure.",
+        clinical_t_stage=None,
+        clinical_n_stage=None,
+        clinical_m_stage=None,
+    )
+    round1 = _rows("assessment", ["insufficient_information"] * 45)
+    round1[0]["assessment"]["unknowns"] = [
+        "T1 glottic cancer typically does not require intensification.",
+        "Clinical T stage is not supplied and must not be inferred from lesion size.",
+    ]
+    round1[0]["assessment"]["case_data_integrity_flags"] = [
+        "Generated narrative contains unsupported T-stage terminology."
+    ]
+    report = ensure_chair_report_completeness(
+        _empty_report(),
+        case,
+        round1,
+        _rows("result", ["insufficient_information"] * 45),
+        _rows("result", ["insufficient_information"] * 45),
+    )
+    joined = " ".join(report.major_uncertainties)
+    assert "T1 glottic cancer typically" not in joined
+    assert "Clinical T stage is not supplied" in joined
+    assert any("unsupported T-stage" in item for item in report.case_data_integrity_flags)
 
 
 def test_completeness_rebuilds_recorded_agreements_from_completed_round_records():
