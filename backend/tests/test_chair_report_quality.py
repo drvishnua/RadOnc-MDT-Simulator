@@ -688,6 +688,17 @@ def test_final_chair_rebuilds_source_opinion_coverage_from_saved_r3_reviews():
     round2[0]["result"]["source_reference_integrity_flags"] = [
         "R2 test flag retained from saved role record."
     ]
+    # Duplicate same-position record: its audit flag must not be lost when
+    # distinct-role position/count summaries retain only the first row.
+    round2.append({
+        **round2[0],
+        "result": {
+            **round2[0]["result"],
+            "source_reference_integrity_flags": [
+                "R2 duplicate-only source-reference flag."
+            ],
+        },
+    })
     round3[2]["result"]["source_reference_integrity_flags"] = [
         "R3 test flag retained from saved role record."
     ]
@@ -748,6 +759,8 @@ def test_final_chair_rebuilds_source_opinion_coverage_from_saved_r3_reviews():
     assert "lacks an exact contiguous excerpt" in flags
     assert "Round 2 source-reference audit: 1/45" in flags
     assert "Round 3 source-reference audit: 1/45" in flags
+    assert "R2 duplicate-only source-reference flag" in flags
+    assert "Round 2 source-reference detail (1 distinct role(s): RO-01)" in flags
     assert "unanimously" not in unresolved.casefold()
 
 def test_source_excerpt_id_conflicts_are_flagged_even_when_one_review_has_an_invalid_peer_reference():
