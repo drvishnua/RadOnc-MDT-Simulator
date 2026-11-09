@@ -53,7 +53,8 @@ def initialize_database() -> None:
                 case_version_id TEXT,
                 case_version_number INTEGER,
                 created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL
+                updated_at TEXT NOT NULL,
+                mdt_finished_at TEXT
             );
 
             CREATE TABLE IF NOT EXISTS synthetic_patients (
@@ -124,6 +125,7 @@ def initialize_database() -> None:
             ("patient_id", "TEXT"),
             ("case_version_id", "TEXT"),
             ("case_version_number", "INTEGER"),
+            ("mdt_finished_at", "TEXT"),
         ):
             if column not in run_columns:
                 db.execute(f"ALTER TABLE simulation_runs ADD COLUMN {column} {sql_type}")
@@ -499,6 +501,7 @@ def get_run(run_id: str) -> dict[str, Any]:
         "current_agent_id": row["current_agent_id"],
         "created_at": row["created_at"],
         "updated_at": row["updated_at"],
+        "mdt_finished_at": row["mdt_finished_at"],
         "case_snapshot_sha256": hashlib.sha256(row["case_json"].encode("utf-8")).hexdigest(),
         "all_agents_required": True,
         "independent_assessments": True,
@@ -670,6 +673,8 @@ def _ensure_round_tables(db: sqlite3.Connection) -> None:
             current_agent_id TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
+            started_at TEXT,
+            finished_at TEXT,
             PRIMARY KEY (run_id, round_number),
             FOREIGN KEY (run_id) REFERENCES simulation_runs(run_id) ON DELETE CASCADE
         );
@@ -695,6 +700,11 @@ def _ensure_round_tables(db: sqlite3.Connection) -> None:
         ON agent_round_results(run_id, round_number, status);
         """
     )
+    # Additive migration for round timing fields on existing SQLite databases.
+    round_columns = {row["name"] for row in db.execute("PRAGMA table_info(round_runs)")}
+    for column in ("started_at", "finished_at"):
+        if column not in round_columns:
+            db.execute(f"ALTER TABLE round_runs ADD COLUMN {column} TEXT")
 
 
 def create_round_job(run_id: str, round_number: int) -> dict[str, Any]:
@@ -742,12 +752,12 @@ def create_round_job(run_id: str, round_number: int) -> dict[str, Any]:
         db.execute(
             """
             INSERT INTO round_runs
-            (run_id, round_number, status, total_agents, current_agent_id, created_at, updated_at)
-            VALUES (?, ?, 'queued', ?, NULL, ?, ?)
+            (run_id, round_number, status, total_agents, current_agent_id, created_at, updated_at, started_at, finished_at)
+            VALUES (?, ?, 'queued', ?, NULL, ?, ?, NULL, NULL)
             ON CONFLICT(run_id, round_number) DO UPDATE SET
                 status = 'queued', total_agents = excluded.total_agents,
                 current_agent_id = NULL, created_at = excluded.created_at,
-                updated_at = excluded.updated_at
+                updated_at = excluded.updated_at, started_at = NULL, finished_at = NULL
             """,
             (run_id, round_number, total, now, now),
         )
@@ -808,6 +818,8 @@ def get_round_summary(run_id: str, round_number: int) -> dict[str, Any]:
         "current_agent_id": row["current_agent_id"],
         "created_at": row["created_at"],
         "updated_at": row["updated_at"],
+        "started_at": row["started_at"],
+        "finished_at": row["finished_at"],
     }
 
 
@@ -858,8 +870,8 @@ def mark_round_running(run_id: str, round_number: int) -> None:
     with _connect() as db:
         _ensure_round_tables(db)
         db.execute(
-            "UPDATE round_runs SET status = 'running', updated_at = ? WHERE run_id = ? AND round_number = ?",
-            (now, run_id, round_number),
+            "UPDATE round_runs SET status = 'running', started_at = COALESCE(started_at, ?), finished_at = NULL, updated_at = ? WHERE run_id = ? AND round_number = ?",
+            (now, now, run_id, round_number),
         )
 
 
@@ -934,17 +946,24 @@ def mark_round_finished(run_id: str, round_number: int) -> None:
         _ensure_round_tables(db)
         db.execute(
             """
-            UPDATE round_runs SET status = ?, current_agent_id = NULL, updated_at = ?
+            UPDATE round_runs SET status = ?, current_agent_id = NULL, updated_at = ?,
+                finished_at = CASE WHEN ? IN ('completed', 'completed_with_errors') THEN ? ELSE NULL END
             WHERE run_id = ? AND round_number = ?
             """,
-            (status, now, run_id, round_number),
+            (status, now, status, now, run_id, round_number),
         )
-        # Keep the parent run timestamp current through all four rounds.
+        # The parent timestamp represents the terminal state of the full four-round MDT,
+        # not completion of the initial R1 batch.
         if round_number == 4 and status in {"completed", "completed_with_errors"}:
             overall_status = "completed" if status == "completed" else "completed_with_errors"
             db.execute(
-                "UPDATE simulation_runs SET status = ?, updated_at = ? WHERE run_id = ?",
-                (overall_status, now, run_id),
+                "UPDATE simulation_runs SET status = ?, updated_at = ?, mdt_finished_at = ? WHERE run_id = ?",
+                (overall_status, now, now, run_id),
+            )
+        elif round_number == 4:
+            db.execute(
+                "UPDATE simulation_runs SET updated_at = ?, mdt_finished_at = NULL WHERE run_id = ?",
+                (now, run_id),
             )
         else:
             db.execute("UPDATE simulation_runs SET updated_at = ? WHERE run_id = ?", (now, run_id))
@@ -965,11 +984,17 @@ def reset_failed_round_agents(run_id: str, round_number: int) -> None:
         )
         db.execute(
             """
-            UPDATE round_runs SET status = 'queued', current_agent_id = NULL, updated_at = ?
+            UPDATE round_runs SET status = 'queued', current_agent_id = NULL, started_at = NULL,
+                finished_at = NULL, updated_at = ?
             WHERE run_id = ? AND round_number = ?
             """,
             (now, run_id, round_number),
         )
+        if round_number == 4:
+            db.execute(
+                "UPDATE simulation_runs SET mdt_finished_at = NULL, updated_at = ? WHERE run_id = ?",
+                (now, run_id),
+            )
 
 
 def get_final_report(run_id: str) -> dict[str, Any] | None:
