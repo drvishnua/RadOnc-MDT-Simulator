@@ -305,7 +305,7 @@ def ensure_chair_report_completeness(
             SECTION_LIMITS["missing_information_before_real_world_review"],
         ) or [
             "No specific missing-information item was recorded. Completeness of the "
-            "synthetic case has not been independently verified."
+            "supplied case has not been independently verified."
         ]
 
     if not data["patient_and_family_considerations"]:
@@ -328,7 +328,7 @@ def ensure_chair_report_completeness(
 
     if not data["governance_and_safeguarding_considerations"]:
         data["governance_and_safeguarding_considerations"] = [
-            "Synthetic educational simulation only; not a clinical decision or treatment instruction.",
+            "Educational simulation only; not a clinical decision or treatment instruction.",
             "Consent, patient preferences, safeguarding, and documentation require qualified review in any real setting.",
             "No real-patient data should be entered into this educational workflow.",
         ]
