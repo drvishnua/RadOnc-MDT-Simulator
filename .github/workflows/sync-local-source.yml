@@ -98,7 +98,9 @@ jobs:
           $parseErrors = $null
           [System.Management.Automation.Language.Parser]::ParseFile($restartScript, [ref]$tokens, [ref]$parseErrors) | Out-Null
           if ($parseErrors.Count -gt 0) {
-            $parseErrors | ForEach-Object { Write-Error $_.Message }
+            foreach ($parseError in $parseErrors) {
+              Write-Host ("POWERSHELL_PARSE_ERROR line={0} column={1} text={2} message={3}" -f $parseError.Extent.StartLineNumber, $parseError.Extent.StartColumnNumber, $parseError.Extent.Text, $parseError.Message)
+            }
             throw "PowerShell parser rejected restart-local-backend.ps1."
           }
           & $restartScript -SourceRoot $destination
