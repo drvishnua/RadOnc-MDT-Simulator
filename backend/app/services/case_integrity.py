@@ -193,9 +193,12 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
                     keys.add(f"{number}{suffix}")
             return keys
 
-        unsupported_stage_groups = sorted(
-            stage_group_keys(text) - stage_group_keys(source_text)
-        )
+        source_group_keys = stage_group_keys(source_text)
+        unsupported_stage_groups = [
+            snippet
+            for snippet in _unqualified_matches(stage_group_pattern, text)
+            if not stage_group_keys(snippet).issubset(source_group_keys)
+        ]
         if unsupported_stage_groups:
             flags.append(
                 "Generated narrative assigns a stage group ("
