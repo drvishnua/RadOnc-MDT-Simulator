@@ -245,7 +245,7 @@ def ensure_chair_report_completeness(
         for _, item in _entries(rows, field):
             integrity_flags.extend(item.get("case_data_integrity_flags") or [])
     data["case_data_integrity_flags"] = _unique(integrity_flags, SECTION_LIMITS["case_data_integrity_flags"]) or [
-        "No unsupported stage, demographic, or absence claim was detected by the deterministic case-data audit."
+        "No case-data integrity flags were recorded in completed role contributions by the deterministic checks that ran. These checks are limited in scope and do not establish the absence of unsupported claims; manual review remains necessary."
     ]
 
     uncertainty_items = list(case.known_unknowns or [])
