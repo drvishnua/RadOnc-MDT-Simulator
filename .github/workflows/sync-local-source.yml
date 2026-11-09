@@ -6,6 +6,10 @@ on:
     branches:
       - main
       - feature/four-round-mdt-and-performance
+    paths-ignore:
+      - ".github/workflows/live-four-round-validation.yml"
+      - ".github/workflows/sync-local-source.yml"
+      - "backend/scripts/live_four_round_validation.py"
 
 permissions:
   contents: read
