@@ -1484,7 +1484,7 @@ function App() {
                       onClick={() => void resumeAllAgents()}
                       disabled={batchResuming || batchStarting}
                     >
-                      {batchResuming ? "Resuming…" : batchRun.status === "completed_with_errors" ? "Retry failed agents" : "Recover interrupted run"}
+                      {batchResuming ? "Resuming…" : batchRun?.status === "completed_with_errors" ? "Retry failed agents" : "Recover interrupted run"}
                     </button>
                   )}
                 </div>
