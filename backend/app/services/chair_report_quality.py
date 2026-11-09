@@ -213,6 +213,7 @@ def build_source_opinion_review_coverage(
     roles_by_source: dict[str, dict[str, list[dict]]] = defaultdict(
         lambda: defaultdict(list)
     )
+    labels_by_source: dict[str, set[str]] = defaultdict(set)
     conflicting_ids: set[str] = set()
 
     for row, result in entries:
@@ -281,6 +282,9 @@ def build_source_opinion_review_coverage(
             id_to_excerpt[source_id] = excerpt
             excerpt_to_id[excerpt] = source_id
             roles_by_source[source_id][role_id].append(review)
+            label = " ".join(str(review.get("opinion_label") or "").split())
+            if label:
+                labels_by_source[source_id].add(label)
 
     valid_numbers = sorted(
         int(match.group(1))
@@ -306,6 +310,8 @@ def build_source_opinion_review_coverage(
 
         option_counts: Counter = Counter()
         condition_counts: Counter = Counter()
+        option_conflicts: list[str] = []
+        condition_conflicts: list[str] = []
         for role_id, reviews in sorted(roles_by_source[source_id].items()):
             if len(reviews) > 1:
                 integrity.append(
@@ -332,17 +338,26 @@ def build_source_opinion_review_coverage(
                         f"R3 source-opinion review {source_id} has conflicting {label} statuses "
                         f"for {role_id}; that role was excluded from the {label} status count."
                     )
+                    (option_conflicts if field == "option_status" else condition_conflicts).append(role_id)
                     continue
                 if statuses:
                     counts[next(iter(statuses))] += 1
 
+        labels = sorted(labels_by_source.get(source_id, set()))
+        label_note = (
+            f"model-reported label(s) {labels}; labels are not independently verified"
+            if labels else "no model-reported label"
+        )
         coverage.append(
-            "R3 source-opinion review coverage (distinct completed roles; model-reported "
+            "R3 source-opinion review coverage (distinct roles; model-reported "
             "representation labels only, not clinical findings or consensus) — "
-            f"{source_id}: {len(roles_by_source[source_id])}/{len(entries)} roles supplied "
+            f"{source_id} ({label_note}): "
+            f"{len(roles_by_source[source_id])}/{len(entries)} roles supplied "
             "an exact source-bound review; option status role counts "
             f"{dict(sorted(option_counts.items()))}; condition status role counts "
-            f"{dict(sorted(condition_counts.items()))}."
+            f"{dict(sorted(condition_counts.items()))}; "
+            f"conflicting duplicate-role reviews excluded (option: {option_conflicts}; "
+            f"conditions: {condition_conflicts})."
         )
 
     return coverage, _unique(integrity, 45)
