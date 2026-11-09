@@ -611,3 +611,45 @@ def test_negative_consensus_clause_does_not_mask_separate_positive_consensus_cla
     assert "positive consensus assertion withheld" in flags
     assert "round 3: supports" in rendered
 
+def test_position_counts_collapse_case_and_whitespace_variants_of_the_same_role_id():
+    case = SyntheticCase(
+        scenario_title="Case-variant duplicate role regression",
+        case_summary="Fictional case for deterministic role-count testing.",
+    )
+    round1 = _rows("assessment", ["insufficient_information"] * 45)
+    round2 = _rows("result", ["insufficient_information"] * 45)
+    round3 = _rows("result", ["insufficient_information"] * 45)
+    duplicate = {**round3[0], "agent_id": " ro-01 "}
+    round3.append(duplicate)
+
+    report = ensure_chair_report_completeness(
+        _empty_report(), case, round1, round2, round3
+    )
+
+    assert "Round 3: 45/45 insufficient-information" in report.overall_educational_synthesis
+    assert any(
+        "2 completed records for RO-01" in item and "counted once" in item
+        for item in report.case_data_integrity_flags
+    )
+
+
+def test_completed_contribution_without_agent_id_is_excluded_from_role_counts():
+    case = SyntheticCase(
+        scenario_title="Missing role identifier exclusion regression",
+        case_summary="Fictional case for deterministic role-count testing.",
+    )
+    round1 = _rows("assessment", ["insufficient_information"] * 45)
+    round2 = _rows("result", ["insufficient_information"] * 45)
+    round3 = _rows("result", ["insufficient_information"] * 45)
+    round3[0]["agent_id"] = None
+
+    report = ensure_chair_report_completeness(
+        _empty_report(), case, round1, round2, round3
+    )
+
+    assert "Round 3: 44/44 insufficient-information" in report.overall_educational_synthesis
+    assert any(
+        "has no agent_id and was excluded" in item
+        for item in report.case_data_integrity_flags
+    )
+
