@@ -749,6 +749,8 @@ def test_final_chair_rebuilds_source_opinion_coverage_from_saved_r3_reviews():
     assert source_one in unresolved
     assert source_two in unresolved
     assert "2/45 roles supplied an exact source-bound review" in unresolved
+    assert "reviewing role IDs: ['RO-01', 'RO-02']" in unresolved
+    assert "reviewing role IDs: ['RO-03']" in unresolved
     assert "option status role counts {'preserved': 1}" in unresolved
     assert "condition status role counts {'omitted': 1, 'preserved': 1}" in unresolved
     assert "CASE:case_summary#2" in unresolved
