@@ -3,7 +3,10 @@ import { access, mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
+import { fileURLToPath } from "node:url";
 
+const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
+const SOURCE_ROOT = path.dirname(SCRIPT_DIR);
 const APP_URL = "http://127.0.0.1:5173/";
 const API_URL = "http://127.0.0.1:8000";
 const TEST_TIMEOUT_MS = 20_000;
@@ -61,6 +64,8 @@ let socket = null;
 let commandId = 0;
 let patientIdentifier = null;
 let patientId = null;
+let dashboardPatientId = null;
+let dashboardRunId = null;
 let browserWorkflowCompleted = false;
 
 function delay(ms) {
@@ -276,6 +281,102 @@ async function verifyBackendDeletion() {
   for (const patient of matches) {
     await fetch(API_URL + "/api/patients/" + patient.patient_id, { method: "DELETE" });
   }
+}
+
+async function verifyFourRoundDashboard() {
+  const pythonExecutable = path.join(
+    SOURCE_ROOT,
+    "backend",
+    ".venv",
+    "Scripts",
+    "python.exe"
+  );
+  const seedScript = path.join(SCRIPT_DIR, "seed-mdt-dashboard-e2e.py");
+  const seedOutput = execFileSync(
+    pythonExecutable,
+    [seedScript],
+    {
+      cwd: path.join(SOURCE_ROOT, "backend"),
+      encoding: "utf8",
+      windowsHide: true
+    }
+  );
+  const seed = JSON.parse(seedOutput.trim());
+  dashboardPatientId = seed.patient_id;
+  dashboardRunId = seed.run_id;
+
+  const summaryResponse = await fetch(API_URL + "/api/runs/" + dashboardRunId);
+  if (!summaryResponse.ok) {
+    throw new Error("The seeded four-round dashboard run could not be retrieved.");
+  }
+  const savedSummary = await summaryResponse.json();
+  if (
+    savedSummary.completed_count !== 45 ||
+    savedSummary.failed_count !== 0 ||
+    savedSummary.status !== "completed"
+  ) {
+    throw new Error("The seeded R1 summary does not contain 45 completed contributions.");
+  }
+
+  await evaluate(
+    "window.localStorage.setItem('radonc-mdt-active-batch', " +
+      json(JSON.stringify(savedSummary)) +
+      "); window.location.reload(); true"
+  );
+  await waitForExpression(
+    "!!document.querySelector('.app-shell')",
+    "the dashboard after restoring the saved four-round run"
+  );
+  await waitForExpression(
+    "document.body.innerText.includes('Four-round MDT workflow')",
+    "the four-round workflow panel"
+  );
+  await waitForExpression(
+    "document.querySelectorAll('.round-stage').length === 3 && " +
+      "document.querySelectorAll('.round-agent-list details').length === 90",
+    "all three saved round panels and all 90 R2/R3 role records"
+  );
+  await waitForExpression(
+    "!!document.querySelector('.final-mdt-report') && " +
+      "document.body.innerText.includes('MDT Chair Synthesis: Dashboard rendering check')",
+    "the persisted Chair report"
+  );
+
+  const rendered = await evaluate(
+    "(() => {" +
+      "const stages = [...document.querySelectorAll('.round-stage')];" +
+      "const headings = stages.map(stage => (stage.querySelector('.round-stage-heading')?.innerText || '').replace(/\\s+/g, ' ').trim());" +
+      "const completed = stages.map(stage => (stage.innerText || '').includes('Stage completed'));" +
+      "const roundRoleCount = document.querySelectorAll('.round-agent-list details').length;" +
+      "const report = document.querySelector('.final-mdt-report')?.innerText || '';" +
+      "return { headings, completed, roundRoleCount, hasInsufficientInformation: report.includes('Consensus status · insufficient information'), " +
+        "hasRecordedAgreementLabel: report.includes('Recorded agreements · attributed, not consensus'), " +
+        "hasUncertaintySection: report.includes('Major uncertainties'), " +
+        "hasEvidenceLimitation: report.includes('Evidence retrieval is not connected') };" +
+    "})()"
+  );
+  if (
+    rendered.headings.length !== 3 ||
+    !rendered.completed.every(Boolean) ||
+    rendered.roundRoleCount !== 90 ||
+    !rendered.hasInsufficientInformation ||
+    !rendered.hasRecordedAgreementLabel ||
+    !rendered.hasUncertaintySection ||
+    !rendered.hasEvidenceLimitation
+  ) {
+    throw new Error("The four-round dashboard did not render every saved state and Chair report section: " + JSON.stringify(rendered));
+  }
+
+  // The browser fixture is disposable; remove both the test patient and its entire run.
+  const deleted = await fetch(API_URL + "/api/patients/" + dashboardPatientId, { method: "DELETE" });
+  if (!deleted.ok) {
+    throw new Error("The disposable four-round dashboard fixture could not be deleted.");
+  }
+  dashboardPatientId = null;
+  dashboardRunId = null;
+  await evaluate("window.localStorage.removeItem('radonc-mdt-active-batch'); true");
+  console.log("FOUR_ROUND_DASHBOARD_BROWSER_E2E_OK");
+  console.log("Verified in headless Edge: saved R1 readiness, R2/R3 45-role result lists, completed R4 and persisted Chair report rendering. No model inference was invoked.");
 }
 
 try {
