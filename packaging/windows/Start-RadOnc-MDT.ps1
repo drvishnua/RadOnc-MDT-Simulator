@@ -74,6 +74,10 @@ for ($attempt = 0; $attempt -lt 45; $attempt++) {
 
 if (-not $ready) {
     $details = if (Test-Path $stderr) { (Get-Content $stderr -Tail 30) -join [Environment]::NewLine } else { "No stderr log was created." }
+    if ($process -and -not $process.HasExited) {
+        Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+    }
+    Remove-Item -LiteralPath $pidFile -Force -ErrorAction SilentlyContinue
     throw "RadOnc MDT did not become ready on port $Port. $details"
 }
 

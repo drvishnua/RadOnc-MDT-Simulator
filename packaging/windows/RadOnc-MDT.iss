@@ -11,8 +11,8 @@ AppPublisher={#MyAppPublisher}
 DefaultDirName={localappdata}\Programs\RadOncMDT
 DefaultGroupName={#MyAppName}
 PrivilegesRequired=lowest
-ArchitecturesAllowed=x64
-ArchitecturesInstallIn64BitMode=x64
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir=..\..\dist\installer
 OutputBaseFilename=RadOnc-MDT-Simulator-Setup
 Compression=lzma2
@@ -48,4 +48,4 @@ Name: "{autodesktop}\RadOnc MDT Simulator"; Filename: "{app}\Start-RadOnc-MDT.cm
 Filename: "{app}\Start-RadOnc-MDT.cmd"; Description: "Launch RadOnc MDT Simulator"; Flags: postinstall nowait skipifsilent
 
 [UninstallRun]
-Filename: "{app}\Stop-RadOnc-MDT.cmd"; Flags: runhidden waituntilterminated
+Filename: "{app}\Stop-RadOnc-MDT.cmd"; Flags: runhidden waituntilterminated; RunOnceId: "StopInstalledRadOncMdt"
