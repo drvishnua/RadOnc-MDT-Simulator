@@ -691,20 +691,20 @@ def test_final_chair_rebuilds_source_opinion_coverage_from_saved_r3_reviews():
         "R3 test flag retained from saved role record."
     ]
 
-    round3[0]["source_peer_ids"] = ["RO-02"]
+    round3[0]["result"]["source_peer_ids"] = ["RO-02"]
     round3[0]["result"]["source_opinion_reviews"] = [
         review("CASE:case_summary#1", source_one, "preserved", "preserved", "RO-02")
     ]
-    round3[1]["source_peer_ids"] = ["RO-03"]
+    round3[1]["result"]["source_peer_ids"] = ["RO-03"]
     round3[1]["result"]["source_opinion_reviews"] = [
         review("CASE:case_summary#1", source_one, "omitted", "omitted", "RO-03"),
         review("CASE:case_summary#1", source_one, "preserved", "omitted", "RO-03"),
     ]
-    round3[2]["source_peer_ids"] = ["RO-04"]
+    round3[2]["result"]["source_peer_ids"] = ["RO-04"]
     round3[2]["result"]["source_opinion_reviews"] = [
         review("CASE:case_summary#2", source_two, "partly_preserved", "unclear", "RO-04")
     ]
-    round3[3]["source_peer_ids"] = ["RO-05"]
+    round3[3]["result"]["source_peer_ids"] = ["RO-05"]
     round3[3]["result"]["source_opinion_reviews"] = [
         {
             **review(
