@@ -2,7 +2,7 @@
 
 A local-first, AI-assisted educational simulator for multidisciplinary oncology case discussions.
 
-> **Current milestone:** The development branch implements 45 independent assessments, 45-agent debate, 45-agent adversarial review, and SG-07 Chair synthesis. The reconciled Chair logic has passed backend regression tests and a fresh 136-generation live run on the target laptop. Feature-branch pushes now automatically synchronize the source into the laptop's `Source` folder.
+> **Current milestone (9 November 2026):** The development branch contains the four-round 45 + 45 + 45 + 1 workflow, patient registry/versioning, expanded case-integrity checks and Chair safeguards. CI passed on code snapshot `b2c072581d2c6d8f870d39b644d71d5851023dd5` (backend 110 passed; frontend 21 passed and production build passed). The latest detailed live MDT-006 audit remains a historical failure with 134 hard failures and 92 major findings; the later prompt/schema and case-integrity changes have not yet had a fresh full live run. Feature-branch pushes synchronize source to the laptop `Source` folder, but an already-running backend must be restarted to load copied Python changes.
 
 ## Purpose
 
@@ -70,10 +70,28 @@ The model is kept warm during a run. Prompts use Ollama's schema-constrained out
 
 ## Validation status
 
-- **Fresh live local-model validation:** run [41979964363](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/41979964363) passed on commit `cf1792b617bdceb7e0beea4cc42c183f9068f9b2`. It completed all 136 generations (45 + 45 + 45 + 1) with zero failures or retries in 793.06 seconds using Ollama `qwen3.5:4b` and the laptop RTX 4060.
-- **Backend regression suite:** 31 tests passed on the final reconciled backend.
-- **Frontend/launcher CI:** PowerShell parsing, Node compatibility checks, dependency installation, TypeScript checking, and production build passed on commit `1f9212653457dbeb5a656d72d3b333833842b5a2`.
-- **Laptop source sync:** run [41984385622](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/41984385622) passed on the self-hosted `RadOnc-Laptop` runner and verified the local `Source` folder at commit `1f9212653457dbeb5a656d72d3b333833842b5a2`.
+### Current code/CI snapshot
+
+The following checks ran against code snapshot `b2c072581d2c6d8f870d39b644d71d5851023dd5`:
+
+- **Backend CI:** [run 42574812785](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42574812785) — success; **110 passed, 1 warning** (the existing Starlette/httpx TestClient deprecation).
+- **Frontend CI:** [run 42574812756](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42574812756) — success; **21 tests passed**, TypeScript check and Vite production build passed.
+- **Windows source sync and local diagnostic:** [run 42574809719](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42574809719) — success; local manifest verified at the same branch/SHA. FastAPI health, React shell and structured case-field checks passed.
+
+The self-hosted diagnostic found existing Vite and Uvicorn processes listening and the React shell mounted. It did not restart the existing Uvicorn process. Source sync therefore does not prove that an already-running backend has loaded the latest copied Python code; stop and restart the local services after backend changes.
+
+### Historical full live runs — not current-head validation
+
+- Earlier live run [41979964363](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/41979964363) completed all 136 generations in 793.06 seconds with zero failures/retries on code commit `cf1792b617bdceb7e0beea4cc42c183f9068f9b2`. This is a historical successful execution, not evidence for the current code snapshot.
+- The later, more detailed MDT-006 audit [run 42502115878](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42502115878) completed all 136 saved contributions in 988.37 seconds but reported **134 hard failures and 92 major findings**. Workflow completion means inference and artefact upload completed; it does not mean the audit passed.
+- The MDT-006 audit found broad/invalid R2 citations, unsupplied peer references and omissions/unclear challenges in R3, plus unsupported resectability, investigation, preference and treatment-safety assertions. Its Chair withheld a treatment recommendation and retained insufficient-information status.
+- The subsequent R2/R3 prompt/schema changes and the latest case-integrity changes have CI coverage but have **not** been validated in a new full live Ollama run. The MDT-006 findings remain open until a separately authorised live validation demonstrates improvement.
+
+### GPU evidence boundary
+
+The historical MDT-006 run recorded sustained system-wide RTX 4060 activity (mean 83.01%, peak 100%) and Ollama model residency telemetry. The telemetry was system-wide and cannot attribute all GPU activity exclusively to Ollama. These values are historical, not a current-head GPU verification. Model residency or VRAM allocation alone is not proof of active token inference.
+
+A fresh live 136-contribution run, current-head GPU attribution and qualified clinical review are still outstanding. CI and backend tests do not establish clinical accuracy or guideline concordance.
 
 ## Automatic laptop source synchronization
 
@@ -81,7 +99,7 @@ Pushes to `main` and `feature/four-round-mdt-and-performance` trigger the Window
 
 The sync is additive/update-only: it does not delete unrelated files in `Source`. It excludes Git metadata, installed Node/Python dependencies, Python caches, and local logs. The runner installation and sibling `AI_Models` folder are outside the destination and are not copied over.
 
-The `Source` folder is a runtime source mirror, not a separate Git working tree. The Actions runner's own checkout is refreshed to the pushed branch/commit for each workflow run. After a sync, use `Start-RadOnc-MDT.cmd` from `Source` to start the local app; use `Stop-RadOnc-MDT.cmd` to stop the backend and frontend. The sync does not forcibly restart an already-running app, so restart the local services after backend-code changes to load the new backend modules. The launcher prepares/checks dependencies, starts FastAPI and Vite, and starts Ollama if it is installed but not already reachable.
+The `Source` folder is a runtime source mirror, not a separate Git working tree. The Actions runner's own checkout is refreshed to the pushed branch/commit for each workflow run. The sync does not forcibly restart an already-running app. After backend-code changes, use `Stop-RadOnc-MDT.cmd` from `Source`, then `Start-RadOnc-MDT.cmd` to ensure the new Python modules are loaded; running the Start launcher alone while the backend is already responding leaves that process in place. The launcher prepares/checks dependencies, starts FastAPI and Vite, and starts Ollama if it is installed but not already reachable. Do not stop services while a simulation is queued or running.
 
 ## Evidence boundary
 
