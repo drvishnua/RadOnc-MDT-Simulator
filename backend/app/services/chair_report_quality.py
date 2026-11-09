@@ -7,7 +7,7 @@ import re
 
 from app.round_schemas import FinalMDTReport
 from app.schemas import SyntheticCase
-from app.services.case_integrity import build_case_report_title
+from app.services.case_integrity import audit_unverified_case_claims, build_case_report_title
 
 
 ROUND_SOURCES = (
@@ -53,6 +53,28 @@ def _unique(values: list[str], limit: int) -> list[str]:
         if len(result) >= limit:
             break
     return result
+
+
+def validate_consensus_points(report: dict) -> None:
+    """Require explicit empty consensus until proposition-level support is implemented."""
+    points = report.get("consensus_points")
+    if not isinstance(points, list):
+        raise ValueError("Chair consensus_points must be a list.")
+    if points:
+        raise ValueError(
+            "Chair consensus_points must remain empty until proposition-level support is implemented."
+        )
+
+
+def _safe_role_text_items(case: SyntheticCase, payload: dict, field: str) -> list[str]:
+    """Exclude individual role strings that assert facts absent from the source case."""
+    safe: list[str] = []
+    for value in payload.get(field) or []:
+        if not isinstance(value, str) or not value.strip():
+            continue
+        if not audit_unverified_case_claims(case, {field: value}):
+            safe.append(value)
+    return safe
 
 
 def _position_counts(rows: list[dict], field: str) -> Counter:
@@ -353,17 +375,16 @@ def ensure_chair_report_completeness(
         (3, round3_rows, "result"),
     ):
         for _, item in _entries(rows, field):
-            uncertainty_items.extend(item.get("unknowns") or [])
-            uncertainty_items.extend(item.get("remaining_unknowns") or [])
-            uncertainty_items.extend(item.get("uncertainty_notes") or [])
-            missing_items.extend(item.get("unknowns") or [])
-            missing_items.extend(item.get("remaining_unknowns") or [])
-            evidence_items.extend(item.get("evidence_gaps") or [])
-            for candidate in (
-                item.get("unknowns") or []
-            ) + (
-                item.get("remaining_unknowns") or []
-            ):
+            role_unknowns = _safe_role_text_items(case, item, "unknowns")
+            role_remaining_unknowns = _safe_role_text_items(case, item, "remaining_unknowns")
+            role_uncertainty_notes = _safe_role_text_items(case, item, "uncertainty_notes")
+            uncertainty_items.extend(role_unknowns)
+            uncertainty_items.extend(role_remaining_unknowns)
+            uncertainty_items.extend(role_uncertainty_notes)
+            missing_items.extend(role_unknowns)
+            missing_items.extend(role_remaining_unknowns)
+            evidence_items.extend(_safe_role_text_items(case, item, "evidence_gaps"))
+            for candidate in role_unknowns + role_remaining_unknowns:
                 lowered = str(candidate).casefold()
                 if any(
                     term in lowered
