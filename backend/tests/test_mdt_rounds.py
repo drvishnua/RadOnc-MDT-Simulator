@@ -403,7 +403,7 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
     assert "REPRESENTATION FIDELITY ONLY" in prompts[1]
     assert "Missing or unfulfilled case prerequisites are case unknowns" in prompts[1]
     assert "not an assessment of clinical appropriateness" in prompts[1].casefold()
-    assert "does not let you assess representation, use unclear" in prompts[1]
+    assert "does not permit assessment, use unclear" in prompts[1]
     assert "[embedded round ref; cite R2]" in prompts[1]
     assert "R1:SO-01" not in prompts[1]
     assert "R2:DS-02" not in prompts[1]
@@ -957,7 +957,7 @@ def test_r3_generation_copies_review_challenge_with_structured_source_prefix(mon
     from app.services import mdt_generation
 
     async def fake_generate(prompt, schema_type, max_tokens):
-        assert "CASE:case_summary#1" in prompt
+        assert "CASE:case_summary#N" in prompt
         assert "R2:MO-01" in prompt
         return AdversarialContributionDraft(
             position="conditional",
