@@ -200,32 +200,61 @@ except Exception as error:
     Write-Host "No process is listening on port 8000; starting the backend without stopping anything."
 }
 
+function ConvertTo-PowerShellStringLiteral([string]$Value) {
+    return "'" + $Value.Replace("'", "''") + "'"
+}
+
 $timestamp = [DateTime]::UtcNow.ToString("yyyyMMdd-HHmmss")
 $stdout = Join-Path $LogDir "backend.restart.$timestamp.stdout.log"
 $stderr = Join-Path $LogDir "backend.restart.$timestamp.stderr.log"
-$backendProcess = Start-Process -FilePath $VenvPython -ArgumentList @("-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8000") -WorkingDirectory $BackendDir -WindowStyle Hidden -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
-Set-Content -Path (Join-Path $LogDir "backend.pid") -Value $backendProcess.Id -Encoding ASCII
+$pidFile = Join-Path $LogDir "backend.pid"
+
+# Spawn through WMI so the self-hosted Actions runner does not reap the backend
+# as an orphaned child process when its workflow step ends.
+$launcherScript = @(
+    '$ErrorActionPreference = "Stop"',
+    '$process = Start-Process -FilePath ' + (ConvertTo-PowerShellStringLiteral $VenvPython) + ' -ArgumentList @("-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8000") -WorkingDirectory ' + (ConvertTo-PowerShellStringLiteral $BackendDir) + ' -WindowStyle Hidden -PassThru -RedirectStandardOutput ' + (ConvertTo-PowerShellStringLiteral $stdout) + ' -RedirectStandardError ' + (ConvertTo-PowerShellStringLiteral $stderr),
+    'Set-Content -Path ' + (ConvertTo-PowerShellStringLiteral $pidFile) + ' -Value $process.Id -Encoding ASCII'
+) -join "`r`n"
+$launcherPowerShell = Join-Path $PSHOME "powershell.exe"
+$encodedLauncher = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($launcherScript))
+$launcherCommandLine = '"' + $launcherPowerShell + '" -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand ' + $encodedLauncher
+$spawnResult = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = $launcherCommandLine }
+if ([int]$spawnResult.ReturnValue -ne 0) {
+    throw "Windows could not launch the detached backend helper (Win32_Process.Create=$($spawnResult.ReturnValue))."
+}
+Write-Host "Detached backend launcher PID: $($spawnResult.ProcessId)"
 
 $healthy = $false
+$listenerPid = $null
 for ($attempt = 0; $attempt -lt 30; $attempt++) {
     Start-Sleep -Seconds 1
-    $backendProcess.Refresh()
-    if ($backendProcess.HasExited) {
-        throw "New backend exited with code $($backendProcess.ExitCode). See $stderr"
+    $listeners = @(Get-NetTCPConnection -State Listen -LocalPort 8000 -ErrorAction SilentlyContinue)
+    if ($listeners.Count -gt 1) {
+        throw "Multiple processes are listening on port 8000 after backend startup."
     }
-    try {
-        $health = Invoke-RestMethod -Uri "http://127.0.0.1:8000/health" -TimeoutSec 2
-        if ($health.status -eq "ok") {
-            $healthy = $true
-            break
+    if ($listeners.Count -eq 1) {
+        $listenerPid = [int]$listeners[0].OwningProcess
+        $listenerProcess = Get-CimInstance Win32_Process -Filter ("ProcessId = " + $listenerPid) -ErrorAction Stop
+        if (-not (Test-ExpectedBackendProcess $listenerProcess)) {
+            throw "Port 8000 was acquired by a process other than the expected Source backend. Refusing to accept it."
         }
-    } catch {
-        # Continue polling until the startup window expires.
+        try {
+            $health = Invoke-RestMethod -Uri "http://127.0.0.1:8000/health" -TimeoutSec 2
+            if ($health.status -eq "ok") {
+                $healthy = $true
+                break
+            }
+        } catch {
+            # Continue polling until the startup window expires.
+        }
     }
 }
-if (-not $healthy) {
-    throw "New backend did not pass /health within 30 seconds. See $stderr"
+if (-not $healthy -or -not $listenerPid) {
+    $errorTail = if (Test-Path $stderr) { (Get-Content $stderr -Tail 30) -join [Environment]::NewLine } else { "No backend stderr log was created." }
+    throw "New backend did not pass /health within 30 seconds. $errorTail"
 }
+Set-Content -Path $pidFile -Value $listenerPid -Encoding ASCII
 
 $preflightHeaders = @{
     Origin = "http://127.0.0.1:5173"
@@ -243,8 +272,60 @@ if ([string]$preflight.Headers["Access-Control-Allow-Methods"] -notmatch '(?i)\b
     throw "Backend is healthy, but DELETE is absent from Access-Control-Allow-Methods."
 }
 
+# Exercise the real registry DELETE route using one uniquely named disposable
+# record. No simulation run or model inference is started.
+$smokeName = "RADONC-DELETE-SMOKE-" + [Guid]::NewGuid().ToString("N")
+$smokePayload = @{
+    patient_name = $smokeName
+    case = @{
+        scenario_title = "Disposable registry deletion check"
+        case_summary = "Temporary non-clinical placeholder created only to verify registry save, retrieval, and deletion."
+    }
+} | ConvertTo-Json -Depth 8
+$smokePatient = $null
+try {
+    $smokePatient = Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/api/patients" -ContentType "application/json" -Body $smokePayload -TimeoutSec 10
+    $smokePatientId = [string]$smokePatient.patient_id
+    if ([string]::IsNullOrWhiteSpace($smokePatientId)) { throw "Patient creation did not return a patient_id." }
+    $savedSmokePatient = Invoke-RestMethod -Uri ("http://127.0.0.1:8000/api/patients/" + $smokePatientId) -TimeoutSec 10
+    if ($savedSmokePatient.patient_name -ne $smokeName -or $savedSmokePatient.versions.Count -ne 1) {
+        throw "Disposable patient retrieval did not match the created record."
+    }
+    $deletedSmokePatient = Invoke-WebRequest -UseBasicParsing -Method Delete -Uri ("http://127.0.0.1:8000/api/patients/" + $smokePatientId) -TimeoutSec 10
+    if ([int]$deletedSmokePatient.StatusCode -ne 200) { throw "Disposable patient DELETE returned HTTP $([int]$deletedSmokePatient.StatusCode)." }
+
+    $notFoundConfirmed = $false
+    try {
+        $null = Invoke-RestMethod -Uri ("http://127.0.0.1:8000/api/patients/" + $smokePatientId) -TimeoutSec 10
+    } catch {
+        $response = $_.Exception.Response
+        if ($response -and [int]$response.StatusCode -eq 404) {
+            $notFoundConfirmed = $true
+        } else {
+            throw
+        }
+    }
+    if (-not $notFoundConfirmed) { throw "Deleted disposable patient remained retrievable." }
+    $registry = Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/patients" -TimeoutSec 10
+    if (@($registry.patients | Where-Object { $_.patient_id -eq $smokePatientId }).Count -gt 0) {
+        throw "Deleted disposable patient remains in the registry list."
+    }
+    Write-Host "PATIENT_DELETE_SMOKE_OK"
+    Write-Host "Disposable patient identifier: $($smokePatient.patient_identifier)"
+    Write-Host "Create, retrieve, DELETE HTTP 200, detail 404, and registry absence verified."
+} catch {
+    if ($smokePatient -and $smokePatient.patient_id) {
+        try {
+            Invoke-WebRequest -UseBasicParsing -Method Delete -Uri ("http://127.0.0.1:8000/api/patients/" + $smokePatient.patient_id) -TimeoutSec 10 | Out-Null
+        } catch {
+            # Preserve the original failure; cleanup is best effort only for this unique smoke record.
+        }
+    }
+    throw
+}
+
 Write-Host "BACKEND_RESTART_OK"
-Write-Host "Backend PID: $($backendProcess.Id)"
+Write-Host "Backend PID: $listenerPid"
 Write-Host "Health: HTTP 200"
 Write-Host "Patient DELETE CORS preflight: HTTP 200; DELETE allowed"
 Write-Host "Backend stderr log: $stderr"
