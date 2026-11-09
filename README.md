@@ -2,7 +2,7 @@
 
 A local-first, AI-assisted educational simulator for multidisciplinary oncology case discussions.
 
-> **Current milestone (9 November 2026):** The development branch contains the four-round 45 + 45 + 45 + 1 workflow, patient registry/versioning, expanded case-integrity checks and Chair safeguards. CI passed on code snapshot `b2c072581d2c6d8f870d39b644d71d5851023dd5` (backend 110 passed; frontend 21 passed and production build passed). The latest detailed live MDT-006 audit remains a historical failure with 134 hard failures and 92 major findings; the later prompt/schema and case-integrity changes have not yet had a fresh full live run. Feature-branch pushes synchronize source to the laptop `Source` folder, but an already-running backend must be restarted to load copied Python changes.
+> **Current milestone (9 November 2026):** The development branch contains the four-round 45 + 45 + 45 + 1 workflow, patient registry/versioning, expanded case-integrity checks and Chair safeguards (including a neutral title when both primary site and histology are absent). CI passed on code snapshot `084d3353bc3dd71a7ee27895e41434c0d425644b` (backend 111 passed; frontend 21 passed and production build passed). The latest detailed live MDT-006 audit remains a historical failure with 134 hard failures and 92 major findings; the later prompt/schema and case-integrity changes have not yet had a fresh full live run. Feature-branch pushes synchronize source to the laptop `Source` folder, but an already-running backend must be restarted to load copied Python changes.
 
 ## Purpose
 
@@ -74,9 +74,9 @@ The model is kept warm during a run. Prompts use Ollama's schema-constrained out
 
 The following checks ran against code snapshot `b2c072581d2c6d8f870d39b644d71d5851023dd5`:
 
-- **Backend CI:** [run 42574812785](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42574812785) — success; **110 passed, 1 warning** (the existing Starlette/httpx TestClient deprecation).
-- **Frontend CI:** [run 42574812756](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42574812756) — success; **21 tests passed**, TypeScript check and Vite production build passed.
-- **Windows source sync and local diagnostic:** [run 42574809719](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42574809719) — success; local manifest verified at the same branch/SHA. FastAPI health, React shell and structured case-field checks passed.
+- **Backend CI:** [run 42575218662](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42574812785) — success; **110 passed, 1 warning** (the existing Starlette/httpx TestClient deprecation).
+- **Frontend CI:** [run 42575218585](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42574812756) — success; **21 tests passed**, TypeScript check and Vite production build passed.
+- **Windows source sync and local diagnostic:** [run 42575212397](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42574809719) — success; local manifest verified at the same branch/SHA. FastAPI health, React shell and structured case-field checks passed.
 
 The self-hosted diagnostic found existing Vite and Uvicorn processes listening and the React shell mounted. It did not restart the existing Uvicorn process. Source sync therefore does not prove that an already-running backend has loaded the latest copied Python code; stop and restart the local services after backend changes.
 
