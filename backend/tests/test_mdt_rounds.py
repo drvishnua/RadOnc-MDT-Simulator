@@ -334,8 +334,9 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
     case = SyntheticCase(
         scenario_title="Synthetic attributed-opinion case",
         case_summary=(
-            "Fictional case. Surgical note favours surgical assessment first, conditional on local staging. "
-            "Medical oncology note favours discussion of preoperative multimodality sequencing, conditional on MRI and fitness."
+            "Fictional case. Neurology service note proposes a specialist assessment first, conditional on "
+            "complete staging. Cardiology service note proposes a separate preoperative sequence, conditional "
+            "on MRI review and documented fitness."
         ),
     )
     own = {
@@ -415,8 +416,12 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
     assert "source_opinion_reviews" in prompts[1]
     assert "source_reference_ids" in prompts[1]
     assert "exact CASE source ID and at least one exact R2:AGENT_ID" in prompts[1]
-    assert "CASE:case_summary#1" in prompts[1]
-    assert "CASE:case_summary#2" in prompts[1]
+    assert "CASE:case_summary#N" in prompts[1]
+    assert "Do not assume a fixed number of opinions" in prompts[1]
+    assert "source_excerpt: an exact contiguous verbatim quotation from case_summary" in prompts[1]
+    assert "For MDT-006" not in prompts[1]
+    assert "colorectal surgical note" not in prompts[1]
+    assert "medical oncology note" not in prompts[1]
     assert "ALLOWED ROUND SOURCE IDS" in prompts[1]
 
 
@@ -442,6 +447,69 @@ def test_chair_reconciliation_preserves_saved_round_challenges_as_unresolved():
     assert "Round 3 recorded challenge —" in joined
     assert "R1:SO-01" in joined
     assert "R2:MO-01" in joined
+
+
+def test_chair_source_opinion_coverage_is_dynamic_and_counts_distinct_roles():
+    case_summary = (
+        "Fictional case. Neurology service note proposes specialist assessment, conditional on MRI. "
+        "Cardiology service note proposes a separate review, conditional on documented fitness. "
+        "Psychology service note records a preference-sensitive discussion, conditional on patient goals."
+    )
+    case = SyntheticCase(
+        scenario_title="Synthetic dynamic source opinion coverage",
+        case_summary=case_summary,
+    )
+    round1 = _chair_rows("assessment", ["insufficient_information"] * 45)
+    round2 = _chair_rows("result", ["insufficient_information"] * 45)
+    round3 = _chair_rows("result", ["insufficient_information"] * 45)
+
+    neurology_excerpt = "Neurology service note proposes specialist assessment, conditional on MRI."
+    cardiology_excerpt = "Cardiology service note proposes a separate review, conditional on documented fitness."
+    psychology_excerpt = "Psychology service note records a preference-sensitive discussion, conditional on patient goals."
+
+    def review(source_id, label, excerpt, option_status, conditions_status):
+        return {
+            "source_id": source_id,
+            "opinion_label": label,
+            "source_excerpt": excerpt,
+            "option_status": option_status,
+            "conditions_status": conditions_status,
+        }
+
+    round3[0]["result"]["source_opinion_reviews"] = [
+        review("CASE:case_summary#1", "Neurology service note", neurology_excerpt, "omitted", "preserved"),
+        # Conflicting duplicate from the same role must not be counted as a second role.
+        review("CASE:case_summary#1", "Neurology service note", neurology_excerpt, "preserved", "preserved"),
+        review("CASE:case_summary#2", "Cardiology service note", cardiology_excerpt, "unclear", "unclear"),
+    ]
+    round3[1]["result"]["source_opinion_reviews"] = [
+        review("CASE:case_summary#1", "Neurology service note", neurology_excerpt, "omitted", "preserved"),
+    ]
+    round3[2]["result"]["source_opinion_reviews"] = [
+        review("CASE:case_summary#1", "Neurology service note", neurology_excerpt, "preserved", "partly_preserved"),
+        review("CASE:case_summary#3", "Psychology service note", psychology_excerpt, "preserved", "preserved"),
+    ]
+
+    report = reconcile_chair_report_draft(
+        "synthetic-dynamic-source-coverage",
+        case,
+        round1,
+        round2,
+        round3,
+        _chair_draft(),
+    )
+    joined = " ".join(report.unresolved_disagreements)
+
+    assert "CASE:case_summary#1" in joined
+    assert "CASE:case_summary#2" in joined
+    assert "CASE:case_summary#3" in joined
+    assert "Neurology service note" in joined
+    assert "Cardiology service note" in joined
+    assert "Psychology service note" in joined
+    assert "distinct roles" in joined
+    assert "RO-01" in joined and "conflicting duplicate-role reviews excluded" in joined
+    assert "colorectal surgical note" not in joined
+    assert "medical oncology note" not in joined
 
 
 def test_chair_reconciliation_preserves_position_counts_and_minor_view():
@@ -903,7 +971,8 @@ def test_r3_generation_copies_review_challenge_with_structured_source_prefix(mon
             source_opinion_reviews=[
                 SourceOpinionReview(
                     source_id="CASE:case_summary#1",
-                    opinion_label="colorectal surgical note",
+                    opinion_label="ENT service note",
+                    source_excerpt="ENT service note proposes a surgery-led assessment, conditional on complete staging.",
                     option_status="omitted",
                     conditions_status="partly_preserved",
                     review_basis="The supplied debate digest retains one staging prerequisite but not the full option.",
@@ -914,7 +983,8 @@ def test_r3_generation_copies_review_challenge_with_structured_source_prefix(mon
                 ),
                 SourceOpinionReview(
                     source_id="CASE:case_summary#2",
-                    opinion_label="medical oncology note",
+                    opinion_label="Cardiology service note",
+                    source_excerpt="Cardiology service note proposes a separate preoperative sequence, conditional on MRI review.",
                     option_status="unclear",
                     conditions_status="unclear",
                     review_basis="The supplied debate sample does not contain enough detail to assess this opinion.",
@@ -928,7 +998,10 @@ def test_r3_generation_copies_review_challenge_with_structured_source_prefix(mon
     profile = {"agent_id": "RO-01", "name": "Radiation Oncology", "mandate": "Review the synthetic case."}
     case = SyntheticCase(
         scenario_title="Synthetic structured-review citation test",
-        case_summary="Fictional case with two attributed source opinions and incomplete staging.",
+        case_summary=(
+            "Fictional case. ENT service note proposes a surgery-led assessment, conditional on complete staging. "
+            "Cardiology service note proposes a separate preoperative sequence, conditional on MRI review."
+        ),
     )
     own_r1 = {
         "position": "conditional",
@@ -985,7 +1058,8 @@ def test_r3_generation_recovers_only_explicitly_source_linked_review_challenge(m
             source_opinion_reviews=[
                 SourceOpinionReview(
                     source_id="CASE:case_summary#1",
-                    opinion_label="colorectal surgical note",
+                    opinion_label="ENT service note",
+                    source_excerpt="ENT service note proposes a surgery-led assessment, conditional on complete staging.",
                     option_status="omitted",
                     conditions_status="omitted",
                     review_basis="The supplied peer record does not preserve the attributed option or its prerequisite.",
@@ -994,7 +1068,8 @@ def test_r3_generation_recovers_only_explicitly_source_linked_review_challenge(m
                 ),
                 SourceOpinionReview(
                     source_id="CASE:case_summary#2",
-                    opinion_label="medical oncology note",
+                    opinion_label="Cardiology service note",
+                    source_excerpt="Cardiology service note proposes a separate preoperative sequence, conditional on MRI review.",
                     option_status="unclear",
                     conditions_status="unclear",
                     review_basis="The supplied peer record does not permit a separate assessment.",
@@ -1008,7 +1083,10 @@ def test_r3_generation_recovers_only_explicitly_source_linked_review_challenge(m
     profile = {"agent_id": "RO-01", "name": "Radiation Oncology", "mandate": "Review the synthetic case."}
     case = SyntheticCase(
         scenario_title="Synthetic source-linked challenge recovery",
-        case_summary="Fictional case with two attributed conditional opinions and incomplete staging.",
+        case_summary=(
+            "Fictional case. ENT service note proposes a surgery-led assessment, conditional on complete staging. "
+            "Cardiology service note proposes a separate preoperative sequence, conditional on MRI review."
+        ),
     )
     own_r1 = {"position": "insufficient_information", "provisional_conclusion": "The case is incomplete.", "preferred_educational_option": "No option yet."}
     own_r2 = {"position": "insufficient_information", "provisional_conclusion": "The debate remains unresolved.", "response_to_other_perspectives": "No common pathway is established."}
@@ -1038,6 +1116,75 @@ def test_r3_generation_recovers_only_explicitly_source_linked_review_challenge(m
     assert not any("CASE:case_summary#1" in flag and "source-linked challenge" in flag for flag in result.source_reference_integrity_flags)
 
 
+def test_r3_case_source_reviews_require_exact_case_summary_excerpt(monkeypatch):
+    from app.round_schemas import AdversarialContributionDraft, SourceOpinionReview
+    from app.services import mdt_generation
+
+    async def fake_generate(prompt, schema_type, max_tokens):
+        assert "exact contiguous verbatim quotation from case_summary" in prompt
+        return AdversarialContributionDraft(
+            position="insufficient_information",
+            provisional_conclusion="The educational review remains incomplete because a source excerpt cannot be verified.",
+            response_to_other_perspectives="The supplied case summary does not contain the quoted source material.",
+            agreements=[],
+            substantive_challenges=[],
+            remaining_unknowns=["The attributed source text requires verification."],
+            risk_flags=[],
+            confidence=0.3,
+            source_opinion_reviews=[
+                SourceOpinionReview(
+                    source_id="CASE:case_summary#1",
+                    opinion_label="Unverified service note",
+                    source_excerpt="This fabricated excerpt is not present in the case summary.",
+                    option_status="omitted",
+                    conditions_status="omitted",
+                    review_basis="A source review was drafted without a matching case-summary excerpt.",
+                    source_reference_ids=["CASE:case_summary#1", "R2:MO-01"],
+                    challenge="The source option is allegedly omitted from the supplied peer record.",
+                )
+            ],
+        )
+
+    monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate)
+    profile = {"agent_id": "RO-01", "name": "Radiation Oncology", "mandate": "Review the educational case."}
+    case = SyntheticCase(
+        scenario_title="Synthetic missing source excerpt test",
+        case_summary="Fictional case. No attributed specialist opinion is explicitly supplied.",
+    )
+    own_r1 = {
+        "position": "insufficient_information",
+        "provisional_conclusion": "The case does not contain enough information for a definitive view.",
+        "preferred_educational_option": "No option can be preferred from the supplied case.",
+    }
+    own_r2 = {
+        "position": "insufficient_information",
+        "provisional_conclusion": "The debate remains unresolved because the case summary is incomplete.",
+        "response_to_other_perspectives": "No source-attributed opinion can be verified in the supplied case summary.",
+    }
+    peers = [{
+        "agent_id": "MO-01",
+        "agent_name": "Medical Oncology",
+        "result": {
+            "position": "insufficient_information",
+            "provisional_conclusion": "The peer record remains unresolved.",
+            "response_to_other_perspectives": "No exact case source excerpt was supplied.",
+            "agreements": [],
+            "substantive_challenges": [],
+            "risk_flags": [],
+            "position_changes": [],
+        },
+    }]
+
+    result = asyncio.run(
+        mdt_generation.generate_adversarial_contribution(profile, case, own_r1, own_r2, peers)
+    )
+    flags = " ".join(result.source_reference_integrity_flags)
+    assert "no exact contiguous source_excerpt" in flags
+    assert "not bound to one unique exact case-summary excerpt" in flags
+    assert not any("Unverified service note" in item for item in result.substantive_challenges)
+    assert result.agent_id == "RO-01"
+
+
 def test_r3_generation_flags_missing_verbatim_peer_evidence_without_dropping_role(monkeypatch):
     from app.round_schemas import AdversarialContributionDraft, SourceOpinionReview
     from app.services import mdt_generation
@@ -1064,7 +1211,8 @@ def test_r3_generation_flags_missing_verbatim_peer_evidence_without_dropping_rol
                 ),
                 SourceOpinionReview(
                     source_id="CASE:case_summary#2",
-                    opinion_label="medical oncology note",
+                    opinion_label="Cardiology service note",
+                    source_excerpt="Cardiology service note proposes staged assessment, conditional on MRI review.",
                     option_status="preserved",
                     conditions_status="unclear",
                     review_basis="The output claims preservation but quotes no supplied evidence.",
@@ -1080,7 +1228,7 @@ def test_r3_generation_flags_missing_verbatim_peer_evidence_without_dropping_rol
     profile = {"agent_id": "RO-01", "name": "Radiation Oncology", "mandate": "Review the synthetic case."}
     case = SyntheticCase(
         scenario_title="Synthetic incomplete R3 review test",
-        case_summary="Fictional case with two source opinions and incomplete staging.",
+        case_summary="Fictional case. Cardiology service note proposes staged assessment, conditional on MRI review.",
     )
     own_r1 = {"position": "conditional", "provisional_conclusion": "The independent position remains conditional pending case information."}
     own_r2 = {"position": "conditional", "provisional_conclusion": "The debate position remains conditional pending case information."}

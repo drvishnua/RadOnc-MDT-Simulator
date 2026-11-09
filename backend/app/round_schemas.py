@@ -30,6 +30,15 @@ class SourceOpinionReview(StrictModel):
     # as source_reference_integrity_flags; a weak review must not erase the whole role.
     source_id: str = Field(min_length=8, max_length=100)
     opinion_label: str = Field(default="", max_length=120)
+    source_excerpt: str = Field(
+        default="",
+        max_length=400,
+        description=(
+            "An exact, contiguous verbatim excerpt from the supplied case_summary that identifies "
+            "this attributed opinion. It must appear in the case text after JSON decoding; do not "
+            "paraphrase, reconstruct, or infer an excerpt."
+        ),
+    )
     option_status: Literal["preserved", "partly_preserved", "omitted", "unclear"] = Field(
         description=(
             "Representation fidelity only: whether the attributed option is faithfully retained "

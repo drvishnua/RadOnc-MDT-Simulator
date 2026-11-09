@@ -203,6 +203,118 @@ def _format_position_counts(counts: Counter) -> str:
     )
 
 
+def _source_opinion_review_coverage(
+    round3_entries: list[tuple[dict, dict]],
+    case_summary: str,
+) -> tuple[list[str], list[str]]:
+    """Summarise only source reviews bound to consistent exact case-summary excerpts.
+
+    Counts are distinct contributing-role coverage, never votes or consensus.
+    Model-authored labels are displayed as submitted, not treated as verified identities.
+    """
+    source_id_pattern = re.compile(r"^CASE:case_summary#([1-9][0-9]*)$")
+    id_to_excerpt: dict[str, str] = {}
+    excerpt_to_id: dict[str, str] = {}
+    roles_by_source: dict[str, dict[str, list[dict]]] = {}
+    labels_by_source: dict[str, set[str]] = {}
+    integrity: list[str] = []
+    conflicting_ids: set[str] = set()
+
+    for row, result in round3_entries:
+        agent_id = str(row.get("agent_id") or "unknown-role")
+        for review in (result.get("source_opinion_reviews") or []):
+            if not isinstance(review, dict):
+                continue
+            source_id = str(review.get("source_id") or "")
+            excerpt = str(review.get("source_excerpt") or "")
+            if not source_id_pattern.fullmatch(source_id):
+                integrity.append(
+                    f"R3 source-opinion review from {agent_id} has invalid source identifier "
+                    f"{source_id or '(missing)'}; expected CASE:case_summary#N."
+                )
+                continue
+            if not excerpt or excerpt not in case_summary:
+                integrity.append(
+                    f"R3 source-opinion review {source_id} from {agent_id} lacks an exact contiguous "
+                    "excerpt from the supplied case_summary."
+                )
+                continue
+            prior_excerpt = id_to_excerpt.get(source_id)
+            if prior_excerpt is not None and prior_excerpt != excerpt:
+                conflicting_ids.add(source_id)
+                integrity.append(
+                    f"R3 source identifier {source_id} maps to more than one exact case-summary excerpt."
+                )
+            prior_id = excerpt_to_id.get(excerpt)
+            if prior_id is not None and prior_id != source_id:
+                conflicting_ids.update({prior_id, source_id})
+                integrity.append(
+                    f"An exact case-summary excerpt is assigned both {prior_id} and {source_id}."
+                )
+            id_to_excerpt[source_id] = excerpt
+            excerpt_to_id[excerpt] = source_id
+            roles_by_source.setdefault(source_id, {}).setdefault(agent_id, []).append(review)
+            label = " ".join(str(review.get("opinion_label") or "").split())
+            if label:
+                labels_by_source.setdefault(source_id, set()).add(label)
+
+    valid_numbers = sorted(
+        int(match.group(1))
+        for source_id in id_to_excerpt
+        if (match := source_id_pattern.fullmatch(source_id))
+    )
+    if valid_numbers and valid_numbers != list(range(1, max(valid_numbers) + 1)):
+        integrity.append(
+            "R3 source-opinion identifiers are not sequential from CASE:case_summary#1; "
+            "one or more attributed source identifiers may be missing or inconsistently numbered."
+        )
+
+    coverage: list[str] = []
+    for source_id in sorted(
+        roles_by_source,
+        key=lambda value: int(source_id_pattern.fullmatch(value).group(1)),
+    ):
+        if source_id in conflicting_ids:
+            integrity.append(
+                f"R3 coverage for {source_id} was excluded because its identifier-to-excerpt mapping conflicts."
+            )
+            continue
+
+        option_counts: Counter = Counter()
+        condition_counts: Counter = Counter()
+        option_conflicts: list[str] = []
+        condition_conflicts: list[str] = []
+        for agent_id, reviews in sorted(roles_by_source[source_id].items()):
+            option_values = {str(review.get("option_status") or "unreported") for review in reviews}
+            condition_values = {str(review.get("conditions_status") or "unreported") for review in reviews}
+            if len(option_values) == 1:
+                option_counts[next(iter(option_values))] += 1
+            else:
+                option_conflicts.append(agent_id)
+            if len(condition_values) == 1:
+                condition_counts[next(iter(condition_values))] += 1
+            else:
+                condition_conflicts.append(agent_id)
+
+        labels = sorted(labels_by_source.get(source_id, set()))
+        label_note = f"model-reported label(s) {labels}" if labels else "no model-reported label"
+        excerpt = _compact(id_to_excerpt[source_id], 180)
+        coverage.append(
+            f"R3 source-opinion coverage (distinct roles; labels not independently verified) — "
+            f"{source_id} ({label_note}; exact excerpt: \"{excerpt}\"): "
+            f"option status roles {dict(sorted(option_counts.items()))}; "
+            f"condition status roles {dict(sorted(condition_counts.items()))}; "
+            f"conflicting duplicate-role reviews excluded "
+            f"(option: {option_conflicts}; conditions: {condition_conflicts})."
+        )
+        if len(labels) > 1:
+            integrity.append(
+                f"R3 source-opinion label for {source_id} differs across roles: {labels}."
+            )
+
+    return coverage, _unique_strings(integrity, limit=20)
+
+
 def reconcile_chair_report_draft(
     run_id: str,
     case: SyntheticCase,
@@ -320,26 +432,13 @@ def reconcile_chair_report_draft(
                         f"{round_label} recorded challenge — {role_id} ({role_name}): "
                         f"{_compact(challenge, 260)}"
                     )
-    # Aggregate source-opinion review dispositions by distinct contributing role.
-    # These are coverage counts, not votes or evidence of clinical agreement.
-    review_ids = (
-        ("CASE:case_summary#1", "colorectal surgical note"),
-        ("CASE:case_summary#2", "medical oncology note"),
+    # Aggregate dynamically numbered source reviews only when their identifiers map
+    # consistently to exact case-summary excerpts. Counts are distinct roles, not votes.
+    source_coverage, source_review_integrity = _source_opinion_review_coverage(
+        r3, case.case_summary
     )
-    for source_id, label in review_ids:
-        source_reviews = [
-            (row, review)
-            for row, result in r3
-            for review in (result.get("source_opinion_reviews") or [])
-            if isinstance(review, dict) and review.get("source_id") == source_id
-        ]
-        if source_reviews:
-            option_counts = Counter(review.get("option_status", "unreported") for _, review in source_reviews)
-            condition_counts = Counter(review.get("conditions_status", "unreported") for _, review in source_reviews)
-            unresolved.append(
-                f"R3 source-opinion review coverage (role counts, not consensus) — {label}: "
-                f"option status {dict(option_counts)}; condition status {dict(condition_counts)}."
-            )
+    unresolved.extend(source_coverage)
+    unresolved.extend(source_review_integrity)
     unresolved.extend(_unique_strings(recorded_review_findings, limit=12))
     # Surface incorrect round-qualified citations without mutating the original model text.
     source_reference_findings: list[str] = []
@@ -691,8 +790,13 @@ async def generate_adversarial_contribution(
         "empty and explain the limitation. The peer digest is a bounded sample of at most 5 of "
         "44 other roles, not the full MDT. Never generalise it to unshown roles or claim all roles "
         "agree. Preserve uncertainty, conditions, and minority views. Risk flags are not "
-        "substitutes for source-linked challenges. For every distinct attributed source opinion, "
-        "populate source_opinion_reviews with its source ID, option_status, conditions_status, "
+        "substitutes for source-linked challenges. Review only distinct attributed opinions explicitly present in the supplied verbatim case_summary; "
+        "Assign stable CASE:case_summary#N identifiers in order of first appearance and keep each "
+        "identifier attached to the same attributed opinion. Do not assume a fixed number of opinions, "
+        "specialty labels, or source institutions. Include source_excerpt as an exact contiguous verbatim "
+        "quotation from case_summary identifying the attributed opinion; do not paraphrase or reconstruct it. "
+        "If no distinct attributed opinion is clearly present, return an empty source_opinion_reviews list. "
+        "For each review, include its source ID, option_status, conditions_status, "
         "a concise review_basis, and source_reference_ids. For each review, source_reference_ids "
         "must include that review's exact CASE source ID and at least one exact R2:AGENT_ID from "
         "the supplied peer sample. Use only IDs in ALLOWED ROUND SOURCE IDS; never invent an ID. "
@@ -705,21 +809,16 @@ async def generate_adversarial_contribution(
         "was preserved. Do not paraphrase or invent excerpts. If no supplied peer text supports a "
         "retained element, use omitted or unclear rather than preserved. Omitted/unclear reviews may "
         "leave evidence_peer_id and evidence_excerpt empty. "
-        "For MDT-006, return exactly two reviews: "
-        "CASE:case_summary#1 for the colorectal surgical note and CASE:case_summary#2 for "
-        "the medical oncology note. Compare each attributed option and its conditions with the "
-        "actual supplied R2 text, not with whether MRI, staging, fitness, or other prerequisites "
-        "are fulfilled in the case. If the conditional option and its prerequisites are retained "
-        "in R2, mark them preserved even though those prerequisites remain unknown; this does not "
-        "validate clinical suitability. Mark omitted or partly_preserved only when the supplied "
-        "R2 text itself omits or distorts that attributed content. If the bounded supplied sample "
-        "does not let you assess representation, use unclear and explain why; do not infer that "
-        "the whole MDT omitted the opinion. For an actual R2 representation omission or distortion, "
-        "write a source-linked challenge in the review and copy it into substantive_challenges. "
-        "Such a challenge must cite CASE:case_summary and at least one supplied R2 peer ID. If "
-        "status is unclear, explain the limitation in review_basis and do not invent a challenge. "
-        "For cases with "
-        "no attributed source opinions, return an empty source_opinion_reviews list.\\n"
+        "Assess representation fidelity only against the actual supplied R2 text, not against whether "
+        "MRI, staging, fitness, or other clinical prerequisites are fulfilled in the case. If a conditional "
+        "option and its prerequisites are retained in R2, mark them preserved even when those prerequisites "
+        "remain unknown; this does not validate clinical suitability. Mark omitted or partly_preserved only "
+        "when supplied R2 text itself omits or materially distorts the attributed content. If the bounded "
+        "peer sample does not permit assessment, use unclear and explain the limitation; do not infer what "
+        "unshown roles omitted. For an actual R2 representation omission or distortion, write a source-linked "
+        "challenge in the review and copy it into substantive_challenges. Such a challenge must cite the exact "
+        "CASE source ID and at least one supplied R2 peer ID. If status is unclear, explain the limitation and "
+        "do not invent a challenge. Cases without clearly attributable opinions must have an empty review list.\\n"
         f"ALLOWED ROUND SOURCE IDS: {', '.join(allowed_source_ids)}\\n"
         f"ROLE: {profile['name']}\\nMANDATE: {profile['mandate']}\\n"
         "SUPPLIED CASE:\\n"
@@ -739,6 +838,45 @@ async def generate_adversarial_contribution(
         *allowed_peer_source_ids,
     }
     review_reference_flags: list[str] = []
+    case_source_id_pattern = re.compile(r"^CASE:case_summary#([1-9][0-9]*)$")
+    case_source_id_to_excerpt: dict[str, str] = {}
+    case_excerpt_to_source_id: dict[str, str] = {}
+    conflicting_case_source_ids: set[str] = set()
+
+    # Keep weak source reviews parseable, but require exact source text for traceability.
+    for review in payload.get("source_opinion_reviews") or []:
+        if not isinstance(review, dict):
+            continue
+        source_id = str(review.get("source_id") or "")
+        source_excerpt = str(review.get("source_excerpt") or "")
+        if not case_source_id_pattern.fullmatch(source_id):
+            review_reference_flags.append(
+                f"Review for {source_id or 'unknown source'} has an invalid CASE source identifier; "
+                "expected CASE:case_summary#N."
+            )
+            continue
+        if not source_excerpt or source_excerpt not in case.case_summary:
+            review_reference_flags.append(
+                f"Review for {source_id} has no exact contiguous source_excerpt from the supplied case_summary."
+            )
+            continue
+        prior_excerpt = case_source_id_to_excerpt.get(source_id)
+        if prior_excerpt is not None and prior_excerpt != source_excerpt:
+            conflicting_case_source_ids.add(source_id)
+            review_reference_flags.append(
+                f"CASE source identifier {source_id} is assigned to multiple different case-summary excerpts."
+            )
+        prior_id = case_excerpt_to_source_id.get(source_excerpt)
+        if prior_id is not None and prior_id != source_id:
+            conflicting_case_source_ids.update({prior_id, source_id})
+            review_reference_flags.append(
+                f"The same exact case-summary excerpt is assigned both {prior_id} and {source_id}."
+            )
+        case_source_id_to_excerpt[source_id] = source_excerpt
+        case_excerpt_to_source_id[source_excerpt] = source_id
+
+    traceable_case_source_ids = set(case_source_id_to_excerpt) - conflicting_case_source_ids
+
     # Preserve model-authored review challenges, but attach their explicit structured
     # source IDs before adding them to the canonical Chair-facing challenge field.
     challenges = list(payload.get("substantive_challenges") or [])
@@ -781,6 +919,10 @@ async def generate_adversarial_contribution(
         if source_id not in reference_ids:
             review_reference_flags.append(
                 f"Review for {source_id or 'unknown source'} omits its attributed CASE source ID."
+            )
+        if source_id not in traceable_case_source_ids:
+            review_reference_flags.append(
+                f"Review for {source_id or 'unknown source'} is not bound to one unique exact case-summary excerpt."
             )
         if not any(reference_id in allowed_peer_source_ids for reference_id in reference_ids):
             review_reference_flags.append(
@@ -826,10 +968,22 @@ async def generate_adversarial_contribution(
                     "from the cited R2 peer material actually supplied to this role."
                 )
         if challenge:
-            source_prefix = "[Sources: " + "; ".join(reference_ids) + "] "
-            canonical_challenge = source_prefix + challenge
-            if canonical_challenge not in challenges:
-                challenges.append(canonical_challenge)
+            if source_id not in traceable_case_source_ids or source_id not in reference_ids:
+                review_reference_flags.append(
+                    f"Challenge for {source_id or 'unknown source'} was not promoted because its CASE excerpt/reference is not traceable."
+                )
+            else:
+                source_prefix = "[Sources: " + "; ".join(reference_ids) + "] "
+                canonical_challenge = source_prefix + challenge
+                if canonical_challenge not in challenges:
+                    challenges.append(canonical_challenge)
+    generated_case_refs = set(
+        re.findall(r"\bCASE:case_summary#\d+\b", " ".join(_payload_strings(payload)))
+    )
+    for reference_id in sorted(generated_case_refs - traceable_case_source_ids):
+        review_reference_flags.append(
+            f"Reference {reference_id} is not backed by a unique exact case-summary source excerpt."
+        )
     payload["substantive_challenges"] = challenges[:8]
     previous_position = own_debate_contribution.get("position", "unknown")
     if draft.position != previous_position:
