@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import logging
+import sys
+from pathlib import Path
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.agent_schemas import AgentAssessment
 from app.agents.catalog import AGENT_PROFILES, EXPECTED_AGENT_COUNT
@@ -355,3 +358,30 @@ async def validate_case(case: SyntheticCase) -> CaseValidationResult:
     if not case.known_unknowns:
         warnings.append("No explicit known-unknowns were listed; review for missing case details.")
     return CaseValidationResult(valid=True, warnings=warnings)
+
+
+def mount_frontend_assets(application: FastAPI, dist_directory: Path) -> bool:
+    """Mount a completed Vite build after API routes; return False when no build exists."""
+    index_file = dist_directory / "index.html"
+    if not index_file.is_file():
+        return False
+    application.mount(
+        "/",
+        StaticFiles(directory=str(dist_directory), html=True),
+        name="frontend",
+    )
+    return True
+
+
+def _frontend_dist_directory() -> Path:
+    """Resolve frontend assets in both source and PyInstaller onedir layouts."""
+    if getattr(sys, "frozen", False):
+        bundle_root = Path(getattr(sys, "_MEIPASS", Path(sys.executable).resolve().parent))
+    else:
+        bundle_root = Path(__file__).resolve().parents[2]
+    return bundle_root / "frontend" / "dist"
+
+
+# In development the Vite server owns the UI. In an installed build the bundled
+# static assets are served by this same FastAPI process on the API origin.
+FRONTEND_STATIC_MOUNTED = mount_frontend_assets(app, _frontend_dist_directory())

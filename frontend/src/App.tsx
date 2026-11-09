@@ -10,7 +10,7 @@ const CASE_DRAFT_KEY = "radonc-mdt-case-draft-v1";
 const LEGACY_CASE_KEY = "radonc-mdt-last-case";
 const SINGLE_ASSESSMENT_KEY = "radonc-mdt-ro01-assessment-v1";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
 type Health = {
   status: string;
