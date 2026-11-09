@@ -376,7 +376,55 @@ def build_source_opinion_review_coverage(
             f"conditions: {condition_conflicts})."
         )
 
-    return coverage, _unique(integrity, 45)
+    # Keep high-volume deterministic findings visible under the final report's
+    # 20-item integrity-flag limit. Summarise repeated categories by distinct role,
+    # then retain a few concrete role-attributed examples for audit navigation.
+    review_issue_categories = (
+        (
+            "lacks an exact contiguous excerpt",
+            "R3 source-opinion exact-excerpt audit",
+        ),
+        (
+            "omits its exact CASE source ID",
+            "R3 source-opinion CASE-reference audit",
+        ),
+        (
+            "does not cite an R2 peer recorded as supplied",
+            "R3 source-opinion supplied-peer audit",
+        ),
+        (
+            "has invalid source identifier",
+            "R3 source-opinion source-identifier audit",
+        ),
+    )
+    summarized_integrity: list[str] = []
+    remaining_integrity = list(integrity)
+    for marker, label in review_issue_categories:
+        matching = [item for item in remaining_integrity if marker in item]
+        if not matching:
+            continue
+        roles = sorted({
+            match.group(1)
+            for item in matching
+            if (match := re.search(r"\\bfrom ([A-Z]{2}-[0-9]{2})\\b", item))
+        })
+        role_note = (
+            f" across {len(roles)} distinct role(s): {roles[:8]}"
+            + (f" and {len(roles) - 8} more" if len(roles) > 8 else "")
+            if roles else ""
+        )
+        summarized_integrity.append(
+            f"{label}: {len(matching)} finding(s){role_note}."
+        )
+        summarized_integrity.extend(matching[:3])
+        remaining_integrity = [
+            item for item in remaining_integrity if marker not in item
+        ]
+
+    return coverage, _unique(
+        [*summarized_integrity, *remaining_integrity],
+        45,
+    )
 
 
 
