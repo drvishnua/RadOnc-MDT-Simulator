@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import { readDraft, writeDraft, listToMultilineText, multilineTextToList } from "./caseDraft.js";
+import { readDraft, writeDraft, listToMultilineText, multilineTextToList, createBlankDraft } from "./caseDraft.js";
 import { readSavedSingleAssessment, writeSavedSingleAssessment } from "./singleAssessmentStorage.js";
 import { hasCompletedIndependentAssessments, shouldShowBatchPanel } from "./runRecovery.js";
 import { patientVersionDisplayName } from "./patientVersionName.js";
@@ -613,10 +613,11 @@ function App() {
   }
 
   function clearPatientEntry(clearLinkedResults = false) {
-    setForm({ ...emptyForm });
+    setForm(createBlankDraft(emptyForm));
     setValidation(null);
     setValidatedCase(null);
     setValidationError("");
+    setPatientError("");
     setSelectedPatientId("");
     setLoadedPatient(null);
     setSelectedCaseVersionId("");
