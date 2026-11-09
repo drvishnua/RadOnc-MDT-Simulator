@@ -131,7 +131,6 @@ _QUALIFIER = re.compile(
     r"|assum(?:e|es|ed|ing|ption|ptions)|hypothetical|provisional"
     r"|\be\.g\.?\b|for\s+example|such\s+as|\bif\b"
     r"|risk\s+of|inability\s+to\s+distinguish|cannot\s+distinguish"
-    r"|may\s+be|might\s+be|potentially|pending|subject\s+to|awaiting|cannot\s+determine"
     r"|not\s+possible\s+to\s+distinguish|misclassif(?:y|ication|ied)"
     r"|cannot\s+exclude|exclusion\s+of|exclude[sd]?\s+(?:the\s+)?possibility\s+of"
     r"|rule\s+out|not\s+(?:evidence|proof)\s+of",
@@ -609,9 +608,18 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         r"\b(?:can|cannot|could|could\s+not|is\s+able\s+to|unable\s+to)\s+tolerate\s+(?:surgery|chemotherapy|radiotherapy|radiation|systemic\s+therapy|treatment)\b[^.!?;\n]{0,80}",
         re.IGNORECASE,
     )
-    treatment_suitability_matches = _unsupported_matches(
-        treatment_suitability_pattern, text, case.case_summary
+    conditional_suitability_marker = re.compile(
+        r"\b(?:may|might|could|possibly|potentially|pending|subject\s+to|"
+        r"awaiting|conditional\s+on|until|unless)\b",
+        re.IGNORECASE,
     )
+    treatment_suitability_matches = [
+        item
+        for item in _unsupported_matches(
+            treatment_suitability_pattern, text, case.case_summary
+        )
+        if not conditional_suitability_marker.search(item)
+    ]
     if treatment_suitability_matches:
         flags.append(
             "Generated narrative makes an unsupported treatment-suitability/eligibility assertion ("

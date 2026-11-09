@@ -645,3 +645,23 @@ def test_structured_patient_goal_without_patient_prefix_supports_matching_prefer
     })
     assert not any("patient preference/decision" in item for item in flags)
 
+def test_conditional_suitability_language_does_not_hide_an_unrelated_unsupported_nodal_claim():
+    case = _case()
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": (
+            "The patient may be a candidate for surgery and is node-negative."
+        )
+    })
+    assert any("node-negative status" in item for item in flags)
+    assert not any("treatment-suitability/eligibility" in item for item in flags)
+
+
+def test_explicit_suitability_followed_by_pending_prerequisites_is_not_unconditional_eligibility():
+    case = _case()
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": (
+            "The patient is a suitable candidate for surgery pending MRI and fitness review."
+        )
+    })
+    assert not any("treatment-suitability/eligibility" in item for item in flags)
+
