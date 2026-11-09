@@ -415,3 +415,28 @@ def test_comma_separated_question_remains_a_question_not_an_assertion():
 def test_missing_site_and_histology_title_uses_neutral_incomplete_label():
     case = _case(primary_site=None, histology=None)
     assert build_case_report_title(case) == "MDT Chair Synthesis: Case details not supplied"
+
+def test_attribution_detector_does_not_mistake_imaging_narrative_for_a_named_speaker():
+    from app.services.case_integrity import case_summary_has_attributed_opinions
+
+    assert not case_summary_has_attributed_opinions(
+        "CT scan demonstrates a lesion involving the right vocal cord."
+    )
+    assert not case_summary_has_attributed_opinions(
+        "According to the scan, the lesion involves the right vocal cord."
+    )
+    assert not case_summary_has_attributed_opinions(
+        "According to the radiology report, further review is required."
+    )
+
+
+def test_attribution_detector_recognises_explicit_named_speakers_conservatively():
+    from app.services.case_integrity import case_summary_has_attributed_opinions
+
+    assert case_summary_has_attributed_opinions(
+        "Dr Arun Kumar recommends a specialist review."
+    )
+    assert case_summary_has_attributed_opinions(
+        "According to Dr Arun Kumar, the opinion remains conditional."
+    )
+

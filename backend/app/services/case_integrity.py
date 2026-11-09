@@ -57,19 +57,28 @@ def case_summary_has_attributed_opinions(case_summary: str) -> bool:
     This deliberately recognises only clear attribution patterns; ordinary clinical
     facts and unlabelled treatment words are not treated as an attributed opinion.
     """
-    patterns = (
+    role_opinion_pattern = (
         r"\b(?:the\s+)?(?:surgeon|oncologist|medical oncologist|radiation oncologist|cardiologist|radiologist|pathologist|physician|"
         r"referring\s+(?:doctor|clinician)|patient|family|mdt|tumour\s+board|tumor\s+board)\s+"
         r"(?:recommends?|proposes?|suggests?|advises?|states?|reports?|says?|said|"
-        r"opines?|believes?|prefers?|wishes?|requests?|argues?)\b",
-        r"\b[A-Z][A-Za-z.'-]*(?:\s+[A-Z][A-Za-z.'-]*){0,2}\s+"
-        r"(?:recommends?|proposes?|suggests?|advises?|states?|reports?|says?|said|"
-        r"opines?|believes?|prefers?|wishes?|requests?|argues?)\b",
-        r"\b(?:according\s+to|per|as\s+(?:reported|stated|recommended)\s+by)\s+"
-        r"(?:the\s+)?(?:surgeon|oncologist|medical oncologist|radiation oncologist|cardiologist|radiologist|pathologist|physician|patient|family|"
-        r"[A-Z][A-Za-z.'-]*(?:\s+[A-Z][A-Za-z.'-]*){0,2})\b",
+        r"opines?|believes?|prefers?|wishes?|requests?|argues?)\b"
     )
-    return any(re.search(pattern, case_summary, re.IGNORECASE) for pattern in patterns)
+    named_person_opinion_pattern = (
+        r"\b(?-i:[A-Z][A-Za-z.'-]*(?:\s+[A-Z][A-Za-z.'-]*){1,2})\s+"
+        r"(?i:recommends?|proposes?|suggests?|advises?|states?|reports?|says?|said|"
+        r"opines?|believes?|prefers?|wishes?|requests?|argues?)\b"
+    )
+    attributed_person_pattern = (
+        r"\b(?i:according\s+to|per|as\s+(?:reported|stated|recommended)\s+by)\s+"
+        r"(?:the\s+)?"
+        r"(?:(?i:surgeon|oncologist|medical oncologist|radiation oncologist|cardiologist|radiologist|pathologist|physician|patient|family)|"
+        r"(?-i:[A-Z][A-Za-z.'-]*(?:\s+[A-Z][A-Za-z.'-]*){1,2}))\b"
+    )
+    return any((
+        re.search(role_opinion_pattern, case_summary, re.IGNORECASE),
+        re.search(named_person_opinion_pattern, case_summary),
+        re.search(attributed_person_pattern, case_summary),
+    ))
 
 
 def build_source_case_facts(case: SyntheticCase) -> list[str]:
