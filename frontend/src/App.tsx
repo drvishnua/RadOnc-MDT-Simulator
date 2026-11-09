@@ -1596,7 +1596,7 @@ function App() {
                 <p className="panel-intro">The debate and review stages ask each role to respond independently to a compact digest of other perspectives. Round 4 produces a chair synthesis that retains dissent and states the evidence limitations.</p>
                 {formatElapsedDuration(batchRun?.created_at, batchRun?.mdt_finished_at) && (
                   <p className="result-footnote">
-                    Full MDT elapsed time: {formatElapsedDuration(batchRun?.created_at, batchRun?.mdt_finished_at)} from run creation through Chair completion, including any pauses between rounds.
+                    Full MDT elapsed time: {formatElapsedDuration(batchRun?.created_at, batchRun?.mdt_finished_at)} from run creation to the end of Round 4, including any pauses between rounds.
                   </p>
                 )}
                 {[2, 3, 4].map((roundNumber) => {
