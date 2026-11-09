@@ -83,6 +83,27 @@ jobs:
           Write-Host "Local runner, AI_Models, node_modules, virtual environments and local logs are excluded."
 
 
+      - name: Restart backend against synchronized source
+        if: github.ref == 'refs/heads/feature/four-round-mdt-and-performance'
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+          $projectRoot = (Resolve-Path (Join-Path $env:GITHUB_WORKSPACE "..\..\..\..")).Path
+          $destination = Join-Path $projectRoot "Source"
+          $restartScript = Join-Path $destination "scripts\restart-local-backend.ps1"
+          if (-not (Test-Path $restartScript)) {
+            throw "Guarded backend restart script was not copied to Source."
+          }
+          $tokens = $null
+          $parseErrors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile($restartScript, [ref]$tokens, [ref]$parseErrors) | Out-Null
+          if ($parseErrors.Count -gt 0) {
+            $parseErrors | ForEach-Object { Write-Error $_.Message }
+            throw "PowerShell parser rejected restart-local-backend.ps1."
+          }
+          & $restartScript -SourceRoot $destination
+
+
       - name: Diagnose the running local app after source sync
         continue-on-error: true
         shell: powershell
