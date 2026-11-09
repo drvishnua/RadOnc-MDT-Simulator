@@ -503,6 +503,10 @@ try {
   await verifyFourRoundDashboard();
   browserWorkflowCompleted = true;
 } finally {
+  if (dashboardPatientId) {
+    await fetch(API_URL + "/api/patients/" + dashboardPatientId, { method: "DELETE" })
+      .catch(error => console.error("Dashboard fixture cleanup warning: " + error.message));
+  }
   await verifyBackendDeletion().catch(error => console.error("Cleanup warning: " + error.message));
   for (const pending of activeRequests.values()) pending.reject(new Error("Browser test ended."));
   activeRequests.clear();
