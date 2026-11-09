@@ -77,9 +77,26 @@ _POSITIVE_CONSENSUS_PATTERN = re.compile(
 )
 
 
+_NEGATED_CONSENSUS_PATTERN = re.compile(
+    r"\\b(?:no|not|never|without|cannot|could\\s+not|did\\s+not|has\\s+not|was\\s+not)\\b"
+    r"[^.!?;]{0,100}\\b(?:consensus|unanimity|unanimous\\s+agreement|majority\\s+agreement)\\b",
+    re.IGNORECASE,
+)
+
+
 def _is_positive_consensus_claim(value: str) -> bool:
-    """Reject positive consensus claims even when separate negative wording coexists."""
-    return bool(_POSITIVE_CONSENSUS_PATTERN.search(value))
+    """Reject unnegated positive consensus claims without proposition provenance."""
+    positive_matches = list(_POSITIVE_CONSENSUS_PATTERN.finditer(value))
+    if not positive_matches:
+        return False
+    negated_matches = list(_NEGATED_CONSENSUS_PATTERN.finditer(value))
+    return any(
+        not any(
+            negative.start() <= positive.start() < negative.end()
+            for negative in negated_matches
+        )
+        for positive in positive_matches
+    )
 
 
 def _note_quarantined_claims(
