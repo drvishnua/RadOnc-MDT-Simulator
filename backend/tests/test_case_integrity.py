@@ -26,6 +26,27 @@ def test_empty_structured_fields_are_marked_not_reported_not_absent():
     assert any("confirmed absent or negative" in item for item in context["interpretation_rules"])
 
 
+def test_lesion_measurement_does_not_establish_t_stage():
+    context = build_case_prompt_context(_case())
+    rules = " ".join(context["interpretation_rules"]).casefold()
+    assert "lesion's size" in rules
+    assert "never convert a 1x1 cm measurement into t1" in rules
+
+
+def test_attributed_opinion_detector_requires_an_explicit_speaker_and_opinion_verb():
+    from app.services.case_integrity import case_summary_has_attributed_opinions
+
+    assert case_summary_has_attributed_opinions(
+        "The surgeon recommends a surgery-led assessment, conditional on MRI."
+    )
+    assert case_summary_has_attributed_opinions(
+        "According to the cardiologist, the preoperative sequence should be considered."
+    )
+    assert not case_summary_has_attributed_opinions(
+        "dm\\nshtn\\nsmoker\\n1x1 cm growth involving right vocal cord."
+    )
+
+
 def test_source_case_facts_are_built_from_snapshot_not_model_generated_facts():
     facts = build_source_case_facts(_case())
     joined = " ".join(facts)
