@@ -106,6 +106,52 @@ jobs:
           & $restartScript -SourceRoot $destination
 
 
+
+      - name: Verify patient registry save, refresh, edit, and restore in Edge
+        if: github.ref == 'refs/heads/feature/four-round-mdt-and-performance'
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+          $projectRoot = (Resolve-Path (Join-Path $env:GITHUB_WORKSPACE "..\..\..\..")).Path
+          $destination = Join-Path $projectRoot "Source"
+          $browserTest = Join-Path $destination "scripts\test-patient-registry-browser.mjs"
+          if (-not (Test-Path $browserTest)) {
+            throw "Patient-registry browser regression script was not copied to Source."
+          }
+
+          $nodeCommand = Get-Command node -ErrorAction SilentlyContinue
+          $nodeExecutable = if ($nodeCommand) { $nodeCommand.Source } else { $null }
+          $nodeVersion = $null
+          if ($nodeExecutable) {
+            try { $nodeVersion = [version]((& $nodeExecutable --version 2>$null).Trim().TrimStart("v")) } catch { $nodeVersion = $null }
+          }
+          $supportedNode = $nodeVersion -and ($nodeVersion.Major -gt 22 -or ($nodeVersion.Major -eq 22 -and $nodeVersion -ge [version]"22.12.0"))
+          if (-not $supportedNode) {
+            $nodeCache = Join-Path (Split-Path -Parent $destination) "actions-runner\_work\_tool\node"
+            if (Test-Path $nodeCache) {
+              $candidates = Get-ChildItem $nodeCache -Directory |
+                Sort-Object { try { [version]$_.Name } catch { [version]"0.0" } } -Descending
+              foreach ($candidate in $candidates) {
+                $candidateNode = Join-Path (Join-Path $candidate.FullName "x64") "node.exe"
+                if (-not (Test-Path $candidateNode)) { continue }
+                try { $candidateVersion = [version]((& $candidateNode --version 2>$null).Trim().TrimStart("v")) } catch { continue }
+                if ($candidateVersion.Major -gt 22 -or ($candidateVersion.Major -eq 22 -and $candidateVersion -ge [version]"22.12.0")) {
+                  $nodeExecutable = $candidateNode
+                  $supportedNode = $true
+                  break
+                }
+              }
+            }
+          }
+          if (-not $supportedNode -or -not $nodeExecutable) {
+            throw "Node.js 22.12 or newer is required for the browser-regression WebSocket client."
+          }
+
+          & $nodeExecutable $browserTest
+          if ($LASTEXITCODE -ne 0) {
+            throw "Patient-registry browser regression failed with exit code $LASTEXITCODE."
+          }
+
       - name: Diagnose the running local app after source sync
         continue-on-error: true
         shell: powershell
