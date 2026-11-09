@@ -194,10 +194,21 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             return keys
 
         source_group_keys = stage_group_keys(source_text)
+
+        def stage_group_is_supported(generated_key: str) -> bool:
+            return any(
+                source_key == generated_key
+                or (generated_key.isdigit() and source_key.startswith(generated_key))
+                for source_key in source_group_keys
+            )
+
         unsupported_stage_groups = [
             snippet
             for snippet in _unqualified_matches(stage_group_pattern, text)
-            if not stage_group_keys(snippet).issubset(source_group_keys)
+            if not all(
+                stage_group_is_supported(key)
+                for key in stage_group_keys(snippet)
+            )
         ]
         if unsupported_stage_groups:
             flags.append(
@@ -391,7 +402,18 @@ def build_case_validation_warnings(case: SyntheticCase) -> list[str]:
             stage_group_key(match.group(0))
             for match in stage_group_pattern.finditer(summary)
         }
-        if text_stage_groups and stage_group_key(case.stage_group) not in text_stage_groups:
+        structured_group = stage_group_key(case.stage_group)
+
+        def stage_groups_compatible(first: str, second: str) -> bool:
+            if first[:1] != second[:1]:
+                return False
+            first_suffix, second_suffix = first[1:], second[1:]
+            return not first_suffix or not second_suffix or first_suffix == second_suffix
+
+        if text_stage_groups and not any(
+            stage_groups_compatible(structured_group, text_group)
+            for text_group in text_stage_groups
+        ):
             warnings.append(
                 "Structured stage_group conflicts with an explicit stage-group statement in free text; preserve both and reconcile before simulation."
             )
