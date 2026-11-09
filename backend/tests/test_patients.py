@@ -1,5 +1,7 @@
 from fastapi.testclient import TestClient
 
+import pytest
+
 from app.agent_schemas import AgentAssessment
 from app.main import app
 from app.schemas import SyntheticCase
@@ -378,4 +380,67 @@ def test_patient_registry_round_trips_every_case_field_across_versions_and_datab
     assert restored_original["case"] == expected_original
     assert restored_original["case_snapshot_sha256"] == original_hash
     assert restored_original["case"] != reloaded_second["case"]
+
+
+def test_patient_create_and_version_failures_roll_back_partial_registry_writes(monkeypatch, tmp_path):
+    import sqlite3
+
+    db_path = tmp_path / "patient_transaction_rollback.sqlite3"
+    monkeypatch.setattr(run_store, "DB_PATH", db_path)
+    run_store.initialize_database()
+
+    # Fail after the patient profile and serial allocation INSERTs have run.
+    # The transaction must roll back both earlier writes as well.
+    with sqlite3.connect(db_path) as db:
+        db.execute(
+            """CREATE TRIGGER reject_initial_case_version
+            BEFORE INSERT ON patient_case_versions
+            BEGIN
+                SELECT RAISE(ABORT, 'injected initial-version failure');
+            END"""
+        )
+
+    with pytest.raises(sqlite3.IntegrityError, match="injected initial-version failure"):
+        run_store.create_patient("Rollback Training Example", SyntheticCase.model_validate(_case()))
+
+    with sqlite3.connect(db_path) as db:
+        assert db.execute("SELECT COUNT(*) FROM synthetic_patients").fetchone()[0] == 0
+        assert db.execute("SELECT COUNT(*) FROM patient_registry_numbers").fetchone()[0] == 0
+        assert db.execute("SELECT COUNT(*) FROM patient_case_versions").fetchone()[0] == 0
+        db.execute("DROP TRIGGER reject_initial_case_version")
+
+    # A successful registration after the failed transaction must still receive
+    # the first serial; a failed operation must not consume a registry identifier.
+    patient = run_store.create_patient("Rollback Training Example", SyntheticCase.model_validate(_case()))
+    assert patient["patient_identifier"] == "RAD-000001"
+    patient_id = patient["patient_id"]
+
+    # Fail after the new immutable version INSERT but before the registry profile
+    # name UPDATE. The failed update must not leave an orphaned extra version.
+    with sqlite3.connect(db_path) as db:
+        db.execute(
+            """CREATE TRIGGER reject_registry_profile_update
+            BEFORE UPDATE ON synthetic_patients
+            BEGIN
+                SELECT RAISE(ABORT, 'injected profile-update failure');
+            END"""
+        )
+
+    with pytest.raises(sqlite3.IntegrityError, match="injected profile-update failure"):
+        run_store.create_case_version(
+            patient_id,
+            "Changed Training Example",
+            SyntheticCase.model_validate(
+                _case("A second title", "A revised fictional test summary for transaction rollback.")
+            ),
+        )
+
+    restored = run_store.get_patient(patient_id)
+    assert restored["patient_name"] == "Rollback Training Example"
+    assert len(restored["versions"]) == 1
+    assert restored["versions"][0]["version_number"] == 1
+    assert restored["versions"][0]["case"]["scenario_title"] == "Training patient case"
+    with sqlite3.connect(db_path) as db:
+        assert db.execute("SELECT COUNT(*) FROM patient_case_versions").fetchone()[0] == 1
+        db.execute("DROP TRIGGER reject_registry_profile_update")
 
