@@ -4,6 +4,7 @@ import { readDraft, writeDraft, listToMultilineText, multilineTextToList } from 
 import { readSavedSingleAssessment, writeSavedSingleAssessment } from "./singleAssessmentStorage.js";
 import { shouldShowBatchPanel } from "./runRecovery.js";
 import { patientVersionDisplayName } from "./patientVersionName.js";
+import { formatElapsedDuration } from "./roundTiming.js";
 
 const CASE_DRAFT_KEY = "radonc-mdt-case-draft-v1";
 const LEGACY_CASE_KEY = "radonc-mdt-last-case";
@@ -108,6 +109,7 @@ type BatchRunSummary = {
   current_agent_id: string | null;
   created_at: string;
   updated_at: string;
+  mdt_finished_at: string | null;
   case_snapshot_sha256: string;
   patient_id?: string | null;
   case_version_id?: string | null;
@@ -184,6 +186,8 @@ type RoundSummary = {
   progress_percent: number;
   current_agent_id: string | null;
   updated_at: string;
+  started_at: string | null;
+  finished_at: string | null;
 };
 
 type RoundAgentResult = {
@@ -1584,8 +1588,14 @@ function App() {
                   <span className="count-chip">45 ROLES</span>
                 </div>
                 <p className="panel-intro">The debate and review stages ask each role to respond independently to a compact digest of other perspectives. Round 4 produces a chair synthesis that retains dissent and states the evidence limitations.</p>
+                {formatElapsedDuration(batchRun.created_at, batchRun.mdt_finished_at) && (
+                  <p className="result-footnote">
+                    Full MDT elapsed time: {formatElapsedDuration(batchRun.created_at, batchRun.mdt_finished_at)} from run creation through Chair completion, including any pauses between rounds.
+                  </p>
+                )}
                 {[2, 3, 4].map((roundNumber) => {
                   const summary = roundSummaries[roundNumber];
+                  const roundElapsed = formatElapsedDuration(summary?.started_at, summary?.finished_at);
                   const isPreviousComplete = roundNumber === 2
                     ? batchRun.status === "completed" && batchRun.completed_count === 45 && batchRun.failed_count === 0
                     : roundSummaries[roundNumber - 1]?.status === "completed";
@@ -1633,6 +1643,7 @@ function App() {
                               <span className="count-failed">{summary.failed_count} failed</span>
                               <span>{summary.queued_count + summary.running_count} remaining</span>
                               {summary.current_agent_id && <span>Now: {summary.current_agent_id}</span>}
+                              {roundElapsed && <span>Attempt duration: {roundElapsed}</span>}
                             </div>
                           </div>
                           {(isRetryable || (summary.status === "running" && Date.now() - Date.parse(summary.updated_at) > 120000)) && (
