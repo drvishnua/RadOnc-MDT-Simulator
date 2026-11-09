@@ -18,6 +18,7 @@ ROUND_SOURCES = (
 
 SECTION_LIMITS = {
     "consensus_points": 15,
+    "recorded_agreements": 90,
     "unresolved_disagreements": 15,
     "minority_and_dissenting_views": 45,
     "major_uncertainties": 20,
@@ -160,6 +161,40 @@ def _merge_minority_views(
     return merged[:limit]
 
 
+def build_recorded_agreements(
+    round2_rows: list[dict],
+    round3_rows: list[dict],
+) -> list[str]:
+    """Preserve saved agreements as role-attributed records, never as consensus.
+
+    A single report entry is emitted per completed role per round. Repeated
+    identical strings from the same role are removed, while distinct statements
+    and the same statement from different roles/rounds remain attributable.
+    """
+    output: list[str] = []
+    for round_number, rows in ((2, round2_rows), (3, round3_rows)):
+        for row, item in _entries(rows, "result"):
+            role_id = str(row.get("agent_id") or "unknown-role")
+            role_name = str(row.get("agent_name") or "Role")
+            statements: list[str] = []
+            seen: set[str] = set()
+            for value in item.get("agreements") or []:
+                if not isinstance(value, str):
+                    continue
+                cleaned = " ".join(value.split())
+                key = cleaned.casefold()
+                if cleaned and key not in seen:
+                    statements.append(cleaned)
+                    seen.add(key)
+            if statements:
+                output.append(
+                    f"Round {round_number} — {role_id} ({role_name}); "
+                    "role-recorded agreement statements, not independently validated "
+                    "as a shared proposition: " + " | ".join(statements)
+                )
+    return output[:SECTION_LIMITS["recorded_agreements"]]
+
+
 def ensure_chair_report_completeness(
     report: FinalMDTReport,
     case: SyntheticCase,
@@ -184,6 +219,7 @@ def ensure_chair_report_completeness(
 
     for field, limit in SECTION_LIMITS.items():
         data[field] = _unique(data.get(field) or [], limit)
+    data["recorded_agreements"] = build_recorded_agreements(round2_rows, round3_rows)
 
     # An empty consensus_points list is meaningful: free-text agreement
     # notes do not provide proposition-level evidence and must not be replaced

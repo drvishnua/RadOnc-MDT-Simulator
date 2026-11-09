@@ -22,6 +22,7 @@ from app.round_schemas import (
 )
 from app.schemas import SyntheticCase
 from app.services.case_integrity import audit_unverified_case_claims, build_case_prompt_context, build_case_report_title
+from app.services.chair_report_quality import build_recorded_agreements
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -354,17 +355,22 @@ def reconcile_chair_report_draft(
         for _, result in r1
         for item in (result.get("unknowns") or [])
     ]
+    debate_unknowns = [
+        item
+        for _, result in r2
+        for item in (result.get("remaining_unknowns") or [])
+    ]
     adversarial_unknowns = [
         item
         for _, result in r3
         for item in (result.get("remaining_unknowns") or [])
     ]
     uncertainties = _unique_strings(
-        case_unknowns + assessment_unknowns + adversarial_unknowns,
-        limit=15,
+        case_unknowns + assessment_unknowns + debate_unknowns + adversarial_unknowns,
+        limit=20,
     )
     missing_information = _unique_strings(
-        case_unknowns + assessment_unknowns + adversarial_unknowns,
+        case_unknowns + assessment_unknowns + debate_unknowns + adversarial_unknowns,
         limit=20,
     )
 
@@ -588,6 +594,7 @@ def reconcile_chair_report_draft(
         chair_conclusion=chair_conclusion,
         overall_educational_synthesis=overall,
         consensus_points=consensus_points,
+        recorded_agreements=build_recorded_agreements(round2_views, round3_views),
         unresolved_disagreements=unresolved,
         minority_and_dissenting_views=minority_views,
         major_uncertainties=uncertainties,
@@ -1030,47 +1037,57 @@ async def generate_chair_report(
             for _, result in entries
             if result.get("position")
         )
-        modal = counts.most_common(1)[0][0] if counts else None
-        non_modal = []
-        representative = []
+        modal = _unique_modal_position(counts)
+        grouped_views: dict[str, list[dict]] = {}
         for row, result in entries:
             position = result.get("position")
+            if not position:
+                continue
             entry = {
                 "agent": row.get("agent_id"),
                 "position": position,
                 "conclusion": _compact(result.get("provisional_conclusion", ""), 160),
             }
-            if position and position != modal:
-                if round_key == "round3":
-                    entry["risks"] = [
-                        _compact(value, 90)
-                        for value in (result.get("risk_flags") or [])[:2]
-                    ]
-                    entry["unknowns"] = [
-                        _compact(value, 90)
-                        for value in (result.get("remaining_unknowns") or [])[:2]
-                    ]
-                non_modal.append(entry)
-            elif len(representative) < 3:
-                if round_key == "round2":
-                    entry["challenges"] = [
-                        _compact(value, 100)
-                        for value in (result.get("substantive_challenges") or [])[:1]
-                    ]
-                elif round_key == "round3":
-                    entry["risks"] = [
-                        _compact(value, 90)
-                        for value in (result.get("risk_flags") or [])[:2]
-                    ]
-                    entry["unknowns"] = [
-                        _compact(value, 90)
-                        for value in (result.get("remaining_unknowns") or [])[:2]
-                    ]
-                representative.append(entry)
+            if round_key in {"round2", "round3"}:
+                entry["agreements"] = [
+                    _compact(value, 100)
+                    for value in (result.get("agreements") or [])[:1]
+                ]
+                entry["challenges"] = [
+                    _compact(value, 100)
+                    for value in (result.get("substantive_challenges") or [])[:1]
+                ]
+            if round_key == "round3":
+                entry["risks"] = [
+                    _compact(value, 90)
+                    for value in (result.get("risk_flags") or [])[:2]
+                ]
+                entry["unknowns"] = [
+                    _compact(value, 90)
+                    for value in (result.get("remaining_unknowns") or [])[:2]
+                ]
+            grouped_views.setdefault(position, []).append(entry)
+
+        # A tie has no unique modal position. Sample every recorded group rather
+        # than arbitrarily treating the first Counter entry as the majority.
+        if modal is None:
+            non_modal = []
+            for position in sorted(grouped_views, key=lambda value: (-counts[value], value)):
+                non_modal.extend(grouped_views[position][:2])
+            representative = []
+        else:
+            non_modal = []
+            for position in sorted(
+                (value for value in grouped_views if value != modal),
+                key=lambda value: (-counts[value], value),
+            ):
+                non_modal.extend(grouped_views[position][:2])
+            representative = grouped_views.get(modal, [])[:3]
+
         return {
             "role_count": len(entries),
             "position_counts": dict(counts),
-            "non_modal_views": non_modal[:5],
+            "non_modal_views": non_modal[:8],
             "representative_views": representative,
         }
 
@@ -1080,7 +1097,7 @@ async def generate_chair_report(
         "Do not invent consensus. Explicitly separate genuine agreement from unresolved dissent. "
         "Do not recommend a patient-specific treatment or include doses. Evidence retrieval is "
         "not connected: say so, and identify evidence gaps rather than inventing citations. "
-        "Do not silently resolve contradictory facts. Preserve the source-case's explicitly attributed opinions and every condition attached to them; do not relabel them as verified facts or MDT consensus. Reconcile the saved R2/R3 substantive_challenges as source-attributed review records, retaining their originating role IDs and round. Do not silently discard a challenge because it is absent from a compressed representative digest. Do not say unanimous, all agents, or no dissent unless exact position counts support it. Treat position labels as descriptions, not votes; distinguish a conditional view from support/opposition. Consensus requires the same explicit proposition or educational option to be supported in the saved contributions. A uniform position-label distribution alone is not consensus; when no shared proposition is established, set insufficient_information.\nSUPPLIED CASE:\n"
+        "Do not silently resolve contradictory facts. Preserve the source-case's explicitly attributed opinions and every condition attached to them; do not relabel them as verified facts or MDT consensus. Reconcile the saved R2/R3 substantive_challenges as source-attributed review records, retaining their originating role IDs and round. Do not silently discard a challenge because it is absent from a compressed representative digest. Do not say unanimous, all agents, or no dissent unless exact position counts support it. Treat position labels as descriptions, not votes; distinguish a conditional view from support/opposition. Preserve Round-2 and Round-3 agreement statements in a separate recorded_agreements section with role/round attribution; never label those records as consensus by themselves. Consensus requires the same explicit proposition or educational option to be supported in the saved contributions. A uniform position-label distribution alone is not consensus; when no shared proposition is established, set insufficient_information.\nSUPPLIED CASE:\n"
         + json.dumps(build_case_prompt_context(case), ensure_ascii=False, separators=(",", ":"))
         + "\nROUND 1 INDEPENDENT POSITIONS:\n"
         + json.dumps(digest(round1_views, "round1"), ensure_ascii=False, separators=(",", ":"))

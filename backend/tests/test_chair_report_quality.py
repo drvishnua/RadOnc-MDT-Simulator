@@ -57,12 +57,40 @@ def _empty_report() -> FinalMDTReport:
 def _assert_all_sections_are_explicit(report: FinalMDTReport) -> None:
     payload = report.model_dump()
     for field in SECTION_LIMITS:
-        if field == "consensus_points":
-            assert payload[field] == [], "Do not populate consensus points without proposition-level evidence"
+        if field in {"consensus_points", "recorded_agreements"}:
+            assert payload[field] == [], "Do not invent consensus or recorded agreement statements"
             continue
         assert payload[field], f"{field} must contain findings or an explicit absence note"
         assert all(isinstance(item, str) and item.strip() for item in payload[field])
         assert len(payload[field]) <= SECTION_LIMITS[field]
+
+
+def test_completeness_rebuilds_recorded_agreements_from_completed_round_records():
+    case = SyntheticCase(
+        scenario_title="Chair completeness agreement provenance test",
+        case_summary="Fictional case used only for a deterministic report integrity regression.",
+    )
+    report = _empty_report().model_copy(
+        update={"recorded_agreements": ["UNTRUSTED LLM INVENTED AGREEMENT"]}
+    )
+    round1 = _rows("assessment", ["insufficient_information"] * 45)
+    round2 = _rows("result", ["insufficient_information"] * 45)
+    round3 = _rows("result", ["insufficient_information"] * 45)
+    statement = "The two educational options remain distinct."
+    round2[0]["result"]["agreements"] = [statement, statement]
+    round3[1]["result"]["agreements"] = ["The missing prerequisite remains unresolved."]
+    round3[2]["status"] = "failed"
+    round3[2]["result"]["agreements"] = ["FAILED PAYLOAD MUST NOT APPEAR"]
+
+    reconciled = ensure_chair_report_completeness(
+        report, case, round1, round2, round3
+    )
+
+    assert not any("UNTRUSTED" in item or "FAILED PAYLOAD" in item for item in reconciled.recorded_agreements)
+    assert sum(statement in item for item in reconciled.recorded_agreements) == 1
+    assert any("Round 2 — RO-01" in item for item in reconciled.recorded_agreements)
+    assert any("Round 3 — RO-02" in item for item in reconciled.recorded_agreements)
+    assert reconciled.consensus_points == []
 
 
 def test_empty_chair_sections_are_filled_from_source_records():

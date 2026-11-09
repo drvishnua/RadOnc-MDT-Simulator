@@ -1,4 +1,5 @@
 import asyncio
+import json
 
 from fastapi.testclient import TestClient
 
@@ -510,6 +511,88 @@ def test_chair_source_opinion_coverage_is_dynamic_and_counts_distinct_roles():
     assert "RO-01" in joined and "conflicting duplicate-role reviews excluded" in joined
     assert "colorectal surgical note" not in joined
     assert "medical oncology note" not in joined
+
+
+def test_chair_preserves_round_two_and_round_three_agreements_and_unknowns_without_calling_them_consensus():
+    case = SyntheticCase(
+        scenario_title="Chair preserves discussion records",
+        case_summary="Fictional case used only to test attributed MDT discussion records.",
+    )
+    positions = ["insufficient_information"] * 45
+    round1 = _chair_rows("assessment", positions)
+    round2 = _chair_rows("result", positions)
+    round3 = _chair_rows("result", positions)
+
+    repeated = "The source records require further staging clarification."
+    round2[0]["result"]["agreements"] = [repeated, repeated]
+    round2[1]["result"]["agreements"] = [
+        "The treatment-sequence options must remain distinct until their prerequisites are reviewed."
+    ]
+    round3[2]["result"]["agreements"] = [
+        "The adversarial review records a shared concern about missing patient goals."
+    ]
+    round2[0]["result"]["remaining_unknowns"] = [
+        "R2-only unresolved question: the date of the staging investigation is not supplied."
+    ]
+
+    report = reconcile_chair_report_draft(
+        "chair-agreement-traceability",
+        case,
+        round1,
+        round2,
+        round3,
+        _chair_draft(),
+    )
+
+    assert report.consensus_points == []
+    assert any(
+        "Round 2 — RO-01" in item and repeated in item
+        and "not independently validated as a shared proposition" in item
+        for item in report.recorded_agreements
+    )
+    assert sum("Round 2 — RO-01" in item for item in report.recorded_agreements) == 1
+    assert any("Round 2 — RO-02" in item for item in report.recorded_agreements)
+    assert any("Round 3 — RO-03" in item for item in report.recorded_agreements)
+    assert any("R2-only unresolved question" in item for item in report.major_uncertainties)
+    assert any("R2-only unresolved question" in item for item in report.missing_information_before_real_world_review)
+
+
+def test_chair_prompt_samples_each_position_when_round_three_counts_are_tied(monkeypatch):
+    from app.services import mdt_generation
+
+    prompts = []
+
+    async def fake_generate(prompt, schema_type, max_tokens):
+        prompts.append(prompt)
+        return _chair_draft()
+
+    monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate)
+    case = SyntheticCase(
+        scenario_title="Chair tied position prompt sample",
+        case_summary="Fictional case used only to test balanced source sampling.",
+    )
+    round1 = _chair_rows("assessment", ["insufficient_information"] * 45)
+    round2 = _chair_rows("result", ["insufficient_information"] * 45)
+    round3 = _chair_rows(
+        "result",
+        ["supports"] * 22 + ["opposes"] * 22 + ["insufficient_information"],
+    )
+
+    asyncio.run(
+        mdt_generation.generate_chair_report(
+            "chair-tied-digest", case, round1, round2, round3
+        )
+    )
+
+    digest_text = prompts[0].split("ROUND 3 ADVERSARIAL REVIEW:\\n", 1)[1].split(
+        "\\nReturn a balanced synthesis.", 1
+    )[0]
+    digest = json.loads(digest_text)
+    sampled = digest["non_modal_views"]
+    sampled_agents = {item["agent"] for item in sampled}
+    sampled_positions = {item["position"] for item in sampled}
+    assert {"RO-01", "RO-23", "RO-45"}.issubset(sampled_agents)
+    assert {"supports", "opposes", "insufficient_information"}.issubset(sampled_positions)
 
 
 def test_chair_reconciliation_preserves_position_counts_and_minor_view():
