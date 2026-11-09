@@ -217,6 +217,26 @@ def ensure_chair_report_completeness(
     }
     final_counts = counts_by_round[3]
 
+    # The current contribution schema does not contain deterministic proposition IDs
+    # or normalized endorsements. Therefore no model-authored consensus point/status
+    # can be accepted by this final defensive layer. A direct R3 support/opposition
+    # split is recorded as no consensus; every other distribution remains
+    # insufficient_information until proposition-level evidence is implemented.
+    data["consensus_points"] = []
+    if final_counts.get("supports") and final_counts.get("opposes"):
+        data["consensus_status"] = "no_consensus"
+        data["chair_conclusion"] = (
+            "The saved Round-3 role positions include both supporting and opposing views. "
+            "The simulated MDT did not reach a single position; review the attributed "
+            "contributions and their unresolved conditions."
+        )
+    else:
+        data["consensus_status"] = "insufficient_information"
+        data["chair_conclusion"] = (
+            "No proposition-level consensus can be established from the saved structured "
+            "contributions. No treatment recommendation can be made from this educational record."
+        )
+
     for field, limit in SECTION_LIMITS.items():
         data[field] = _unique(data.get(field) or [], limit)
     data["recorded_agreements"] = build_recorded_agreements(round2_rows, round3_rows)
