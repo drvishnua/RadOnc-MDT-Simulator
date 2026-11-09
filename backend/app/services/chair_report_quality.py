@@ -371,23 +371,24 @@ def ensure_chair_report_completeness(
                 ):
                     patient_items.append(str(candidate))
 
-    if not data["major_uncertainties"]:
-        data["major_uncertainties"] = _unique(
-            uncertainty_items,
-            SECTION_LIMITS["major_uncertainties"],
-        ) or [
-            "No explicit uncertainty item was recorded in the case snapshot or role "
-            "contributions; this does not establish that uncertainty is absent."
-        ]
+    # Source-derived facts and unknowns must not disappear merely because the
+    # Chair draft supplied a non-empty but generic summary. Prefer case/R1/R2/R3
+    # records, then retain any additional Chair wording within the section limits.
+    data["major_uncertainties"] = _unique(
+        [*uncertainty_items, *data["major_uncertainties"]],
+        SECTION_LIMITS["major_uncertainties"],
+    ) or [
+        "No explicit uncertainty item was recorded in the case snapshot or role "
+        "contributions; this does not establish that uncertainty is absent."
+    ]
 
-    if not data["missing_information_before_real_world_review"]:
-        data["missing_information_before_real_world_review"] = _unique(
-            missing_items,
-            SECTION_LIMITS["missing_information_before_real_world_review"],
-        ) or [
-            "No specific missing-information item was recorded. Completeness of the "
-            "supplied case has not been independently verified."
-        ]
+    data["missing_information_before_real_world_review"] = _unique(
+        [*missing_items, *data["missing_information_before_real_world_review"]],
+        SECTION_LIMITS["missing_information_before_real_world_review"],
+    ) or [
+        "No specific missing-information item was recorded. Completeness of the "
+        "supplied case has not been independently verified."
+    ]
 
     if not data["patient_and_family_considerations"]:
         data["patient_and_family_considerations"] = _unique(
