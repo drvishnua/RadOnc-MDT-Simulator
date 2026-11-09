@@ -591,3 +591,57 @@ def test_negative_n_and_m_assertions_explicitly_present_in_case_summary_are_not_
     })
     assert not any("node-negative status" in item for item in flags)
     assert not any("absence of metastatic disease" in item for item in flags)
+
+def test_populated_histology_does_not_silently_accept_a_conflicting_generated_diagnosis():
+    case = _case(histology="scc", pathology_summary="Biopsy: squamous cell carcinoma.")
+    matching = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The pathology confirms squamous cell carcinoma."
+    })
+    assert not any("histological diagnosis" in item for item in matching)
+    conflicting = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The pathology confirms adenocarcinoma."
+    })
+    assert any("histological diagnosis" in item for item in conflicting)
+
+
+def test_populated_pathology_summary_does_not_silently_accept_conflicting_biomarker_claims():
+    case = _case(pathology_summary="p16 negative, grade 2.")
+    matching = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The biopsy is p16 negative, grade 2."
+    })
+    assert not any("pathology/biomarker" in item for item in matching)
+    conflicting = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The biopsy is p16 positive, grade 2."
+    })
+    assert any("pathology/biomarker" in item for item in conflicting)
+
+
+def test_populated_imaging_summary_does_not_silently_accept_a_conflicting_generated_result():
+    case = _case(imaging_summary="MRI shows no suspicious cervical nodes.")
+    matching = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "MRI shows no suspicious cervical nodes."
+    })
+    assert not any("imaging/investigation" in item for item in matching)
+    conflicting = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "MRI demonstrates a suspicious cervical node."
+    })
+    assert any("imaging/investigation" in item for item in conflicting)
+
+
+def test_positive_treatment_suitability_is_flagged_but_conditional_candidate_language_is_not():
+    case = _case()
+    assert any("treatment-suitability/eligibility" in item for item in audit_unverified_case_claims(
+        case, {"provisional_conclusion": "The patient is a suitable candidate for surgery."}
+    ))
+    assert not any("treatment-suitability/eligibility" in item for item in audit_unverified_case_claims(
+        case, {"risk_flags": ["The patient may be a candidate for surgery pending imaging and fitness review."]}
+    ))
+
+
+def test_structured_patient_goal_without_patient_prefix_supports_matching_preference_statement():
+    case = _case(patient_goals=["prefers surgery"])
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient prefers surgery."
+    })
+    assert not any("patient preference/decision" in item for item in flags)
+

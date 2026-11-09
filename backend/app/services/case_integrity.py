@@ -131,6 +131,7 @@ _QUALIFIER = re.compile(
     r"|assum(?:e|es|ed|ing|ption|ptions)|hypothetical|provisional"
     r"|\be\.g\.?\b|for\s+example|such\s+as|\bif\b"
     r"|risk\s+of|inability\s+to\s+distinguish|cannot\s+distinguish"
+    r"|may\s+be|might\s+be|potentially|pending|subject\s+to|awaiting|cannot\s+determine"
     r"|not\s+possible\s+to\s+distinguish|misclassif(?:y|ication|ied)"
     r"|cannot\s+exclude|exclusion\s+of|exclude[sd]?\s+(?:the\s+)?possibility\s+of"
     r"|rule\s+out|not\s+(?:evidence|proof)\s+of",
@@ -465,11 +466,15 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         if case.clinical_n_stage not in (None, "")
         else case.case_summary
     )
-    supported_n0 = "N0" in _tnm_component_values(supported_n_source, "N")
-    matching_node_negative = _unsupported_matches(
-        node_negative_pattern, text, supported_n_source
+    source_n_values = _tnm_component_values(supported_n_source, "N")
+    source_explicitly_node_negative = bool(
+        _unqualified_matches(node_negative_pattern, supported_n_source)
     )
-    if generated_node_negative and not supported_n0 and matching_node_negative:
+    supported_negative_n = (
+        "N0" in source_n_values
+        or (not source_n_values and source_explicitly_node_negative)
+    )
+    if generated_node_negative and not supported_negative_n:
         flags.append(
             "Generated narrative asserts node-negative status ("
             + ", ".join(generated_node_negative[:3])
@@ -486,11 +491,15 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         if case.clinical_m_stage not in (None, "")
         else case.case_summary
     )
-    supported_m0 = "M0" in _tnm_component_values(supported_m_source, "M")
-    matching_no_metastases = _unsupported_matches(
-        no_metastases_pattern, text, supported_m_source
+    source_m_values = _tnm_component_values(supported_m_source, "M")
+    source_explicitly_no_metastases = bool(
+        _unqualified_matches(no_metastases_pattern, supported_m_source)
     )
-    if generated_no_metastases and not supported_m0 and matching_no_metastases:
+    supported_negative_m = (
+        "M0" in source_m_values
+        or (not source_m_values and source_explicitly_no_metastases)
+    )
+    if generated_no_metastases and not supported_negative_m:
         flags.append(
             "Generated narrative asserts absence of metastatic disease ("
             + ", ".join(generated_no_metastases[:3])
@@ -498,39 +507,86 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         )
 
     resectability_pattern = re.compile(
-        r"\b(?:is|was|remains|appears|seems|deemed|considered)\s+(?:clearly |technically |borderline )?(?:resectable|unresectable)\b|\b(?:resectable|unresectable)\s+(?:tumou?r|disease|lesion|cancer)\b|\bnot resectable\b",
+        r"\b(?:is|was|remains|appears|seems|deemed|considered)\s+(?:clearly |technically |borderline )?(?:resectable|unresectable|operable|inoperable)\b|\b(?:resectable|unresectable|operable|inoperable)\s+(?:tumou?r|disease|lesion|cancer)\b|\bnot (?:resectable|operable)\b",
         re.IGNORECASE,
     )
     matches = _unsupported_matches(resectability_pattern, text, source_text)
     if matches:
         flags.append("Generated narrative asserts resectability status (" + ", ".join(matches[:3]) + "), which is not explicitly documented in the supplied case.")
 
-    if case.histology in (None, "") and case.pathology_summary in (None, ""):
-        histology_pattern = re.compile(
-            r"\b(?:squamous cell carcinoma|adenocarcinoma|small[- ]cell carcinoma|large[- ]cell carcinoma|urothelial carcinoma|neuroendocrine carcinoma|lymphoma|melanoma|sarcoma|SCC)\b",
-            re.IGNORECASE,
-        )
-        matches = _unsupported_matches(histology_pattern, text, source_text)
-        if matches:
-            flags.append("Generated narrative asserts a histological diagnosis (" + ", ".join(matches[:3]) + "), but histology/pathology is not supplied as a structured case finding.")
+    histology_pattern = re.compile(
+        r"\b(?:squamous cell carcinoma|squamous carcinoma|adenocarcinoma|small[- ]cell(?: lung)? carcinoma|large[- ]cell(?: lung)? carcinoma|urothelial carcinoma|neuroendocrine carcinoma|lymphoma|melanoma|sarcoma|NSCLC|SCLC|SCC)\b",
+        re.IGNORECASE,
+    )
 
-    if case.pathology_summary in (None, ""):
-        pathology_pattern = re.compile(
-            r"\b(?:p16|HPV|HER2|ER|PR|PD-L1|Ki-67)\s*(?:positive|negative|high|low|[+-])\b|\b(?:grade|G)\s*[1-4]\b|\b(?:lymphovascular|perineural) invasion\b|\b(?:positive|negative) margins?\b",
-            re.IGNORECASE,
-        )
-        matches = _unsupported_matches(pathology_pattern, text, source_text)
-        if matches:
-            flags.append("Generated narrative asserts a specific pathology/biomarker finding (" + ", ".join(matches[:3]) + "), but pathology_summary is not supplied.")
+    def histology_key(value: str) -> str:
+        normalised = re.sub(r"[^a-z0-9]+", " ", value.casefold()).strip()
+        if normalised in {"scc", "squamous carcinoma", "squamous cell carcinoma"}:
+            return "squamous_cell_carcinoma"
+        if normalised in {"nsclc", "non small cell carcinoma", "non small cell lung carcinoma"}:
+            return "non_small_cell_carcinoma"
+        if normalised in {"sclc", "small cell carcinoma", "small cell lung carcinoma"}:
+            return "small_cell_carcinoma"
+        return normalised
 
-    if case.imaging_summary in (None, ""):
-        investigation_pattern = re.compile(
-            r"\b(?:CT|MRI|PET(?:[- ]CT)?|ultrasound|USG|X[- ]ray|radiograph|bone scan|colonoscopy|endoscopy|bronchoscopy|cystoscopy|biopsy)\s+(?:scan\s+)?(?:shows?|demonstrates?|reveals?|confirms?|identifies?|detected|reported)\s+[^.!?;\n]{1,100}",
-            re.IGNORECASE,
+    histology_source = (
+        str(case.histology)
+        if case.histology not in (None, "")
+        else str(case.pathology_summary)
+        if case.pathology_summary not in (None, "")
+        else case.case_summary
+    )
+    source_histologies = {
+        histology_key(item)
+        for item in _unqualified_matches(histology_pattern, histology_source)
+    }
+    generated_histologies = _unqualified_matches(histology_pattern, text)
+    unsupported_histologies = [
+        item for item in generated_histologies
+        if histology_key(item) not in source_histologies
+    ]
+    if unsupported_histologies:
+        flags.append(
+            "Generated narrative asserts histological diagnosis(es) ("
+            + ", ".join(unsupported_histologies[:3])
+            + "), which are not supported by the available structured histology/pathology field or verbatim case summary."
         )
-        matches = _unsupported_matches(investigation_pattern, text, source_text)
-        if matches:
-            flags.append("Generated narrative asserts an imaging/investigation result (" + "; ".join(matches[:2]) + "), but imaging_summary is not supplied.")
+
+    pathology_pattern = re.compile(
+        r"\b(?:p16|HPV|HER2|ER|PR|PD-L1|Ki-67)\s*(?:positive|negative|high|low|[+-])\b|\b(?:grade|G)\s*[1-4]\b|\b(?:lymphovascular|perineural) invasion\b|\b(?:positive|negative) margins?\b",
+        re.IGNORECASE,
+    )
+    pathology_source = "\n".join(
+        item for item in (case.pathology_summary or "", case.case_summary) if item
+    )
+    unsupported_pathology = _unsupported_matches(
+        pathology_pattern, text, pathology_source
+    )
+    if unsupported_pathology:
+        flags.append(
+            "Generated narrative asserts pathology/biomarker finding(s) ("
+            + ", ".join(unsupported_pathology[:3])
+            + "), which are not explicitly supported by the structured pathology summary or verbatim case summary."
+        )
+
+    investigation_pattern = re.compile(
+        r"\b(?:CT|MRI|PET(?:[- ]CT)?|ultrasound|USG|X[- ]ray|radiograph|bone scan|colonoscopy|endoscopy|bronchoscopy|cystoscopy|biopsy)\s+(?:scan\s+)?(?:shows?|demonstrates?|reveals?|confirms?|identifies?|detected|reported)\s+[^.!?;\n]{1,100}",
+        re.IGNORECASE,
+    )
+    investigation_source = "\n".join(
+        item
+        for item in (case.imaging_summary or "", *case.relevant_investigations, case.case_summary)
+        if item
+    )
+    unsupported_investigations = _unsupported_matches(
+        investigation_pattern, text, investigation_source
+    )
+    if unsupported_investigations:
+        flags.append(
+            "Generated narrative asserts imaging/investigation result(s) ("
+            + "; ".join(unsupported_investigations[:2])
+            + "), which are not explicitly supported by the supplied imaging summary, relevant investigations, or verbatim case summary."
+        )
 
     # Missing information alone does not establish that a treatment is unsafe,
     # contraindicated, or not indicated. Flag categorical clinical status claims;
@@ -547,6 +603,22 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             + "); missing information alone does not establish contraindication, safety, or indication."
         )
 
+    treatment_suitability_pattern = re.compile(
+        r"\b(?:is|are|was|were|remains|appears|seems|deemed|considered)\s+(?:a\s+)?(?:suitable|appropriate|eligible|fit|unfit)\s+candidate\s+for\b[^.!?;\n]{0,100}|"
+        r"\b(?:is|are|was|were|remains|appears|seems|deemed|considered)\s+(?:medically\s+)?(?:suitable|appropriate|eligible|fit|unfit|operable|inoperable)\s+for\b[^.!?;\n]{0,100}|"
+        r"\b(?:can|cannot|could|could\s+not|is\s+able\s+to|unable\s+to)\s+tolerate\s+(?:surgery|chemotherapy|radiotherapy|radiation|systemic\s+therapy|treatment)\b[^.!?;\n]{0,80}",
+        re.IGNORECASE,
+    )
+    treatment_suitability_matches = _unsupported_matches(
+        treatment_suitability_pattern, text, case.case_summary
+    )
+    if treatment_suitability_matches:
+        flags.append(
+            "Generated narrative makes an unsupported treatment-suitability/eligibility assertion ("
+            + "; ".join(treatment_suitability_matches[:3])
+            + "); suitability cannot be established without explicit supporting case information."
+        )
+
     preference_pattern = re.compile(
         # Match an actual patient-attributed choice/act. The noun phrase
         # "obtain patient consent" is a recommendation to elicit consent,
@@ -555,7 +627,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         re.IGNORECASE,
     )
     preference_source_text = "\n".join(
-        [case.case_summary, *(case.patient_goals or [])]
+        [case.case_summary, *(f"patient {goal}" for goal in (case.patient_goals or []))]
     )
     unsupported_preferences = _unsupported_matches(
         preference_pattern,
