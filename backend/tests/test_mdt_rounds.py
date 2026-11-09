@@ -584,8 +584,8 @@ def test_chair_prompt_samples_each_position_when_round_three_counts_are_tied(mon
         )
     )
 
-    digest_text = prompts[0].split("ROUND 3 ADVERSARIAL REVIEW:\\n", 1)[1].split(
-        "\\nReturn a balanced synthesis.", 1
+    digest_text = prompts[0].split("ROUND 3 ADVERSARIAL REVIEW:\n", 1)[1].split(
+        "\nReturn a balanced synthesis.", 1
     )[0]
     digest = json.loads(digest_text)
     sampled = digest["non_modal_views"]
