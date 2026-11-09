@@ -8,6 +8,9 @@ from __future__ import annotations
 import json
 import sys
 import uuid
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
 
 from app.agent_schemas import AgentAssessment
 from app.agents.catalog import AGENT_PROFILES
