@@ -16,3 +16,12 @@ export function shouldShowBatchPanel(
   validation: ValidationState,
   validatedCase: unknown
 ): boolean;
+
+export function shouldOfferIndependentBatchResume(
+  batchRun: {
+    status: "queued" | "running" | "completed" | "completed_with_errors";
+    failed_count?: number;
+    updated_at?: string;
+  } | null | undefined,
+  now?: number
+): boolean;
