@@ -2,7 +2,7 @@
 
 A local-first, AI-assisted educational simulator for multidisciplinary oncology case discussions.
 
-> **Current milestone (9 November 2026):** The development branch contains the four-round 45 + 45 + 45 + 1 workflow, patient registry/versioning, expanded case-integrity checks, Chair safeguards, persisted round/full-MDT completion timestamps and neutral “fictional training case” terminology. The exact current code snapshot is `8a318900f9a661116dba2130b118d924741bfcfe`: backend CI passed (114 tests, 1 existing deprecation warning) and frontend launcher/persistence checks, TypeScript and production build passed. The last Windows source-sync verification is older (`aa0e90b7...`); the current code snapshot has not yet been verified in the laptop `Source` folder or loaded by a restarted backend. The historical MDT-006 audit remains a failure with 134 hard failures and 92 major findings; later prompt/schema and case-integrity changes still need a fresh full live run.
+> **Current milestone (9 November 2026):** The development branch contains the four-round 45 + 45 + 45 + 1 workflow, patient registry/versioning, expanded case-integrity checks, Chair safeguards, persisted round/full-MDT completion timestamps and neutral “fictional training case” terminology. The exact current code snapshot is `d6f7421f6c38862f5ca171b1023e94ac3fdcfb06`: backend CI passed (114 tests, 1 existing deprecation warning); frontend CI passed (28 tests), TypeScript checking and Vite production build passed. The dashboard now displays R2–R4 attempt durations and total elapsed time through Round 4, explicitly including pauses between rounds. The last Windows source-sync verification is older (`aa0e90b7...`); the current code snapshot has not yet been verified in the laptop `Source` folder or loaded by a restarted backend. The historical MDT-006 audit remains a failure with 134 hard failures and 92 major findings; later prompt/schema and case-integrity changes still need a fresh full live run.
 
 ## Purpose
 
@@ -72,10 +72,11 @@ The model is kept warm during a run. Prompts use Ollama's schema-constrained out
 
 ### Current code/CI snapshot
 
-The following CI checks ran against exact code snapshot `8a318900f9a661116dba2130b118d924741bfcfe`:
+The following CI checks ran against exact code snapshot `d6f7421f6c38862f5ca171b1023e94ac3fdcfb06`:
 
-- **Backend CI:** [run 42578931373](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42578931373) — success; **114 passed, 1 warning** (the existing Starlette/httpx TestClient deprecation).
-- **Frontend CI:** [run 42578931319](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42578931319) — success; PowerShell launcher syntax, Node compatibility, case-draft persistence tests, TypeScript checking and Vite production build passed.
+- **Backend CI:** [run 42581653317](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42581653317) — success; **114 passed, 1 warning** (the existing Starlette/httpx TestClient deprecation).
+- **Frontend CI:** [run 42581653276](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42581653276) — success; **28 tests passed**, PowerShell launcher syntax, Node compatibility, TypeScript checking and Vite production build passed.
+- **Dashboard timing:** R2–R4 attempt durations and full wall-clock elapsed time through Round 4 are rendered from persisted timestamps. The overall interval begins at run creation and includes pauses between rounds; it is not pure inference time.
 - **Terminology:** generated Chair report text, agent prompts, API descriptions, validation metadata and user documentation consistently use “fictional training case” / “educational simulation” language. Internal Python/schema/DB identifiers remain unchanged for compatibility. The education-only/no-clinical-decision boundary is retained.
 
 ### Local source/runtime verification
