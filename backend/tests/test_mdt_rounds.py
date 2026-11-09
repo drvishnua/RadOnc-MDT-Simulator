@@ -1660,3 +1660,47 @@ def test_chair_failure_retry_and_saved_four_round_records_survive_database_reini
     assert run_store.list_round_results(run_id, 3) == saved_r3
     assert run_store.list_round_results(run_id, 4) == saved_r4
     assert run_store.get_final_report(run_id) == report_before_restart
+
+    # Launch a separate interpreter against the same SQLite file to simulate a
+    # backend process restart rather than relying only on fresh connections.
+    import subprocess
+    import sys
+
+    restart_probe = """
+import json
+import sys
+from pathlib import Path
+from app.services import run_store
+
+run_store.DB_PATH = Path(sys.argv[1])
+run_id = sys.argv[2]
+run_store.initialize_database()
+report = run_store.get_final_report(run_id)
+print(json.dumps({
+    "run_id": run_store.get_run(run_id)["run_id"],
+    "case_snapshot_sha256": run_store.get_run(run_id)["case_snapshot_sha256"],
+    "r1_completed": sum(row["status"] == "completed" for row in run_store.list_results(run_id)),
+    "round_completed": [
+        run_store.get_round_summary(run_id, number)["completed_count"]
+        for number in (2, 3, 4)
+    ],
+    "chair_report_available": report is not None,
+    "chair_consensus_status": report["consensus_status"] if report else None,
+}))
+"""
+    restarted = subprocess.run(
+        [sys.executable, "-c", restart_probe, str(run_store.DB_PATH), run_id],
+        cwd=str(run_store.BACKEND_DIR),
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    restarted_state = json.loads(restarted.stdout)
+    assert restarted_state == {
+        "run_id": run_id,
+        "case_snapshot_sha256": run_before_restart["case_snapshot_sha256"],
+        "r1_completed": 45,
+        "round_completed": [45, 45, 1],
+        "chair_report_available": True,
+        "chair_consensus_status": "insufficient_information",
+    }
