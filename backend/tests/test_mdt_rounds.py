@@ -1502,6 +1502,8 @@ def test_failed_round_agent_resumes_without_replacing_completed_peer_records(mon
     assert failed_row["status"] == "failed"
     assert failed_row["result"] is None
     assert failed_row["error_message"]
+    # A failed R2 cannot be treated as a complete prerequisite for R3.
+    assert client.post(f"/api/runs/{run_id}/rounds/3").status_code == 409
     assert completed_peer_before["status"] == "completed"
     assert completed_peer_before["result"] is not None
 
@@ -1559,6 +1561,8 @@ def test_failed_round_three_agent_resumes_without_replacing_completed_peer_recor
     assert failed_row["status"] == "failed"
     assert failed_row["result"] is None
     assert failed_row["error_message"]
+    # A failed R3 cannot be treated as a complete prerequisite for Chair synthesis.
+    assert client.post(f"/api/runs/{run_id}/rounds/4").status_code == 409
     assert completed_peer_before["status"] == "completed"
     assert completed_peer_before["result"]["round_number"] == 3
 
