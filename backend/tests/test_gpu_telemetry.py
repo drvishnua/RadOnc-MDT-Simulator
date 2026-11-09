@@ -62,3 +62,10 @@ def test_gpu_inference_requires_activity_and_ollama_gpu_allocation():
     assert result["peak_gpu_utilization_percent"] == 73.0
     assert result["max_ollama_vram_allocation_bytes"] == 3_000_000_000
     assert result["active_gpu_inference_observed"] is True
+
+def test_live_four_round_validation_script_parses_without_execution():
+    import ast
+    from pathlib import Path
+
+    script = Path(__file__).resolve().parents[1] / "scripts" / "live_four_round_validation.py"
+    ast.parse(script.read_text(encoding="utf-8"), filename=str(script))
