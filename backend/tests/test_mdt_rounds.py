@@ -211,6 +211,7 @@ def test_retried_or_failed_round_record_cannot_retain_stale_payload(monkeypatch,
     row = next(item for item in run_store.list_round_results(run["run_id"], 2) if item["agent_id"] == "RO-01")
     assert row["status"] == "running"
     assert row["result"] is None
+    assert row["duration_seconds"] is None
 
     run_store.save_round_success(run["run_id"], 2, "RO-01", stale, 0.01)
     run_store.save_round_failure(run["run_id"], 2, "RO-01", "intentional test failure", 0.01)
