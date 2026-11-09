@@ -78,8 +78,8 @@ _POSITIVE_CONSENSUS_PATTERN = re.compile(
 
 
 _NEGATED_CONSENSUS_PATTERN = re.compile(
-    r"\\b(?:no|not|never|without|cannot|could\\s+not|did\\s+not|has\\s+not|was\\s+not)\\b"
-    r"[^.!?;]{0,100}\\b(?:consensus|unanimity|unanimous\\s+agreement|majority\\s+agreement)\\b",
+    r"\b(?:no|not|never|without|cannot|could\s+not|did\s+not|has\s+not|was\s+not)\b"
+    r"[^.!?;]{0,100}\b(?:consensus|unanimity|unanimous\s+agreement|majority\s+agreement)\b",
     re.IGNORECASE,
 )
 
