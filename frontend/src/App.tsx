@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { readDraft, writeDraft, listToMultilineText, multilineTextToList, createBlankDraft } from "./caseDraft.js";
 import { readSavedSingleAssessment, writeSavedSingleAssessment } from "./singleAssessmentStorage.js";
-import { hasCompletedIndependentAssessments, shouldShowBatchPanel } from "./runRecovery.js";
+import { hasCompletedIndependentAssessments, shouldOfferIndependentBatchResume, shouldShowBatchPanel } from "./runRecovery.js";
 import { patientVersionDisplayName } from "./patientVersionName.js";
 import { formatElapsedDuration } from "./roundTiming.js";
 
@@ -1477,9 +1477,7 @@ function App() {
                       Export JSON
                     </button>
                   )}
-                  {(batchRun?.status === "completed_with_errors" ||
-                    (batchRun?.status === "running" && Date.now() - Date.parse(batchRun.updated_at) > 120000) ||
-                    (batchRun?.status === "queued" && Date.now() - Date.parse(batchRun.updated_at) > 120000)) && (
+                  {shouldOfferIndependentBatchResume(batchRun) && (
                     <button
                       className="button button-secondary"
                       type="button"
