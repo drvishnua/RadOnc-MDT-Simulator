@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import sys
+import uuid
 
 from app.agent_schemas import AgentAssessment
 from app.agents.catalog import AGENT_PROFILES
@@ -30,7 +31,7 @@ def main() -> int:
             ],
         )
         patient = run_store.create_patient(
-            "Disposable dashboard E2E " + run_store.uuid.uuid4().hex[:10],
+            "Disposable dashboard E2E " + uuid.uuid4().hex[:10],
             case,
         )
         patient_id = patient["patient_id"]
