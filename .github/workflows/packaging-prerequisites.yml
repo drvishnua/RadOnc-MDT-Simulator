@@ -1,0 +1,93 @@
+name: Windows Packaging Prerequisites
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/packaging-prerequisites.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-packaging-prerequisites
+  cancel-in-progress: false
+
+jobs:
+  inspect:
+    name: Read-only Windows build-tool inspection
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 5
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Inspect available packaging tools without changing the machine
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Continue"
+          Write-Host "=== RUNNER IDENTITY ==="
+          Write-Host "RUNNER_NAME=$env:RUNNER_NAME"
+          Write-Host "RUNNER_OS=$env:RUNNER_OS"
+          Write-Host "RUNNER_ARCH=$env:RUNNER_ARCH"
+          whoami
+
+          Write-Host "=== PYTHON ==="
+          $py = Get-Command py -ErrorAction SilentlyContinue
+          $python = Get-Command python -ErrorAction SilentlyContinue
+          if ($py) {
+            & $py.Source -0p
+            & $py.Source -3 -c "import sys, importlib.util; print('PYTHON_EXE=' + sys.executable); print('PYTHON_VERSION=' + sys.version.split()[0]); print('PYINSTALLER_AVAILABLE=' + str(importlib.util.find_spec('PyInstaller') is not None))"
+          } elseif ($python) {
+            & $python.Source --version
+            & $python.Source -c "import sys, importlib.util; print('PYTHON_EXE=' + sys.executable); print('PYINSTALLER_AVAILABLE=' + str(importlib.util.find_spec('PyInstaller') is not None))"
+          } else {
+            Write-Host "PYTHON_NOT_FOUND"
+          }
+
+          Write-Host "=== NODE TOOLCHAIN ==="
+          foreach ($name in @("node", "npm", "git")) {
+            $command = Get-Command $name -ErrorAction SilentlyContinue
+            if ($command) {
+              Write-Host "$name=$($command.Source)"
+              & $command.Source --version
+            } else {
+              Write-Host "$name=NOT_FOUND"
+            }
+          }
+
+          Write-Host "=== INNO SETUP ==="
+          $iscc = Get-Command ISCC.exe -ErrorAction SilentlyContinue
+          $isccCandidates = @(
+            "C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
+            "C:\Program Files\Inno Setup 6\ISCC.exe",
+            (Join-Path $env:LOCALAPPDATA "Programs\Inno Setup 6\ISCC.exe")
+          )
+          if ($iscc) { $isccCandidates = @($iscc.Source) + $isccCandidates }
+          $foundIscc = $isccCandidates | Where-Object { $_ -and (Test-Path $_) } | Select-Object -Unique
+          if ($foundIscc) {
+            foreach ($path in $foundIscc) {
+              Write-Host "ISCC_FOUND=$path"
+              & $path /?
+            }
+          } else {
+            Write-Host "INNO_SETUP_NOT_FOUND"
+          }
+
+          Write-Host "=== PACKAGE MANAGERS ==="
+          foreach ($name in @("choco", "winget")) {
+            $command = Get-Command $name -ErrorAction SilentlyContinue
+            if ($command) {
+              Write-Host "$name=$($command.Source)"
+              & $command.Source --version
+            } else {
+              Write-Host "$name=NOT_FOUND"
+            }
+          }
+
+          Write-Host "=== DISK SPACE ==="
+          Get-PSDrive -PSProvider FileSystem | Select-Object Name, Free, Used | Format-Table -AutoSize
+
+          Write-Host "READ_ONLY_PROBE_COMPLETE"
+          Write-Host "No packages were installed. No application, database, Ollama service, or model process was started, stopped, or modified."

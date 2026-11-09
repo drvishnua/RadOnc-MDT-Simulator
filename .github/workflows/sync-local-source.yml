@@ -9,6 +9,7 @@ on:
     paths-ignore:
       - ".github/workflows/live-four-round-validation.yml"
       - ".github/workflows/sync-local-source.yml"
+      - ".github/workflows/packaging-prerequisites.yml"
       - "backend/scripts/live_four_round_validation.py"
 
 permissions:
