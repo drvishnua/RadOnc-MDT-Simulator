@@ -491,27 +491,31 @@ def test_chair_source_opinion_coverage_is_dynamic_and_counts_distinct_roles():
     cardiology_excerpt = "Cardiology service note proposes a separate review, conditional on documented fitness."
     psychology_excerpt = "Psychology service note records a preference-sensitive discussion, conditional on patient goals."
 
-    def review(source_id, label, excerpt, option_status, conditions_status):
+    def review(source_id, label, excerpt, option_status, conditions_status, peer_id):
         return {
             "source_id": source_id,
             "opinion_label": label,
             "source_excerpt": excerpt,
             "option_status": option_status,
             "conditions_status": conditions_status,
+            "source_reference_ids": [source_id, f"R2:{peer_id}"],
         }
 
+    round3[0]["source_peer_ids"] = ["RO-10"]
     round3[0]["result"]["source_opinion_reviews"] = [
-        review("CASE:case_summary#1", "Neurology service note", neurology_excerpt, "omitted", "preserved"),
+        review("CASE:case_summary#1", "Neurology service note", neurology_excerpt, "omitted", "preserved", "RO-10"),
         # Conflicting duplicate from the same role must not be counted as a second role.
-        review("CASE:case_summary#1", "Neurology service note", neurology_excerpt, "preserved", "preserved"),
-        review("CASE:case_summary#2", "Cardiology service note", cardiology_excerpt, "unclear", "unclear"),
+        review("CASE:case_summary#1", "Neurology service note", neurology_excerpt, "preserved", "preserved", "RO-10"),
+        review("CASE:case_summary#2", "Cardiology service note", cardiology_excerpt, "unclear", "unclear", "RO-10"),
     ]
+    round3[1]["source_peer_ids"] = ["RO-11"]
     round3[1]["result"]["source_opinion_reviews"] = [
-        review("CASE:case_summary#1", "Neurology service note", neurology_excerpt, "omitted", "preserved"),
+        review("CASE:case_summary#1", "Neurology service note", neurology_excerpt, "omitted", "preserved", "RO-11"),
     ]
+    round3[2]["source_peer_ids"] = ["RO-12"]
     round3[2]["result"]["source_opinion_reviews"] = [
-        review("CASE:case_summary#1", "Neurology service note", neurology_excerpt, "preserved", "partly_preserved"),
-        review("CASE:case_summary#3", "Psychology service note", psychology_excerpt, "preserved", "preserved"),
+        review("CASE:case_summary#1", "Neurology service note", neurology_excerpt, "preserved", "partly_preserved", "RO-12"),
+        review("CASE:case_summary#3", "Psychology service note", psychology_excerpt, "preserved", "preserved", "RO-12"),
     ]
 
     report = reconcile_chair_report_draft(
