@@ -207,3 +207,17 @@ def test_single_agent_assessment_rejects_identifying_case_fields() -> None:
         },
     )
     assert response.status_code == 422
+
+
+def test_cors_allows_patient_delete_preflight_from_local_vite_origin() -> None:
+    response = client.options(
+        "/api/patients/test-patient-id",
+        headers={
+            "Origin": "http://127.0.0.1:5173",
+            "Access-Control-Request-Method": "DELETE",
+        },
+    )
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://127.0.0.1:5173"
+    allowed_methods = response.headers["access-control-allow-methods"]
+    assert "DELETE" in allowed_methods
