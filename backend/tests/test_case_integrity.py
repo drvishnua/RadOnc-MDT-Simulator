@@ -95,7 +95,7 @@ def test_unqualified_stage_and_prior_treatment_absence_claims_remain_flagged():
     flags = " ".join(audit_unverified_case_claims(case, payload)).casefold()
     assert "t-stage" in flags
     assert "n-stage" in flags
-    assert "prior-treatment" in flags
+    assert "prior treatment as absent" in flags
 
 
 def test_report_title_never_adds_unprovided_stage():
@@ -571,4 +571,23 @@ def test_comorbidity_and_prior_treatment_absence_claims_are_checked_against_supp
     })).casefold()
     assert "comorbidities as absent" in flags
     assert "prior treatment as absent" in flags
+def test_negative_n_and_m_assertions_are_supported_by_structured_n0_m0():
+    case = _case(clinical_n_stage="N0", clinical_m_stage="M0")
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient is node-negative with no distant metastases."
+    })
+    assert not any("node-negative status" in item for item in flags)
+    assert not any("absence of metastatic disease" in item for item in flags)
 
+
+def test_negative_n_and_m_assertions_explicitly_present_in_case_summary_are_not_relabelled():
+    case = _case(
+        clinical_n_stage=None,
+        clinical_m_stage=None,
+        case_summary="Referral record documents node-negative status and no distant metastases.",
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The record states node-negative status and no distant metastases."
+    })
+    assert not any("node-negative status" in item for item in flags)
+    assert not any("absence of metastatic disease" in item for item in flags)

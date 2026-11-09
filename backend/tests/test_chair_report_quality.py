@@ -454,3 +454,55 @@ def test_chair_finalizer_rebuilds_synthesis_and_case_sections_instead_of_trustin
     assert "not indicated" not in rendered
     assert "no distant metastases" not in rendered
 
+def test_position_counts_deduplicate_same_role_rows_and_flag_them():
+    case = SyntheticCase(
+        scenario_title="Duplicate same-position role regression",
+        case_summary="Fictional case for deterministic role-count testing.",
+    )
+    round1 = _rows("assessment", ["insufficient_information"] * 45)
+    round2 = _rows("result", ["insufficient_information"] * 45)
+    round3 = _rows("result", ["insufficient_information"] * 45)
+    duplicate = {
+        **round3[0],
+        "result": {**round3[0]["result"], "provisional_conclusion": "A repeated saved record from the same role."},
+    }
+    round3.append(duplicate)
+
+    report = ensure_chair_report_completeness(
+        _empty_report(), case, round1, round2, round3
+    )
+
+    assert "Round 3: 45/45 insufficient-information" in report.overall_educational_synthesis
+    assert any(
+        "Round 3 contains 2 completed records for RO-01" in item
+        and "counted once" in item
+        for item in report.case_data_integrity_flags
+    )
+
+
+def test_conflicting_duplicate_role_positions_are_excluded_and_flagged():
+    case = SyntheticCase(
+        scenario_title="Duplicate conflicting role regression",
+        case_summary="Fictional case for deterministic role-count testing.",
+    )
+    round1 = _rows("assessment", ["insufficient_information"] * 45)
+    round2 = _rows("result", ["insufficient_information"] * 45)
+    round3 = _rows("result", ["insufficient_information"] * 45)
+    duplicate = {
+        **round3[0],
+        "result": {**round3[0]["result"], "position": "supports"},
+    }
+    round3.append(duplicate)
+
+    report = ensure_chair_report_completeness(
+        _empty_report(), case, round1, round2, round3
+    )
+
+    assert "Round 3: 44/44 insufficient-information" in report.overall_educational_synthesis
+    assert not any("RO-01" in item for item in report.minority_and_dissenting_views)
+    assert any(
+        "duplicate completed records for RO-01" in item
+        and "conflicting positions" in item
+        and "excluded" in item
+        for item in report.case_data_integrity_flags
+    )
