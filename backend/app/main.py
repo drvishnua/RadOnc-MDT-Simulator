@@ -267,6 +267,14 @@ async def resume_independent_batch(
         raise HTTPException(status_code=409, detail="Another 45-agent batch is currently running.")
     if summary["status"] == "completed":
         raise HTTPException(status_code=409, detail="All 45 agents have already completed.")
+    if summary["completed_count"] == summary["total_agents"] and summary["failed_count"] == 0:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "All 45 independent assessments are complete; resume the failed MDT round "
+                "instead of restarting Round 1."
+            ),
+        )
 
     updated = validate_resume_state(run_id)
     background_tasks.add_task(run_independent_assessments, run_id)
