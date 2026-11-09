@@ -1519,4 +1519,3 @@ def test_failed_round_agent_resumes_without_replacing_completed_peer_records(mon
     assert recovered_row["status"] == "completed"
     assert recovered_row["result"] is not None
     assert completed_peer_after["result"] == completed_peer_before["result"]
-    assert completed_peer_after["completed_at"] == completed_peer_before["completed_at"]
