@@ -360,10 +360,13 @@ def build_source_opinion_review_coverage(
             f"model-reported label(s) {labels}; labels are not independently verified"
             if labels else "no model-reported label"
         )
+        source_excerpt = " ".join(id_to_excerpt[source_id].split())
+        if len(source_excerpt) > 180:
+            source_excerpt = source_excerpt[:179].rstrip() + "…"
         coverage.append(
             "R3 source-opinion review coverage (distinct roles; model-reported "
             "representation labels only, not clinical findings or consensus) — "
-            f"{source_id} ({label_note}): "
+            f"{source_id} (exact saved-case excerpt: \"{source_excerpt}\"; {label_note}): "
             f"{len(roles_by_source[source_id])}/{len(entries)} roles supplied "
             "an exact source-bound review; option status role counts "
             f"{dict(sorted(option_counts.items()))}; condition status role counts "
@@ -576,6 +579,7 @@ def ensure_chair_report_completeness(
     rows_by_round = (round1_rows, round2_rows, round3_rows)
     quarantine_flags: list[str] = []
     stored_integrity_flags: list[str] = []
+    source_reference_audit_summaries: list[str] = []
     counts_by_round = {
         round_number: _position_counts(rows, field, f"Round {round_number}", quarantine_flags)
         for (round_number, field), rows in zip(ROUND_SOURCES, rows_by_round)
@@ -636,7 +640,7 @@ def ensure_chair_report_completeness(
         flagged_role_ids = set(flags_by_role)
         if flagged_role_ids:
             total_flags = sum(len(values) for values in flags_by_role.values())
-            stored_integrity_flags.append(
+            source_reference_audit_summaries.append(
                 f"Round {round_number} source-reference audit: {len(flagged_role_ids)}/"
                 f"{len(all_role_ids)} distinct completed roles have {total_flags} "
                 "unique saved source-reference integrity finding(s)."
@@ -958,7 +962,11 @@ def ensure_chair_report_completeness(
     )
 
     data["case_data_integrity_flags"] = _unique(
-        [*quarantine_flags, *stored_integrity_flags],
+        [
+            *source_reference_audit_summaries,
+            *quarantine_flags,
+            *stored_integrity_flags,
+        ],
         SECTION_LIMITS["case_data_integrity_flags"],
     ) or [
         "No case-data integrity flags were recorded in completed role contributions by the deterministic checks that ran. "
