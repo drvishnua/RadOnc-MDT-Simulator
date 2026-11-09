@@ -653,3 +653,93 @@ def test_completed_contribution_without_agent_id_is_excluded_from_role_counts():
         for item in report.case_data_integrity_flags
     )
 
+def test_final_chair_rebuilds_source_opinion_coverage_from_saved_r3_reviews():
+    source_one = (
+        "colorectal surgical note favours surgical assessment first "
+        "conditional on complete local staging"
+    )
+    source_two = (
+        "medical oncology note favours discussion of preoperative multimodality "
+        "pending MRI staging and fitness review"
+    )
+    case = SyntheticCase(
+        scenario_title="Source-opinion final-boundary regression",
+        case_summary=f"Referral records two opinions: {source_one}. {source_two}.",
+    )
+
+    def review(source_id, excerpt, option, conditions, peer_id):
+        return {
+            "source_id": source_id,
+            "opinion_label": "model-reported source label",
+            "source_excerpt": excerpt,
+            "option_status": option,
+            "conditions_status": conditions,
+            "review_basis": "Representation comparison only.",
+            "source_reference_ids": [source_id, f"R2:{peer_id}"],
+            "evidence_peer_id": "",
+            "evidence_excerpt": "",
+            "challenge": "",
+        }
+
+    round1 = _rows("assessment", ["insufficient_information"] * 45)
+    round2 = _rows("result", ["insufficient_information"] * 45)
+    round3 = _rows("result", ["insufficient_information"] * 45)
+    round2[0]["result"]["source_reference_integrity_flags"] = [
+        "R2 test flag retained from saved role record."
+    ]
+    round3[2]["result"]["source_reference_integrity_flags"] = [
+        "R3 test flag retained from saved role record."
+    ]
+
+    round3[0]["source_peer_ids"] = ["RO-02"]
+    round3[0]["result"]["source_opinion_reviews"] = [
+        review("CASE:case_summary#1", source_one, "preserved", "preserved", "RO-02")
+    ]
+    round3[1]["source_peer_ids"] = ["RO-03"]
+    round3[1]["result"]["source_opinion_reviews"] = [
+        review("CASE:case_summary#1", source_one, "omitted", "omitted", "RO-03"),
+        review("CASE:case_summary#1", source_one, "preserved", "omitted", "RO-03"),
+    ]
+    round3[2]["source_peer_ids"] = ["RO-04"]
+    round3[2]["result"]["source_opinion_reviews"] = [
+        review("CASE:case_summary#2", source_two, "partly_preserved", "unclear", "RO-04")
+    ]
+    round3[3]["source_peer_ids"] = ["RO-05"]
+    round3[3]["result"]["source_opinion_reviews"] = [
+        {
+            **review(
+                "CASE:case_summary#2",
+                "This excerpt is not present in the supplied case.",
+                "preserved",
+                "preserved",
+                "RO-05",
+            )
+        }
+    ]
+
+    draft = _empty_report().model_copy(update={
+        "unresolved_disagreements": [
+            "STALE MODEL-CONTROLLED SOURCE REVIEW COVERAGE — 45/45 roles unanimously preserved all options."
+        ],
+    })
+    report = ensure_chair_report_completeness(
+        draft, case, round1, round2, round3
+    )
+    unresolved = " ".join(report.unresolved_disagreements)
+    flags = " ".join(report.case_data_integrity_flags)
+
+    assert "STALE MODEL-CONTROLLED SOURCE REVIEW COVERAGE" not in unresolved
+    assert "CASE:case_summary#1" in unresolved
+    assert "2/45 roles supplied an exact source-bound review" in unresolved
+    assert "option status role counts {'preserved': 1}" in unresolved
+    assert "condition status role counts {'omitted': 1, 'preserved': 1}" in unresolved
+    assert "CASE:case_summary#2" in unresolved
+    assert "1/45 roles supplied an exact source-bound review" in unresolved
+    assert "option status role counts {'partly_preserved': 1}" in unresolved
+    assert "condition status role counts {'unclear': 1}" in unresolved
+    assert "conflicting option statuses for RO-02" in flags
+    assert "lacks an exact contiguous excerpt" in flags
+    assert "Round 2 source-reference audit: 1/45" in flags
+    assert "Round 3 source-reference audit: 1/45" in flags
+    assert "unanimously" not in unresolved.casefold()
+
