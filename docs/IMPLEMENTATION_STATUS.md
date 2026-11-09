@@ -3,7 +3,7 @@
 **Last verified:** 9 November 2026
 **Repository:** `drvishnua/RadOnc-MDT-Simulator`
 **Development branch:** `feature/four-round-mdt-and-performance`
-**Verified code snapshot:** `b2c072581d2c6d8f870d39b644d71d5851023dd5`
+**Verified code snapshot:** `084d3353bc3dd71a7ee27895e41434c0d425644b`
 **PR #1:** open, draft, unmerged; targets `main`.
 
 This document distinguishes code/CI verification from local runtime loading, full live inference, GPU attribution and clinical validation. A passing CI workflow is not evidence of clinical accuracy.
@@ -17,13 +17,13 @@ This document distinguishes code/CI verification from local runtime loading, ful
 | R1 independent assessments | Implemented | Individual role/case prompts and persisted results; latest full live validation predates current prompt and case-integrity changes |
 | R2 debate | Implemented | Bounded peer-source allowlists and source-reference checks are covered by backend regression tests; latest full live validation predates these changes |
 | R3 adversarial review | Implemented | Source-bound representation/omission checks and schema/prompt constraints are covered by backend tests; latest full live validation predates these changes |
-| R4 Chair | Implemented | Saved R1–R3 reconciliation, source-derived role history, distinct-role counts and conservative consensus handling have regression coverage; no fresh live Chair report on this code snapshot |
+| R4 Chair | Implemented | Saved R1–R3 reconciliation, source-derived role history, distinct-role counts and conservative consensus handling have regression coverage. Missing primary-site/histology title fallback is neutral (“Case details not supplied”); no fresh live Chair report on this code snapshot |
 | Patient registry | Implemented | SQLite registry, sequential local RAD identifiers, immutable case versions, per-version patient-name preservation, linked runs/assessments and delete cascade have backend tests |
 | Case-data integrity | Expanded | Pattern-based audits now cover unsupported age/stage-group/T/N/M and other previously implemented claim classes; explicit age/sex/TNM/stage-group discrepancies are surfaced. This is not exhaustive semantic contradiction detection |
 | Case validation | Implemented | Completeness warnings are non-blocking; unknown fields remain unknown. Conflicts are warnings and must not be silently reconciled |
 | Frontend case restore | Corrected | Structured list values are converted to actual newline-delimited form text and parsed with the same helper; round-trip unit tests added |
 | Frontend | CI passed | 21/21 Node tests, TypeScript check and Vite production build on the verified code snapshot |
-| Backend | CI passed | 110 passed, 1 warning on the verified code snapshot; warning is the existing Starlette/httpx TestClient deprecation |
+| Backend | CI passed | 111 passed, 1 warning on the verified code snapshot; warning is the existing Starlette/httpx TestClient deprecation |
 | Local source mirror | Synced | Windows self-hosted workflow verified `Source` manifest at the same code SHA and completed local diagnostics |
 | Running local backend | Restart not verified | Uvicorn was still running as its prior process during diagnostics. A source copy does not reload Python modules. Do not assume the live backend has loaded the latest source until services are restarted and rechecked |
 | Concurrency | 1 | Keep sequential generation; do not increase without measured quality and throughput evidence |
@@ -41,6 +41,7 @@ Expected saved contribution count for a complete run is 136 (45 + 45 + 45 + 1). 
 ## Case-data safeguards
 
 The current case-integrity layer:
+- builds Chair report titles only from supplied primary-site/histology fields and uses “Case details not supplied” if both are absent;
 - represents missing structured fields as not reported, not negative;
 - flags unsupported age and stage-group assertions separately from T/N/M;
 - checks unsupported T/N/M, demographic, performance-status, resectability, histology/pathology, investigation, treatment-status and patient-preference assertions covered by the existing rule set;
@@ -63,11 +64,11 @@ The complete browser UI flow (create → validate → save → refresh → resto
 
 ## Validation record
 
-### CI and source sync on code snapshot `b2c072581d2c6d8f870d39b644d71d5851023dd5`
+### CI and source sync on code snapshot `084d3353bc3dd71a7ee27895e41434c0d425644b`
 
-- [Backend Tests — run 42574812785](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42574812785): success; **110 passed, 1 warning**.
-- [Frontend Build — run 42574812756](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42574812756): success; **21 passed, 0 failed**, TypeScript check and Vite production build passed.
-- [Local Source sync and diagnostic — run 42574809719](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42574809719): success; local manifest verified as `feature/four-round-mdt-and-performance @ b2c072581d2c6d8f870d39b644d71d5851023dd5`. Health endpoint, React shell and structured case fields passed diagnostic checks.
+- [Backend Tests — run 42575218662](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42575218662): success; **111 passed, 1 warning** (the existing Starlette/httpx TestClient deprecation).
+- [Frontend Build — run 42575218585](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42575218585): success; **21 passed, 0 failed**, TypeScript check and Vite production build passed.
+- [Local Source sync and diagnostic — run 42575212397](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42575212397): success; local manifest verified as `feature/four-round-mdt-and-performance @ 084d3353bc3dd71a7ee27895e41434c0d425644b`. Health endpoint, React shell and structured case fields passed diagnostic checks.
 
 The push-triggered duplicate backend/frontend runs were cancelled by workflow concurrency controls. The PR-triggered runs above are the authoritative CI results for this code snapshot.
 
