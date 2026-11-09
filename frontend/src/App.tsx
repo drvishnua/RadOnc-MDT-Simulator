@@ -219,7 +219,7 @@ type FinalMDTReport = {
   chair_conclusion: string;
   overall_educational_synthesis: string;
   consensus_points: string[];
-  recorded_agreements: string[];
+  recorded_agreements?: string[];
   unresolved_disagreements: string[];
   minority_and_dissenting_views: string[];
   major_uncertainties: string[];
@@ -1714,7 +1714,7 @@ function App() {
                     </div>
                     {([
                       ["Proposition-level consensus", finalReport.consensus_points],
-                      ["Recorded agreements · attributed, not consensus", finalReport.recorded_agreements],
+                      ["Recorded agreements · attributed, not consensus", finalReport.recorded_agreements ?? []],
                       ["Unresolved disagreements", finalReport.unresolved_disagreements],
                       ["Minority and dissenting views", finalReport.minority_and_dissenting_views],
                       ["Major uncertainties", finalReport.major_uncertainties],
