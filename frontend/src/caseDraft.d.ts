@@ -15,3 +15,5 @@ export function writeDraft<T extends Record<string, string>>(
 
 export function listToMultilineText(values: unknown): string;
 export function multilineTextToList(value: string): string[];
+
+export function createBlankDraft<T extends Record<string, string>>(defaults: T): T;
