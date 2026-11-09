@@ -200,30 +200,18 @@ except Exception as error:
     Write-Host "No process is listening on port 8000; starting the backend without stopping anything."
 }
 
-function ConvertTo-PowerShellStringLiteral([string]$Value) {
-    return "'" + $Value.Replace("'", "''") + "'"
+# Use Win32_Process.Create to launch the venv interpreter directly, outside the
+# current GitHub Actions job process tree. This avoids orphan cleanup killing it.
+$backendCommandLine = '"' + $VenvPython + '" -m uvicorn app.main:app --host 127.0.0.1 --port 8000'
+$spawnResult = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{
+    CommandLine = $backendCommandLine
+    CurrentDirectory = $BackendDir
 }
-
-$timestamp = [DateTime]::UtcNow.ToString("yyyyMMdd-HHmmss")
-$stdout = Join-Path $LogDir "backend.restart.$timestamp.stdout.log"
-$stderr = Join-Path $LogDir "backend.restart.$timestamp.stderr.log"
-$pidFile = Join-Path $LogDir "backend.pid"
-
-# Spawn through WMI so the self-hosted Actions runner does not reap the backend
-# as an orphaned child process when its workflow step ends.
-$launcherScript = @(
-    '$ErrorActionPreference = "Stop"',
-    '$process = Start-Process -FilePath ' + (ConvertTo-PowerShellStringLiteral $VenvPython) + ' -ArgumentList @("-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8000") -WorkingDirectory ' + (ConvertTo-PowerShellStringLiteral $BackendDir) + ' -WindowStyle Hidden -PassThru -RedirectStandardOutput ' + (ConvertTo-PowerShellStringLiteral $stdout) + ' -RedirectStandardError ' + (ConvertTo-PowerShellStringLiteral $stderr),
-    'Set-Content -Path ' + (ConvertTo-PowerShellStringLiteral $pidFile) + ' -Value $process.Id -Encoding ASCII'
-) -join "`r`n"
-$launcherPowerShell = Join-Path $PSHOME "powershell.exe"
-$encodedLauncher = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($launcherScript))
-$launcherCommandLine = '"' + $launcherPowerShell + '" -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand ' + $encodedLauncher
-$spawnResult = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = $launcherCommandLine }
 if ([int]$spawnResult.ReturnValue -ne 0) {
-    throw "Windows could not launch the detached backend helper (Win32_Process.Create=$($spawnResult.ReturnValue))."
+    throw "Windows could not launch the backend (Win32_Process.Create=$($spawnResult.ReturnValue))."
 }
-Write-Host "Detached backend launcher PID: $($spawnResult.ProcessId)"
+$spawnedPid = [int]$spawnResult.ProcessId
+Write-Host "Detached backend process PID: $spawnedPid"
 
 $healthy = $false
 $listenerPid = $null
@@ -251,10 +239,11 @@ for ($attempt = 0; $attempt -lt 30; $attempt++) {
     }
 }
 if (-not $healthy -or -not $listenerPid) {
-    $errorTail = if (Test-Path $stderr) { (Get-Content $stderr -Tail 30) -join [Environment]::NewLine } else { "No backend stderr log was created." }
-    throw "New backend did not pass /health within 30 seconds. $errorTail"
+    $spawnedProcess = Get-CimInstance Win32_Process -Filter ("ProcessId = " + $spawnedPid) -ErrorAction SilentlyContinue
+    $spawnedDetails = if ($spawnedProcess) { "NAME=$($spawnedProcess.Name) COMMAND=$($spawnedProcess.CommandLine) IMAGE=$($spawnedProcess.ExecutablePath)" } else { "The launched backend process exited before opening port 8000." }
+    throw "New backend did not pass /health within 30 seconds. $spawnedDetails"
 }
-Set-Content -Path $pidFile -Value $listenerPid -Encoding ASCII
+Set-Content -Path (Join-Path $LogDir "backend.pid") -Value $listenerPid -Encoding ASCII
 
 $preflightHeaders = @{
     Origin = "http://127.0.0.1:5173"
