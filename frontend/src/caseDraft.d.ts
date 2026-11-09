@@ -12,3 +12,6 @@ export function writeDraft<T extends Record<string, string>>(
   legacyKey: string,
   draft: T
 ): boolean;
+
+export function listToMultilineText(values: unknown): string;
+export function multilineTextToList(value: string): string[];
