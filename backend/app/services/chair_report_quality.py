@@ -680,6 +680,7 @@ def ensure_chair_report_completeness(
             for marker in (
                 "r3 source-opinion review coverage",
                 "r3 source-opinion coverage",
+                "source review coverage",
             )
         )
     ]
