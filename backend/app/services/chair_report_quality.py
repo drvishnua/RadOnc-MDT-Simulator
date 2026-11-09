@@ -568,6 +568,34 @@ def ensure_chair_report_completeness(
                 if isinstance(flag, str) and flag.strip():
                     stored_integrity_flags.append(f"R{round_number} {role_id}: {flag}")
 
+    # Do not let the Chair draft decide whether persisted source-reference audit
+    # findings are visible. Summarise their distinct-role incidence deterministically.
+    for round_number, rows in ((2, round2_rows), (3, round3_rows)):
+        distinct_entries = _distinct_role_entries(
+            rows, "result", f"Round {round_number}", quarantine_flags
+        )
+        flagged_roles = [
+            (row, item)
+            for row, item in distinct_entries
+            if any(
+                isinstance(flag, str) and flag.strip()
+                for flag in (item.get("source_reference_integrity_flags") or [])
+            )
+        ]
+        if flagged_roles:
+            total_flags = sum(
+                1
+                for _, item in flagged_roles
+                for flag in (item.get("source_reference_integrity_flags") or [])
+                if isinstance(flag, str) and flag.strip()
+            )
+            stored_integrity_flags.append(
+                f"Round {round_number} source-reference audit: {len(flagged_roles)}/"
+                f"{len(distinct_entries)} distinct completed roles have {total_flags} "
+                "saved source-reference integrity finding(s); inspect the original "
+                "role records for the individual details."
+            )
+
     # No proposition-level support exists in the saved contribution schema.
     # Position labels alone therefore cannot create a consensus point or status.
     data["consensus_points"] = []
@@ -597,6 +625,13 @@ def ensure_chair_report_completeness(
         integrity_flags=quarantine_flags,
     )
 
+    # Rebuild source-opinion review coverage from the saved R3 role records at
+    # the final Chair boundary. Earlier reconciliation/model prose is not its source.
+    source_review_coverage, source_review_integrity = build_source_opinion_review_coverage(
+        round3_rows, case.case_summary
+    )
+    quarantine_flags.extend(source_review_integrity)
+
     # Reconstruct source-linked challenge entries from the actual saved R2/R3 rows.
     # This makes the final boundary independently reconcile challenges rather than
     # trusting an earlier Chair draft/reconciliation string.
@@ -619,8 +654,22 @@ def ensure_chair_report_completeness(
                 saved_challenge_items.append(
                     f"Round {round_number} recorded challenge — {role_id} ({role_name}): {cleaned}"
                 )
+    # Discard any model-authored source-review coverage and replace it with
+    # the deterministic summary above. Preserve other draft disagreement text.
+    draft_disagreements = [
+        item
+        for item in (data.get("unresolved_disagreements") or [])
+        if isinstance(item, str)
+        and not any(
+            marker in item.casefold()
+            for marker in (
+                "r3 source-opinion review coverage",
+                "r3 source-opinion coverage",
+            )
+        )
+    ]
     data["unresolved_disagreements"] = _unique(
-        [*(data.get("unresolved_disagreements") or []), *saved_challenge_items],
+        [*source_review_coverage, *draft_disagreements, *saved_challenge_items],
         SECTION_LIMITS["unresolved_disagreements"],
     )
 
