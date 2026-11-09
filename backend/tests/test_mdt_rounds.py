@@ -584,6 +584,10 @@ def test_chair_prompt_samples_each_position_when_round_three_counts_are_tied(mon
         )
     )
 
+    assert "software will retain saved Round-2 and Round-3 agreement statements separately" in prompts[0]
+    assert "do not add extra JSON fields" in prompts[0]
+    assert "recorded_agreements" not in prompts[0]
+
     digest_text = prompts[0].split("ROUND 3 ADVERSARIAL REVIEW:\n", 1)[1].split(
         "\nReturn a balanced synthesis.", 1
     )[0]
