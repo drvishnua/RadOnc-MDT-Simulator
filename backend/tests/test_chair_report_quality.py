@@ -576,3 +576,38 @@ def test_explicit_negative_consensus_statements_are_not_quarantined_as_positive_
 
     assert any("No consensus was reached" in item for item in report.unresolved_disagreements)
 
+def test_negative_consensus_clause_does_not_mask_separate_positive_consensus_claims():
+    case = SyntheticCase(
+        scenario_title="Mixed positive and negative consensus quarantine regression",
+        case_summary="Fictional incomplete case for testing the Chair consensus boundary.",
+    )
+    mixed_claim = (
+        "No consensus was reached, but the majority supports surgery "
+        "as the appropriate educational pathway."
+    )
+    draft = _empty_report().model_copy(update={
+        "major_uncertainties": [mixed_claim],
+    })
+    round1 = _rows("assessment", ["insufficient_information"] * 45)
+    round2 = _rows("result", ["insufficient_information"] * 45)
+    round3 = _rows("result", ["insufficient_information"] * 45)
+
+    round1[0]["assessment"]["unknowns"] = [mixed_claim]
+    round2[0]["result"]["agreements"] = [mixed_claim]
+    round3[-1]["result"]["position"] = "supports"
+    round3[-1]["result"]["provisional_conclusion"] = mixed_claim
+
+    report = ensure_chair_report_completeness(
+        draft, case, round1, round2, round3
+    )
+    rendered = " ".join([
+        *report.major_uncertainties,
+        *report.recorded_agreements,
+        *report.minority_and_dissenting_views,
+    ]).casefold()
+    flags = " ".join(report.case_data_integrity_flags).casefold()
+
+    assert mixed_claim.casefold() not in rendered
+    assert "positive consensus assertion withheld" in flags
+    assert "round 3: supports" in rendered
+
