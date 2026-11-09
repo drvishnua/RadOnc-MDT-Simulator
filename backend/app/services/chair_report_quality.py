@@ -66,15 +66,56 @@ def validate_consensus_points(report: dict) -> None:
         )
 
 
-def _safe_role_text_items(case: SyntheticCase, payload: dict, field: str) -> list[str]:
-    """Exclude individual role strings that assert facts absent from the source case."""
+def _note_quarantined_claims(
+    integrity_flags: list[str] | None,
+    source_label: str,
+    findings: list[str],
+) -> None:
+    if integrity_flags is None:
+        return
+    integrity_flags.extend(
+        f"Quarantined {source_label}: {finding}"
+        for finding in findings
+    )
+
+
+def _safe_text_items(
+    case: SyntheticCase,
+    values: object,
+    field: str,
+    integrity_flags: list[str] | None = None,
+    source_label: str = "Chair text",
+) -> list[str]:
+    """Keep only individually auditable strings; retain quarantine findings."""
     safe: list[str] = []
-    for value in payload.get(field) or []:
+    if not isinstance(values, (list, tuple)):
+        return safe
+    for value in values:
         if not isinstance(value, str) or not value.strip():
             continue
-        if not audit_unverified_case_claims(case, {field: value}):
-            safe.append(value)
+        findings = audit_unverified_case_claims(case, {field: value})
+        if findings:
+            _note_quarantined_claims(integrity_flags, source_label, findings)
+            continue
+        safe.append(value)
     return safe
+
+
+def _safe_role_text_items(
+    case: SyntheticCase,
+    payload: dict,
+    field: str,
+    integrity_flags: list[str] | None = None,
+    source_label: str = "role contribution",
+) -> list[str]:
+    """Exclude unsupported role text without altering the saved contribution."""
+    return _safe_text_items(
+        case,
+        payload.get(field),
+        field,
+        integrity_flags=integrity_flags,
+        source_label=source_label,
+    )
 
 
 def _position_counts(rows: list[dict], field: str) -> Counter:
@@ -82,6 +123,22 @@ def _position_counts(rows: list[dict], field: str) -> Counter:
         item.get("position")
         for _, item in _entries(rows, field)
         if item.get("position")
+    )
+
+
+def _format_position_counts(counts: Counter) -> str:
+    total = sum(counts.values())
+    if not total:
+        return "no valid positions recorded"
+    labels = {
+        "insufficient_information": "insufficient-information",
+        "conditional": "conditional",
+        "supports": "supports",
+        "opposes": "opposes",
+    }
+    return ", ".join(
+        f"{count}/{total} {labels.get(position, position)}"
+        for position, count in sorted(counts.items(), key=lambda item: (-item[1], item[0]))
     )
 
 
@@ -98,10 +155,13 @@ def _minority_history(
     round1_rows: list[dict],
     round2_rows: list[dict],
     round3_rows: list[dict],
+    case: SyntheticCase | None = None,
+    integrity_flags: list[str] | None = None,
 ) -> list[str]:
-    """Keep genuine qualified minority views and auditable position changes.
+    """Keep role-position history while quarantining unsupported conclusions.
 
     Stable insufficient-information roles are uncertainty contributors, not dissenters.
+    Original role records remain stored unchanged.
     """
     by_agent: dict[str, dict[str, object]] = defaultdict(lambda: {"name": "Role", "positions": [], "events": []})
     for round_number, rows, field in ((1, round1_rows, "assessment"), (2, round2_rows, "result"), (3, round3_rows, "result")):
@@ -114,10 +174,22 @@ def _minority_history(
                 continue
             record["positions"].append(position)
             conclusion = " ".join(str(item.get("provisional_conclusion") or "").split())
+            withheld = False
+            if conclusion and case is not None:
+                findings = audit_unverified_case_claims(case, {"provisional_conclusion": conclusion})
+                if findings:
+                    withheld = True
+                    _note_quarantined_claims(
+                        integrity_flags,
+                        f"R{round_number} {agent_id} minority-history conclusion",
+                        findings,
+                    )
             if len(conclusion) > 180:
                 conclusion = conclusion[:179].rstrip() + "…"
             event = f"Round {round_number}: {position}"
-            if conclusion:
+            if withheld:
+                event += " — provisional conclusion withheld by deterministic case-integrity audit"
+            elif conclusion:
                 event += f" — {conclusion}"
             record["events"].append(event)
 
@@ -186,13 +258,10 @@ def _merge_minority_views(
 def build_recorded_agreements(
     round2_rows: list[dict],
     round3_rows: list[dict],
+    case: SyntheticCase | None = None,
+    integrity_flags: list[str] | None = None,
 ) -> list[str]:
-    """Preserve saved agreements as role-attributed records, never as consensus.
-
-    A single report entry is emitted per completed role per round. Repeated
-    identical strings from the same role are removed, while distinct statements
-    and the same statement from different roles/rounds remain attributable.
-    """
+    """Preserve only auditable, role-attributed agreement statements, never consensus."""
     output: list[str] = []
     for round_number, rows in ((2, round2_rows), (3, round3_rows)):
         for row, item in _entries(rows, "result"):
@@ -205,9 +274,19 @@ def build_recorded_agreements(
                     continue
                 cleaned = " ".join(value.split())
                 key = cleaned.casefold()
-                if cleaned and key not in seen:
-                    statements.append(cleaned)
-                    seen.add(key)
+                if not cleaned or key in seen:
+                    continue
+                seen.add(key)
+                if case is not None:
+                    findings = audit_unverified_case_claims(case, {"agreement": cleaned})
+                    if findings:
+                        _note_quarantined_claims(
+                            integrity_flags,
+                            f"R{round_number} {role_id} agreement",
+                            findings,
+                        )
+                        continue
+                statements.append(cleaned)
             if statements:
                 output.append(
                     f"Round {round_number} — {role_id} ({role_name}); "
@@ -216,7 +295,6 @@ def build_recorded_agreements(
                 )
     return output[:SECTION_LIMITS["recorded_agreements"]]
 
-
 def ensure_chair_report_completeness(
     report: FinalMDTReport,
     case: SyntheticCase,
@@ -224,11 +302,10 @@ def ensure_chair_report_completeness(
     round2_rows: list[dict],
     round3_rows: list[dict],
 ) -> FinalMDTReport:
-    """Fill empty report sections with traceable findings or explicit absence notes.
+    """Rebuild the Chair report from saved records and quarantine unsupported text.
 
-    Existing source-grounded reconciliation is retained. This function is a final
-    defensive layer so the UI and live validator never mistake an empty array for
-    a completed analysis.
+    This is the final report boundary. It never rewrites source contributions; it
+    removes an unsafe statement only from the derived Chair view and records why.
     """
     data = report.model_dump()
     data["report_title"] = build_case_report_title(case)
@@ -238,12 +315,22 @@ def ensure_chair_report_completeness(
         for (round_number, field), rows in zip(ROUND_SOURCES, rows_by_round)
     }
     final_counts = counts_by_round[3]
+    quarantine_flags: list[str] = []
+    stored_integrity_flags: list[str] = []
 
-    # The current contribution schema does not contain deterministic proposition IDs
-    # or normalized endorsements. Therefore no model-authored consensus point/status
-    # can be accepted by this final defensive layer. A direct R3 support/opposition
-    # split is recorded as no consensus; every other distribution remains
-    # insufficient_information until proposition-level evidence is implemented.
+    for round_number, rows, field in (
+        (1, round1_rows, "assessment"),
+        (2, round2_rows, "result"),
+        (3, round3_rows, "result"),
+    ):
+        for row, item in _entries(rows, field):
+            role_id = str(row.get("agent_id") or "unknown-role")
+            for flag in item.get("case_data_integrity_flags") or []:
+                if isinstance(flag, str) and flag.strip():
+                    stored_integrity_flags.append(f"R{round_number} {role_id}: {flag}")
+
+    # No proposition-level support exists in the saved contribution schema.
+    # Position labels alone therefore cannot create a consensus point or status.
     data["consensus_points"] = []
     if final_counts.get("supports") and final_counts.get("opposes"):
         data["consensus_status"] = "no_consensus"
@@ -261,11 +348,15 @@ def ensure_chair_report_completeness(
 
     for field, limit in SECTION_LIMITS.items():
         data[field] = _unique(data.get(field) or [], limit)
-    data["recorded_agreements"] = build_recorded_agreements(round2_rows, round3_rows)
 
-    # An empty consensus_points list is meaningful: free-text agreement
-    # notes do not provide proposition-level evidence and must not be replaced
-    # with a position-count statement labelled as a consensus point.
+    # Agreements remain individually attributed and are excluded when their text
+    # asserts a case finding not supported by the saved case snapshot.
+    data["recorded_agreements"] = build_recorded_agreements(
+        round2_rows,
+        round3_rows,
+        case=case,
+        integrity_flags=quarantine_flags,
+    )
 
     if not data["unresolved_disagreements"]:
         if len(final_counts) > 1:
@@ -280,15 +371,12 @@ def ensure_chair_report_completeness(
             if len(tied_positions) > 1:
                 note = (
                     "Round-3 positions have no unique modal label because the highest "
-                    "counts are tied ("
-                    + distribution
-                    + "). All non-insufficient position groups are retained; the labels "
-                    "do not by themselves establish opposing treatment views."
+                    "counts are tied (" + distribution + "). All non-insufficient position "
+                    "groups are retained; the labels do not by themselves establish opposing treatment views."
                 )
             else:
                 note = (
-                    "Round-3 positions were non-uniform ("
-                    + distribution
+                    "Round-3 positions were non-uniform (" + distribution
                     + "); these labels do not by themselves establish opposing treatment views."
                 )
         elif len(final_counts) == 1 and any(
@@ -300,8 +388,7 @@ def ensure_chair_report_completeness(
                 for position, count in sorted(final_counts.items())
             )
             note = (
-                "Round-3 positions were uniform ("
-                + distribution
+                "Round-3 positions were uniform (" + distribution
                 + "), but the saved contributions do not establish one shared, "
                 "proposition-level educational option. Uniform labels alone do not prove consensus."
             )
@@ -335,20 +422,34 @@ def ensure_chair_report_completeness(
             SECTION_LIMITS["unresolved_disagreements"],
         )
 
-    history = _minority_history(round1_rows, round2_rows, round3_rows)
-    # Saved role records are authoritative; ignore model-generated entries for
-    # stable insufficient-information roles.
+    # Challenges are useful only when their case claims pass the same deterministic
+    # case-integrity audit applied to role-authored uncertainty and evidence-gap text.
+    data["unresolved_disagreements"] = _unique(
+        _safe_text_items(
+            case,
+            data["unresolved_disagreements"],
+            "unresolved_disagreement",
+            integrity_flags=quarantine_flags,
+            source_label="Chair unresolved disagreement",
+        ),
+        SECTION_LIMITS["unresolved_disagreements"],
+    )
+    if not data["unresolved_disagreements"]:
+        data["unresolved_disagreements"] = [
+            "No auditable unresolved-disagreement text was retained. This is not evidence that all clinical questions are resolved.",
+            "No proposition-level consensus is established by free-text agreement notes; position labels and repeated wording are not counted as votes.",
+        ]
+
+    history = _minority_history(
+        round1_rows,
+        round2_rows,
+        round3_rows,
+        case=case,
+        integrity_flags=quarantine_flags,
+    )
     data["minority_and_dissenting_views"] = history or [
         "No genuine conditional/minority position or position change was identified in the saved rounds. "
         "Stable insufficient-information roles are represented in uncertainty sections, not as dissent."
-    ]
-
-    integrity_flags: list[str] = []
-    for rows, field in ((round1_rows, "assessment"), (round2_rows, "result"), (round3_rows, "result")):
-        for _, item in _entries(rows, field):
-            integrity_flags.extend(item.get("case_data_integrity_flags") or [])
-    data["case_data_integrity_flags"] = _unique(integrity_flags, SECTION_LIMITS["case_data_integrity_flags"]) or [
-        "No case-data integrity flags were recorded in completed role contributions by the deterministic checks that ran. These checks are limited in scope and do not establish the absence of unsupported claims; manual review remains necessary."
     ]
 
     uncertainty_items = list(case.known_unknowns or [])
@@ -369,43 +470,52 @@ def ensure_chair_report_completeness(
     )
     evidence_items: list[str] = []
 
-    for _, rows, field in (
+    for round_number, rows, field in (
         (1, round1_rows, "assessment"),
         (2, round2_rows, "result"),
         (3, round3_rows, "result"),
     ):
-        for _, item in _entries(rows, field):
-            role_unknowns = _safe_role_text_items(case, item, "unknowns")
-            role_remaining_unknowns = _safe_role_text_items(case, item, "remaining_unknowns")
-            role_uncertainty_notes = _safe_role_text_items(case, item, "uncertainty_notes")
+        for row, item in _entries(rows, field):
+            role_id = str(row.get("agent_id") or "unknown-role")
+            source_label = f"R{round_number} {role_id}"
+            role_unknowns = _safe_role_text_items(
+                case, item, "unknowns", quarantine_flags, source_label
+            )
+            role_remaining_unknowns = _safe_role_text_items(
+                case, item, "remaining_unknowns", quarantine_flags, source_label
+            )
+            role_uncertainty_notes = _safe_role_text_items(
+                case, item, "uncertainty_notes", quarantine_flags, source_label
+            )
             uncertainty_items.extend(role_unknowns)
             uncertainty_items.extend(role_remaining_unknowns)
             uncertainty_items.extend(role_uncertainty_notes)
             missing_items.extend(role_unknowns)
             missing_items.extend(role_remaining_unknowns)
-            evidence_items.extend(_safe_role_text_items(case, item, "evidence_gaps"))
+            evidence_items.extend(
+                _safe_role_text_items(
+                    case, item, "evidence_gaps", quarantine_flags, source_label
+                )
+            )
             for candidate in role_unknowns + role_remaining_unknowns:
-                lowered = str(candidate).casefold()
-                if any(
-                    term in lowered
-                    for term in ("patient", "family", "preference", "goal", "support")
-                ):
-                    patient_items.append(str(candidate))
+                lowered = candidate.casefold()
+                if any(term in lowered for term in ("patient", "family", "preference", "goal", "support")):
+                    patient_items.append(candidate)
 
-    # Source-derived facts and unknowns must not disappear merely because the
-    # Chair draft supplied a non-empty but generic summary. Prefer case/R1/R2/R3
-    # records, then retain any additional Chair wording within the section limits.
-    # The preceding deterministic reconciliation may already have collected
-    # role-authored uncertainty strings. Re-audit those strings here as well so an
-    # unsupported assertion cannot re-enter the final report through the Chair draft.
-    safe_chair_uncertainties = [
-        value for value in (data.get("major_uncertainties") or [])
-        if isinstance(value, str) and not audit_unverified_case_claims(case, {"major_uncertainty": value})
-    ]
-    safe_chair_missing = [
-        value for value in (data.get("missing_information_before_real_world_review") or [])
-        if isinstance(value, str) and not audit_unverified_case_claims(case, {"missing_information": value})
-    ]
+    safe_chair_uncertainties = _safe_text_items(
+        case,
+        data.get("major_uncertainties"),
+        "major_uncertainty",
+        integrity_flags=quarantine_flags,
+        source_label="Chair major uncertainty",
+    )
+    safe_chair_missing = _safe_text_items(
+        case,
+        data.get("missing_information_before_real_world_review"),
+        "missing_information",
+        integrity_flags=quarantine_flags,
+        source_label="Chair missing-information item",
+    )
     data["major_uncertainties"] = _unique(
         [*uncertainty_items, *safe_chair_uncertainties],
         SECTION_LIMITS["major_uncertainties"],
@@ -413,7 +523,6 @@ def ensure_chair_report_completeness(
         "No explicit uncertainty item was recorded in the case snapshot or role "
         "contributions; this does not establish that uncertainty is absent."
     ]
-
     data["missing_information_before_real_world_review"] = _unique(
         [*missing_items, *safe_chair_missing],
         SECTION_LIMITS["missing_information_before_real_world_review"],
@@ -422,39 +531,62 @@ def ensure_chair_report_completeness(
         "supplied case has not been independently verified."
     ]
 
-    if not data["patient_and_family_considerations"]:
-        data["patient_and_family_considerations"] = _unique(
-            patient_items,
-            SECTION_LIMITS["patient_and_family_considerations"],
-        ) or [
-            "Patient goals, preferences, and family context were not supplied; none "
-            "should be inferred from this simulation."
-        ]
+    # These sections are reconstructed from structured case fields and safe role
+    # unknowns; pre-existing Chair prose is never allowed to replace their sources.
+    data["patient_and_family_considerations"] = _unique(
+        patient_items,
+        SECTION_LIMITS["patient_and_family_considerations"],
+    ) or [
+        "Patient goals, preferences, and family context were not supplied; none "
+        "should be inferred from this simulation."
+    ]
+    data["feasibility_and_resource_considerations"] = _unique(
+        feasibility_items,
+        SECTION_LIMITS["feasibility_and_resource_considerations"],
+    ) or [
+        "No structured resource or access context was supplied; feasibility cannot "
+        "be assessed from the saved case."
+    ]
+    data["governance_and_safeguarding_considerations"] = [
+        "Educational simulation only; not a clinical decision or treatment instruction.",
+        "Consent, patient preferences, safeguarding, and documentation require qualified review in any real setting.",
+        "No real-patient data should be entered into this educational workflow.",
+    ]
+    data["evidence_limitations"] = _unique(
+        [
+            "Evidence retrieval and citation verification are not connected.",
+            "Clinical accuracy and guideline concordance have not been evaluated.",
+            *evidence_items,
+        ],
+        SECTION_LIMITS["evidence_limitations"],
+    )
 
-    if not data["feasibility_and_resource_considerations"]:
-        data["feasibility_and_resource_considerations"] = _unique(
-            feasibility_items,
-            SECTION_LIMITS["feasibility_and_resource_considerations"],
-        ) or [
-            "No structured resource or access context was supplied; feasibility cannot "
-            "be assessed from the saved case."
-        ]
+    round_distribution = "; ".join(
+        f"Round {round_number}: {_format_position_counts(counts_by_round[round_number])}"
+        for round_number in (1, 2, 3)
+    )
+    data["overall_educational_synthesis"] = (
+        f"Recorded position distribution — {round_distribution}. These are role-level labels, not "
+        "votes; conditional positions are not recast as support or opposition, and a non-uniform "
+        "distribution is not described as unanimous. The source case and saved role contributions "
+        "may identify missing information, which is listed separately. Evidence retrieval is not "
+        "connected, and clinical accuracy was not evaluated."
+    )
+    data["chair_reflection"] = (
+        "This Chair record is reconciled against the saved Round-1, Round-2, and Round-3 "
+        "contributions so that counts and minority positions remain traceable. Unsupported "
+        "role-authored assertions are withheld from the Chair view and retained in the "
+        "source contribution/audit history. This is a structural educational synthesis only; "
+        "it does not validate clinical correctness, guideline concordance, or evidence quality."
+    )
 
-    if not data["governance_and_safeguarding_considerations"]:
-        data["governance_and_safeguarding_considerations"] = [
-            "Educational simulation only; not a clinical decision or treatment instruction.",
-            "Consent, patient preferences, safeguarding, and documentation require qualified review in any real setting.",
-            "No real-patient data should be entered into this educational workflow.",
-        ]
+    data["case_data_integrity_flags"] = _unique(
+        [*quarantine_flags, *stored_integrity_flags],
+        SECTION_LIMITS["case_data_integrity_flags"],
+    ) or [
+        "No case-data integrity flags were recorded in completed role contributions by the deterministic checks that ran. "
+        "These checks are limited in scope and do not establish the absence of unsupported claims; manual review remains necessary."
+    ]
 
-    if not data["evidence_limitations"]:
-        data["evidence_limitations"] = _unique(
-            [
-                "Evidence retrieval and citation verification are not connected.",
-                "Clinical accuracy and guideline concordance have not been evaluated.",
-                *evidence_items,
-            ],
-            SECTION_LIMITS["evidence_limitations"],
-        )
-
+    validate_consensus_points(data)
     return FinalMDTReport.model_validate(data)

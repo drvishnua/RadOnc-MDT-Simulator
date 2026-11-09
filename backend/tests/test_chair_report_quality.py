@@ -353,3 +353,104 @@ def test_uniform_support_positions_are_not_reported_as_minority_dissent():
     joined = " ".join(report.minority_and_dissenting_views).casefold()
     assert "no genuine conditional/minority position" in joined
     assert not any(f"RO-{index:02d}" in joined for index in range(1, 46))
+
+def test_final_chair_quarantines_unsupported_claims_across_saved_role_text_sections():
+    case = SyntheticCase(
+        scenario_title="Chair all-section quarantine regression",
+        case_summary="1x1 cm growth involving right vocal cord and anterior commissure.",
+        clinical_t_stage=None,
+        clinical_n_stage=None,
+        clinical_m_stage=None,
+        relevant_comorbidities=[],
+        prior_treatment=[],
+        patient_goals=[],
+    )
+    round1 = _rows("assessment", ["insufficient_information"] * 45)
+    round2 = _rows("result", ["insufficient_information"] * 45)
+    round3 = _rows("result", ["insufficient_information"] * 45)
+
+    round1[0]["assessment"]["unknowns"] = ["The patient prefers surgery."]
+    round1[0]["assessment"]["evidence_gaps"] = ["MRI demonstrates node-negative disease."]
+    round2[0]["result"]["agreements"] = [
+        "The patient is node-negative and the tumour is resectable."
+    ]
+    round3[1]["result"]["substantive_challenges"] = [
+        "The patient has no distant metastases; treatment is unsafe."
+    ]
+    round3[-1]["result"]["position"] = "supports"
+    round3[-1]["result"]["provisional_conclusion"] = (
+        "The patient has T1N0M0 and the tumour is resectable."
+    )
+
+    report = ensure_chair_report_completeness(
+        _empty_report(), case, round1, round2, round3
+    )
+
+    agreements = " ".join(report.recorded_agreements).casefold()
+    unresolved = " ".join(report.unresolved_disagreements).casefold()
+    minority = " ".join(report.minority_and_dissenting_views).casefold()
+    evidence = " ".join(report.evidence_limitations).casefold()
+    patient = " ".join(report.patient_and_family_considerations).casefold()
+    flags = " ".join(report.case_data_integrity_flags).casefold()
+
+    assert "node-negative" not in agreements
+    assert "resectable" not in agreements
+    assert "no distant metastases" not in unresolved
+    assert "unsafe" not in unresolved
+    assert "ro-45" in minority and "round 3: supports" in minority
+    assert "t1n0m0" not in minority and "resectable" not in minority
+    assert "withheld by deterministic case-integrity audit" in minority
+    assert "mri demonstrates" not in evidence
+    assert "prefers surgery" not in patient
+    assert "node-negative" in flags
+    assert "resectability status" in flags
+    assert "absence of metastatic disease" in flags
+    assert "treatment safety/indication" in flags
+    assert "performance" not in flags
+
+
+def test_chair_finalizer_rebuilds_synthesis_and_case_sections_instead_of_trusting_preexisting_text():
+    case = SyntheticCase(
+        scenario_title="Chair deterministic-section rebuild regression",
+        case_summary="Fictional incomplete case for report-boundary testing.",
+        patient_goals=[],
+        social_context=[],
+        resource_context=[],
+    )
+    untrusted_report = _empty_report().model_copy(update={
+        "chair_conclusion": "The patient is T1N0M0 and should receive treatment.",
+        "overall_educational_synthesis": "All roles agree the patient is node-negative.",
+        "chair_reflection": "The patient prefers surgery.",
+        "patient_and_family_considerations": ["The patient prefers surgery."],
+        "feasibility_and_resource_considerations": ["The tumour is resectable."],
+        "governance_and_safeguarding_considerations": ["Treatment is not indicated."],
+        "evidence_limitations": ["MRI shows no distant metastases."],
+        "unresolved_disagreements": ["The patient is node-negative."],
+        "recorded_agreements": ["All roles agreed."],
+    })
+    rows1 = _rows("assessment", ["insufficient_information"] * 45)
+    rows2 = _rows("result", ["insufficient_information"] * 45)
+    rows3 = _rows("result", ["insufficient_information"] * 45)
+
+    report = ensure_chair_report_completeness(
+        untrusted_report, case, rows1, rows2, rows3
+    )
+
+    rendered = " ".join([
+        report.chair_conclusion,
+        report.overall_educational_synthesis,
+        report.chair_reflection,
+        *report.patient_and_family_considerations,
+        *report.feasibility_and_resource_considerations,
+        *report.governance_and_safeguarding_considerations,
+        *report.evidence_limitations,
+        *report.unresolved_disagreements,
+        *report.recorded_agreements,
+    ]).casefold()
+    assert "t1n0m0" not in rendered
+    assert "node-negative" not in rendered
+    assert "prefers surgery" not in rendered
+    assert "resectable" not in rendered
+    assert "not indicated" not in rendered
+    assert "no distant metastases" not in rendered
+

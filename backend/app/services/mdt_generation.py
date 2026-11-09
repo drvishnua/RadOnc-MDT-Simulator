@@ -594,7 +594,7 @@ def reconcile_chair_report_draft(
         chair_conclusion=chair_conclusion,
         overall_educational_synthesis=overall,
         consensus_points=consensus_points,
-        recorded_agreements=build_recorded_agreements(round2_views, round3_views),
+        recorded_agreements=build_recorded_agreements(round2_views, round3_views, case=case),
         unresolved_disagreements=unresolved,
         minority_and_dissenting_views=minority_views,
         major_uncertainties=uncertainties,
