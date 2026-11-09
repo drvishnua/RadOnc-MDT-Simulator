@@ -43,7 +43,7 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
             "not_reported means unknown/not supplied; it never means confirmed absent or negative.",
             "The case_summary is user-provided free text. Preserve its wording and do not silently normalise shorthand into confirmed structured diagnoses.",
             "Only explicitly provided clinical_t_stage, clinical_n_stage, clinical_m_stage and stage_group fields establish recorded staging.",
-            "Do not infer sex, T/N/M stage, nodal status, metastatic status, performance status, prior treatment, patient goals or comorbidity negatives.",
+            "Do not infer age, sex, T/N/M stage, stage group, nodal status, metastatic status, performance status, prior treatment, patient goals or comorbidity negatives.",
             "Separate source facts, clinical interpretations, hypotheses/assumptions and unknowns.",
             "If free text and structured fields differ, explicitly flag the discrepancy; do not silently reconcile it.",
         ],
@@ -155,11 +155,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             r"(\\d{1,3})\\s*y/o)\\b",
             re.IGNORECASE,
         )
-        source_ages = {match for match in age_pattern.findall(source_text) for match in match if match}
-        generated_ages = {
-            match for match in age_pattern.findall(text) for match in match if match
-        }
-        unsupported_ages = sorted(generated_ages - source_ages)
+        unsupported_ages = _unsupported_matches(age_pattern, text, source_text)
         if unsupported_ages:
             flags.append(
                 "Generated narrative assigns an age ("
@@ -174,15 +170,9 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             r"\\b(?:clinical\\s+)?stage\\s*(?:group\\s*)?(IV|III|II|I|[1-4])(?:[ABC])?\\b",
             re.IGNORECASE,
         )
-        source_stage_groups = {
-            match.group(0).casefold()
-            for match in stage_group_pattern.finditer(source_text)
-        }
-        generated_stage_groups = {
-            match.group(0).casefold()
-            for match in stage_group_pattern.finditer(text)
-        }
-        unsupported_stage_groups = sorted(generated_stage_groups - source_stage_groups)
+        unsupported_stage_groups = _unsupported_matches(
+            stage_group_pattern, text, source_text
+        )
         if unsupported_stage_groups:
             flags.append(
                 "Generated narrative assigns a stage group ("
