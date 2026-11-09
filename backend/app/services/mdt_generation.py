@@ -885,6 +885,12 @@ async def generate_adversarial_contribution(
             continue
         source_id = str(review.get("source_id") or "")
         reference_ids = review.get("source_reference_ids") or []
+        review_source_excerpt = str(review.get("source_excerpt") or "")
+        review_source_is_traceable = (
+            source_id in traceable_case_source_ids
+            and review_source_excerpt == case_source_id_to_excerpt.get(source_id)
+            and review_source_excerpt in case.case_summary
+        )
         statuses = {
             review.get("option_status"),
             review.get("conditions_status"),
@@ -920,7 +926,7 @@ async def generate_adversarial_contribution(
             review_reference_flags.append(
                 f"Review for {source_id or 'unknown source'} omits its attributed CASE source ID."
             )
-        if source_id not in traceable_case_source_ids:
+        if not review_source_is_traceable:
             review_reference_flags.append(
                 f"Review for {source_id or 'unknown source'} is not bound to one unique exact case-summary excerpt."
             )
@@ -968,7 +974,7 @@ async def generate_adversarial_contribution(
                     "from the cited R2 peer material actually supplied to this role."
                 )
         if challenge:
-            if source_id not in traceable_case_source_ids or source_id not in reference_ids:
+            if not review_source_is_traceable or source_id not in reference_ids:
                 review_reference_flags.append(
                     f"Challenge for {source_id or 'unknown source'} was not promoted because its CASE excerpt/reference is not traceable."
                 )
