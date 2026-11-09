@@ -284,3 +284,98 @@ def test_existing_case_versions_migrate_with_their_best_available_registry_names
     assert "patient_name" not in first["case"]
     assert first["case_snapshot_sha256"] == hashlib.sha256(first_json.encode("utf-8")).hexdigest()
 
+
+def test_patient_registry_round_trips_every_case_field_across_versions_and_database_reopen(monkeypatch, tmp_path):
+    import hashlib
+
+    monkeypatch.setattr(run_store, "DB_PATH", tmp_path / "complete_patient_case.sqlite3")
+
+    original_case = {
+        "scenario_title": "TEST_ONLY complete case field roundtrip",
+        "case_summary": (
+            "Fixture narrative only. Every structured value in this payload is test-only "
+            "and does not represent a real clinical finding."
+        ),
+        "age_years": 63,
+        "sex_at_birth": "TEST_ONLY_SEX_AT_BIRTH",
+        "primary_site": "TEST_ONLY_PRIMARY_SITE",
+        "histology": "TEST_ONLY_HISTOLOGY",
+        "clinical_t_stage": "TEST_ONLY_T_STAGE",
+        # Deliberately unknown fields must remain absent after schema serialisation.
+        "clinical_n_stage": None,
+        "clinical_m_stage": None,
+        "stage_group": None,
+        "performance_status": None,
+        "pathology_summary": "TEST_ONLY_PATHOLOGY_SUMMARY",
+        "imaging_summary": "TEST_ONLY_IMAGING_SUMMARY",
+        "current_medications": ["TEST_ONLY_MEDICATION_A", "TEST_ONLY_MEDICATION_B"],
+        "known_allergies": ["TEST_ONLY_ALLERGY_A"],
+        "relevant_investigations": ["TEST_ONLY_INVESTIGATION_A", "TEST_ONLY_INVESTIGATION_B"],
+        "relevant_comorbidities": ["TEST_ONLY_COMORBIDITY_A"],
+        "prior_treatment": ["TEST_ONLY_PRIOR_TREATMENT_A"],
+        "patient_goals": ["TEST_ONLY_PATIENT_STATED_GOAL_A"],
+        "social_context": ["TEST_ONLY_SOCIAL_CONTEXT_A"],
+        "resource_context": ["TEST_ONLY_RESOURCE_CONTEXT_A"],
+        "known_unknowns": ["TEST_ONLY_UNKNOWN_A", "TEST_ONLY_UNKNOWN_B"],
+    }
+    expected_original = SyntheticCase.model_validate(original_case).model_dump(exclude_none=True)
+    original_hash = hashlib.sha256(
+        SyntheticCase.model_validate(original_case).model_dump_json(exclude_none=True).encode("utf-8")
+    ).hexdigest()
+
+    created = client.post(
+        "/api/patients",
+        json=_registration(original_case, "Complete Field Training Example"),
+    )
+    assert created.status_code == 200
+    patient_id = created.json()["patient_id"]
+    first = created.json()["versions"][0]
+
+    assert first["version_number"] == 1
+    assert first["case"] == expected_original
+    assert first["case_snapshot_sha256"] == original_hash
+    assert "patient_name" not in first["case"]
+    for unknown_field in ("clinical_n_stage", "clinical_m_stage", "stage_group", "performance_status"):
+        assert unknown_field not in first["case"]
+
+    # Change exactly one case property; all other scalar and list properties must survive.
+    changed_case = {**original_case, "pathology_summary": "TEST_ONLY_PATHOLOGY_SUMMARY_UPDATED"}
+    expected_changed = SyntheticCase.model_validate(changed_case).model_dump(exclude_none=True)
+    changed_hash = hashlib.sha256(
+        SyntheticCase.model_validate(changed_case).model_dump_json(exclude_none=True).encode("utf-8")
+    ).hexdigest()
+    saved = client.post(
+        f"/api/patients/{patient_id}/versions",
+        json=_registration(changed_case, "Complete Field Training Example"),
+    )
+    assert saved.status_code == 200
+    versions = saved.json()["versions"]
+    assert [version["version_number"] for version in versions] == [2, 1]
+    second, preserved_first = versions
+
+    assert second["case"] == expected_changed
+    assert second["case_snapshot_sha256"] == changed_hash
+    assert second["case_snapshot_sha256"] != first["case_snapshot_sha256"]
+    assert preserved_first["case_version_id"] == first["case_version_id"]
+    assert preserved_first["case"] == expected_original
+    assert preserved_first["case_snapshot_sha256"] == original_hash
+
+    # Every store operation uses a short-lived SQLite connection. Reinitialise the
+    # schema and fetch again to exercise persistence across a fresh DB connection.
+    run_store.initialize_database()
+    reloaded = client.get(f"/api/patients/{patient_id}")
+    assert reloaded.status_code == 200
+    reloaded_versions = reloaded.json()["versions"]
+    reloaded_second, reloaded_first = reloaded_versions
+
+    assert reloaded_second["case"] == expected_changed
+    assert reloaded_second["case_snapshot_sha256"] == changed_hash
+    assert reloaded_first["case"] == expected_original
+    assert reloaded_first["case_snapshot_sha256"] == original_hash
+    assert reloaded_first["case_version_id"] == first["case_version_id"]
+
+    restored_original = run_store.get_patient_case_version(patient_id, first["case_version_id"])
+    assert restored_original["case"] == expected_original
+    assert restored_original["case_snapshot_sha256"] == original_hash
+    assert restored_original["case"] != reloaded_second["case"]
+

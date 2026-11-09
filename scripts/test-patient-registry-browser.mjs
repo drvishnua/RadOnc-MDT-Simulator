@@ -27,11 +27,31 @@ if (!edgePath) throw new Error("Microsoft Edge was not found; the registry brows
 
 const token = new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14) + "-" + Math.random().toString(16).slice(2, 8);
 const originalName = "E2E Browser Patient " + token;
-const updatedName = "E2E Browser Patient Updated " + token;
 const originalTitle = "Browser registry regression " + token;
-const updatedTitle = originalTitle + " updated";
 const originalSummary = "Browser workflow version one " + token + ". This disposable fictional training summary verifies patient persistence and historical restoration.";
 const updatedSummary = "Browser workflow version two " + token + ". This edited fictional training summary verifies immutable case version history.";
+const structuredFieldValues = [
+  ["Age (optional)", "63"],
+  ["Primary site", "TEST_ONLY_PRIMARY_SITE"],
+  ["Histology", "TEST_ONLY_HISTOLOGY"],
+  ["Sex at birth", "TEST_ONLY_SEX_AT_BIRTH"],
+  ["Performance status", "TEST_ONLY_PERFORMANCE_STATUS"],
+  ["Clinical T stage", "TEST_ONLY_T_STAGE"],
+  ["Clinical N stage", "TEST_ONLY_N_STAGE"],
+  ["Clinical M stage", "TEST_ONLY_M_STAGE"],
+  ["Stage group", "TEST_ONLY_STAGE_GROUP"],
+  ["Pathology summary", "TEST_ONLY_PATHOLOGY_SUMMARY"],
+  ["Imaging summary", "TEST_ONLY_IMAGING_SUMMARY"],
+  ["Current medications", "TEST_ONLY_MEDICATION_A\nTEST_ONLY_MEDICATION_B"],
+  ["Known allergies", "TEST_ONLY_ALLERGY_A"],
+  ["Relevant investigations", "TEST_ONLY_INVESTIGATION_A\nTEST_ONLY_INVESTIGATION_B"],
+  ["Relevant comorbidities", "TEST_ONLY_COMORBIDITY_A"],
+  ["Prior treatment", "TEST_ONLY_PRIOR_TREATMENT_A"],
+  ["Patient goals", "TEST_ONLY_PATIENT_STATED_GOAL_A"],
+  ["Social context", "TEST_ONLY_SOCIAL_CONTEXT_A"],
+  ["Resource context", "TEST_ONLY_RESOURCE_CONTEXT_A"],
+  ["Known unknowns", "TEST_ONLY_UNKNOWN_A\nTEST_ONLY_UNKNOWN_B"]
+];
 
 const tempRoot = await mkdtemp(path.join(os.tmpdir(), "radonc-patient-registry-e2e-"));
 const profileDir = path.join(tempRoot, "edge-profile");
@@ -201,6 +221,21 @@ async function clickButton(textPrefix) {
   await evaluate(expression);
 }
 
+async function setAllStructuredFieldValues() {
+  await evaluate(
+    "(() => { const section = document.querySelector('details.structured-fields'); if (!section) throw new Error('Structured case details section is missing.'); section.open = true; return true; })()"
+  );
+  for (const [label, value] of structuredFieldValues) {
+    await setLabelValue(label, value);
+  }
+}
+
+async function assertAllStructuredFieldValues() {
+  for (const [label, value] of structuredFieldValues) {
+    await assertFieldValue(label, value);
+  }
+}
+
 async function assertFieldValue(labelText, expectedValue) {
   const expression =
     "(() => {" +
@@ -230,7 +265,7 @@ async function verifyBackendDeletion() {
   if (!patientsResponse.ok) throw new Error("The patient registry API could not be checked during cleanup.");
   const body = await patientsResponse.json();
   const matches = (body.patients || []).filter(patient =>
-    patient.patient_name === originalName || patient.patient_name === updatedName
+    patient.patient_name === originalName
   );
   for (const patient of matches) {
     await fetch(API_URL + "/api/patients/" + patient.patient_id, { method: "DELETE" });
@@ -268,6 +303,7 @@ try {
   await setLabelValue("Fictional patient name", originalName);
   await setLabelValue("Diagnosis / MDT case title", originalTitle);
   await setLabelValue("Clinical summary", originalSummary);
+  await setAllStructuredFieldValues();
   await waitForValidationReady();
   await clickButton("Validate patient details");
   await waitForExpression(
@@ -285,6 +321,7 @@ try {
   );
   await assertFieldValue("Fictional patient name", originalName);
   await assertFieldValue("Clinical summary", originalSummary);
+  await assertAllStructuredFieldValues();
 
   await sendCommand("Page.reload", { ignoreCache: true });
   await waitForExpression("!!document.querySelector('.app-shell')", "the application after browser refresh");
@@ -297,8 +334,9 @@ try {
   );
   await assertFieldValue("Fictional patient name", originalName);
   await assertFieldValue("Clinical summary", originalSummary);
+  await assertAllStructuredFieldValues();
 
-  await setLabelValue("Fictional patient name", updatedName);
+  // Change one field only; every other narrative and structured field must remain intact.
   await setLabelValue("Clinical summary", updatedSummary);
   await waitForValidationReady();
   await clickButton("Validate patient details");
@@ -315,13 +353,15 @@ try {
     "document.body.innerText.includes('Loaded patient: " + patientIdentifier + " · 2 immutable case version(s)')",
     "the patient detail to report both immutable versions"
   );
-  await assertFieldValue("Fictional patient name", updatedName);
+  await assertFieldValue("Fictional patient name", originalName);
   await assertFieldValue("Clinical summary", updatedSummary);
+  await assertAllStructuredFieldValues();
 
   await selectOptionByText("Saved case version", "Version 1 ·");
   await clickButton("Load version");
   await assertFieldValue("Fictional patient name", originalName);
   await assertFieldValue("Clinical summary", originalSummary);
+  await assertAllStructuredFieldValues();
   const restoredVersionSelected = await evaluate(
     "(() => { const label = [...document.querySelectorAll('label')].find(node => (node.innerText || '').trim().startsWith('Saved case version')); const select = label && label.querySelector('select'); const option = select && [...select.options].find(item => (item.textContent || '').includes('Version 1 ·')); return !!option && select.value === option.value; })()"
   );
@@ -346,7 +386,7 @@ try {
   if (deletedLookup.status !== 404) throw new Error("The deleted patient detail endpoint did not return HTTP 404.");
 
   console.log("PATIENT_REGISTRY_BROWSER_E2E_OK");
-  console.log("Verified in headless Edge: create, reload, edit, save immutable version 2, restore version 1, and delete.");
+  console.log("Verified in headless Edge: all case fields round-trip through create/reload; one-field edit; immutable version 2; restore version 1; delete.");
   console.log("Disposable registry identifier: " + patientIdentifier);
 } finally {
   await verifyBackendDeletion().catch(error => console.error("Cleanup warning: " + error.message));
