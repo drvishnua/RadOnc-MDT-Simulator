@@ -191,89 +191,164 @@ def _unsupported_matches(pattern: re.Pattern[str], generated_text: str, source_t
     ]
 
 
+_TNM_EXPRESSION_PATTERN = re.compile(
+    r"\b(?:c|p|yc|yp)?T(?:is|x|0|[1-4][a-d]?)(?:N(?:x|0|[1-3]))?(?:M(?:x|0|1))?\b"
+    r"|\b(?:c|p|yc|yp)?N(?:x|0|[1-3])\b"
+    r"|\b(?:c|p|yc|yp)?M(?:x|0|1)\b",
+    re.IGNORECASE,
+)
+
+
+def _tnm_component_values(value: str, component: str) -> set[str]:
+    """Extract explicit unqualified T/N/M component values from standalone or combined TNM."""
+    values: set[str] = set()
+    for snippet in _unqualified_matches(_TNM_EXPRESSION_PATTERN, value):
+        if component == "T":
+            match = re.search(r"(?:c|p|yc|yp)?(T(?:is|x|0|[1-4][a-d]?))", snippet, re.IGNORECASE)
+        elif component == "N":
+            match = re.search(r"N(?:x|0|[1-3])", snippet, re.IGNORECASE)
+        elif component == "M":
+            match = re.search(r"M(?:x|0|1)", snippet, re.IGNORECASE)
+        else:
+            raise ValueError(f"Unsupported TNM component: {component}")
+        if match:
+            values.add(match.group(0).upper().removeprefix("YC").removeprefix("YP").removeprefix("C").removeprefix("P"))
+    return values
+
+
+def _stage_group_values(value: str) -> set[str]:
+    """Normalise explicit stage-group labels while retaining substage distinctions."""
+    pattern = re.compile(
+        r"\b(?:clinical\s+)?stage\s*(?:group\s*)?(IV|III|II|I|[1-4])([ABC])?\b",
+        re.IGNORECASE,
+    )
+    roman_values = {"I": 1, "II": 2, "III": 3, "IV": 4}
+    keys: set[str] = set()
+    for snippet in _unqualified_matches(pattern, value):
+        match = pattern.search(snippet)
+        if not match:
+            continue
+        numeral = match.group(1).upper()
+        suffix = (match.group(2) or "").upper()
+        number = roman_values.get(numeral, int(numeral) if numeral.isdigit() else None)
+        if number is not None:
+            keys.add(f"{number}{suffix}")
+    return keys
+
+
+def _stage_group_supported(generated_key: str, source_keys: set[str]) -> bool:
+    """A documented substage supports its parent stage; a parent does not imply a substage."""
+    return any(
+        source_key == generated_key
+        or (generated_key.isdigit() and source_key.startswith(generated_key))
+        for source_key in source_keys
+    )
+
+
 def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[str, Any]) -> list[str]:
     """Flag generated assertions that lack a corresponding structured source field."""
     text = " ".join(_flatten_strings(generated_payload))
     flags: list[str] = []
-    if case.clinical_t_stage is None:
-        matches = _unqualified_matches(re.compile(r"\b(?:c|p|yc|yp)?T(?:is|x|0|[1-4][a-d]?)(?:N(?:x|0|[1-3]))?(?:M(?:x|0|1))?\b", re.IGNORECASE), text)
-        if matches:
-            flags.append("Generated narrative contains T-stage terminology (" + ", ".join(matches[:4]) + "), but clinical_t_stage is not supplied in the case snapshot.")
-    if case.clinical_n_stage is None:
-        matches = _unqualified_matches(re.compile(r"(?:\b(?:c|p|yc|yp)?N(?:x|0|[1-3])\b|(?:c|p|yc|yp)?T(?:is|x|0|[1-4][a-d]?)N(?:x|0|[1-3])(?:M(?:x|0|1))?\b)", re.IGNORECASE), text)
-        if matches:
-            flags.append("Generated narrative contains N-stage terminology (" + ", ".join(matches[:4]) + "), but clinical_n_stage is not supplied in the case snapshot.")
-    if case.clinical_m_stage is None:
-        matches = _unqualified_matches(re.compile(r"(?:\b(?:c|p|yc|yp)?M(?:x|0|1)\b|(?:c|p|yc|yp)?T(?:is|x|0|[1-4][a-d]?)(?:N(?:x|0|[1-3]))?M(?:x|0|1)\b)", re.IGNORECASE), text)
-        if matches:
-            flags.append("Generated narrative contains M-stage terminology (" + ", ".join(matches[:4]) + "), but clinical_m_stage is not supplied in the case snapshot.")
     source_text = case.case_summary.casefold()
 
-    # Explicit age assertions are audited separately from general demographic language.
-    # Do not flag an age already stated in the user-provided free-text source.
-    if case.age_years is None:
-        age_pattern = re.compile(
-            r"\b(?:(\d{1,3})\s*[- ]?(?:year|yr)s?[- ]old|"
-            r"aged\s+(\d{1,3})|age\s*[:=]\s*(\d{1,3})|"
-            r"(\d{1,3})\s*y/o)\b",
-            re.IGNORECASE,
+    # Compare generated stage components with the exact structured value when
+    # present; otherwise compare with the verbatim case summary. A supplied
+    # structured stage must not silently legitimise a contradictory generated
+    # value merely because another field is populated.
+    for component, field, label in (
+        ("T", "clinical_t_stage", "clinical_t_stage"),
+        ("N", "clinical_n_stage", "clinical_n_stage"),
+        ("M", "clinical_m_stage", "clinical_m_stage"),
+    ):
+        structured_value = getattr(case, field)
+        supported_values = (
+            _tnm_component_values(str(structured_value), component)
+            if structured_value not in (None, "")
+            else _tnm_component_values(case.case_summary, component)
         )
-        def age_numbers(value: str) -> set[int]:
-            return {
-                int(number)
-                for snippet in _unqualified_matches(age_pattern, value)
-                for groups in age_pattern.findall(snippet)
-                for number in groups
-                if number
-            }
+        generated_values = _tnm_component_values(text, component)
+        unsupported_values = sorted(generated_values - supported_values)
+        if unsupported_values:
+            if structured_value not in (None, ""):
+                flags.append(
+                    f"Generated narrative contains {component}-stage value(s) "
+                    + ", ".join(unsupported_values[:4])
+                    + f", which conflict with structured {label}={structured_value!s}."
+                )
+            else:
+                flags.append(
+                    f"Generated narrative contains {component}-stage value(s) "
+                    + ", ".join(unsupported_values[:4])
+                    + f", but {label} is not supplied and those values are not explicitly recorded in the verbatim case summary."
+                )
 
-        unsupported_ages = sorted(age_numbers(text) - age_numbers(source_text))
-        if unsupported_ages:
+    # Explicit age assertions are compared with structured age when present,
+    # otherwise with the exact age stated in the verbatim source summary.
+    age_pattern = re.compile(
+        r"\b(?:(\d{1,3})\s*[- ]?(?:year|yr)s?[- ]old|"
+        r"aged\s+(\d{1,3})|age\s*[:=]\s*(\d{1,3})|"
+        r"(\d{1,3})\s*y/o)\b",
+        re.IGNORECASE,
+    )
+
+    def age_numbers(value: str) -> set[int]:
+        return {
+            int(number)
+            for snippet in _unqualified_matches(age_pattern, value)
+            for groups in age_pattern.findall(snippet)
+            for number in groups
+            if number
+        }
+
+    supported_ages = (
+        {case.age_years}
+        if case.age_years is not None
+        else age_numbers(case.case_summary)
+    )
+    unsupported_ages = sorted(age_numbers(text) - supported_ages)
+    if unsupported_ages:
+        if case.age_years is not None:
+            flags.append(
+                "Generated narrative assigns age(s) "
+                + ", ".join(str(age) for age in unsupported_ages[:4])
+                + f", which conflict with structured age_years={case.age_years}."
+            )
+        else:
             flags.append(
                 "Generated narrative assigns an age ("
                 + ", ".join(str(age) for age in unsupported_ages[:4])
                 + "), but age_years is not supplied in the structured case or explicitly recorded in the source summary."
             )
 
-    # A stage group is distinct from T/N/M components. It must not be inferred
-    # from an incomplete TNM record or from a site/histology description.
-    if case.stage_group in (None, ""):
-        stage_group_pattern = re.compile(
-            r"\b(?:clinical\s+)?stage\s*(?:group\s*)?(IV|III|II|I|[1-4])([ABC])?\b",
-            re.IGNORECASE,
+    # Stage group is checked against structured input when present, otherwise
+    # against the source summary. A parent stage is not inferred from a substage's
+    # absence, and a substage is never inferred from a parent stage.
+    structured_group = case.stage_group
+    supported_group_keys = (
+        _stage_group_values(str(structured_group))
+        if structured_group not in (None, "")
+        else _stage_group_values(case.case_summary)
+    )
+    generated_group_snippets = _unqualified_matches(
+        re.compile(r"\b(?:clinical\s+)?stage\s*(?:group\s*)?(IV|III|II|I|[1-4])([ABC])?\b", re.IGNORECASE),
+        text,
+    )
+    unsupported_stage_groups = [
+        snippet
+        for snippet in generated_group_snippets
+        if not all(
+            _stage_group_supported(key, supported_group_keys)
+            for key in _stage_group_values(snippet)
         )
-        roman_values = {"I": 1, "II": 2, "III": 3, "IV": 4}
-        def stage_group_keys(value: str) -> set[str]:
-            keys: set[str] = set()
-            for snippet in _unqualified_matches(stage_group_pattern, value):
-                match = stage_group_pattern.search(snippet)
-                if not match:
-                    continue
-                numeral = match.group(1).upper()
-                suffix = (match.group(2) or "").upper()
-                number = roman_values.get(numeral, int(numeral) if numeral.isdigit() else None)
-                if number is not None:
-                    keys.add(f"{number}{suffix}")
-            return keys
-
-        source_group_keys = stage_group_keys(source_text)
-
-        def stage_group_is_supported(generated_key: str) -> bool:
-            return any(
-                source_key == generated_key
-                or (generated_key.isdigit() and source_key.startswith(generated_key))
-                for source_key in source_group_keys
+    ]
+    if unsupported_stage_groups:
+        if structured_group not in (None, ""):
+            flags.append(
+                "Generated narrative assigns stage group(s) "
+                + ", ".join(unsupported_stage_groups[:4])
+                + f", which conflict with structured stage_group={structured_group!s}."
             )
-
-        unsupported_stage_groups = [
-            snippet
-            for snippet in _unqualified_matches(stage_group_pattern, text)
-            if not all(
-                stage_group_is_supported(key)
-                for key in stage_group_keys(snippet)
-            )
-        ]
-        if unsupported_stage_groups:
+        else:
             flags.append(
                 "Generated narrative assigns a stage group ("
                 + ", ".join(unsupported_stage_groups[:4])
@@ -381,17 +456,27 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             + "); missing information alone does not establish contraindication, safety, or indication."
         )
 
-    if not case.patient_goals:
-        preference_pattern = re.compile(
-            # Match an actual patient-attributed choice/act. The noun phrase
-            # "obtain patient consent" is a recommendation to elicit consent,
-            # not evidence that the patient has already consented.
-            r"\bpatient(?:'s)?\s+(?:prefers?|wishes?|wants?|chooses?|declines?|refuses?|agrees?|consents\b|has chosen|has consented|does not want|doesn't want)\b[^.!?;\n]{0,100}",
-            re.IGNORECASE,
+    preference_pattern = re.compile(
+        # Match an actual patient-attributed choice/act. The noun phrase
+        # "obtain patient consent" is a recommendation to elicit consent,
+        # not evidence that the patient has already consented.
+        r"\bpatient(?:'s)?\s+(?:prefers?|wishes?|wants?|chooses?|declines?|refuses?|agrees?|consents\b|has chosen|has consented|does not want|doesn't want)\b[^.!?;\n]{0,100}",
+        re.IGNORECASE,
+    )
+    preference_source_text = "\n".join(
+        [case.case_summary, *(case.patient_goals or [])]
+    )
+    unsupported_preferences = _unsupported_matches(
+        preference_pattern,
+        text,
+        preference_source_text,
+    )
+    if unsupported_preferences:
+        flags.append(
+            "Generated narrative attributes patient preference/decision statement(s) "
+            + "; ".join(unsupported_preferences[:2])
+            + ", which are not explicitly supported by the verbatim case summary or structured patient_goals."
         )
-        matches = _unsupported_matches(preference_pattern, text, source_text)
-        if matches:
-            flags.append("Generated narrative attributes a patient preference/decision (" + "; ".join(matches[:2]) + "), but patient_goals are not supplied.")
     return flags[:20]
 
 

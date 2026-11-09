@@ -451,3 +451,78 @@ def test_attribution_detector_recognises_explicit_department_service_notes():
         "Cardiology service note proposes a separate preoperative sequence."
     )
 
+def test_generated_tnm_values_are_checked_against_supplied_structured_stages():
+    case = _case(
+        clinical_t_stage="T2",
+        clinical_n_stage="N1",
+        clinical_m_stage="M0",
+        case_summary="Structured staging fields are recorded separately for this regression.",
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The case is cT1N0M0."
+    })).casefold()
+
+    assert "t-stage value" in flags and "t2" in flags
+    assert "n-stage value" in flags and "n1" in flags
+    assert "m-stage value" not in flags
+
+
+def test_generated_tnm_components_may_be_repeated_only_when_present_in_source_summary():
+    case = _case(
+        clinical_t_stage=None,
+        clinical_n_stage=None,
+        clinical_m_stage=None,
+        case_summary="Referral summary documents cT2N1M0 disease.",
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The referral records cT2N1M0."
+    })
+    assert not any("stage value" in item for item in flags)
+
+    unsupported = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has cT3N0M1 disease."
+    })).casefold()
+    assert "t-stage value" in unsupported
+    assert "n-stage value" in unsupported
+    assert "m-stage value" in unsupported
+
+
+def test_generated_stage_group_is_checked_against_structured_group_without_inventing_substage():
+    case = _case(
+        stage_group="Stage III",
+        case_summary="Structured stage group supplied separately.",
+    )
+    unsupported = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has Stage IIIA disease."
+    })
+    assert any("conflict with structured stage_group" in item for item in unsupported)
+
+    matching = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has Stage III disease."
+    })
+    assert not any("stage group" in item for item in matching)
+
+
+def test_patient_preference_audit_detects_conflict_with_structured_patient_goals():
+    case = _case(patient_goals=["The patient prefers surgery."])
+    matching = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient prefers surgery."
+    })
+    assert not any("patient preference/decision" in item for item in matching)
+
+    conflicting = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient prefers chemotherapy."
+    })
+    assert any("patient_goals" in item for item in conflicting)
+
+
+def test_patient_preference_audit_accepts_preference_explicitly_recorded_in_case_summary():
+    case = _case(
+        patient_goals=[],
+        case_summary="Referral text: the patient prefers surgery after discussion.",
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient prefers surgery after discussion."
+    })
+    assert not any("patient preference/decision" in item for item in flags)
+
