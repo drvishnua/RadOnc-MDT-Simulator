@@ -1,5 +1,5 @@
 import { spawn, execFileSync } from "node:child_process";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { access, mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
@@ -16,7 +16,7 @@ const edgeCandidates = [
 let edgePath = null;
 for (const candidate of edgeCandidates) {
   try {
-    await readFile(candidate);
+    await access(candidate);
     edgePath = candidate;
     break;
   } catch {
@@ -40,6 +40,7 @@ let edgeProcess = null;
 let socket = null;
 let commandId = 0;
 let patientIdentifier = null;
+let patientId = null;
 
 function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -269,6 +270,7 @@ try {
 
   const firstOption = await waitUntil(() => readPatientOption(originalName), "the newly registered patient in the registry");
   patientIdentifier = firstOption.identifier;
+  patientId = firstOption.value;
   await waitForExpression(
     "document.body.innerText.includes('Loaded patient: " + patientIdentifier + "')",
     "the newly registered patient to load"
@@ -300,6 +302,10 @@ try {
     "(() => { const label = [...document.querySelectorAll('label')].find(node => (node.innerText || '').trim().startsWith('Saved case version')); return !!label && !!label.querySelector('select') && [...label.querySelector('select').options].some(option => (option.textContent || '').includes('Version 2 ·')); })()",
     "the second immutable case version"
   );
+  await waitForExpression(
+    "document.body.innerText.includes('Loaded patient: " + patientIdentifier + " · 2 immutable case version(s)')",
+    "the patient detail to report both immutable versions"
+  );
   await assertFieldValue("Fictional patient name", updatedName);
   await assertFieldValue("Clinical summary", updatedSummary);
 
@@ -307,6 +313,10 @@ try {
   await clickButton("Load version");
   await assertFieldValue("Fictional patient name", originalName);
   await assertFieldValue("Clinical summary", originalSummary);
+  const restoredVersionSelected = await evaluate(
+    "(() => { const label = [...document.querySelectorAll('label')].find(node => (node.innerText || '').trim().startsWith('Saved case version')); const select = label && label.querySelector('select'); const option = select && [...select.options].find(item => (item.textContent || '').includes('Version 1 ·')); return !!option && select.value === option.value; })()"
+  );
+  if (!restoredVersionSelected) throw new Error("The registry did not retain Version 1 as the active restored version.");
   await waitForExpression(
     "(() => { const label = [...document.querySelectorAll('label')].find(node => (node.innerText || '').trim().startsWith('Saved case version')); return !!label && [...label.querySelector('select').options].some(option => (option.textContent || '').includes('Version 2 ·')); })()",
     "the preserved second version after restoring version one"
@@ -323,10 +333,8 @@ try {
     "the deleted patient to disappear from the registry selector"
   );
 
-  const deletedLookup = await evaluate(
-    "(async () => { const response = await fetch(" + json(API_URL + "/api/patients/") + "); return response.status; })()"
-  );
-  if (deletedLookup !== 200) throw new Error("The patient registry did not remain reachable after deletion.");
+  const deletedLookup = await fetch(API_URL + "/api/patients/" + patientId);
+  if (deletedLookup.status !== 404) throw new Error("The deleted patient detail endpoint did not return HTTP 404.");
 
   console.log("PATIENT_REGISTRY_BROWSER_E2E_OK");
   console.log("Verified in headless Edge: create, reload, edit, save immutable version 2, restore version 1, and delete.");
