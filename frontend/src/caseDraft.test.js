@@ -98,3 +98,17 @@ test("preserves a previous form schema and fills newly added fields from default
   assert.equal(restored.known_allergies, "");
   assert.equal(restored.relevant_investigations, "");
 });
+
+test("round-trips structured case lists through actual newline-delimited form text", async () => {
+  const { listToMultilineText, multilineTextToList } = await import("./caseDraft.js");
+  const values = ["Diabetes", "Hypertension", "Prior surgery"];
+  const formText = listToMultilineText(values);
+  assert.equal(formText, "Diabetes\nHypertension\nPrior surgery");
+  assert.deepEqual(multilineTextToList(formText), values);
+});
+
+test("renders an empty structured list as empty form text", async () => {
+  const { listToMultilineText, multilineTextToList } = await import("./caseDraft.js");
+  assert.equal(listToMultilineText([]), "");
+  assert.deepEqual(multilineTextToList(""), []);
+});
