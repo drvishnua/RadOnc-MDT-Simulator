@@ -14,6 +14,7 @@ import platform
 import subprocess
 import sys
 import time
+import urllib.request
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
@@ -24,9 +25,10 @@ REPO_ROOT = BACKEND_DIR.parent
 sys.path.insert(0, str(BACKEND_DIR))
 
 from app.agents.catalog import AGENT_PROFILES
-from app.config import OLLAMA_MODEL
+from app.config import OLLAMA_BASE_URL, OLLAMA_MODEL
 from app.schemas import SyntheticCase
 from app.services import batch_runner, mdt_rounds, run_store
+from app.services.gpu_telemetry import parse_nvidia_smi_csv, summarize_gpu_telemetry
 from app.services.ollama import get_ollama_status
 from app.services.case_integrity import build_source_case_facts, build_case_report_title
 
@@ -50,6 +52,67 @@ def gpu_snapshot() -> str:
         ).strip()
     except Exception as exc:
         return f"unavailable: {type(exc).__name__}"
+
+
+def ollama_process_snapshot() -> dict:
+    """Capture Ollama API VRAM allocation and its human-readable processor split."""
+    snapshot: dict = {}
+    try:
+        with urllib.request.urlopen(f"{OLLAMA_BASE_URL}/api/ps", timeout=5) as response:
+            snapshot["api_ps"] = json.loads(response.read().decode("utf-8"))
+    except Exception as exc:
+        snapshot["api_ps_error"] = f"{type(exc).__name__}: {exc}"
+    try:
+        snapshot["cli_ps"] = subprocess.check_output(
+            ["ollama", "ps"], text=True, timeout=5
+        ).strip()
+    except Exception as exc:
+        snapshot["cli_ps_error"] = f"{type(exc).__name__}: {exc}"
+    return snapshot
+
+
+async def record_ollama_process_snapshot(telemetry: dict, label: str) -> None:
+    snapshot = await asyncio.to_thread(ollama_process_snapshot)
+    telemetry["ollama_process_snapshots"].append({
+        "label": label,
+        "captured_at": datetime.now(timezone.utc).isoformat(),
+        "snapshot": snapshot,
+    })
+
+
+async def sample_gpu_during_run(stop_event: asyncio.Event, telemetry: dict) -> None:
+    """Sample NVIDIA utilisation/VRAM during inference; poll Ollama allocation every 10s."""
+    last_ollama_snapshot = 0.0
+    query = [
+        "nvidia-smi",
+        "--query-gpu=name,memory.used,memory.total,utilization.gpu,utilization.memory",
+        "--format=csv,noheader,nounits",
+    ]
+    while not stop_event.is_set():
+        captured_at = datetime.now(timezone.utc).isoformat()
+        try:
+            output = await asyncio.to_thread(
+                subprocess.check_output, query, text=True, timeout=8
+            )
+            telemetry["samples"].append({
+                "captured_at": captured_at,
+                "gpus": parse_nvidia_smi_csv(output),
+            })
+        except Exception as exc:
+            telemetry["sampling_errors"].append({
+                "captured_at": captured_at,
+                "error": f"{type(exc).__name__}: {exc}",
+            })
+
+        now = time.monotonic()
+        if now - last_ollama_snapshot >= 10:
+            await record_ollama_process_snapshot(telemetry, "during_inference")
+            last_ollama_snapshot = now
+
+        try:
+            await asyncio.wait_for(stop_event.wait(), timeout=1.0)
+        except asyncio.TimeoutError:
+            pass
 
 
 def build_case() -> SyntheticCase:
@@ -169,6 +232,14 @@ async def main() -> int:
         "round_3_attempts": [],
         "round_4_attempts": [],
     }
+    gpu_telemetry = {
+        "sample_interval_seconds": 1.0,
+        "samples": [],
+        "sampling_errors": [],
+        "ollama_process_snapshots": [],
+    }
+    stop_gpu_sampler = asyncio.Event()
+    gpu_sampler_task: asyncio.Task | None = None
     result_payload: dict = {
         "validation_type": "live_four_round_synthetic_integration",
         "synthetic_only": True,
@@ -178,6 +249,8 @@ async def main() -> int:
         "ollama": runtime,
         "model": OLLAMA_MODEL,
         "gpu_before": gpu_snapshot(),
+        "gpu_telemetry": gpu_telemetry,
+        "ollama_process_before": None,
         "case_snapshot": json.loads(case_json),
         "case_snapshot_json": case_json,
         "case_snapshot_sha256": case_hash,
@@ -188,11 +261,16 @@ async def main() -> int:
     run_id = None
 
     try:
+        result_payload["ollama_process_before"] = await asyncio.to_thread(ollama_process_snapshot)
+        gpu_sampler_task = asyncio.create_task(
+            sample_gpu_during_run(stop_gpu_sampler, gpu_telemetry)
+        )
         created = run_store.create_run(case)
         run_id = created["run_id"]
         result_payload["run_id"] = run_id
 
         round1_summary = await ensure_round1(run_id, metrics)
+        await record_ollama_process_snapshot(gpu_telemetry, "after_round_1")
         round1 = run_store.list_results(run_id)
         ids_match(round1, expected_ids, "Round 1")
         require(all(row["status"] == "completed" and row["assessment"] for row in round1),
@@ -232,6 +310,7 @@ async def main() -> int:
             "Round 2 case-data integrity audit fields are missing.",
         )
         verify_position_transitions(round1, round2, "Round 2")
+        await record_ollama_process_snapshot(gpu_telemetry, "after_round_2")
 
         round3_summary = await ensure_round(run_id, 3, metrics)
         round3 = run_store.list_round_results(run_id, 3)
@@ -245,10 +324,12 @@ async def main() -> int:
             "Round 3 case-data integrity audit fields are missing.",
         )
         verify_position_transitions(round2, round3, "Round 3")
+        await record_ollama_process_snapshot(gpu_telemetry, "after_round_3")
 
         round4_summary = await ensure_round(run_id, 4, metrics)
         report = run_store.get_final_report(run_id)
         require(report is not None, "Final Chair report was not saved.")
+        await record_ollama_process_snapshot(gpu_telemetry, "after_round_4")
         require(bool(report.get("chair_conclusion", "").strip()), "Chair conclusion is empty.")
         require(report.get("consensus_status") in {
             "consensus", "qualified_consensus", "no_consensus", "insufficient_information"
@@ -443,9 +524,18 @@ async def main() -> int:
                 result_payload["partial_results_error"] = type(nested).__name__
         raise
     finally:
+        stop_gpu_sampler.set()
+        if gpu_sampler_task is not None:
+            await gpu_sampler_task
+        await record_ollama_process_snapshot(gpu_telemetry, "after_validation")
+        gpu_telemetry["summary"] = summarize_gpu_telemetry(
+            gpu_telemetry["samples"],
+            gpu_telemetry["ollama_process_snapshots"],
+        )
         result_payload["finished_at"] = datetime.now(timezone.utc).isoformat()
         result_payload["total_wall_seconds"] = round(time.perf_counter() - started_all, 2)
         result_payload["gpu_after"] = gpu_snapshot()
+        result_payload["gpu_telemetry"] = gpu_telemetry
         artifact_path = ARTIFACT_DIR / "live_four_round_validation.json"
         artifact_path.write_text(
             json.dumps(result_payload, ensure_ascii=False, indent=2),
