@@ -805,3 +805,32 @@ def test_source_excerpt_id_conflicts_are_flagged_even_when_one_review_has_an_inv
         for item in flags
     )
 
+def test_high_volume_source_excerpt_failures_are_summarised_by_distinct_role():
+    case_summary = (
+        "Referral note records a conditional option pending MRI staging. "
+        "No further exact opinion excerpts were supplied."
+    )
+    rows = _rows("result", ["insufficient_information"] * 45)
+    for index in range(3):
+        role_id = f"RO-{index + 1:02d}"
+        peer_id = f"RO-{index + 10:02d}"
+        rows[index]["result"]["source_peer_ids"] = [peer_id]
+        rows[index]["result"]["source_opinion_reviews"] = [{
+            "source_id": "CASE:case_summary#1",
+            "opinion_label": "Unverified attributed opinion",
+            "source_excerpt": f"Paraphrased excerpt for {role_id}, not present verbatim.",
+            "option_status": "unclear",
+            "conditions_status": "unclear",
+            "source_reference_ids": ["CASE:case_summary#1", f"R2:{peer_id}"],
+        }]
+
+    coverage, flags = build_source_opinion_review_coverage(rows, case_summary)
+    joined_flags = " ".join(flags)
+
+    assert coverage == []
+    assert (
+        "R3 source-opinion exact-excerpt audit: 3 finding(s) across "
+        "3 distinct role(s): ['RO-01', 'RO-02', 'RO-03']."
+    ) in joined_flags
+    assert "from RO-01 lacks an exact contiguous excerpt" in joined_flags
+
