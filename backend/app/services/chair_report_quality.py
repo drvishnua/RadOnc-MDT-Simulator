@@ -347,7 +347,9 @@ def ensure_chair_report_completeness(
         (2, round2_rows, "result"),
         (3, round3_rows, "result"),
     ):
-        for row, item in _distinct_role_entries(rows, field, f"Round {round_number}", quarantine_flags):
+        # Preserve source integrity flags from every completed record, including
+        # duplicate/conflicting role rows that are excluded from derived summaries.
+        for row, item in _entries(rows, field):
             role_id = str(row.get("agent_id") or "unknown-role")
             for flag in item.get("case_data_integrity_flags") or []:
                 if isinstance(flag, str) and flag.strip():

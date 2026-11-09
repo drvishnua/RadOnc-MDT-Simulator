@@ -488,9 +488,14 @@ def test_conflicting_duplicate_role_positions_are_excluded_and_flagged():
     round1 = _rows("assessment", ["insufficient_information"] * 45)
     round2 = _rows("result", ["insufficient_information"] * 45)
     round3 = _rows("result", ["insufficient_information"] * 45)
+    round3[0]["result"]["case_data_integrity_flags"] = ["Original RO-01 source flag must remain visible."]
     duplicate = {
         **round3[0],
-        "result": {**round3[0]["result"], "position": "supports"},
+        "result": {
+            **round3[0]["result"],
+            "position": "supports",
+            "case_data_integrity_flags": ["Duplicate RO-01 source flag must remain visible."],
+        },
     }
     round3.append(duplicate)
 
@@ -500,6 +505,8 @@ def test_conflicting_duplicate_role_positions_are_excluded_and_flagged():
 
     assert "Round 3: 44/44 insufficient-information" in report.overall_educational_synthesis
     assert not any("RO-01" in item for item in report.minority_and_dissenting_views)
+    assert any("Original RO-01 source flag must remain visible" in item for item in report.case_data_integrity_flags)
+    assert any("Duplicate RO-01 source flag must remain visible" in item for item in report.case_data_integrity_flags)
     assert any(
         "duplicate completed records for RO-01" in item
         and "conflicting positions" in item
