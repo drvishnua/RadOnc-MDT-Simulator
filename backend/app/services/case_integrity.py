@@ -409,6 +409,20 @@ def build_case_validation_warnings(case: SyntheticCase) -> list[str]:
             normalize_stage(match.group(1))
             for match in pattern.finditer(summary)
         }
+        # In a contiguous cT3N1M0 token, N and M are not preceded by word
+        # boundaries. Capture those components from the complete TNM expression.
+        if field in {"clinical_n_stage", "clinical_m_stage"}:
+            combined_tnm = re.compile(
+                r"\\b(?:c|p|yc|yp)?T(?:is|x|0|[1-4][a-d]?)"
+                r"(N(?:x|0|[1-3]))?(M(?:x|0|1))?\\b",
+                re.IGNORECASE,
+            )
+            component_index = 1 if field == "clinical_n_stage" else 2
+            text_values.update(
+                normalize_stage(match.group(component_index))
+                for match in combined_tnm.finditer(summary)
+                if match.group(component_index)
+            )
         if (
             structured_value
             and text_values
