@@ -13,6 +13,8 @@ on:
       - "backend/scripts/live_four_round_validation.py"
       - "backend/app/main.py"
       - "backend/tests/test_static_frontend.py"
+      - "backend/app/services/run_store.py"
+      - "backend/tests/test_database_migration.py"
       - "frontend/src/App.tsx"
       - "frontend/vite.config.ts"
 

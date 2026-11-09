@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import sqlite3
 import uuid
 from contextlib import contextmanager
@@ -15,7 +16,43 @@ from app.agents.catalog import AGENT_PROFILES
 from app.schemas import SyntheticCase
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
-DB_PATH = BACKEND_DIR / "data" / "simulation_runs.sqlite3"
+DEFAULT_DATA_DIR = BACKEND_DIR / "data"
+DATA_DIR = Path(os.environ.get("RADONC_DATA_DIR", str(DEFAULT_DATA_DIR))).expanduser().resolve()
+DB_PATH = DATA_DIR / "simulation_runs.sqlite3"
+_legacy_path = os.environ.get("RADONC_LEGACY_DB_PATH")
+LEGACY_DB_PATH = Path(_legacy_path).expanduser().resolve() if _legacy_path else None
+
+
+def _migrate_legacy_database_if_needed() -> bool:
+    """Copy an explicitly selected legacy SQLite database without altering its source."""
+    if LEGACY_DB_PATH is None or not LEGACY_DB_PATH.is_file():
+        return False
+    if DB_PATH.exists() or LEGACY_DB_PATH == DB_PATH:
+        return False
+
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path = DB_PATH.with_name(
+        f".{DB_PATH.name}.{uuid.uuid4().hex}.migration"
+    )
+    try:
+        with sqlite3.connect(LEGACY_DB_PATH, timeout=30) as source:
+            source_check = source.execute("PRAGMA integrity_check").fetchone()
+            if not source_check or source_check[0] != "ok":
+                raise sqlite3.DatabaseError("Legacy database failed SQLite integrity_check.")
+            with sqlite3.connect(temporary_path, timeout=30) as destination:
+                source.backup(destination)
+                destination_check = destination.execute("PRAGMA integrity_check").fetchone()
+                if not destination_check or destination_check[0] != "ok":
+                    raise sqlite3.DatabaseError("Migrated database failed SQLite integrity_check.")
+
+        # Never replace an existing destination. If another process created it
+        # during the backup, retain both files and let the existing destination win.
+        if DB_PATH.exists():
+            return False
+        temporary_path.replace(DB_PATH)
+        return True
+    finally:
+        temporary_path.unlink(missing_ok=True)
 
 
 def _now() -> str:
@@ -25,6 +62,7 @@ def _now() -> str:
 @contextmanager
 def _connect():
     """Open a short-lived SQLite connection and always close it."""
+    _migrate_legacy_database_if_needed()
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     connection = sqlite3.connect(DB_PATH, timeout=30)
     connection.row_factory = sqlite3.Row
