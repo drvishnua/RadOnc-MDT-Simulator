@@ -354,57 +354,152 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
                 + ", ".join(unsupported_stage_groups[:4])
                 + "), but stage_group is not supplied in the structured case or explicitly recorded in the source summary."
             )
-    sex_is_reported_in_source = bool(
-        re.search(
-            r"\b(?:male|female|man|woman|boy|girl)\b|\b(?:sex|gender)\s*[:=]\s*(?:male|female)\b",
-            source_text,
-            re.IGNORECASE,
-        )
+    sex_pattern = re.compile(r"\b(?:male|female|man|woman|boy|girl)\b", re.IGNORECASE)
+    generated_sex_terms = _unqualified_matches(sex_pattern, text)
+
+    def sex_category(value: str) -> str | None:
+        normalised = value.casefold()
+        if re.search(r"\b(?:male|man|boy)\b", normalised):
+            return "male"
+        if re.search(r"\b(?:female|woman|girl)\b", normalised):
+            return "female"
+        return None
+
+    if case.sex_at_birth not in (None, ""):
+        expected_sex = sex_category(str(case.sex_at_birth))
+        unsupported_sex_terms = [
+            term for term in generated_sex_terms
+            if sex_category(term) != expected_sex
+        ]
+        if unsupported_sex_terms:
+            flags.append(
+                "Generated narrative assigns sex/gender descriptor(s) "
+                + ", ".join(unsupported_sex_terms[:4])
+                + f", which conflict with structured sex_at_birth={case.sex_at_birth!s}."
+            )
+    else:
+        source_sexes = {
+            category
+            for category in (sex_category(term) for term in _unqualified_matches(sex_pattern, case.case_summary))
+            if category
+        }
+        unsupported_sex_terms = [
+            term for term in generated_sex_terms
+            if sex_category(term) not in source_sexes
+        ]
+        if unsupported_sex_terms:
+            flags.append(
+                "Generated narrative assigns sex/gender descriptor(s) ("
+                + ", ".join(unsupported_sex_terms[:4])
+                + "), but they are not supported by the structured case or verbatim case summary."
+            )
+
+    comorbidity_absence_pattern = re.compile(
+        r"\b(?:no known comorbidities|no comorbidities|no relevant medical history|otherwise healthy)\b",
+        re.IGNORECASE,
     )
-    if case.sex_at_birth is None and not sex_is_reported_in_source:
-        matches = _unqualified_matches(re.compile(r"\b(?:male|female|man|woman|boy|girl)\b", re.IGNORECASE), text)
-        if matches:
-            flags.append("Generated narrative assigns a sex/gender descriptor (" + ", ".join(matches[:4]) + "), but sex_at_birth is not supplied in the case snapshot or source text.")
-    if not case.relevant_comorbidities:
-        matches = _unqualified_matches(re.compile(r"\b(?:no known comorbidities|no comorbidities|no relevant medical history|otherwise healthy)\b", re.IGNORECASE), text)
-        if matches:
-            flags.append("Generated narrative treats comorbidities as absent, but the structured comorbidity list is not reported.")
-    if not case.prior_treatment:
-        matches = _unqualified_matches(re.compile(r"\b(?:no prior treatment|treatment[- ]na[iï]ve|never treated)\b", re.IGNORECASE), text)
-        if matches:
-            flags.append("Generated narrative treats prior treatment as absent, but the structured prior-treatment list is not reported.")
+    comorbidity_source = "\n".join([case.case_summary, *(case.relevant_comorbidities or [])])
+    unsupported_comorbidity_absence = _unsupported_matches(
+        comorbidity_absence_pattern, text, comorbidity_source
+    )
+    if unsupported_comorbidity_absence:
+        flags.append(
+            "Generated narrative treats comorbidities as absent or denies relevant medical history "
+            "(" + ", ".join(unsupported_comorbidity_absence[:3])
+            + "), but that absence is not explicitly supported by the supplied case."
+        )
+
+    prior_treatment_absence_pattern = re.compile(
+        r"\b(?:no prior treatment|treatment[- ]na[iï]ve|never treated)\b",
+        re.IGNORECASE,
+    )
+    prior_treatment_source = "\n".join([case.case_summary, *(case.prior_treatment or [])])
+    unsupported_prior_treatment_absence = _unsupported_matches(
+        prior_treatment_absence_pattern, text, prior_treatment_source
+    )
+    if unsupported_prior_treatment_absence:
+        flags.append(
+            "Generated narrative treats prior treatment as absent ("
+            + ", ".join(unsupported_prior_treatment_absence[:3])
+            + "), but that absence is not explicitly supported by the supplied case."
+        )
 
     # High-specificity assertion checks. Questions and qualified uncertainty are not
     # treated as findings. Exact matching source snippets remain attributed to the
     # user-provided case summary rather than being relabelled as model inventions.
-    if case.performance_status in (None, ""):
-        pattern = re.compile(
-            r"\b(?:ECOG(?:\s*[- ]?PS|\s+performance\s+status)?|"
-            r"WHO(?:\s+performance)?\s+status)\s*[:=]?\s*[0-4]\b|"
-            r"\b(?:KPS|Karnofsky(?:\s+Performance\s+Status)?)\s*[:=]?\s*\d{2,3}\b",
-            re.IGNORECASE,
-        )
-        matches = _unsupported_matches(pattern, text, source_text)
-        if matches:
-            flags.append("Generated narrative assigns a performance-status score (" + ", ".join(matches[:3]) + "), but performance_status is not supplied in the structured case.")
+    performance_pattern = re.compile(
+        r"\b(?:ECOG(?:\s*[- ]?PS|\s+performance\s+status)?|"
+        r"WHO(?:\s+performance)?\s+status)\s*[:=]?\s*[0-4]\b|"
+        r"\b(?:KPS|Karnofsky(?:\s+Performance\s+Status)?)\s*[:=]?\s*\d{2,3}\b",
+        re.IGNORECASE,
+    )
+    performance_source = (
+        str(case.performance_status)
+        if case.performance_status not in (None, "")
+        else case.case_summary
+    )
+    unsupported_performance = _unsupported_matches(
+        performance_pattern, text, performance_source
+    )
+    if unsupported_performance:
+        if case.performance_status not in (None, ""):
+            flags.append(
+                "Generated narrative assigns performance-status score(s) ("
+                + ", ".join(unsupported_performance[:3])
+                + f"), which conflict with structured performance_status={case.performance_status!s}."
+            )
+        else:
+            flags.append(
+                "Generated narrative assigns a performance-status score ("
+                + ", ".join(unsupported_performance[:3])
+                + "), but performance_status is not supplied in the structured case or verbatim case summary."
+            )
 
-    if case.clinical_n_stage is None:
-        pattern = re.compile(
-            r"\b(?:node[- ]negative|no (?:regional )?nodal (?:disease|involvement)|negative (?:regional )?nodes?)\b",
-            re.IGNORECASE,
+    node_negative_pattern = re.compile(
+        r"\b(?:node[- ]negative|no (?:regional )?nodal (?:disease|involvement)|negative (?:regional )?nodes?)\b",
+        re.IGNORECASE,
+    )
+    generated_node_negative = _unqualified_matches(node_negative_pattern, text)
+    supported_n_source = (
+        str(case.clinical_n_stage)
+        if case.clinical_n_stage not in (None, "")
+        else case.case_summary
+    )
+    supported_n0 = "N0" in _tnm_component_values(supported_n_source, "N")
+    matching_node_negative = _unsupported_matches(
+        node_negative_pattern, text, supported_n_source
+    )
+    if generated_node_negative and not supported_n0 and len(matching_node_negative) == len(generated_node_negative):
+        # An exact supplied source phrase is preserved even where the record does
+        # not use TNM notation. Any different/unsupported phrase remains flagged.
+        pass
+    elif generated_node_negative and not supported_n0:
+        flags.append(
+            "Generated narrative asserts node-negative status ("
+            + ", ".join(generated_node_negative[:3])
+            + "), but the supplied structured/source data do not establish N0 or an equivalent explicit negative nodal finding."
         )
-        matches = _unsupported_matches(pattern, text, source_text)
-        if matches:
-            flags.append("Generated narrative asserts node-negative status (" + ", ".join(matches[:3]) + "), but clinical_n_stage is not supplied.")
 
-    if case.clinical_m_stage is None:
-        pattern = re.compile(
-            r"\b(?:no (?:evidence of )?(?:distant )?metastases?|no (?:evidence of )?(?:distant )?metastatic disease|without (?:distant )?metastases?|metastasis[- ]free|(?:distant )?metastases? (?:are|is) absent)\b",
-            re.IGNORECASE,
+    no_metastases_pattern = re.compile(
+        r"\b(?:no (?:evidence of )?(?:distant )?metastases?|no (?:evidence of )?(?:distant )?metastatic disease|without (?:distant )?metastases?|metastasis[- ]free|(?:distant )?metastases? (?:are|is) absent)\b",
+        re.IGNORECASE,
+    )
+    generated_no_metastases = _unqualified_matches(no_metastases_pattern, text)
+    supported_m_source = (
+        str(case.clinical_m_stage)
+        if case.clinical_m_stage not in (None, "")
+        else case.case_summary
+    )
+    supported_m0 = "M0" in _tnm_component_values(supported_m_source, "M")
+    matching_no_metastases = _unsupported_matches(
+        no_metastases_pattern, text, supported_m_source
+    )
+    if generated_no_metastases and not supported_m0 and len(matching_no_metastases) != len(generated_no_metastases):
+        flags.append(
+            "Generated narrative asserts absence of metastatic disease ("
+            + ", ".join(generated_no_metastases[:3])
+            + "), but the supplied structured/source data do not establish M0 or an equivalent explicit negative metastatic finding."
         )
-        matches = _unsupported_matches(pattern, text, source_text)
-        if matches:
-            flags.append("Generated narrative asserts absence of metastatic disease (" + ", ".join(matches[:3]) + "), but clinical_m_stage is not supplied; absence of a reported metastasis is not M0.")
 
     resectability_pattern = re.compile(
         r"\b(?:is|was|remains|appears|seems|deemed|considered)\s+(?:clearly |technically |borderline )?(?:resectable|unresectable)\b|\b(?:resectable|unresectable)\s+(?:tumou?r|disease|lesion|cancer)\b|\bnot resectable\b",

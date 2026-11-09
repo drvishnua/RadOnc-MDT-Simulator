@@ -526,3 +526,49 @@ def test_patient_preference_audit_accepts_preference_explicitly_recorded_in_case
     })
     assert not any("patient preference/decision" in item for item in flags)
 
+def test_generated_sex_descriptor_is_checked_against_structured_sex():
+    case = _case(sex_at_birth="female")
+    matching = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The female patient requires further assessment."
+    })
+    assert not any("sex/gender" in item for item in matching)
+
+    conflicting = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The male patient requires further assessment."
+    })
+    assert any("conflict with structured sex_at_birth" in item for item in conflicting)
+
+
+def test_generated_performance_status_is_checked_against_structured_score():
+    case = _case(performance_status="ECOG 1")
+    matching = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has ECOG 1."
+    })
+    assert not any("performance-status" in item for item in matching)
+
+    conflicting = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has ECOG 2."
+    })
+    assert any("conflict with structured performance_status" in item for item in conflicting)
+
+
+def test_negative_n_and_m_claims_conflict_with_structured_positive_stages():
+    case = _case(clinical_n_stage="N1", clinical_m_stage="M1")
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient is node-negative with no distant metastases."
+    })).casefold()
+    assert "node-negative status" in flags
+    assert "absence of metastatic disease" in flags
+
+
+def test_comorbidity_and_prior_treatment_absence_claims_are_checked_against_supplied_lists():
+    case = _case(
+        relevant_comorbidities=["Diabetes mellitus"],
+        prior_treatment=["Prior radiotherapy"],
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has no comorbidities and has received no prior treatment."
+    })).casefold()
+    assert "comorbidities as absent" in flags
+    assert "prior treatment as absent" in flags
+
