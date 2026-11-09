@@ -17,6 +17,9 @@ on:
       - "backend/tests/test_database_migration.py"
       - "frontend/src/App.tsx"
       - "frontend/vite.config.ts"
+      - "backend/launch_installed.py"
+      - "packaging/windows/**"
+      - ".github/workflows/windows-installer.yml"
 
 permissions:
   contents: read
