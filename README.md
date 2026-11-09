@@ -72,13 +72,15 @@ The model is kept warm during a run. Prompts use Ollama's schema-constrained out
 
 ### Current code/CI snapshot
 
-The following checks ran against code snapshot `084d3353bc3dd71a7ee27895e41434c0d425644b`:
+The following checks ran against the exact code snapshot `aa0e90b7ec6fbbea9fc359c98f2deefdad2cf902`:
 
-- **Backend CI:** [run 42575218662](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42575218662) — success; **111 passed, 1 warning** (the existing Starlette/httpx TestClient deprecation).
-- **Frontend CI:** [run 42575218585](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42575218585) — success; **21 tests passed**, TypeScript check and Vite production build passed.
-- **Windows source sync and local diagnostic:** [run 42575212397](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42575212397) — success; the local manifest was read back and verified as `feature/four-round-mdt-and-performance @ 084d3353bc3dd71a7ee27895e41434c0d425644b`. FastAPI health, React shell mounting and structured case-field presence checks passed.
+- **Backend CI:** [run 42576728875](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42576728875) — success; **113 passed, 1 warning** (the existing Starlette/httpx TestClient deprecation).
+- **Frontend CI:** [run 42576728810](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42576728810) — success; launcher syntax/compatibility, case-draft persistence tests, TypeScript check and Vite production build passed.
+- **Windows source sync and local diagnostic:** [run 42576725334](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42576725334) — success; the local manifest was read back and verified as `feature/four-round-mdt-and-performance @ aa0e90b7ec6fbbea9fc359c98f2deefdad2cf902`. FastAPI health, Ollama reachability, React shell mounting and structured case-field presence checks passed.
 
-The self-hosted diagnostic found existing Vite and Uvicorn processes listening and the React shell mounted. It did not restart the existing Uvicorn process. Source sync therefore does not prove that an already-running backend has loaded the latest copied Python code; stop and restart the local services after backend changes.
+Round-level execution timing is now persisted as `round_runs.started_at` and `round_runs.finished_at`; the parent run stores `mdt_finished_at` when Round 4 reaches a terminal state. These fields are added to existing SQLite databases through additive migrations. Resetting a failed/interrupted round clears its attempt timestamps; resetting the Chair also clears the parent MDT finish time. The parent run's `created_at` is the start reference for elapsed time from run creation, not a separately measured first-token timestamp.
+
+The self-hosted diagnostic reads the exact source manifest and checks the running services and rendered React shell. It does **not** restart Uvicorn or prove that an already-running backend process has imported the newly copied Python code. Full patient-registry browser acceptance and runtime process reload remain unverified.
 
 ### Historical full live runs — not current-head validation
 
