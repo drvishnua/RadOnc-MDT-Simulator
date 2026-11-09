@@ -36,6 +36,7 @@ ARTIFACT_DIR = BACKEND_DIR / "validation_artifacts"
 ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
 run_store.DB_PATH = ARTIFACT_DIR / "live_four_round_validation.sqlite3"
 
+# Keep one bounded retry per stage; no unbounded local-model generation loop.
 MAX_STAGE_ATTEMPTS = 2
 
 
