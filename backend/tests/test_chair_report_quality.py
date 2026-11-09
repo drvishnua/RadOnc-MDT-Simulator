@@ -746,6 +746,8 @@ def test_final_chair_rebuilds_source_opinion_coverage_from_saved_r3_reviews():
 
     assert "STALE MODEL-CONTROLLED SOURCE REVIEW COVERAGE" not in unresolved
     assert "CASE:case_summary#1" in unresolved
+    assert source_one in unresolved
+    assert source_two in unresolved
     assert "2/45 roles supplied an exact source-bound review" in unresolved
     assert "option status role counts {'preserved': 1}" in unresolved
     assert "condition status role counts {'omitted': 1, 'preserved': 1}" in unresolved
