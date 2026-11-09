@@ -323,3 +323,46 @@ def test_matching_combined_ctnm_notation_does_not_generate_discrepancy():
     assert "t stage conflicts" not in warnings
     assert "n stage conflicts" not in warnings
     assert "m stage conflicts" not in warnings
+
+
+
+def test_parent_stage_group_is_compatible_with_documented_substage():
+    case = _case(
+        stage_group="Stage III",
+        case_summary="Case summary documents Stage IIIA disease.",
+    )
+    warnings = " ".join(build_case_validation_warnings(case)).casefold()
+    assert "stage_group conflicts" not in warnings
+
+
+def test_different_stage_group_substages_are_flagged():
+    case = _case(
+        stage_group="Stage IIIA",
+        case_summary="Case summary documents Stage IIIB disease.",
+    )
+    warnings = " ".join(build_case_validation_warnings(case)).casefold()
+    assert "stage_group conflicts" in warnings
+
+
+def test_generated_parent_stage_is_supported_by_source_substage():
+    case = _case(
+        age_years=None,
+        stage_group=None,
+        case_summary="Documented Stage IIIA disease.",
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has Stage III disease."
+    })
+    assert not any("assigns a stage group" in item for item in flags)
+
+
+def test_generated_substage_is_not_inferred_from_parent_stage():
+    case = _case(
+        age_years=None,
+        stage_group=None,
+        case_summary="Documented Stage III disease.",
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has Stage IIIA disease."
+    })
+    assert any("assigns a stage group" in item for item in flags)
