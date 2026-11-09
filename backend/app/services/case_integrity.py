@@ -69,7 +69,7 @@ def case_summary_has_attributed_opinions(case_summary: str) -> bool:
         r"(?:the\s+)?(?:surgeon|oncologist|medical oncologist|radiation oncologist|cardiologist|radiologist|pathologist|physician|patient|family|"
         r"[A-Z][A-Za-z.'-]*(?:\s+[A-Z][A-Za-z.'-]*){0,2})\b",
     )
-    return any(re.search(pattern, case_summary) for pattern in patterns)
+    return any(re.search(pattern, case_summary, re.IGNORECASE) for pattern in patterns)
 
 
 def build_source_case_facts(case: SyntheticCase) -> list[str]:
