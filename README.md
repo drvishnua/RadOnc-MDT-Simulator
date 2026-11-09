@@ -6,7 +6,7 @@ A local-first, AI-assisted educational simulator for multidisciplinary oncology 
 
 ## Purpose
 
-The initial scenario set focuses on synthetic head-and-neck cancer cases. The simulator helps trainees and educators explore specialty perspectives, patient context, uncertainty, disagreement, feasibility, resources, and governance. It is not a clinical decision-support system.
+The initial scenario set focuses on fictional head-and-neck training cases. The simulator helps trainees and educators explore specialty perspectives, patient context, uncertainty, disagreement, feasibility, resources, and governance. It is not a clinical decision-support system.
 
 ## 45 configured perspectives
 
@@ -14,7 +14,7 @@ All 45 configured role profiles are required in each of Rounds 1–3. Round 4 us
 
 ## Four-round workflow
 
-1. **Round 1 — Independent assessments:** Each role receives the saved synthetic case and its own role profile. No other agent's output is included. Each must state a position, provisional conclusion, and preferred educational option or explain why none can yet be preferred.
+1. **Round 1 — Independent assessments:** Each role receives the saved training case and its own role profile. No other agent's output is included. Each must state a position, provisional conclusion, and preferred educational option or explain why none can yet be preferred.
 2. **Round 2 — MDT debate:** Each role receives its own Round-1 view and a bounded digest of selected peer positions. It records agreements, substantive challenges, and any change in position. The full independent views remain preserved.
 3. **Round 3 — Adversarial review:** All roles identify unsupported assumptions, uncertainty, missing information, patient/context concerns, feasibility issues, risks, and governance questions.
 4. **Round 4 — Chair synthesis:** SG-07 creates a structured Chair draft. Before storage, the backend reconciles it against saved role records: exact position counts are recomputed, non-modal views are preserved with source conclusions, and missing-information, patient/family, feasibility, governance, and evidence-limitations sections are populated from source data.
@@ -41,7 +41,7 @@ Position labels are descriptions, not votes. The system does not invent a majori
 - GET /api/runtime
 - GET /api/agents
 - GET /api/patients
-- POST /api/patients — save a new synthetic patient with case version 1
+- POST /api/patients — save a new fictional training patient with case version 1
 - GET /api/patients/{patient_id} — patient versions and linked simulation history
 - POST /api/patients/{patient_id}/versions — append an immutable case version
 - POST /api/patients/{patient_id}/runs — start only from a saved case version
