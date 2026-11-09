@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readDraft, writeDraft } from "./caseDraft.js";
+import { readDraft, writeDraft, createBlankDraft } from "./caseDraft.js";
 
 const defaults = {
   scenario_title: "Synthetic head-and-neck case",
@@ -111,4 +111,25 @@ test("renders an empty structured list as empty form text", async () => {
   const { listToMultilineText, multilineTextToList } = await import("./caseDraft.js");
   assert.equal(listToMultilineText([]), "");
   assert.deepEqual(multilineTextToList(""), []);
+});
+
+
+test("clearing a patient entry blanks every field, including the diagnosis title", () => {
+  const defaultsWithPrefilledTitle = {
+    patient_name: "",
+    scenario_title: "Head-and-neck oncology case",
+    case_summary: "Old case text",
+    age_years: "64",
+    primary_site: "Oropharynx"
+  };
+  const cleared = createBlankDraft(defaultsWithPrefilledTitle);
+  assert.deepEqual(cleared, {
+    patient_name: "",
+    scenario_title: "",
+    case_summary: "",
+    age_years: "",
+    primary_site: ""
+  });
+  assert.notEqual(cleared, defaultsWithPrefilledTitle);
+  assert.equal(defaultsWithPrefilledTitle.scenario_title, "Head-and-neck oncology case");
 });
