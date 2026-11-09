@@ -21,7 +21,7 @@ from app.round_schemas import (
     RoundContributionDraft,
 )
 from app.schemas import SyntheticCase
-from app.services.case_integrity import audit_unverified_case_claims, build_case_prompt_context, build_case_report_title
+from app.services.case_integrity import audit_unverified_case_claims, build_case_prompt_context, build_case_report_title, case_summary_has_attributed_opinions
 from app.services.chair_report_quality import build_recorded_agreements
 
 T = TypeVar("T", bound=BaseModel)
@@ -770,6 +770,17 @@ async def generate_adversarial_contribution(
         f"R2:{profile['agent_id']}",
         *(f"R2:{peer['agent_id']}" for peer in peer_debate_views[:5]),
     ]
+    if case_summary_has_attributed_opinions(case.case_summary):
+        attribution_instruction = (
+            "CASE ATTRIBUTION CHECK: review only clearly speaker-attributed opinions in the verbatim case summary. "
+            "A peer's R2 contribution is never itself a case-summary attributed opinion. Do not create a case opinion from a peer role or its R2 ID."
+        )
+    else:
+        attribution_instruction = (
+            "CASE ATTRIBUTION CHECK: the verbatim case summary contains no clearly speaker-attributed opinion. "
+            "Return source_opinion_reviews as an empty list. Do not invent opinions, treat R2 peer roles as case sources, "
+            "or create CASE source IDs from R2 identifiers. Peer records remain separately attributable as R2 sources."
+        )
     prompt = (
         "ROUND 3 — ADVERSARIAL REVIEW. Educational simulation only; do not give a treatment "
         "instruction or invent facts/evidence. Treat the verbatim case summary as attributed "
@@ -826,7 +837,8 @@ async def generate_adversarial_contribution(
         "challenge in the review and copy it into substantive_challenges. Such a challenge must cite the exact "
         "CASE source ID and at least one supplied R2 peer ID. If status is unclear, explain the limitation and "
         "do not invent a challenge. Cases without clearly attributable opinions must have an empty review list.\\n"
-        f"ALLOWED ROUND SOURCE IDS: {', '.join(allowed_source_ids)}\\n"
+        + attribution_instruction + "\\n"
+        + f"ALLOWED ROUND SOURCE IDS: {', '.join(allowed_source_ids)}\\n"
         f"ROLE: {profile['name']}\\nMANDATE: {profile['mandate']}\\n"
         "SUPPLIED CASE:\\n"
         + json.dumps(build_case_prompt_context(case), ensure_ascii=False, separators=(",", ":"))
