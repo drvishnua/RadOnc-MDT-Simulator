@@ -882,7 +882,7 @@ def mark_round_agent_running(run_id: str, round_number: int, agent_id: str) -> N
         db.execute(
             """
             UPDATE agent_round_results SET status = 'running', result_json = NULL,
-                error_message = ?, started_at = ?, completed_at = NULL
+                error_message = ?, started_at = ?, completed_at = NULL, duration_seconds = NULL
             WHERE run_id = ? AND round_number = ? AND agent_id = ?
             """,
             (None, now, run_id, round_number, agent_id),
