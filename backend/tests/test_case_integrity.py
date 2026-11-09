@@ -380,3 +380,11 @@ def test_qualifier_for_one_claim_does_not_hide_a_later_claim_after_comma_or_cont
         "provisional_conclusion": "M1 cannot be assumed but there are no distant metastases."
     })
     assert any("absence of metastatic disease" in item for item in contrast_example)
+
+
+
+def test_comma_separated_question_remains_a_question_not_an_assertion():
+    flags = audit_unverified_case_claims(_case(), {
+        "risk_flags": ["Could this be T1, or should the team obtain further staging?"]
+    })
+    assert flags == []
