@@ -1519,3 +1519,133 @@ def test_failed_round_agent_resumes_without_replacing_completed_peer_records(mon
     assert recovered_row["status"] == "completed"
     assert recovered_row["result"] is not None
     assert completed_peer_after["result"] == completed_peer_before["result"]
+
+def test_failed_round_three_agent_resumes_without_replacing_completed_peer_records(monkeypatch, tmp_path):
+    run_id = _create_complete_round1(monkeypatch, tmp_path)
+
+    async def fake_debate(profile, case, own, peers, max_tokens=900):
+        assert peers
+        return _round_contribution(profile, case, own, peers, 2)
+
+    attempts = {"RO-01": 0}
+
+    async def fake_adversarial(profile, case, own, debate, peers, max_tokens=1300):
+        assert peers
+        assert debate["position"] == "conditional"
+        if profile["agent_id"] == "RO-01":
+            attempts["RO-01"] += 1
+            # Fail both the initial structured response and its one schema retry.
+            if attempts["RO-01"] <= 2:
+                raise AgentGenerationError("intentional R3 transient failure")
+        return _round_contribution(profile, case, own, peers, 3)
+
+    monkeypatch.setattr(mdt_rounds, "generate_debate_contribution", fake_debate)
+    monkeypatch.setattr(mdt_rounds, "generate_adversarial_contribution", fake_adversarial)
+
+    assert client.post(f"/api/runs/{run_id}/rounds/2").status_code == 200
+    r2_summary = client.get(f"/api/runs/{run_id}/rounds/2").json()
+    assert r2_summary["status"] == "completed"
+    assert r2_summary["completed_count"] == 45
+
+    assert client.post(f"/api/runs/{run_id}/rounds/3").status_code == 200
+    failed_summary = client.get(f"/api/runs/{run_id}/rounds/3").json()
+    assert failed_summary["status"] == "completed_with_errors"
+    assert failed_summary["completed_count"] == 44
+    assert failed_summary["failed_count"] == 1
+
+    before_resume = client.get(f"/api/runs/{run_id}/rounds/3/results").json()["results"]
+    failed_row = next(row for row in before_resume if row["agent_id"] == "RO-01")
+    completed_peer_before = next(row for row in before_resume if row["agent_id"] == "RO-02")
+    assert failed_row["status"] == "failed"
+    assert failed_row["result"] is None
+    assert failed_row["error_message"]
+    assert completed_peer_before["status"] == "completed"
+    assert completed_peer_before["result"]["round_number"] == 3
+
+    resumed = client.post(f"/api/runs/{run_id}/rounds/3/resume")
+    assert resumed.status_code == 200
+    final_summary = client.get(f"/api/runs/{run_id}/rounds/3").json()
+    assert final_summary["status"] == "completed"
+    assert final_summary["completed_count"] == 45
+    assert final_summary["failed_count"] == 0
+    assert attempts["RO-01"] == 3
+
+    after_resume = client.get(f"/api/runs/{run_id}/rounds/3/results").json()["results"]
+    recovered_row = next(row for row in after_resume if row["agent_id"] == "RO-01")
+    completed_peer_after = next(row for row in after_resume if row["agent_id"] == "RO-02")
+    assert recovered_row["status"] == "completed"
+    assert recovered_row["result"]["round_number"] == 3
+    assert completed_peer_after["result"] == completed_peer_before["result"]
+
+
+def test_chair_failure_retry_and_saved_four_round_records_survive_database_reinitialisation(monkeypatch, tmp_path):
+    run_id = _create_complete_round1(monkeypatch, tmp_path)
+
+    async def fake_debate(profile, case, own, peers, max_tokens=900):
+        assert peers
+        return _round_contribution(profile, case, own, peers, 2)
+
+    async def fake_adversarial(profile, case, own, debate, peers, max_tokens=1300):
+        assert peers
+        return _round_contribution(profile, case, own, peers, 3)
+
+    chair_attempts = 0
+
+    async def fake_chair(run_id_arg, case, round1, round2, round3, max_tokens=1600):
+        nonlocal chair_attempts
+        chair_attempts += 1
+        assert run_id_arg == run_id
+        assert len(round1) == len(round2) == len(round3) == 45
+        if chair_attempts <= 2:
+            raise AgentGenerationError("intentional Chair structured-output failure")
+        return _final_report(run_id_arg, case, round1, round2, round3)
+
+    monkeypatch.setattr(mdt_rounds, "generate_debate_contribution", fake_debate)
+    monkeypatch.setattr(mdt_rounds, "generate_adversarial_contribution", fake_adversarial)
+    monkeypatch.setattr(mdt_rounds, "generate_chair_report", fake_chair)
+
+    assert client.post(f"/api/runs/{run_id}/rounds/2").status_code == 200
+    assert client.get(f"/api/runs/{run_id}/rounds/2").json()["status"] == "completed"
+    assert client.post(f"/api/runs/{run_id}/rounds/3").status_code == 200
+    assert client.get(f"/api/runs/{run_id}/rounds/3").json()["status"] == "completed"
+
+    assert client.post(f"/api/runs/{run_id}/rounds/4").status_code == 200
+    failed_summary = client.get(f"/api/runs/{run_id}/rounds/4").json()
+    assert failed_summary["status"] == "completed_with_errors"
+    assert failed_summary["completed_count"] == 0
+    assert failed_summary["failed_count"] == 1
+    chair_failure = client.get(f"/api/runs/{run_id}/rounds/4/results").json()["results"][0]
+    assert chair_failure["agent_id"] == "SG-07"
+    assert chair_failure["status"] == "failed"
+    assert chair_failure["result"] is None
+    assert chair_failure["error_message"]
+    assert client.get(f"/api/runs/{run_id}/report").status_code == 404
+
+    resumed = client.post(f"/api/runs/{run_id}/rounds/4/resume")
+    assert resumed.status_code == 200
+    completed_summary = client.get(f"/api/runs/{run_id}/rounds/4").json()
+    assert completed_summary["status"] == "completed"
+    assert completed_summary["completed_count"] == 1
+    assert completed_summary["failed_count"] == 0
+    assert chair_attempts == 3
+
+    report_before_restart = client.get(f"/api/runs/{run_id}/report").json()
+    assert report_before_restart["not_a_treatment_instruction"] is True
+    assert report_before_restart["consensus_points"] == []
+    assert report_before_restart["consensus_status"] == "insufficient_information"
+    run_before_restart = run_store.get_run(run_id)
+    saved_r1 = client.get(f"/api/runs/{run_id}/results").json()["results"]
+    saved_r2 = client.get(f"/api/runs/{run_id}/rounds/2/results").json()["results"]
+    saved_r3 = client.get(f"/api/runs/{run_id}/rounds/3/results").json()["results"]
+    saved_r4 = client.get(f"/api/runs/{run_id}/rounds/4/results").json()["results"]
+
+    # Each store operation uses a fresh SQLite connection; explicit reinitialisation
+    # exercises schema migration/startup against the persisted database file.
+    run_store.initialize_database()
+
+    assert run_store.get_run(run_id)["case_snapshot_sha256"] == run_before_restart["case_snapshot_sha256"]
+    assert run_store.list_results(run_id) == saved_r1
+    assert run_store.list_round_results(run_id, 2) == saved_r2
+    assert run_store.list_round_results(run_id, 3) == saved_r3
+    assert run_store.list_round_results(run_id, 4) == saved_r4
+    assert run_store.get_final_report(run_id) == report_before_restart
