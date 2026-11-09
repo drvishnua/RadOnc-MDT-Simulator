@@ -231,6 +231,11 @@ async function setAllStructuredFieldValues() {
 }
 
 async function assertAllStructuredFieldValues() {
+  // Labels inside a closed <details> element have no rendered innerText.
+  // Open the structured section before using the same label-based field checks.
+  await evaluate(
+    "(() => { const section = document.querySelector('details.structured-fields'); if (!section) throw new Error('Structured case details section is missing.'); section.open = true; return true; })()"
+  );
   for (const [label, value] of structuredFieldValues) {
     await assertFieldValue(label, value);
   }
