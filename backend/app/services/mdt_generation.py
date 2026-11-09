@@ -394,7 +394,7 @@ def reconcile_chair_report_draft(
     feasibility = _unique_strings(feasibility, limit=10)
 
     governance = [
-        "Synthetic educational simulation only; this report is not a clinical decision or treatment instruction.",
+        "Educational simulation only; this report is not a clinical decision or treatment instruction.",
         "Patient goals, consent, and decision-making preferences must not be inferred from missing data.",
         "No evidence retrieval or citation verification is connected to this run.",
     ]
@@ -419,7 +419,7 @@ def reconcile_chair_report_draft(
     elif consensus_status == "insufficient_information":
         key_unknowns = "; ".join(uncertainties[:4]) or "critical clinical information is not supplied"
         chair_conclusion = (
-            "No treatment recommendation can be made from the supplied synthetic case. "
+            "No treatment recommendation can be made from the supplied case. "
             f"Unresolved information includes: {key_unknowns}. Round-3 positions were "
             f"{_format_position_counts(final_counts)}; any conditional view is retained separately."
         )
@@ -431,7 +431,7 @@ def reconcile_chair_report_draft(
         )
     else:
         chair_conclusion = (
-            "The recorded Round-3 positions are aligned, but this is only a synthetic educational "
+            "The recorded Round-3 positions are aligned, but this is only an educational "
             "summary and does not establish clinical validity or support a patient-specific treatment recommendation."
         )
 
@@ -551,7 +551,7 @@ async def generate_debate_contribution(
         "response_to_other_perspectives and leave the corresponding list empty. Preserve "
         "conditionality; do not convert conditional positions into support.\\n"
         f"ROLE: {profile['name']}\nMANDATE: {profile['mandate']}\n"
-        "SYNTHETIC CASE:\n"
+        "SUPPLIED CASE:\n"
         + json.dumps(build_case_prompt_context(case), ensure_ascii=False, separators=(",", ":"))
         + "\nYOUR ROUND-1 POSITION:\n"
         + json.dumps(own, ensure_ascii=False, separators=(",", ":"))
@@ -691,7 +691,7 @@ async def generate_adversarial_contribution(
         "no attributed source opinions, return an empty source_opinion_reviews list.\\n"
         f"ALLOWED ROUND SOURCE IDS: {', '.join(allowed_source_ids)}\\n"
         f"ROLE: {profile['name']}\\nMANDATE: {profile['mandate']}\\n"
-        "SYNTHETIC CASE:\\n"
+        "SUPPLIED CASE:\\n"
         + json.dumps(build_case_prompt_context(case), ensure_ascii=False, separators=(",", ":"))
         + "\\nYOUR R1 AND COMPLETE OWN R2 RECORD (bounded fields):\\n"
         + json.dumps(own, ensure_ascii=False, separators=(",", ":"))
@@ -889,7 +889,7 @@ async def generate_chair_report(
         "Do not invent consensus. Explicitly separate genuine agreement from unresolved dissent. "
         "Do not recommend a patient-specific treatment or include doses. Evidence retrieval is "
         "not connected: say so, and identify evidence gaps rather than inventing citations. "
-        "Do not silently resolve contradictory facts. Preserve the source-case's explicitly attributed opinions and every condition attached to them; do not relabel them as verified facts or MDT consensus. Reconcile the saved R2/R3 substantive_challenges as source-attributed review records, retaining their originating role IDs and round. Do not silently discard a challenge because it is absent from a compressed representative digest. Do not say unanimous, all agents, or no dissent unless exact position counts support it. Treat position labels as descriptions, not votes; distinguish a conditional view from support/opposition. Consensus requires the same explicit proposition or educational option to be supported in the saved contributions. A uniform position-label distribution alone is not consensus; when no shared proposition is established, set insufficient_information.\nSYNTHETIC CASE:\n"
+        "Do not silently resolve contradictory facts. Preserve the source-case's explicitly attributed opinions and every condition attached to them; do not relabel them as verified facts or MDT consensus. Reconcile the saved R2/R3 substantive_challenges as source-attributed review records, retaining their originating role IDs and round. Do not silently discard a challenge because it is absent from a compressed representative digest. Do not say unanimous, all agents, or no dissent unless exact position counts support it. Treat position labels as descriptions, not votes; distinguish a conditional view from support/opposition. Consensus requires the same explicit proposition or educational option to be supported in the saved contributions. A uniform position-label distribution alone is not consensus; when no shared proposition is established, set insufficient_information.\nSUPPLIED CASE:\n"
         + json.dumps(build_case_prompt_context(case), ensure_ascii=False, separators=(",", ":"))
         + "\nROUND 1 INDEPENDENT POSITIONS:\n"
         + json.dumps(digest(round1_views, "round1"), ensure_ascii=False, separators=(",", ":"))
