@@ -49,3 +49,9 @@ export function listToMultilineText(values) {
 export function multilineTextToList(value) {
   return value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
 }
+
+
+/** Return a fresh draft with every form field cleared. */
+export function createBlankDraft(defaults) {
+  return Object.fromEntries(Object.keys(defaults).map((key) => [key, ""]));
+}
