@@ -22,7 +22,11 @@ from app.round_schemas import (
 )
 from app.schemas import SyntheticCase
 from app.services.case_integrity import audit_unverified_case_claims, build_case_prompt_context, build_case_report_title, case_summary_has_attributed_opinions
-from app.services.chair_report_quality import build_recorded_agreements, count_distinct_role_positions
+from app.services.chair_report_quality import (
+    build_recorded_agreements,
+    build_source_opinion_review_coverage,
+    count_distinct_role_positions,
+)
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -200,118 +204,6 @@ def _format_position_counts(counts: Counter) -> str:
     )
 
 
-def _source_opinion_review_coverage(
-    round3_entries: list[tuple[dict, dict]],
-    case_summary: str,
-) -> tuple[list[str], list[str]]:
-    """Summarise only source reviews bound to consistent exact case-summary excerpts.
-
-    Counts are distinct contributing-role coverage, never votes or consensus.
-    Model-authored labels are displayed as submitted, not treated as verified identities.
-    """
-    source_id_pattern = re.compile(r"^CASE:case_summary#([1-9][0-9]*)$")
-    id_to_excerpt: dict[str, str] = {}
-    excerpt_to_id: dict[str, str] = {}
-    roles_by_source: dict[str, dict[str, list[dict]]] = {}
-    labels_by_source: dict[str, set[str]] = {}
-    integrity: list[str] = []
-    conflicting_ids: set[str] = set()
-
-    for row, result in round3_entries:
-        agent_id = str(row.get("agent_id") or "unknown-role")
-        for review in (result.get("source_opinion_reviews") or []):
-            if not isinstance(review, dict):
-                continue
-            source_id = str(review.get("source_id") or "")
-            excerpt = str(review.get("source_excerpt") or "")
-            if not source_id_pattern.fullmatch(source_id):
-                integrity.append(
-                    f"R3 source-opinion review from {agent_id} has invalid source identifier "
-                    f"{source_id or '(missing)'}; expected CASE:case_summary#N."
-                )
-                continue
-            if not excerpt or excerpt not in case_summary:
-                integrity.append(
-                    f"R3 source-opinion review {source_id} from {agent_id} lacks an exact contiguous "
-                    "excerpt from the supplied case_summary."
-                )
-                continue
-            prior_excerpt = id_to_excerpt.get(source_id)
-            if prior_excerpt is not None and prior_excerpt != excerpt:
-                conflicting_ids.add(source_id)
-                integrity.append(
-                    f"R3 source identifier {source_id} maps to more than one exact case-summary excerpt."
-                )
-            prior_id = excerpt_to_id.get(excerpt)
-            if prior_id is not None and prior_id != source_id:
-                conflicting_ids.update({prior_id, source_id})
-                integrity.append(
-                    f"An exact case-summary excerpt is assigned both {prior_id} and {source_id}."
-                )
-            id_to_excerpt[source_id] = excerpt
-            excerpt_to_id[excerpt] = source_id
-            roles_by_source.setdefault(source_id, {}).setdefault(agent_id, []).append(review)
-            label = " ".join(str(review.get("opinion_label") or "").split())
-            if label:
-                labels_by_source.setdefault(source_id, set()).add(label)
-
-    valid_numbers = sorted(
-        int(match.group(1))
-        for source_id in id_to_excerpt
-        if (match := source_id_pattern.fullmatch(source_id))
-    )
-    if valid_numbers and valid_numbers != list(range(1, max(valid_numbers) + 1)):
-        integrity.append(
-            "R3 source-opinion identifiers are not sequential from CASE:case_summary#1; "
-            "one or more attributed source identifiers may be missing or inconsistently numbered."
-        )
-
-    coverage: list[str] = []
-    for source_id in sorted(
-        roles_by_source,
-        key=lambda value: int(source_id_pattern.fullmatch(value).group(1)),
-    ):
-        if source_id in conflicting_ids:
-            integrity.append(
-                f"R3 coverage for {source_id} was excluded because its identifier-to-excerpt mapping conflicts."
-            )
-            continue
-
-        option_counts: Counter = Counter()
-        condition_counts: Counter = Counter()
-        option_conflicts: list[str] = []
-        condition_conflicts: list[str] = []
-        for agent_id, reviews in sorted(roles_by_source[source_id].items()):
-            option_values = {str(review.get("option_status") or "unreported") for review in reviews}
-            condition_values = {str(review.get("conditions_status") or "unreported") for review in reviews}
-            if len(option_values) == 1:
-                option_counts[next(iter(option_values))] += 1
-            else:
-                option_conflicts.append(agent_id)
-            if len(condition_values) == 1:
-                condition_counts[next(iter(condition_values))] += 1
-            else:
-                condition_conflicts.append(agent_id)
-
-        labels = sorted(labels_by_source.get(source_id, set()))
-        label_note = f"model-reported label(s) {labels}" if labels else "no model-reported label"
-        excerpt = _compact(id_to_excerpt[source_id], 180)
-        coverage.append(
-            f"R3 source-opinion coverage (distinct roles; labels not independently verified) — "
-            f"{source_id} ({label_note}; exact excerpt: \"{excerpt}\"): "
-            f"option status roles {dict(sorted(option_counts.items()))}; "
-            f"condition status roles {dict(sorted(condition_counts.items()))}; "
-            f"conflicting duplicate-role reviews excluded "
-            f"(option: {option_conflicts}; conditions: {condition_conflicts})."
-        )
-        if len(labels) > 1:
-            integrity.append(
-                f"R3 source-opinion label for {source_id} differs across roles: {labels}."
-            )
-
-    return coverage, _unique_strings(integrity, limit=20)
-
-
 def reconcile_chair_report_draft(
     run_id: str,
     case: SyntheticCase,
@@ -436,8 +328,8 @@ def reconcile_chair_report_draft(
                     )
     # Aggregate dynamically numbered source reviews only when their identifiers map
     # consistently to exact case-summary excerpts. Counts are distinct roles, not votes.
-    source_coverage, source_review_integrity = _source_opinion_review_coverage(
-        r3, case.case_summary
+    source_coverage, source_review_integrity = build_source_opinion_review_coverage(
+        round3_views, case.case_summary
     )
     unresolved.extend(source_coverage)
     unresolved.extend(source_review_integrity)
