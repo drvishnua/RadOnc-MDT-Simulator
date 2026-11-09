@@ -24,8 +24,7 @@ function Test-ExpectedBackendProcess($Process) {
     $command = [string]$Process.CommandLine
     if ([string]::IsNullOrWhiteSpace($command)) { return $false }
 
-    # Derive the executable from the first command-line token. WMI's
-    # ExecutablePath can be blank for processes owned by another session.
+    # Verify the command-line executable is the exact backend venv Python.
     $commandExe = $null
     $arguments = $null
     if ($command.StartsWith('"')) {
@@ -34,30 +33,37 @@ function Test-ExpectedBackendProcess($Process) {
         $commandExe = $command.Substring(1, $closingQuote - 1)
         $arguments = $command.Substring($closingQuote + 1)
     } else {
-        $firstSpace = $command.IndexOf(' ')
+        $firstSpace = $command.IndexOf(" ")
         if ($firstSpace -lt 1) { return $false }
         $commandExe = $command.Substring(0, $firstSpace)
         $arguments = $command.Substring($firstSpace + 1)
     }
-
-    try {
-        $commandExe = [IO.Path]::GetFullPath($commandExe)
-    } catch {
-        return $false
-    }
+    try { $commandExe = [IO.Path]::GetFullPath($commandExe) } catch { return $false }
     if ($commandExe -ine $expectedExe) { return $false }
 
-    # Windows virtual-environment launchers can report the base interpreter
-    # as the process image while retaining the venv executable in CommandLine.
-    # Accept only the venv executable itself or the base python.exe declared by
-    # this exact venv's pyvenv.cfg.
+    # A Windows venv process can report the base interpreter as its image.
+    # Accept only the venv Python or the base python.exe declared by pyvenv.cfg.
     if (-not [string]::IsNullOrWhiteSpace([string]$Process.ExecutablePath)) {
         try {
             $actualImage = [IO.Path]::GetFullPath([string]$Process.ExecutablePath)
             $allowedImages = @($expectedExe)
             $venvConfig = Join-Path $BackendDir ".venv\pyvenv.cfg"
             if (Test-Path $venvConfig) {
-                $homeLine = Get-Content $venvConfig | Where-Object { $_ -match '^\s*home\s*=\s*(.+?)\s*
+                foreach ($configLine in (Get-Content $venvConfig)) {
+                    if ($configLine.StartsWith("home =")) {
+                        $baseHome = $configLine.Substring($configLine.IndexOf("=") + 1).Trim()
+                        $allowedImages += [IO.Path]::GetFullPath((Join-Path $baseHome "python.exe"))
+                        break
+                    }
+                }
+            }
+            if (-not ($allowedImages | Where-Object { $_ -ieq $actualImage })) { return $false }
+        } catch {
+            return $false
+        }
+    }
+
+    return (
         $arguments -match '(?i)(?:^|\s)-m\s+uvicorn\s+app\.main:app(?:\s|$)' -and
         $arguments -match '(?i)--host\s+127\.0\.0\.1(?:\s|$)' -and
         $arguments -match '(?i)--port\s+8000(?:\s|$)'
