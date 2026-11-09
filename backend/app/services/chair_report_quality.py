@@ -118,12 +118,36 @@ def _safe_role_text_items(
     )
 
 
-def _position_counts(rows: list[dict], field: str) -> Counter:
-    return Counter(
-        item.get("position")
-        for _, item in _entries(rows, field)
-        if item.get("position")
-    )
+def _distinct_role_entries(rows: list[dict], field: str, round_label: str, integrity_flags: list[str] | None = None) -> list[tuple[dict, dict]]:
+    """Return at most one unambiguous completed contribution per role and round."""
+    grouped: dict[str, list[tuple[dict, dict]]] = defaultdict(list)
+    for row, item in _entries(rows, field):
+        agent_id = str(row.get("agent_id") or "").strip()
+        if not agent_id:
+            if integrity_flags is not None:
+                integrity_flags.append(f"{round_label} completed contribution has no agent_id and was excluded from distinct-role summaries.")
+            continue
+        grouped[agent_id].append((row, item))
+    output: list[tuple[dict, dict]] = []
+    for agent_id, entries in grouped.items():
+        if len(entries) > 1:
+            positions = {item.get("position") for _, item in entries}
+            if len(positions) > 1:
+                if integrity_flags is not None:
+                    values = sorted(str(value) for value in positions)
+                    integrity_flags.append(f"{round_label} contains duplicate completed records for {agent_id} with conflicting positions {values}; the role was excluded from deterministic position counts and derived role summaries.")
+                continue
+            if integrity_flags is not None:
+                integrity_flags.append(f"{round_label} contains {len(entries)} completed records for {agent_id} with the same position; the role was counted once and the first record retained.")
+        output.append(entries[0])
+    return output
+
+def count_distinct_role_positions(rows: list[dict], field: str, round_label: str = "Round", integrity_flags: list[str] | None = None) -> Counter:
+    """Count one unambiguous position per distinct completed role."""
+    return Counter(item.get("position") for _, item in _distinct_role_entries(rows, field, round_label, integrity_flags) if item.get("position"))
+
+def _position_counts(rows: list[dict], field: str, round_label: str = "Round", integrity_flags: list[str] | None = None) -> Counter:
+    return count_distinct_role_positions(rows, field, round_label, integrity_flags)
 
 
 def _format_position_counts(counts: Counter) -> str:
@@ -165,7 +189,7 @@ def _minority_history(
     """
     by_agent: dict[str, dict[str, object]] = defaultdict(lambda: {"name": "Role", "positions": [], "events": []})
     for round_number, rows, field in ((1, round1_rows, "assessment"), (2, round2_rows, "result"), (3, round3_rows, "result")):
-        for row, item in _entries(rows, field):
+        for row, item in _distinct_role_entries(rows, field, f"Round {round_number}", integrity_flags):
             agent_id = str(row.get("agent_id") or "unknown-role")
             record = by_agent[agent_id]
             record["name"] = row.get("agent_name") or record["name"]
@@ -193,7 +217,7 @@ def _minority_history(
                 event += f" — {conclusion}"
             record["events"].append(event)
 
-    round3_counts = _position_counts(round3_rows, "result")
+    round3_counts = _position_counts(round3_rows, "result", "Round 3", integrity_flags)
     final_modal = _unique_modal_position(round3_counts)
     output: list[tuple[int, str]] = []
     for agent_id in sorted(by_agent):
@@ -264,7 +288,7 @@ def build_recorded_agreements(
     """Preserve only auditable, role-attributed agreement statements, never consensus."""
     output: list[str] = []
     for round_number, rows in ((2, round2_rows), (3, round3_rows)):
-        for row, item in _entries(rows, "result"):
+        for row, item in _distinct_role_entries(rows, "result", f"Round {round_number}", integrity_flags):
             role_id = str(row.get("agent_id") or "unknown-role")
             role_name = str(row.get("agent_name") or "Role")
             statements: list[str] = []
@@ -310,20 +334,20 @@ def ensure_chair_report_completeness(
     data = report.model_dump()
     data["report_title"] = build_case_report_title(case)
     rows_by_round = (round1_rows, round2_rows, round3_rows)
+    quarantine_flags: list[str] = []
+    stored_integrity_flags: list[str] = []
     counts_by_round = {
-        round_number: _position_counts(rows, field)
+        round_number: _position_counts(rows, field, f"Round {round_number}", quarantine_flags)
         for (round_number, field), rows in zip(ROUND_SOURCES, rows_by_round)
     }
     final_counts = counts_by_round[3]
-    quarantine_flags: list[str] = []
-    stored_integrity_flags: list[str] = []
 
     for round_number, rows, field in (
         (1, round1_rows, "assessment"),
         (2, round2_rows, "result"),
         (3, round3_rows, "result"),
     ):
-        for row, item in _entries(rows, field):
+        for row, item in _distinct_role_entries(rows, field, f"Round {round_number}", quarantine_flags):
             role_id = str(row.get("agent_id") or "unknown-role")
             for flag in item.get("case_data_integrity_flags") or []:
                 if isinstance(flag, str) and flag.strip():
@@ -363,7 +387,7 @@ def ensure_chair_report_completeness(
     # trusting an earlier Chair draft/reconciliation string.
     saved_challenge_items: list[str] = []
     for round_number, rows in ((2, round2_rows), (3, round3_rows)):
-        for row, item in _entries(rows, "result"):
+        for row, item in _distinct_role_entries(rows, "result", f"Round {round_number}", quarantine_flags):
             role_id = str(row.get("agent_id") or "unknown-role")
             role_name = str(row.get("agent_name") or "Role")
             safe_challenges = _safe_role_text_items(

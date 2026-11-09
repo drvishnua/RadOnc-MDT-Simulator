@@ -22,7 +22,7 @@ from app.round_schemas import (
 )
 from app.schemas import SyntheticCase
 from app.services.case_integrity import audit_unverified_case_claims, build_case_prompt_context, build_case_report_title, case_summary_has_attributed_opinions
-from app.services.chair_report_quality import build_recorded_agreements
+from app.services.chair_report_quality import build_recorded_agreements, count_distinct_role_positions
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -98,11 +98,7 @@ def _round_items(rows: list[dict], field: str) -> list[tuple[dict, dict]]:
 
 
 def _position_counts(rows: list[dict], field: str) -> Counter:
-    return Counter(
-        result.get("position")
-        for _, result in _round_items(rows, field)
-        if result.get("position")
-    )
+    return count_distinct_role_positions(rows, field)
 
 
 def _unique_modal_position(counts: Counter) -> str | None:
