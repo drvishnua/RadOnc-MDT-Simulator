@@ -369,8 +369,18 @@ def build_case_validation_warnings(case: SyntheticCase) -> list[str]:
         ("clinical_m_stage", "M stage", re.compile(r"\b(?:c|p|yc|yp)?M(?:x|0|1)\b", re.IGNORECASE)),
     ):
         structured_value = getattr(case, field)
-        text_values = {match.group(0).casefold() for match in pattern.finditer(summary)}
-        if structured_value and text_values and structured_value.casefold() not in text_values:
+        normalize_stage = lambda value: re.sub(
+            r"^(?:yc|yp|c|p)", "", value.casefold().replace(" ", "")
+        )
+        text_values = {
+            normalize_stage(match.group(0))
+            for match in pattern.finditer(summary)
+        }
+        if (
+            structured_value
+            and text_values
+            and normalize_stage(structured_value) not in text_values
+        ):
             warnings.append(
                 f"Structured {label} conflicts with an explicit {label} statement in free text; preserve both and reconcile before simulation."
             )
