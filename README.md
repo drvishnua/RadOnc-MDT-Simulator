@@ -2,7 +2,7 @@
 
 A local-first, AI-assisted educational simulator for multidisciplinary oncology case discussions.
 
-> **Current milestone (9 November 2026):** The development branch contains the four-round 45 + 45 + 45 + 1 workflow, patient registry/versioning, expanded case-integrity checks and Chair safeguards (including a neutral title when both primary site and histology are absent). CI passed on code snapshot `084d3353bc3dd71a7ee27895e41434c0d425644b` (backend 111 passed; frontend 21 passed and production build passed). The latest detailed live MDT-006 audit remains a historical failure with 134 hard failures and 92 major findings; the later prompt/schema and case-integrity changes have not yet had a fresh full live run. Feature-branch pushes synchronize source to the laptop `Source` folder, but an already-running backend must be restarted to load copied Python changes.
+> **Current milestone (9 November 2026):** The development branch contains the four-round 45 + 45 + 45 + 1 workflow, patient registry/versioning, expanded case-integrity checks, Chair safeguards and persisted round/full-MDT completion timestamps. The tested code snapshot is `aa0e90b7ec6fbbea9fc359c98f2deefdad2cf902`: backend CI passed (113 tests, 1 existing deprecation warning), frontend launcher/persistence checks, TypeScript and production build passed, and the Windows sync workflow verified the laptop `Source` manifest at that exact SHA. The latest detailed live MDT-006 audit remains a historical failure with 134 hard failures and 92 major findings; later prompt/schema and case-integrity changes have not had a fresh full live run. Source sync does not restart an already-running backend, so copied Python changes require a controlled service restart before live validation.
 
 ## Purpose
 
