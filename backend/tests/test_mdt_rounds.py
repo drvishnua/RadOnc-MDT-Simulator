@@ -1076,3 +1076,84 @@ def test_r3_generation_flags_missing_verbatim_peer_evidence_without_dropping_rol
     assert "omits its attributed CASE source ID" in flags
     assert "omitted or partly preserved but provides no source-linked challenge" in flags
     assert "no exact supporting excerpt" in flags
+
+
+
+def test_mdt_and_round_timestamps_cover_all_rounds_and_clear_on_chair_retry(monkeypatch, tmp_path):
+    run_id = _create_complete_round1(monkeypatch, tmp_path)
+    assert run_store.get_run(run_id)["mdt_finished_at"] is None
+
+    role_ids = [profile["agent_id"] for profile in run_store.AGENT_PROFILES]
+
+    def complete_round(round_number, agent_ids, started_at, finished_at):
+        monkeypatch.setattr(run_store, "_now", lambda: started_at)
+        run_store.mark_round_running(run_id, round_number)
+        for agent_id in agent_ids:
+            run_store.save_round_success(run_id, round_number, agent_id, "{}", 0.01)
+        monkeypatch.setattr(run_store, "_now", lambda: finished_at)
+        run_store.mark_round_finished(run_id, round_number)
+        summary = run_store.get_round_summary(run_id, round_number)
+        assert summary["started_at"] == started_at
+        assert summary["finished_at"] == finished_at
+
+    run_store.create_round_job(run_id, 2)
+    complete_round(2, role_ids, "2099-01-01T10:00:00+00:00", "2099-01-01T10:05:00+00:00")
+    assert run_store.get_run(run_id)["mdt_finished_at"] is None
+
+    run_store.create_round_job(run_id, 3)
+    complete_round(3, role_ids, "2099-01-01T10:06:00+00:00", "2099-01-01T10:12:00+00:00")
+    assert run_store.get_run(run_id)["mdt_finished_at"] is None
+
+    run_store.create_round_job(run_id, 4)
+    monkeypatch.setattr(run_store, "_now", lambda: "2099-01-01T10:13:00+00:00")
+    run_store.mark_round_running(run_id, 4)
+    run_store.save_round_failure(run_id, 4, "SG-07", "Intentional timestamp retry test.", 0.01)
+    monkeypatch.setattr(run_store, "_now", lambda: "2099-01-01T10:14:00+00:00")
+    run_store.mark_round_finished(run_id, 4)
+    assert run_store.get_run(run_id)["status"] == "completed_with_errors"
+    assert run_store.get_run(run_id)["mdt_finished_at"] == "2099-01-01T10:14:00+00:00"
+
+    monkeypatch.setattr(run_store, "_now", lambda: "2099-01-01T10:15:00+00:00")
+    run_store.reset_failed_round_agents(run_id, 4)
+    assert run_store.get_run(run_id)["mdt_finished_at"] is None
+    reset_summary = run_store.get_round_summary(run_id, 4)
+    assert reset_summary["started_at"] is None
+    assert reset_summary["finished_at"] is None
+
+    complete_round(4, ["SG-07"], "2099-01-01T10:16:00+00:00", "2099-01-01T10:17:00+00:00")
+    assert run_store.get_run(run_id)["status"] == "completed"
+    assert run_store.get_run(run_id)["mdt_finished_at"] == "2099-01-01T10:17:00+00:00"
+
+
+def test_completion_timestamp_columns_migrate_existing_sqlite_database(monkeypatch, tmp_path):
+    legacy_db = tmp_path / "legacy-timestamps.sqlite3"
+    connection = run_store.sqlite3.connect(legacy_db)
+    connection.execute(
+        """CREATE TABLE simulation_runs (
+            run_id TEXT PRIMARY KEY, case_json TEXT NOT NULL, status TEXT NOT NULL,
+            total_agents INTEGER NOT NULL, current_agent_id TEXT, patient_id TEXT,
+            case_version_id TEXT, case_version_number INTEGER,
+            created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+        )"""
+    )
+    connection.execute(
+        """CREATE TABLE round_runs (
+            run_id TEXT NOT NULL, round_number INTEGER NOT NULL, status TEXT NOT NULL,
+            total_agents INTEGER NOT NULL, current_agent_id TEXT,
+            created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+            PRIMARY KEY (run_id, round_number),
+            FOREIGN KEY (run_id) REFERENCES simulation_runs(run_id) ON DELETE CASCADE
+        )"""
+    )
+    connection.commit()
+    connection.close()
+
+    monkeypatch.setattr(run_store, "DB_PATH", legacy_db)
+    run_store.initialize_database()
+    with run_store._connect() as db:
+        run_store._ensure_round_tables(db)
+        run_columns = {row["name"] for row in db.execute("PRAGMA table_info(simulation_runs)")}
+        round_columns = {row["name"] for row in db.execute("PRAGMA table_info(round_runs)")}
+
+    assert "mdt_finished_at" in run_columns
+    assert {"started_at", "finished_at"}.issubset(round_columns)
