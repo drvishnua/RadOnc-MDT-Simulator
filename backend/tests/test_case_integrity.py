@@ -217,3 +217,56 @@ def test_patient_preferences_wording_is_not_misread_as_a_patient_choice():
     assert not any("patient preference/decision" in item for item in audit_unverified_case_claims(
         case, {"unknowns": ["The patient's preferences should be elicited."]}
     ))
+
+
+
+def test_unreported_age_and_stage_group_assertions_are_flagged():
+    case = _case(age_years=None, stage_group=None)
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "This 62-year-old patient has Stage IIIA disease."
+    })).casefold()
+    assert "assigns an age" in flags
+    assert "assigns a stage group" in flags
+
+
+def test_age_and_stage_group_in_source_summary_are_not_mislabelled_as_invented():
+    case = _case(
+        age_years=None,
+        stage_group=None,
+        case_summary="A 62-year-old patient with documented Stage IIIA disease.",
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The 62-year-old patient has Stage IIIA disease."
+    })
+    assert not any("assigns an age" in item for item in flags)
+    assert not any("assigns a stage group" in item for item in flags)
+
+
+def test_qualified_age_and_stage_group_uncertainty_is_not_flagged():
+    case = _case(age_years=None, stage_group=None)
+    flags = audit_unverified_case_claims(case, {
+        "risk_flags": [
+            "Age is not reported and must not be assumed.",
+            "Stage IIIA is hypothetical and cannot be inferred.",
+        ]
+    })
+    assert not any("assigns an age" in item for item in flags)
+    assert not any("assigns a stage group" in item for item in flags)
+
+
+def test_validation_warns_on_explicit_age_sex_and_stage_discrepancies():
+    case = _case(
+        age_years=75,
+        sex_at_birth="male",
+        clinical_t_stage="T2",
+        clinical_n_stage="N0",
+        clinical_m_stage="M0",
+        stage_group="Stage II",
+        case_summary="A 68-year-old woman with cT3N1M0 disease, Stage III.",
+    )
+    joined = " ".join(build_case_validation_warnings(case)).casefold()
+    assert "structured age_years" in joined
+    assert "sex_at_birth conflicts" in joined
+    assert "t stage conflicts" in joined
+    assert "n stage conflicts" in joined
+    assert "stage_group conflicts" in joined
