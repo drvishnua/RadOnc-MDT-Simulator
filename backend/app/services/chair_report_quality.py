@@ -162,12 +162,14 @@ def _distinct_role_entries(rows: list[dict], field: str, round_label: str, integ
     """Return at most one unambiguous completed contribution per role and round."""
     grouped: dict[str, list[tuple[dict, dict]]] = defaultdict(list)
     for row, item in _entries(rows, field):
-        agent_id = str(row.get("agent_id") or "").strip()
-        if not agent_id:
+        raw_agent_id = str(row.get("agent_id") or "").strip()
+        if not raw_agent_id:
             if integrity_flags is not None:
                 integrity_flags.append(f"{round_label} completed contribution has no agent_id and was excluded from distinct-role summaries.")
             continue
-        grouped[agent_id].append((row, item))
+        # Role identifiers are canonical uppercase codes (for example RO-01).
+        # Normalise only the grouping key; the saved source row is left unchanged.
+        grouped[raw_agent_id.upper()].append((row, item))
     output: list[tuple[dict, dict]] = []
     for agent_id, entries in grouped.items():
         if len(entries) > 1:
