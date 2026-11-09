@@ -155,7 +155,16 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             r"(\d{1,3})\s*y/o)\b",
             re.IGNORECASE,
         )
-        unsupported_ages = _unsupported_matches(age_pattern, text, source_text)
+        def age_numbers(value: str) -> set[int]:
+            return {
+                int(number)
+                for snippet in _unqualified_matches(age_pattern, value)
+                for groups in age_pattern.findall(snippet)
+                for number in groups
+                if number
+            }
+
+        unsupported_ages = sorted(age_numbers(text) - age_numbers(source_text))
         if unsupported_ages:
             flags.append(
                 "Generated narrative assigns an age ("
@@ -170,8 +179,22 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             r"\b(?:clinical\s+)?stage\s*(?:group\s*)?(IV|III|II|I|[1-4])(?:[ABC])?\b",
             re.IGNORECASE,
         )
-        unsupported_stage_groups = _unsupported_matches(
-            stage_group_pattern, text, source_text
+        roman_values = {"I": 1, "II": 2, "III": 3, "IV": 4}
+        def stage_group_keys(value: str) -> set[str]:
+            keys: set[str] = set()
+            for snippet in _unqualified_matches(stage_group_pattern, value):
+                match = stage_group_pattern.search(snippet)
+                if not match:
+                    continue
+                numeral = match.group(1).upper()
+                suffix = (match.group(2) or "").upper()
+                number = roman_values.get(numeral, int(numeral) if numeral.isdigit() else None)
+                if number is not None:
+                    keys.add(f"{number}{suffix}")
+            return keys
+
+        unsupported_stage_groups = sorted(
+            stage_group_keys(text) - stage_group_keys(source_text)
         )
         if unsupported_stage_groups:
             flags.append(
@@ -351,29 +374,36 @@ def build_case_validation_warnings(case: SyntheticCase) -> list[str]:
             r"\b(?:clinical\s+)?stage\s*(?:group\s*)?(IV|III|II|I|[1-4])(?:[ABC])?\b",
             re.IGNORECASE,
         )
+        roman_values = {"I": 1, "II": 2, "III": 3, "IV": 4}
+        def stage_group_key(value: str) -> str:
+            match = stage_group_pattern.search(value)
+            if not match:
+                return value.strip().casefold()
+            numeral = match.group(1).upper()
+            suffix = (match.group(2) or "").upper()
+            number = roman_values.get(numeral, int(numeral) if numeral.isdigit() else None)
+            return f"{number}{suffix}" if number is not None else value.strip().casefold()
+
         text_stage_groups = {
-            match.group(0).casefold()
+            stage_group_key(match.group(0))
             for match in stage_group_pattern.finditer(summary)
         }
-        if text_stage_groups and not any(
-            case.stage_group.casefold() in value or value in case.stage_group.casefold()
-            for value in text_stage_groups
-        ):
+        if text_stage_groups and stage_group_key(case.stage_group) not in text_stage_groups:
             warnings.append(
                 "Structured stage_group conflicts with an explicit stage-group statement in free text; preserve both and reconcile before simulation."
             )
 
     for field, label, pattern in (
-        ("clinical_t_stage", "T stage", re.compile(r"\b(?:c|p|yc|yp)?T(?:is|x|0|[1-4][a-d]?)\b", re.IGNORECASE)),
-        ("clinical_n_stage", "N stage", re.compile(r"\b(?:c|p|yc|yp)?N(?:x|0|[1-3])\b", re.IGNORECASE)),
-        ("clinical_m_stage", "M stage", re.compile(r"\b(?:c|p|yc|yp)?M(?:x|0|1)\b", re.IGNORECASE)),
+        ("clinical_t_stage", "T stage", re.compile(r"\b(?:c|p|yc|yp)?(T(?:is|x|0|[1-4][a-d]?))(?=(?:N(?:x|0|[1-3]))?(?:M(?:x|0|1))?\b)", re.IGNORECASE)),
+        ("clinical_n_stage", "N stage", re.compile(r"\b(?:c|p|yc|yp)?(N(?:x|0|[1-3]))(?=(?:M(?:x|0|1))?\b)", re.IGNORECASE)),
+        ("clinical_m_stage", "M stage", re.compile(r"\b(?:c|p|yc|yp)?(M(?:x|0|1))\b", re.IGNORECASE)),
     ):
         structured_value = getattr(case, field)
         normalize_stage = lambda value: re.sub(
             r"^(?:yc|yp|c|p)", "", value.casefold().replace(" ", "")
         )
         text_values = {
-            normalize_stage(match.group(0))
+            normalize_stage(match.group(1))
             for match in pattern.finditer(summary)
         }
         if (
