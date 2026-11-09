@@ -270,3 +270,56 @@ def test_validation_warns_on_explicit_age_sex_and_stage_discrepancies():
     assert "t stage conflicts" in joined
     assert "n stage conflicts" in joined
     assert "stage_group conflicts" in joined
+
+
+
+def test_age_assertion_uses_numeric_equivalence_across_wording():
+    case = _case(age_years=None, case_summary="Referral summary: 68-year-old patient.")
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient is aged 68 and needs further assessment."
+    })
+    assert not any("assigns an age" in item for item in flags)
+
+
+def test_stage_group_uses_exact_roman_numeric_equivalence():
+    case = _case(
+        stage_group="Stage III",
+        case_summary="Case summary: stage group 3 disease.",
+    )
+    warnings = " ".join(build_case_validation_warnings(case)).casefold()
+    assert "stage_group conflicts" not in warnings
+
+
+def test_stage_group_does_not_confuse_stage_ii_with_stage_iii():
+    case = _case(
+        stage_group="Stage II",
+        case_summary="Case summary documents Stage III disease.",
+    )
+    warnings = " ".join(build_case_validation_warnings(case)).casefold()
+    assert "stage_group conflicts" in warnings
+
+
+def test_combined_ctnm_notation_is_parsed_for_each_component():
+    case = _case(
+        clinical_t_stage="T2",
+        clinical_n_stage="N0",
+        clinical_m_stage="M0",
+        case_summary="Case summary records cT3N1M0 disease.",
+    )
+    warnings = " ".join(build_case_validation_warnings(case)).casefold()
+    assert "t stage conflicts" in warnings
+    assert "n stage conflicts" in warnings
+    assert "m stage conflicts" not in warnings
+
+
+def test_matching_combined_ctnm_notation_does_not_generate_discrepancy():
+    case = _case(
+        clinical_t_stage="T3",
+        clinical_n_stage="N1",
+        clinical_m_stage="M0",
+        case_summary="Case summary records cT3N1M0 disease.",
+    )
+    warnings = " ".join(build_case_validation_warnings(case)).casefold()
+    assert "t stage conflicts" not in warnings
+    assert "n stage conflicts" not in warnings
+    assert "m stage conflicts" not in warnings
