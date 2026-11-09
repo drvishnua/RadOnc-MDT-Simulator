@@ -2,6 +2,7 @@ from app.round_schemas import FinalMDTReport
 from app.schemas import SyntheticCase
 from app.services.chair_report_quality import (
     SECTION_LIMITS,
+    build_source_opinion_review_coverage,
     ensure_chair_report_completeness,
     validate_consensus_points,
 )
@@ -742,4 +743,42 @@ def test_final_chair_rebuilds_source_opinion_coverage_from_saved_r3_reviews():
     assert "Round 2 source-reference audit: 1/45" in flags
     assert "Round 3 source-reference audit: 1/45" in flags
     assert "unanimously" not in unresolved.casefold()
+
+def test_source_excerpt_id_conflicts_are_flagged_even_when_one_review_has_an_invalid_peer_reference():
+    source_one = "Surgical service note records a conditional surgical assessment."
+    source_two = "Medical oncology note records a conditional systemic review."
+    case_summary = f"Referral contains two notes. {source_one} {source_two}"
+    rows = _rows("result", ["insufficient_information"] * 45)
+
+    rows[0]["result"]["source_peer_ids"] = ["RO-02"]
+    rows[0]["result"]["source_opinion_reviews"] = [{
+        "source_id": "CASE:case_summary#1",
+        "opinion_label": "Surgical service note",
+        "source_excerpt": source_one,
+        "option_status": "preserved",
+        "conditions_status": "preserved",
+        "source_reference_ids": ["CASE:case_summary#1", "R2:RO-02"],
+    }]
+    rows[1]["result"]["source_peer_ids"] = ["RO-03"]
+    rows[1]["result"]["source_opinion_reviews"] = [{
+        "source_id": "CASE:case_summary#1",
+        "opinion_label": "Medical oncology note",
+        "source_excerpt": source_two,
+        "option_status": "omitted",
+        "conditions_status": "omitted",
+        # This peer was not supplied to RO-02, so this review is not countable.
+        "source_reference_ids": ["CASE:case_summary#1", "R2:RO-04"],
+    }]
+
+    coverage, flags = build_source_opinion_review_coverage(rows, case_summary)
+
+    assert coverage == []
+    assert any(
+        "CASE:case_summary#1 maps to more than one exact case-summary excerpt" in item
+        for item in flags
+    )
+    assert any(
+        "does not cite an R2 peer recorded as supplied to that role" in item
+        for item in flags
+    )
 
