@@ -406,7 +406,7 @@ def build_source_opinion_review_coverage(
         roles = sorted({
             match.group(1)
             for item in matching
-            if (match := re.search(r"\\bfrom ([A-Z]{2}-[0-9]{2})\\b", item))
+            if (match := re.search(r"\bfrom ([A-Z]{2}-[0-9]{2})\b", item))
         })
         role_note = (
             f" across {len(roles)} distinct role(s): {roles[:8]}"
