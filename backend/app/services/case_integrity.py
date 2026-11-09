@@ -114,6 +114,19 @@ def _unqualified_matches(pattern: re.Pattern[str], text: str) -> list[str]:
     """Return assertion-like matches, applying qualifiers only within the same clause."""
     findings: list[str] = []
     for match in pattern.finditer(text):
+        # Preserve the whole-sentence question safeguard even when the clause
+        # itself ends at a comma or contrast marker before the question mark.
+        sentence_end = min(
+            (
+                position
+                for mark in ".!?;:\n"
+                if (position := text.find(mark, match.end())) >= 0
+            ),
+            default=len(text),
+        )
+        if sentence_end < len(text) and text[sentence_end] == "?":
+            continue
+
         left = max(
             (boundary.end() for boundary in _CLAUSE_BOUNDARY.finditer(text, 0, match.start())),
             default=0,
@@ -123,8 +136,7 @@ def _unqualified_matches(pattern: re.Pattern[str], text: str) -> list[str]:
             default=len(text),
         )
         clause = text[left:right]
-        ends_with_question = right < len(text) and text[right] == "?"
-        if _QUALIFIER.search(clause) or ends_with_question:
+        if _QUALIFIER.search(clause):
             continue
         token = match.group(0).strip()
         if token and token.casefold() not in {item.casefold() for item in findings}:
