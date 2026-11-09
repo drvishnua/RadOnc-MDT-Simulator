@@ -2,7 +2,7 @@
 
 A local-first, AI-assisted educational simulator for multidisciplinary oncology case discussions.
 
-> **Current milestone (9 November 2026):** The development branch contains the four-round 45 + 45 + 45 + 1 workflow, patient registry/versioning, expanded case-integrity checks, Chair safeguards and persisted round/full-MDT completion timestamps. The tested code snapshot is `aa0e90b7ec6fbbea9fc359c98f2deefdad2cf902`: backend CI passed (113 tests, 1 existing deprecation warning), frontend launcher/persistence checks, TypeScript and production build passed, and the Windows sync workflow verified the laptop `Source` manifest at that exact SHA. The latest detailed live MDT-006 audit remains a historical failure with 134 hard failures and 92 major findings; later prompt/schema and case-integrity changes have not had a fresh full live run. Source sync does not restart an already-running backend, so copied Python changes require a controlled service restart before live validation.
+> **Current milestone (9 November 2026):** The development branch contains the four-round 45 + 45 + 45 + 1 workflow, patient registry/versioning, expanded case-integrity checks, Chair safeguards, persisted round/full-MDT completion timestamps and neutral “fictional training case” terminology. The exact current code snapshot is `8a318900f9a661116dba2130b118d924741bfcfe`: backend CI passed (114 tests, 1 existing deprecation warning) and frontend launcher/persistence checks, TypeScript and production build passed. The last Windows source-sync verification is older (`aa0e90b7...`); the current code snapshot has not yet been verified in the laptop `Source` folder or loaded by a restarted backend. The historical MDT-006 audit remains a failure with 134 hard failures and 92 major findings; later prompt/schema and case-integrity changes still need a fresh full live run.
 
 ## Purpose
 
@@ -72,15 +72,20 @@ The model is kept warm during a run. Prompts use Ollama's schema-constrained out
 
 ### Current code/CI snapshot
 
-The following checks ran against the exact code snapshot `aa0e90b7ec6fbbea9fc359c98f2deefdad2cf902`:
+The following CI checks ran against exact code snapshot `8a318900f9a661116dba2130b118d924741bfcfe`:
 
-- **Backend CI:** [run 42576728875](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42576728875) — success; **113 passed, 1 warning** (the existing Starlette/httpx TestClient deprecation).
-- **Frontend CI:** [run 42576728810](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42576728810) — success; launcher syntax/compatibility, case-draft persistence tests, TypeScript check and Vite production build passed.
-- **Windows source sync and local diagnostic:** [run 42576725334](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42576725334) — success; the local manifest was read back and verified as `feature/four-round-mdt-and-performance @ aa0e90b7ec6fbbea9fc359c98f2deefdad2cf902`. FastAPI health, Ollama reachability, React shell mounting and structured case-field presence checks passed.
+- **Backend CI:** [run 42578931373](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42578931373) — success; **114 passed, 1 warning** (the existing Starlette/httpx TestClient deprecation).
+- **Frontend CI:** [run 42578931319](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42578931319) — success; PowerShell launcher syntax, Node compatibility, case-draft persistence tests, TypeScript checking and Vite production build passed.
+- **Terminology:** generated Chair report text, agent prompts, API descriptions, validation metadata and user documentation now use “fictional training case” / “educational simulation” language instead of “synthetic case”. Internal Python/schema/DB identifiers remain unchanged for compatibility. The education-only/no-clinical-decision boundary is retained.
 
-Round-level execution timing is now persisted as `round_runs.started_at` and `round_runs.finished_at`; the parent run stores `mdt_finished_at` when Round 4 reaches a terminal state. These fields are added to existing SQLite databases through additive migrations. Resetting a failed/interrupted round clears its attempt timestamps; resetting the Chair also clears the parent MDT finish time. The parent run's `created_at` is the start reference for elapsed time from run creation, not a separately measured first-token timestamp.
+### Local source/runtime verification
 
-The self-hosted diagnostic reads the exact source manifest and checks the running services and rendered React shell. It does **not** restart Uvicorn or prove that an already-running backend process has imported the newly copied Python code. Full patient-registry browser acceptance and runtime process reload remain unverified.
+- The last successful Windows source-sync diagnostic is [run 42576725334](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42576725334), which verified the local `Source` manifest at the older code snapshot `aa0e90b7ec6fbbea9fc359c98f2deefdad2cf902`.
+- The current code snapshot `8a318900f9a661116dba2130b118d924741bfcfe` has **not** yet been verified in the local `Source` manifest.
+- The older diagnostic found FastAPI health, Ollama reachability, the React app shell and structured case-field presence, but did not restart Uvicorn. A source copy does not prove that an already-running backend process has imported changed Python modules.
+- Full patient-registry browser acceptance (create → validate → save → refresh → restore → edit → save version → delete), browser console/network inspection and a current-head backend restart remain outstanding.
+
+Round-level execution timing is persisted as `round_runs.started_at` and `round_runs.finished_at`; the parent run stores `mdt_finished_at` when Round 4 reaches a terminal state. Existing SQLite databases receive additive migrations. Resetting the Chair also clears the parent MDT finish time. The parent run's `created_at` is the start reference for elapsed time from run creation, not a separately measured first-token timestamp.
 
 ### Historical full live runs — not current-head validation
 
