@@ -31,6 +31,7 @@ from app.services import batch_runner, mdt_rounds, run_store
 from app.services.gpu_telemetry import parse_nvidia_smi_csv, summarize_gpu_telemetry
 from app.services.ollama import get_ollama_status
 from app.services.case_integrity import build_source_case_facts, build_case_report_title
+from app.services.chair_report_quality import validate_consensus_points
 
 ARTIFACT_DIR = BACKEND_DIR / "validation_artifacts"
 ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
@@ -424,10 +425,13 @@ async def main() -> int:
         require(bool(report.get("evidence_limitations")),
                 "Chair evidence limitations are empty.")
 
-        # Every report section must contain source-grounded content or an explicit
-        # statement that no applicable item was recorded. Empty arrays are not a pass.
+        # consensus_points must remain an empty list until proposition-level
+        # provenance exists. It is not a completeness section that should be filled.
+        validate_consensus_points(report)
+
+        # Every applicable report section must contain source-grounded content or an
+        # explicit statement that no applicable item was recorded.
         required_report_sections = (
-            "consensus_points",
             "unresolved_disagreements",
             "minority_and_dissenting_views",
             "major_uncertainties",
@@ -467,14 +471,6 @@ async def main() -> int:
                     "Non-uniform Round-3 positions were not preserved.")
             require(bool(report.get("minority_and_dissenting_views")),
                     "Non-modal Round-3 positions were not listed separately.")
-        if (
-            final_positions.get("insufficient_information")
-            and not final_positions.get("supports")
-            and not final_positions.get("opposes")
-        ):
-            require(bool(report.get("consensus_points")),
-                    "Chair did not summarize the lack of a definitive Round-3 treatment position.")
-
         # Check variety as a diagnostic only; it is not a clinical quality score.
         round1_conclusions = [
             row["assessment"]["provisional_conclusion"].strip().lower()
@@ -508,6 +504,7 @@ async def main() -> int:
                 "clinical_accuracy_evaluated": False,
                 "chair_position_counts_by_round": position_counts_by_round,
                 "chair_consensus_status_reconciled": expected_chair_status,
+                "consensus_points_empty_is_expected": not bool(report.get("consensus_points")),
             },
         })
     except Exception as exc:
