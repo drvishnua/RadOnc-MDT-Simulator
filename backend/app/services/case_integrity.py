@@ -176,7 +176,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     # from an incomplete TNM record or from a site/histology description.
     if case.stage_group in (None, ""):
         stage_group_pattern = re.compile(
-            r"\b(?:clinical\s+)?stage\s*(?:group\s*)?(IV|III|II|I|[1-4])(?:[ABC])?\b",
+            r"\b(?:clinical\s+)?stage\s*(?:group\s*)?(IV|III|II|I|[1-4])([ABC])?\b",
             re.IGNORECASE,
         )
         roman_values = {"I": 1, "II": 2, "III": 3, "IV": 4}
@@ -374,7 +374,7 @@ def build_case_validation_warnings(case: SyntheticCase) -> list[str]:
 
     if case.stage_group:
         stage_group_pattern = re.compile(
-            r"\b(?:clinical\s+)?stage\s*(?:group\s*)?(IV|III|II|I|[1-4])(?:[ABC])?\b",
+            r"\b(?:clinical\s+)?stage\s*(?:group\s*)?(IV|III|II|I|[1-4])([ABC])?\b",
             re.IGNORECASE,
         )
         roman_values = {"I": 1, "II": 2, "III": 3, "IV": 4}
