@@ -68,4 +68,13 @@ def test_live_four_round_validation_script_parses_without_execution():
     from pathlib import Path
 
     script = Path(__file__).resolve().parents[1] / "scripts" / "live_four_round_validation.py"
-    ast.parse(script.read_text(encoding="utf-8"), filename=str(script))
+    source = script.read_text(encoding="utf-8")
+    tree = ast.parse(source, filename=str(script))
+    assert "validate_consensus_points(report)" in source
+    required_sections = next(
+        node.value
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Assign)
+        and any(isinstance(target, ast.Name) and target.id == "required_report_sections" for target in node.targets)
+    )
+    assert "consensus_points" not in ast.literal_eval(required_sections)
