@@ -72,11 +72,11 @@ The model is kept warm during a run. Prompts use Ollama's schema-constrained out
 
 ### Current code/CI snapshot
 
-The following checks ran against code snapshot `b2c072581d2c6d8f870d39b644d71d5851023dd5`:
+The following checks ran against code snapshot `084d3353bc3dd71a7ee27895e41434c0d425644b`:
 
-- **Backend CI:** [run 42575218662](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42574812785) — success; **110 passed, 1 warning** (the existing Starlette/httpx TestClient deprecation).
-- **Frontend CI:** [run 42575218585](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42574812756) — success; **21 tests passed**, TypeScript check and Vite production build passed.
-- **Windows source sync and local diagnostic:** [run 42575212397](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42574809719) — success; local manifest verified at the same branch/SHA. FastAPI health, React shell and structured case-field checks passed.
+- **Backend CI:** [run 42575218662](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42575218662) — success; **111 passed, 1 warning** (the existing Starlette/httpx TestClient deprecation).
+- **Frontend CI:** [run 42575218585](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42575218585) — success; **21 tests passed**, TypeScript check and Vite production build passed.
+- **Windows source sync and local diagnostic:** [run 42575212397](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42575212397) — success; the local manifest was read back and verified as `feature/four-round-mdt-and-performance @ 084d3353bc3dd71a7ee27895e41434c0d425644b`. FastAPI health, React shell mounting and structured case-field presence checks passed.
 
 The self-hosted diagnostic found existing Vite and Uvicorn processes listening and the React shell mounted. It did not restart the existing Uvicorn process. Source sync therefore does not prove that an already-running backend has loaded the latest copied Python code; stop and restart the local services after backend changes.
 
