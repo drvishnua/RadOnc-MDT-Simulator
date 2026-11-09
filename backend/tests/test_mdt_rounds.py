@@ -165,6 +165,26 @@ def test_four_rounds_require_full_previous_round_and_preserve_all_roles(monkeypa
     assert report.json()["evidence_retrieval_connected"] is False
     assert report.json()["report_title"] == "MDT Chair Synthesis: Larynx — Squamous cell carcinoma"
 
+    # The complete four-round route must rebuild the report from saved role rows,
+    # not reuse the fake/model-authored report's consensus point or omit discussion.
+    saved_report = report.json()
+    agreements = saved_report["recorded_agreements"]
+    assert len(agreements) == 90
+    assert sum(item.startswith("Round 2 —") for item in agreements) == 45
+    assert sum(item.startswith("Round 3 —") for item in agreements) == 45
+    assert all("not independently validated as a shared proposition" in item for item in agreements)
+    assert saved_report["consensus_points"] == []
+    assert saved_report["consensus_status"] == "insufficient_information"
+    assert "unanimously" not in saved_report["chair_conclusion"].casefold()
+    assert any(
+        "Additional staging and functional details remain unknown." in item
+        for item in saved_report["major_uncertainties"]
+    )
+    assert any(
+        "Additional staging and functional details remain unknown." in item
+        for item in saved_report["missing_information_before_real_world_review"]
+    )
+
 
 def test_retried_or_failed_round_record_cannot_retain_stale_payload(monkeypatch, tmp_path):
     import json
