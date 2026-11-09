@@ -150,9 +150,9 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     # Do not flag an age already stated in the user-provided free-text source.
     if case.age_years is None:
         age_pattern = re.compile(
-            r"\\b(?:(\\d{1,3})\\s*[- ]?(?:year|yr)s?[- ]old|"
-            r"aged\\s+(\\d{1,3})|age\\s*[:=]\\s*(\\d{1,3})|"
-            r"(\\d{1,3})\\s*y/o)\\b",
+            r"\b(?:(\d{1,3})\s*[- ]?(?:year|yr)s?[- ]old|"
+            r"aged\s+(\d{1,3})|age\s*[:=]\s*(\d{1,3})|"
+            r"(\d{1,3})\s*y/o)\b",
             re.IGNORECASE,
         )
         unsupported_ages = _unsupported_matches(age_pattern, text, source_text)
@@ -167,7 +167,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     # from an incomplete TNM record or from a site/histology description.
     if case.stage_group in (None, ""):
         stage_group_pattern = re.compile(
-            r"\\b(?:clinical\\s+)?stage\\s*(?:group\\s*)?(IV|III|II|I|[1-4])(?:[ABC])?\\b",
+            r"\b(?:clinical\s+)?stage\s*(?:group\s*)?(IV|III|II|I|[1-4])(?:[ABC])?\b",
             re.IGNORECASE,
         )
         unsupported_stage_groups = _unsupported_matches(
@@ -318,9 +318,9 @@ def build_case_validation_warnings(case: SyntheticCase) -> list[str]:
     # Explicit contradictions are warnings for human reconciliation; neither
     # the structured field nor free text is silently preferred.
     age_pattern = re.compile(
-        r"\\b(?:(\\d{1,3})\\s*[- ]?(?:year|yr)s?[- ]old|"
-        r"aged\\s+(\\d{1,3})|age\\s*[:=]\\s*(\\d{1,3})|"
-        r"(\\d{1,3})\\s*y/o)\\b",
+        r"\b(?:(\d{1,3})\s*[- ]?(?:year|yr)s?[- ]old|"
+        r"aged\s+(\d{1,3})|age\s*[:=]\s*(\d{1,3})|"
+        r"(\d{1,3})\s*y/o)\b",
         re.IGNORECASE,
     )
     text_ages = {
@@ -338,8 +338,8 @@ def build_case_validation_warnings(case: SyntheticCase) -> list[str]:
 
     if case.sex_at_birth:
         structured_sex = case.sex_at_birth.casefold()
-        text_male = bool(re.search(r"\\b(?:male|man|boy)\\b", summary))
-        text_female = bool(re.search(r"\\b(?:female|woman|girl)\\b", summary))
+        text_male = bool(re.search(r"\b(?:male|man|boy)\b", summary))
+        text_female = bool(re.search(r"\b(?:female|woman|girl)\b", summary))
         if (("male" in structured_sex and "female" not in structured_sex and text_female)
                 or ("female" in structured_sex and text_male)):
             warnings.append(
@@ -348,7 +348,7 @@ def build_case_validation_warnings(case: SyntheticCase) -> list[str]:
 
     if case.stage_group:
         stage_group_pattern = re.compile(
-            r"\\b(?:clinical\\s+)?stage\\s*(?:group\\s*)?(IV|III|II|I|[1-4])(?:[ABC])?\\b",
+            r"\b(?:clinical\s+)?stage\s*(?:group\s*)?(IV|III|II|I|[1-4])(?:[ABC])?\b",
             re.IGNORECASE,
         )
         text_stage_groups = {
@@ -364,9 +364,9 @@ def build_case_validation_warnings(case: SyntheticCase) -> list[str]:
             )
 
     for field, label, pattern in (
-        ("clinical_t_stage", "T stage", re.compile(r"\\b(?:c|p|yc|yp)?T(?:is|x|0|[1-4][a-d]?)\\b", re.IGNORECASE)),
-        ("clinical_n_stage", "N stage", re.compile(r"\\b(?:c|p|yc|yp)?N(?:x|0|[1-3])\\b", re.IGNORECASE)),
-        ("clinical_m_stage", "M stage", re.compile(r"\\b(?:c|p|yc|yp)?M(?:x|0|1)\\b", re.IGNORECASE)),
+        ("clinical_t_stage", "T stage", re.compile(r"\b(?:c|p|yc|yp)?T(?:is|x|0|[1-4][a-d]?)\b", re.IGNORECASE)),
+        ("clinical_n_stage", "N stage", re.compile(r"\b(?:c|p|yc|yp)?N(?:x|0|[1-3])\b", re.IGNORECASE)),
+        ("clinical_m_stage", "M stage", re.compile(r"\b(?:c|p|yc|yp)?M(?:x|0|1)\b", re.IGNORECASE)),
     ):
         structured_value = getattr(case, field)
         text_values = {match.group(0).casefold() for match in pattern.finditer(summary)}
