@@ -696,6 +696,10 @@ def test_final_chair_rebuilds_source_opinion_coverage_from_saved_r3_reviews():
     round3[0]["result"]["source_opinion_reviews"] = [
         review("CASE:case_summary#1", source_one, "preserved", "preserved", "RO-02")
     ]
+    # Unsafe model-authored labels must not suppress the deterministic review counts.
+    round3[0]["result"]["source_opinion_reviews"][0]["opinion_label"] = (
+        "The majority supports surgery"
+    )
     round3[1]["result"]["source_peer_ids"] = ["RO-03"]
     round3[1]["result"]["source_opinion_reviews"] = [
         review("CASE:case_summary#1", source_one, "omitted", "omitted", "RO-03"),
@@ -738,6 +742,8 @@ def test_final_chair_rebuilds_source_opinion_coverage_from_saved_r3_reviews():
     assert "1/45 roles supplied an exact source-bound review" in unresolved
     assert "option status role counts {'partly_preserved': 1}" in unresolved
     assert "condition status role counts {'unclear': 1}" in unresolved
+    assert "majority supports surgery" not in unresolved.casefold()
+    assert "opinion label containing a positive consensus assertion" in flags
     assert "conflicting option statuses for RO-02" in flags
     assert "lacks an exact contiguous excerpt" in flags
     assert "Round 2 source-reference audit: 1/45" in flags
