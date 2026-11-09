@@ -1625,6 +1625,13 @@ def test_chair_failure_retry_and_saved_four_round_records_survive_database_reini
     assert chair_failure["error_message"]
     assert client.get(f"/api/runs/{run_id}/report").status_code == 404
 
+    # The parent run is terminal-with-errors because R4 failed, but R1 itself
+    # has no failed agents. R1 resume must not silently mark the whole MDT complete.
+    wrong_stage_resume = client.post(f"/api/runs/{run_id}/resume")
+    assert wrong_stage_resume.status_code == 409
+    assert "resume the failed MDT round" in wrong_stage_resume.json()["detail"]
+    assert client.get(f"/api/runs/{run_id}/rounds/4").json()["status"] == "completed_with_errors"
+
     resumed = client.post(f"/api/runs/{run_id}/rounds/4/resume")
     assert resumed.status_code == 200
     completed_summary = client.get(f"/api/runs/{run_id}/rounds/4").json()
