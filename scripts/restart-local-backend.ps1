@@ -261,6 +261,99 @@ if ([string]$preflight.Headers["Access-Control-Allow-Methods"] -notmatch '(?i)\b
     throw "Backend is healthy, but DELETE is absent from Access-Control-Allow-Methods."
 }
 
+# Keep the dashboard frontend available after the Actions job ends as well.
+$FrontendDir = Join-Path $SourceRoot "frontend"
+$ViteEntry = Join-Path $FrontendDir "node_modules\vite\bin\vite.js"
+if (-not (Test-Path $ViteEntry)) {
+    throw "Vite entry point was not found at $ViteEntry. Frontend dependencies must be installed before starting the dashboard."
+}
+
+$NodeCommand = Get-Command node -ErrorAction SilentlyContinue
+$NodeExecutable = if ($NodeCommand) { $NodeCommand.Source } else { $null }
+function Test-SupportedNodeForVite([string]$Executable) {
+    if (-not $Executable -or -not (Test-Path $Executable)) { return $false }
+    try {
+        $versionText = (& $Executable --version 2>$null).Trim()
+        $version = [version]$versionText.TrimStart("v")
+        return (($version -ge [version]"20.19.0" -and $version.Major -eq 20) -or ($version -ge [version]"22.12.0" -and $version.Major -eq 22) -or $version.Major -gt 22)
+    } catch {
+        return $false
+    }
+}
+
+if (-not (Test-SupportedNodeForVite $NodeExecutable)) {
+    $runnerNodeCache = Join-Path (Split-Path -Parent $SourceRoot) "actions-runner\_work\_tool\node"
+    $selectedNode = $null
+    if (Test-Path $runnerNodeCache) {
+        $nodeCandidates = Get-ChildItem $runnerNodeCache -Directory |
+            Sort-Object { try { [version]$_.Name } catch { [version]"0.0" } } -Descending
+        foreach ($candidate in $nodeCandidates) {
+            $candidateNode = Join-Path (Join-Path $candidate.FullName "x64") "node.exe"
+            if (Test-SupportedNodeForVite $candidateNode) {
+                $selectedNode = $candidateNode
+                break
+            }
+        }
+    }
+    if (-not $selectedNode) {
+        throw "A supported Node.js runtime (20.19+ or 22.12+) was not found for Vite."
+    }
+    $NodeExecutable = $selectedNode
+}
+
+$viteListeners = @(Get-NetTCPConnection -State Listen -LocalPort 5173 -ErrorAction SilentlyContinue)
+if ($viteListeners.Count -gt 1) {
+    throw "Multiple processes are listening on port 5173; refusing to replace the dashboard frontend."
+}
+if ($viteListeners.Count -eq 0) {
+    $viteCommandLine = '"' + $NodeExecutable + '" "' + $ViteEntry + '" --host 127.0.0.1 --port 5173 --strictPort'
+    $viteSpawn = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{
+        CommandLine = $viteCommandLine
+        CurrentDirectory = $FrontendDir
+    }
+    if ([int]$viteSpawn.ReturnValue -ne 0) {
+        throw "Windows could not launch Vite (Win32_Process.Create=$($viteSpawn.ReturnValue))."
+    }
+    Write-Host "Detached Vite process PID: $($viteSpawn.ProcessId)"
+}
+
+$viteReady = $false
+for ($attempt = 0; $attempt -lt 45; $attempt++) {
+    Start-Sleep -Seconds 1
+    $viteListeners = @(Get-NetTCPConnection -State Listen -LocalPort 5173 -ErrorAction SilentlyContinue)
+    if ($viteListeners.Count -gt 1) {
+        throw "Multiple processes are listening on port 5173 after Vite startup."
+    }
+    if ($viteListeners.Count -eq 1) {
+        $vitePid = [int]$viteListeners[0].OwningProcess
+        $viteProcess = Get-CimInstance Win32_Process -Filter ("ProcessId = " + $vitePid) -ErrorAction Stop
+        $viteProcessCommand = [string]$viteProcess.CommandLine
+        if ($viteProcess.Name -ine "node.exe" -or
+            $viteProcessCommand -notmatch [regex]::Escape($ViteEntry) -or
+            $viteProcessCommand -notmatch '(?i)--host\s+127\.0\.0\.1(?:\s|$)' -or
+            $viteProcessCommand -notmatch '(?i)--port\s+5173(?:\s|$)') {
+            throw "Port 5173 is not owned by the expected Source Vite process. Refusing to accept it."
+        }
+        try {
+            $viteRoot = Invoke-WebRequest -UseBasicParsing -Uri "http://127.0.0.1:5173/" -TimeoutSec 3
+            $viteAppModule = Invoke-WebRequest -UseBasicParsing -Uri "http://127.0.0.1:5173/src/App.tsx" -TimeoutSec 5
+            if ([int]$viteRoot.StatusCode -eq 200 -and [int]$viteAppModule.StatusCode -eq 200) {
+                $viteReady = $true
+                break
+            }
+        } catch {
+            # Continue polling while Vite completes its initial dependency scan.
+        }
+    }
+}
+if (-not $viteReady) {
+    throw "Vite did not serve both / and /src/App.tsx successfully within 45 seconds. Inspect the local frontend stderr log."
+}
+Set-Content -Path (Join-Path $LogDir "frontend.pid") -Value $vitePid -Encoding ASCII
+Write-Host "VITE_FRONTEND_READY"
+Write-Host "Vite PID: $vitePid"
+Write-Host "Dashboard root and transformed App.tsx: HTTP 200"
+
 # Exercise the real registry DELETE route using one uniquely named disposable
 # record. No simulation run or model inference is started.
 $smokeName = "RADONC-DELETE-SMOKE-" + [Guid]::NewGuid().ToString("N")
