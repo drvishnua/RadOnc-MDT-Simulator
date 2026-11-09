@@ -147,17 +147,52 @@ jobs:
 
             $agents = Invoke-RestMethod -Uri "http://127.0.0.1:18765/api/agents" -TimeoutSec 10
             if ($agents.returned_agent_count -ne 45) { throw "Installed API did not return all 45 role profiles." }
-            $null = Invoke-RestMethod -Uri "http://127.0.0.1:18765/api/patients" -TimeoutSec 10
+            $casePayload = @{
+              scenario_title = "Installer acceptance training case"
+              case_summary = "Fictional training record used only to verify local database persistence."
+              primary_site = "Test site"
+              histology = "Test histology"
+            } | ConvertTo-Json -Depth 6
+            $patientPayload = @{
+              patient_name = "Installer Acceptance Record"
+              case = ($casePayload | ConvertFrom-Json)
+            } | ConvertTo-Json -Depth 8
+            $savedPatient = Invoke-RestMethod -Uri "http://127.0.0.1:18765/api/patients" -Method Post -ContentType "application/json" -Body $patientPayload -TimeoutSec 10
+            if ($savedPatient.patient_identifier -ne "RAD-000001") {
+              throw "Installed application did not persist its first training registry record."
+            }
 
             $expectedDb = Join-Path $localAppData "RadOncMDT\Data\simulation_runs.sqlite3"
             if (-not (Test-Path $expectedDb)) { throw "SQLite database was not created in the user data directory." }
             $bundledDb = Get-ChildItem -Path $installDir -Filter "simulation_runs.sqlite3" -Recurse -ErrorAction SilentlyContinue
             if ($bundledDb) { throw "Application database was incorrectly created inside the install directory." }
+            $databaseHashBeforeUninstall = (Get-FileHash -Algorithm SHA256 $expectedDb).Hash
 
             Write-Host "INSTALLED_HEALTH_OK"
             Write-Host "INSTALLED_FRONTEND_OK"
             Write-Host "INSTALLED_API_45_ROLES_OK"
             Write-Host "USER_DATA_DATABASE_PATH_OK"
+            Write-Host "TRAINING_RECORD_SAVE_OK"
+
+            # Stop the exact process started by this smoke test before uninstalling.
+            if ($process -and -not $process.HasExited) {
+              Stop-Process -Id $process.Id -Force
+              $process.WaitForExit(10000) | Out-Null
+              $process.Refresh()
+              if (-not $process.HasExited) { throw "Installed application did not stop before uninstall." }
+            }
+
+            $uninstaller = Join-Path $installDir "unins000.exe"
+            if (-not (Test-Path $uninstaller)) { throw "Inno Setup uninstaller was not installed." }
+            $uninstall = Start-Process -FilePath $uninstaller -ArgumentList @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART") -Wait -PassThru
+            if ($uninstall.ExitCode -ne 0) { throw "Silent uninstall failed with exit code $($uninstall.ExitCode)." }
+            if (Test-Path $exe) { throw "Application executable remains after uninstall." }
+            if (-not (Test-Path $expectedDb)) { throw "Uninstall removed the user database." }
+            $databaseHashAfterUninstall = (Get-FileHash -Algorithm SHA256 $expectedDb).Hash
+            if ($databaseHashAfterUninstall -ne $databaseHashBeforeUninstall) {
+              throw "Uninstall changed the saved user database."
+            }
+            Write-Host "UNINSTALL_PRESERVED_USER_DATABASE_OK"
             Write-Host "No Ollama request or model inference was performed."
           } finally {
             if ($webClient) { $webClient.Dispose() }
