@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import { readDraft, writeDraft } from "./caseDraft.js";
+import { readDraft, writeDraft, listToMultilineText, multilineTextToList } from "./caseDraft.js";
 import { readSavedSingleAssessment, writeSavedSingleAssessment } from "./singleAssessmentStorage.js";
 import { shouldShowBatchPanel } from "./runRecovery.js";
 import { patientVersionDisplayName } from "./patientVersionName.js";
@@ -271,15 +271,15 @@ function caseSnapshotToForm(snapshot: SyntheticCasePayload): typeof emptyForm {
     performance_status: snapshot.performance_status ?? "",
     pathology_summary: snapshot.pathology_summary ?? "",
     imaging_summary: snapshot.imaging_summary ?? "",
-    current_medications: (snapshot.current_medications ?? []).join("\\n"),
-    known_allergies: (snapshot.known_allergies ?? []).join("\\n"),
-    relevant_investigations: (snapshot.relevant_investigations ?? []).join("\\n"),
-    relevant_comorbidities: (snapshot.relevant_comorbidities ?? []).join("\\n"),
-    prior_treatment: (snapshot.prior_treatment ?? []).join("\\n"),
-    patient_goals: (snapshot.patient_goals ?? []).join("\\n"),
-    social_context: (snapshot.social_context ?? []).join("\\n"),
-    resource_context: (snapshot.resource_context ?? []).join("\\n"),
-    known_unknowns: (snapshot.known_unknowns ?? []).join("\\n")
+    current_medications: listToMultilineText(snapshot.current_medications ?? []),
+    known_allergies: listToMultilineText(snapshot.known_allergies ?? []),
+    relevant_investigations: listToMultilineText(snapshot.relevant_investigations ?? []),
+    relevant_comorbidities: listToMultilineText(snapshot.relevant_comorbidities ?? []),
+    prior_treatment: listToMultilineText(snapshot.prior_treatment ?? []),
+    patient_goals: listToMultilineText(snapshot.patient_goals ?? []),
+    social_context: listToMultilineText(snapshot.social_context ?? []),
+    resource_context: listToMultilineText(snapshot.resource_context ?? []),
+    known_unknowns: listToMultilineText(snapshot.known_unknowns ?? [])
   };
 }
 
@@ -289,7 +289,7 @@ function optionalText(value: string): string | null {
 }
 
 function linesToList(value: string): string[] {
-  return value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
+  return multilineTextToList(value);
 }
 
 function savedOptionalText(value: unknown): string | null {
