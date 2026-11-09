@@ -1472,3 +1472,51 @@ def test_chair_report_uses_neutral_case_wording_and_retains_education_boundary()
     assert any("educational simulation only" in item.casefold()
                for item in report.governance_and_safeguarding_considerations)
     assert report.not_a_treatment_instruction is True
+
+def test_failed_round_agent_resumes_without_replacing_completed_peer_records(monkeypatch, tmp_path):
+    run_id = _create_complete_round1(monkeypatch, tmp_path)
+    attempts = {"RO-01": 0}
+
+    async def fake_debate(profile, case, own, peers, max_tokens=900):
+        agent_id = profile["agent_id"]
+        assert peers
+        if agent_id == "RO-01":
+            attempts[agent_id] += 1
+            # Fail both the initial structured response and its one schema retry.
+            if attempts[agent_id] <= 2:
+                raise AgentGenerationError("intentional transient failure")
+        return _round_contribution(profile, case, own, peers, 2)
+
+    monkeypatch.setattr(mdt_rounds, "generate_debate_contribution", fake_debate)
+
+    started = client.post(f"/api/runs/{run_id}/rounds/2")
+    assert started.status_code == 200
+    failed_summary = client.get(f"/api/runs/{run_id}/rounds/2").json()
+    assert failed_summary["status"] == "completed_with_errors"
+    assert failed_summary["completed_count"] == 44
+    assert failed_summary["failed_count"] == 1
+
+    before_resume = client.get(f"/api/runs/{run_id}/rounds/2/results").json()["results"]
+    failed_row = next(row for row in before_resume if row["agent_id"] == "RO-01")
+    completed_peer_before = next(row for row in before_resume if row["agent_id"] == "RO-02")
+    assert failed_row["status"] == "failed"
+    assert failed_row["result"] is None
+    assert failed_row["error_message"]
+    assert completed_peer_before["status"] == "completed"
+    assert completed_peer_before["result"] is not None
+
+    resumed = client.post(f"/api/runs/{run_id}/rounds/2/resume")
+    assert resumed.status_code == 200
+    final_summary = client.get(f"/api/runs/{run_id}/rounds/2").json()
+    assert final_summary["status"] == "completed"
+    assert final_summary["completed_count"] == 45
+    assert final_summary["failed_count"] == 0
+    assert attempts["RO-01"] == 3
+
+    after_resume = client.get(f"/api/runs/{run_id}/rounds/2/results").json()["results"]
+    recovered_row = next(row for row in after_resume if row["agent_id"] == "RO-01")
+    completed_peer_after = next(row for row in after_resume if row["agent_id"] == "RO-02")
+    assert recovered_row["status"] == "completed"
+    assert recovered_row["result"] is not None
+    assert completed_peer_after["result"] == completed_peer_before["result"]
+    assert completed_peer_after["completed_at"] == completed_peer_before["completed_at"]
