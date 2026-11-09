@@ -469,11 +469,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     matching_node_negative = _unsupported_matches(
         node_negative_pattern, text, supported_n_source
     )
-    if generated_node_negative and not supported_n0 and len(matching_node_negative) == len(generated_node_negative):
-        # An exact supplied source phrase is preserved even where the record does
-        # not use TNM notation. Any different/unsupported phrase remains flagged.
-        pass
-    elif generated_node_negative and not supported_n0:
+    if generated_node_negative and not supported_n0 and matching_node_negative:
         flags.append(
             "Generated narrative asserts node-negative status ("
             + ", ".join(generated_node_negative[:3])
@@ -494,7 +490,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     matching_no_metastases = _unsupported_matches(
         no_metastases_pattern, text, supported_m_source
     )
-    if generated_no_metastases and not supported_m0 and len(matching_no_metastases) != len(generated_no_metastases):
+    if generated_no_metastases and not supported_m0 and matching_no_metastases:
         flags.append(
             "Generated narrative asserts absence of metastatic disease ("
             + ", ".join(generated_no_metastases[:3])
