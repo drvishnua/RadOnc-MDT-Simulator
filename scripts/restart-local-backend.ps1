@@ -72,7 +72,7 @@ function Test-ExpectedBackendProcess($Process) {
 
 Write-Host "=== GUARDED LOCAL BACKEND RESTART ==="
 Write-Host "Source: $SourceRoot"
-$listeners = @(Get-NetTCPConnection -State Listen -LocalPort 8000 -ErrorAction Stop)
+$listeners = @(Get-NetTCPConnection -State Listen -LocalPort 8000 -ErrorAction SilentlyContinue)
 $listenerPids = @($listeners | Select-Object -ExpandProperty OwningProcess -Unique)
 
 if ($listenerPids.Count -gt 1) {
