@@ -366,7 +366,8 @@ def build_source_opinion_review_coverage(
         coverage.append(
             "R3 source-opinion review coverage (distinct roles; model-reported "
             "representation labels only, not clinical findings or consensus) — "
-            f"{source_id} (exact saved-case excerpt: \"{source_excerpt}\"; {label_note}): "
+            f"{source_id} (exact saved-case excerpt: \"{source_excerpt}\"; {label_note}; "
+            f"reviewing role IDs: {sorted(roles_by_source[source_id])}): "
             f"{len(roles_by_source[source_id])}/{len(entries)} roles supplied "
             "an exact source-bound review; option status role counts "
             f"{dict(sorted(option_counts.items()))}; condition status role counts "
