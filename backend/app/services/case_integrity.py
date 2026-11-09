@@ -168,7 +168,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         if unsupported_ages:
             flags.append(
                 "Generated narrative assigns an age ("
-                + ", ".join(unsupported_ages[:4])
+                + ", ".join(str(age) for age in unsupported_ages[:4])
                 + "), but age_years is not supplied in the structured case or explicitly recorded in the source summary."
             )
 
