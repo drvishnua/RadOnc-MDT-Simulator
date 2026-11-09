@@ -530,6 +530,37 @@ def test_uniform_support_labels_with_conflicting_options_are_not_consensus():
 
 
 
+def test_chair_reconciliation_preserves_all_groups_when_round3_top_positions_tie():
+    case = SyntheticCase(
+        scenario_title="Synthetic tied-position test",
+        case_summary="Fictional case used only to verify tied position labels are not arbitrarily ranked.",
+    )
+    positions = ["supports"] * 22 + ["opposes"] * 22 + ["insufficient_information"]
+    round1 = _chair_rows("assessment", positions)
+    round2 = _chair_rows("result", positions)
+    round3 = _chair_rows("result", positions)
+
+    report = reconcile_chair_report_draft(
+        "synthetic-tied-positions",
+        case,
+        round1,
+        round2,
+        round3,
+        _chair_draft(),
+    )
+
+    expected_roles = {
+        row["agent_id"]
+        for row in round3
+        if row["result"]["position"] in {"supports", "opposes"}
+    }
+    visible_history = " ".join(report.minority_and_dissenting_views)
+    assert all(agent_id in visible_history for agent_id in expected_roles)
+    assert "RO-45" not in visible_history
+    assert "no unique modal position" in " ".join(report.unresolved_disagreements).casefold()
+    assert report.consensus_status == "no_consensus"
+
+
 def test_round_finish_updates_parent_run_timestamp(monkeypatch, tmp_path):
     run_id = _create_complete_round1(monkeypatch, tmp_path)
     run_store.create_round_job(run_id, 2)

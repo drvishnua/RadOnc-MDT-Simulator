@@ -62,6 +62,15 @@ def _position_counts(rows: list[dict], field: str) -> Counter:
     )
 
 
+def _unique_modal_position(counts: Counter) -> str | None:
+    """Return a modal label only when one position is uniquely most frequent."""
+    if not counts:
+        return None
+    highest = max(counts.values())
+    modes = [position for position, count in counts.items() if count == highest]
+    return modes[0] if len(modes) == 1 else None
+
+
 def _minority_history(
     round1_rows: list[dict],
     round2_rows: list[dict],
@@ -90,7 +99,7 @@ def _minority_history(
             record["events"].append(event)
 
     round3_counts = _position_counts(round3_rows, "result")
-    final_modal = round3_counts.most_common(1)[0][0] if round3_counts else None
+    final_modal = _unique_modal_position(round3_counts)
     output: list[tuple[int, str]] = []
     for agent_id in sorted(by_agent):
         record = by_agent[agent_id]
@@ -99,7 +108,10 @@ def _minority_history(
             continue
         changed = len(set(positions)) > 1
         final_position = positions[-1]
-        qualified_minority = final_position in {"conditional", "supports", "opposes"} and final_position != final_modal
+        qualified_minority = (
+            final_position in {"conditional", "supports", "opposes"}
+            and (final_modal is None or final_position != final_modal)
+        )
         if not (changed or qualified_minority):
             continue
         transition = "Position evolution: " + " → ".join(positions) + ". " if changed else ""
@@ -183,11 +195,24 @@ def ensure_chair_report_completeness(
                 f"{count}/{sum(final_counts.values())} {position.replace('_', '-')}"
                 for position, count in sorted(final_counts.items())
             )
-            note = (
-                "Round-3 positions were non-uniform ("
-                + distribution
-                + "); these labels do not by themselves establish opposing treatment views."
+            highest_count = max(final_counts.values())
+            tied_positions = sorted(
+                position for position, count in final_counts.items() if count == highest_count
             )
+            if len(tied_positions) > 1:
+                note = (
+                    "Round-3 positions have no unique modal label because the highest "
+                    "counts are tied ("
+                    + distribution
+                    + "). All non-insufficient position groups are retained; the labels "
+                    "do not by themselves establish opposing treatment views."
+                )
+            else:
+                note = (
+                    "Round-3 positions were non-uniform ("
+                    + distribution
+                    + "); these labels do not by themselves establish opposing treatment views."
+                )
         elif len(final_counts) == 1 and any(
             final_counts.get(position)
             for position in ("supports", "opposes", "conditional")

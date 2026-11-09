@@ -104,6 +104,15 @@ def _position_counts(rows: list[dict], field: str) -> Counter:
     )
 
 
+def _unique_modal_position(counts: Counter) -> str | None:
+    """Return a modal label only when one position is uniquely most frequent."""
+    if not counts:
+        return None
+    highest = max(counts.values())
+    modes = [position for position, count in counts.items() if count == highest]
+    return modes[0] if len(modes) == 1 else None
+
+
 _ROUND_REFERENCE_PATTERN = re.compile(r"\bR([123]):([A-Z]{2}-[0-9]{2})\b")
 _ROUND_REFERENCE_RANGE_PATTERN = re.compile(
     r"\bR([123]):([A-Z]{2}-[0-9]{2})\s*(?:through|thru|to|[-–—])\s*(?:R\1:)?([A-Z]{2}-[0-9]{2})\b",
@@ -255,11 +264,11 @@ def reconcile_chair_report_draft(
 
     # Any non-modal Round-3 label is listed with its source conclusion. It is not
     # automatically called opposing dissent.
-    modal_position = final_counts.most_common(1)[0][0] if final_counts else None
+    modal_position = _unique_modal_position(final_counts)
     minority_views: list[str] = []
     for row, result in r3:
         position = result.get("position")
-        if position and position != modal_position:
+        if position and position != "insufficient_information" and position != modal_position:
             agent = row.get("agent_id", "unknown role")
             role = row.get("agent_name", "Role")
             conclusion = result.get("provisional_conclusion", "")
@@ -271,7 +280,12 @@ def reconcile_chair_report_draft(
         # converged, so a changed position does not erase the original view.
         for row, result in r1:
             position = result.get("position")
-            if position and final_counts and position != final_counts.most_common(1)[0][0]:
+            if (
+                position
+                and position != "insufficient_information"
+                and modal_position is not None
+                and position != modal_position
+            ):
                 minority_views.append(
                     f"{row.get('agent_id', 'unknown role')} — "
                     f"{row.get('agent_name', 'Role')} ({position}, Round 1): "
@@ -350,11 +364,28 @@ def reconcile_chair_report_draft(
             "warnings are not counted as source-linked adversarial challenges."
         )
     if len(final_counts) > 1:
-        unresolved.append(
-            "Round-3 position labels were not uniform: "
-            + _format_position_counts(final_counts)
-            + ". The labels are preserved as recorded and are not, by themselves, proof of opposing treatment views."
+        highest_count = max(final_counts.values())
+        tied_positions = sorted(
+            position for position, count in final_counts.items() if count == highest_count
         )
+        if len(tied_positions) > 1:
+            tied_distribution = ", ".join(
+                f"{final_counts[position]}/{sum(final_counts.values())} {position}"
+                for position in tied_positions
+            )
+            unresolved.append(
+                "Round-3 position labels have no unique modal position because the highest "
+                "counts are tied ("
+                + tied_distribution
+                + "). All non-insufficient recorded position groups are retained; the labels "
+                "are not, by themselves, proof of opposing treatment views."
+            )
+        else:
+            unresolved.append(
+                "Round-3 position labels were not uniform: "
+                + _format_position_counts(final_counts)
+                + ". The labels are preserved as recorded and are not, by themselves, proof of opposing treatment views."
+            )
     elif len(final_counts) == 1 and any(
         final_counts.get(position)
         for position in ("supports", "opposes", "conditional")

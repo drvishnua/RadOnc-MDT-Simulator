@@ -184,6 +184,31 @@ def test_minority_history_merges_earlier_roles_with_existing_round_three_minorit
 
 
 
+def test_minority_history_retains_all_groups_when_round_three_modal_is_tied():
+    case = SyntheticCase(
+        scenario_title="Synthetic tied Round-3 completeness test",
+        case_summary="Fictional case for validating balanced position-history preservation.",
+    )
+    positions = ["supports"] * 22 + ["opposes"] * 22 + ["insufficient_information"]
+    round1 = _rows("assessment", positions, unknowns=False)
+    round2 = _rows("result", positions, unknowns=False)
+    round3 = _rows("result", positions, unknowns=False)
+
+    report = ensure_chair_report_completeness(
+        _empty_report(), case, round1, round2, round3
+    )
+
+    expected_roles = {
+        row["agent_id"]
+        for row in round3
+        if row["result"]["position"] in {"supports", "opposes"}
+    }
+    visible_history = " ".join(report.minority_and_dissenting_views)
+    assert all(agent_id in visible_history for agent_id in expected_roles)
+    assert "RO-45" not in visible_history
+    assert "no unique modal label" in " ".join(report.unresolved_disagreements).casefold()
+
+
 def test_failed_round_payloads_are_excluded_from_chair_counts_and_history():
     case = SyntheticCase(
         scenario_title="Synthetic failed-record exclusion test",
