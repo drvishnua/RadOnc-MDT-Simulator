@@ -1,57 +1,115 @@
 # Implementation Status
 
-Last updated: 2026-11-05
+**Last verified:** 9 November 2026
+**Repository:** `drvishnua/RadOnc-MDT-Simulator`
+**Development branch:** `feature/four-round-mdt-and-performance`
+**Verified code snapshot:** `b2c072581d2c6d8f870d39b644d71d5851023dd5`
+**PR #1:** open, draft, unmerged; targets `main`.
 
-## Implemented in the development branch
+This document distinguishes code/CI verification from local runtime loading, full live inference, GPU attribution and clinical validation. A passing CI workflow is not evidence of clinical accuracy.
 
-| Area | State | Verification |
+## Current verified snapshot
+
+| Area | State | Verification and limitation |
 |---|---|---|
-| Local environment | Windows self-hosted runner connected to local Ollama/GPU | Live GitHub Actions execution on RadOnc-Laptop |
-| Ollama | qwen3.5:4b reachable locally | Live preflight and inference |
-| Agent catalogue | 45 unique roles | Catalogue tests |
-| Round 1 | 45 independent assessments with position, provisional conclusion, and preferred educational option or reason none can be preferred | Batch/resume tests and earlier live run |
-| Round 2 | All 45 roles generate debate contributions from bounded peer digests | Orchestration tests and earlier live run |
-| Round 3 | All 45 roles generate adversarial reviews | Orchestration tests and earlier live run |
-| Round 4 | SG-07 Chair synthesis reconciled against saved position counts and role records | 2 regression tests; fresh live validation pending |
-| Persistence | SQLite stores case snapshot, checksum, per-role outputs and statuses | Persistence and endpoint tests |
-| Export | JSON export includes exact case JSON, checksum, outputs and report | Case snapshot/checksum test |
-| Recovery | Failed/interrupted roles resume without rerunning completed roles | Batch and round resume tests |
-| Frontend | Round controls, progress, per-role results and Chair report | TypeScript/Vite build and launcher checks |
-| Concurrency | Default remains 1 | Laptop benchmark: two-at-once throughput was 0.86x sequential |
+| Four-round architecture | Implemented | R1/R2/R3 orchestration and SG-07 Chair paths have backend tests; no fresh full 136-contribution run on this code snapshot |
+| Specialist catalogue | 45 configured roles | Backend tests and local `/api/agents` diagnostic |
+| R1 independent assessments | Implemented | Individual role/case prompts and persisted results; latest full live validation predates current prompt and case-integrity changes |
+| R2 debate | Implemented | Bounded peer-source allowlists and source-reference checks are covered by backend regression tests; latest full live validation predates these changes |
+| R3 adversarial review | Implemented | Source-bound representation/omission checks and schema/prompt constraints are covered by backend tests; latest full live validation predates these changes |
+| R4 Chair | Implemented | Saved R1–R3 reconciliation, source-derived role history, distinct-role counts and conservative consensus handling have regression coverage; no fresh live Chair report on this code snapshot |
+| Patient registry | Implemented | SQLite registry, sequential local RAD identifiers, immutable case versions, per-version patient-name preservation, linked runs/assessments and delete cascade have backend tests |
+| Case-data integrity | Expanded | Pattern-based audits now cover unsupported age/stage-group/T/N/M and other previously implemented claim classes; explicit age/sex/TNM/stage-group discrepancies are surfaced. This is not exhaustive semantic contradiction detection |
+| Case validation | Implemented | Completeness warnings are non-blocking; unknown fields remain unknown. Conflicts are warnings and must not be silently reconciled |
+| Frontend case restore | Corrected | Structured list values are converted to actual newline-delimited form text and parsed with the same helper; round-trip unit tests added |
+| Frontend | CI passed | 21/21 Node tests, TypeScript check and Vite production build on the verified code snapshot |
+| Backend | CI passed | 110 passed, 1 warning on the verified code snapshot; warning is the existing Starlette/httpx TestClient deprecation |
+| Local source mirror | Synced | Windows self-hosted workflow verified `Source` manifest at the same code SHA and completed local diagnostics |
+| Running local backend | Restart not verified | Uvicorn was still running as its prior process during diagnostics. A source copy does not reload Python modules. Do not assume the live backend has loaded the latest source until services are restarted and rechecked |
+| Concurrency | 1 | Keep sequential generation; do not increase without measured quality and throughput evidence |
+| Model selection | Baseline retained | `qwen3.5:4b` remains the configured baseline. Candidate models are described in `docs/MODEL_BENCHMARK_PLAN.md`; no candidate has been installed or benchmarked |
 
-## Four-round behavior
+## Four-round architecture
 
-Round 1 sends the saved synthetic case separately to all 45 roles. Each role receives only its own profile and the case. Round 2 asks all 45 roles to compare their independent view with selected peer perspectives. Round 3 asks all 45 roles to challenge assumptions, uncertainty, missing information, patient/context, feasibility, resource and governance issues. Round 4 runs SG-07 as Chair over compact digests of all stored results.
+1. **R1 — Independent assessments:** 45 roles receive the saved case and their own role profile.
+2. **R2 — Debate:** 45 roles compare their R1 view with bounded, selected peer perspectives. Supplied source IDs must be attributable and exact.
+3. **R3 — Adversarial review:** 45 roles challenge unsupported assumptions, source omissions/distortions, uncertainty, missing information, risks and governance concerns.
+4. **R4 — Chair:** SG-07 synthesises actual saved R1–R3 records. Deterministic backend reconciliation verifies saved contributions, position distributions, minority history and report completeness.
 
-All outputs are persisted by role and round. A malformed structured response receives one retry with a larger output budget. Failed or interrupted work can be resumed while retaining completed outputs.
+Expected saved contribution count for a complete run is 136 (45 + 45 + 45 + 1). A complete run is not necessarily a passing audit. Failed/omitted contributions must remain visible. Position labels are descriptive and are not votes; uniform labels or repeated wording do not establish proposition-level consensus.
 
-The Chair produces a structured draft, then the backend reconciles its report against saved Round-1, Round-2 and Round-3 records. It recomputes exact position distributions, derives consensus status conservatively, preserves non-modal views with source conclusions, and fills uncertainty, missing-information, patient/family, feasibility, governance and evidence-limitations sections from structured case and role data. Conditional positions are not automatically treated as opposition. This reporting safeguard is not clinical validation.
+## Case-data safeguards
 
-## Output budgets and runtime
+The current case-integrity layer:
+- represents missing structured fields as not reported, not negative;
+- flags unsupported age and stage-group assertions separately from T/N/M;
+- checks unsupported T/N/M, demographic, performance-status, resectability, histology/pathology, investigation, treatment-status and patient-preference assertions covered by the existing rule set;
+- uses clause boundaries so a qualifier for one statement does not suppress a separate unsupported assertion after punctuation, commas or contrast markers;
+- warns about explicit structured/free-text age, sex, T/N/M and stage-group discrepancies; and
+- preserves both source representations for human reconciliation.
 
-- Round 1: 1,100-token initial budget; one retry at 1,500.
-- Rounds 2 and 3: 700-token initial budget; one retry at 1,000.
-- Round 4 Chair: 1,600-token initial budget; one retry at 2,200.
-- Ollama context remains fixed at 4K.
-- RADONC_AGENT_CONCURRENCY remains 1 because two simultaneous generations were slower than sequential execution on the target laptop.
+These are deterministic pattern-based checks, not comprehensive natural-language understanding. Passing them does not establish that every unsupported claim has been detected. Human review remains necessary. The Chair fallback now explicitly states that the checks are limited and that absence of recorded flags is not proof of absence of unsupported claims.
+
+## Patient registry and persistence
+
+- Local identifiers use sequential `RAD-000001`-style training identifiers; deleted identifiers are not reused.
+- Registry name is stored separately from the de-identified clinical case payload.
+- Each saved case version is immutable, retains its own best-available patient name and has a snapshot hash.
+- Runs and RO-01 assessments are linked to the exact saved case version.
+- Deleting a registry record cascades to linked case versions and MDT outputs while preserving the serial allocation.
+- Backend tests cover creation, versioning, patient-version ownership, run linkage, legacy migration, historical names and delete cascade.
+
+The complete browser UI flow (create → validate → save → refresh → restore prior version → edit → save new version → delete) has **not** been independently exercised end-to-end in a browser during this verification. Unit and API tests do not substitute for that acceptance test.
 
 ## Validation record
 
-- Live run 41941583054 on commit 4446065b53b67907861493269ea16aaed81aef7a completed 45 + 45 + 45 + 1 generations (136 total), zero failures/retries, in 798.63 seconds. This run preceded the new Chair reconciliation logic.
-- Backend regression suite: 26 passed on the reconciled code/test revision.
-- Backend and frontend CI checks passed on commit 1daa89eda17f7b09e028a1aa5fc981a6c3879187.
-- A new live run on the local Windows/Ollama runner is exercising the reconciliation code. A stricter run also checks exact Chair counts and required sections; those live checks are not yet confirmed complete.
+### CI and source sync on code snapshot `b2c072581d2c6d8f870d39b644d71d5851023dd5`
 
-## Not implemented / not validated
+- [Backend Tests — run 42574812785](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42574812785): success; **110 passed, 1 warning**.
+- [Frontend Build — run 42574812756](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42574812756): success; **21 passed, 0 failed**, TypeScript check and Vite production build passed.
+- [Local Source sync and diagnostic — run 42574809719](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42574809719): success; local manifest verified as `feature/four-round-mdt-and-performance @ b2c072581d2c6d8f870d39b644d71d5851023dd5`. Health endpoint, React shell and structured case fields passed diagnostic checks.
 
-- Evidence retrieval adapters and citation provenance verification
-- Clinically validated evidence grading or accuracy evaluation
-- Validation by a qualified clinical MDT
-- Formal bias, reproducibility and safety evaluation
-- Real-patient use
+The push-triggered duplicate backend/frontend runs were cancelled by workflow concurrency controls. The PR-triggered runs above are the authoritative CI results for this code snapshot.
 
-No evidence claim should be presented as source-verified. Use synthetic cases only.
+The local diagnostic found the Vite and Uvicorn processes responding and headless Edge mounted the React shell. It did not restart the existing backend process. The source mirror being current does not prove that an already-running Uvicorn process has loaded newly copied Python files.
 
-## Safety
+### Historical live MDT-006 validation — audit did not pass
 
-Research/education prototype only. Not a medical device or clinical decision-support system. Do not use outputs for real-patient treatment decisions or as a substitute for a qualified MDT.
+- [Workflow run 42502115878](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42502115878)
+- Stored run ID: `beaea927-fff8-48ce-9779-1e991149e6ba`
+- Code snapshot: `df3e29b7f4f126493212630e128642cecd5700eb` (requested via a later workflow commit)
+- Result: `completed_with_findings`; 988.37 seconds; 136/136 expected saved contributions across four rounds.
+- Audit totals: **134 hard failures and 92 major findings**. R2 had 45 hard failures; R3 had 89 hard failures and 1 major finding; R1 had 3 major findings; Chair had 2 major findings; stress oracle had 86 major findings.
+- R2 findings included invalid broad role-range citations. R3 findings included unsupplied peer references and missing/unclear source-linked challenges. Unsupported resectability, investigation, preference and definitive treatment-safety wording were also identified.
+- The Chair withheld a treatment recommendation and retained insufficient-information status; its saved output is not a clinical conclusion.
+
+This run predates subsequent R2/R3 source allowlist, prompt/schema and representation-fidelity changes, and predates the latest case-integrity changes. Those changes have CI coverage but have **not** been validated in a subsequent full live Ollama MDT run. The old audit findings remain open live-validation evidence until a new separately authorised run demonstrates improvement.
+
+### Historical GPU telemetry only
+
+The MDT-006 run recorded 941 telemetry samples on an NVIDIA RTX 4060 Laptop GPU (8,188 MiB): mean utilisation 83.01%, peak 100%; mean VRAM 3,750.84 MiB, peak 3,765 MiB. Ollama `/api/ps` reported `qwen3.5:4b` resident in 188/189 samples. Telemetry was system-wide and does not attribute all GPU activity exclusively to Ollama. These historical measurements are **not** current-head GPU verification.
+
+## Not implemented or not validated
+
+- Evidence retrieval adapters and citation provenance verification.
+- Independent guideline/primary literature checking for generated clinical claims.
+- Clinically validated evidence grading or accuracy evaluation.
+- Formal bias, reproducibility and safety evaluation.
+- Qualified clinical MDT validation.
+- Full browser acceptance of the patient-registry workflow on the latest source.
+- Fresh full 136-contribution live simulation and Chair audit on the current code snapshot.
+- Current-head GPU attribution during active inference.
+- Real-hospital registration or hospital MRN integration.
+
+## Model benchmark
+
+The controlled model-selection protocol is in [MODEL_BENCHMARK_PLAN.md](./MODEL_BENCHMARK_PLAN.md). It retains `qwen3.5:4b` as the control, requires identical artificial cases/prompts and blinded review, sets critical safety gates before comparison, measures full 136-contribution runtime and GPU telemetry, and treats cloud inference as a separate privacy/security-reviewed phase. No model change has been made.
+
+## Safety and data boundaries
+
+- Fictional educational cases only. Do not enter real patient identifiers or real patient health information.
+- Local RAD serials are training identifiers, not hospital medical-record numbers. This application does not register patients with a hospital.
+- Registry names are stored separately from the de-identified case payload and are not sent to specialist agents.
+- Not a medical device or clinical decision-support system. Outputs are not diagnosis, prescriptions, dose instructions, contours, treatment plans or patient-specific recommendations.
+- Outputs must not be used for real-patient treatment decisions or as a substitute for a qualified MDT.
+- Evidence retrieval is not connected; no guideline compliance or source verification should be claimed.
