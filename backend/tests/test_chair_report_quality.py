@@ -93,8 +93,13 @@ def test_chair_uncertainties_exclude_unverified_role_assertions_but_keep_unknown
     round1[0]["assessment"]["case_data_integrity_flags"] = [
         "Generated narrative contains unsupported T-stage terminology."
     ]
+    chair_draft = _empty_report().model_copy(update={
+        "major_uncertainties": [
+            "T1 glottic cancer typically does not require intensification."
+        ],
+    })
     report = ensure_chair_report_completeness(
-        _empty_report(),
+        chair_draft,
         case,
         round1,
         _rows("result", ["insufficient_information"] * 45),
