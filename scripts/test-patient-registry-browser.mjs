@@ -496,10 +496,12 @@ try {
   const deletedLookup = await fetch(API_URL + "/api/patients/" + patientId);
   if (deletedLookup.status !== 404) throw new Error("The deleted patient detail endpoint did not return HTTP 404.");
 
-  browserWorkflowCompleted = true;
   console.log("PATIENT_REGISTRY_BROWSER_E2E_OK");
   console.log("Verified in headless Edge: all case fields round-trip through create/reload; one-field edit; immutable version 2; restore version 1; delete.");
   console.log("Disposable registry identifier: " + patientIdentifier);
+
+  await verifyFourRoundDashboard();
+  browserWorkflowCompleted = true;
 } finally {
   await verifyBackendDeletion().catch(error => console.error("Cleanup warning: " + error.message));
   for (const pending of activeRequests.values()) pending.reject(new Error("Browser test ended."));
