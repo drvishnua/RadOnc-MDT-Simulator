@@ -366,3 +366,17 @@ def test_generated_substage_is_not_inferred_from_parent_stage():
         "provisional_conclusion": "The patient has Stage IIIA disease."
     })
     assert any("assigns a stage group" in item for item in flags)
+
+
+
+def test_qualifier_for_one_claim_does_not_hide_a_later_claim_after_comma_or_contrast():
+    case = _case()
+    comma_example = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "M0 is not confirmed, but the patient is node-negative."
+    })
+    assert any("node-negative status" in item for item in comma_example)
+
+    contrast_example = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "M1 cannot be assumed but there are no distant metastases."
+    })
+    assert any("absence of metastatic disease" in item for item in contrast_example)
