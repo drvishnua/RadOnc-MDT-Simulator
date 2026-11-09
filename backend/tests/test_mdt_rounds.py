@@ -882,6 +882,8 @@ def test_adversarial_prompt_truncates_peer_digest_to_five_source_records(monkeyp
     assert '"source":"R2:SO-01"' in captured[0]
     assert '"source":"R2:SO-05"' in captured[0]
     assert '"source":"R2:SO-06"' not in captured[0]
+    assert "CASE ATTRIBUTION CHECK: the verbatim case summary contains no clearly speaker-attributed opinion." in captured[0]
+    assert "Return source_opinion_reviews as an empty list" in captured[0]
 
 
 
