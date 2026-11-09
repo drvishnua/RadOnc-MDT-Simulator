@@ -70,7 +70,7 @@ class PatientCaseUpdateRequest(StrictModel):
 
 class CaseValidationResult(StrictModel):
     valid: bool
-    mode: str = "synthetic_educational_case"
+    mode: str = "fictional_educational_case"
     warnings: list[str] = Field(default_factory=list)
     note: str = (
         "Schema validation only. This is not clinical validation or a treatment recommendation."
