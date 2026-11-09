@@ -395,8 +395,19 @@ def ensure_chair_report_completeness(
     # Source-derived facts and unknowns must not disappear merely because the
     # Chair draft supplied a non-empty but generic summary. Prefer case/R1/R2/R3
     # records, then retain any additional Chair wording within the section limits.
+    # The preceding deterministic reconciliation may already have collected
+    # role-authored uncertainty strings. Re-audit those strings here as well so an
+    # unsupported assertion cannot re-enter the final report through the Chair draft.
+    safe_chair_uncertainties = [
+        value for value in (data.get("major_uncertainties") or [])
+        if isinstance(value, str) and not audit_unverified_case_claims(case, {"major_uncertainty": value})
+    ]
+    safe_chair_missing = [
+        value for value in (data.get("missing_information_before_real_world_review") or [])
+        if isinstance(value, str) and not audit_unverified_case_claims(case, {"missing_information": value})
+    ]
     data["major_uncertainties"] = _unique(
-        [*uncertainty_items, *data["major_uncertainties"]],
+        [*uncertainty_items, *safe_chair_uncertainties],
         SECTION_LIMITS["major_uncertainties"],
     ) or [
         "No explicit uncertainty item was recorded in the case snapshot or role "
@@ -404,7 +415,7 @@ def ensure_chair_report_completeness(
     ]
 
     data["missing_information_before_real_world_review"] = _unique(
-        [*missing_items, *data["missing_information_before_real_world_review"]],
+        [*missing_items, *safe_chair_missing],
         SECTION_LIMITS["missing_information_before_real_world_review"],
     ) or [
         "No specific missing-information item was recorded. Completeness of the "
