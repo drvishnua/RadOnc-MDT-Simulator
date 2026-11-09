@@ -418,7 +418,7 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
     assert "exact CASE source ID and at least one exact R2:AGENT_ID" in prompts[1]
     assert "CASE:case_summary#N" in prompts[1]
     assert "Do not assume a fixed number of opinions" in prompts[1]
-    assert "source_excerpt: an exact contiguous verbatim quotation from case_summary" in prompts[1]
+    assert "Include source_excerpt as an exact contiguous verbatim quotation from case_summary" in prompts[1]
     assert "For MDT-006" not in prompts[1]
     assert "colorectal surgical note" not in prompts[1]
     assert "medical oncology note" not in prompts[1]
