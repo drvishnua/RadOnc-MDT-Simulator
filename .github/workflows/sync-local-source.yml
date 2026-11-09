@@ -19,6 +19,8 @@ on:
       - "frontend/vite.config.ts"
       - "backend/launch_installed.py"
       - "packaging/windows/**"
+      - "README.md"
+      - "docs/IMPLEMENTATION_STATUS.md"
       - ".github/workflows/windows-installer.yml"
 
 permissions:

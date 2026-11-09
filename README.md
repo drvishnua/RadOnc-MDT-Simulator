@@ -2,7 +2,29 @@
 
 A local-first, AI-assisted educational simulator for multidisciplinary oncology case discussions.
 
-> **Current milestone (9 November 2026):** The development branch contains the four-round 45 + 45 + 45 + 1 workflow, patient registry/versioning, expanded case-integrity checks, Chair safeguards, persisted round/full-MDT completion timestamps and neutral “fictional training case” terminology. The exact current code snapshot is `d6f7421f6c38862f5ca171b1023e94ac3fdcfb06`: backend CI passed (114 tests, 1 existing deprecation warning); frontend CI passed (28 tests), TypeScript checking and Vite production build passed. The dashboard now displays R2–R4 attempt durations and total elapsed time through Round 4, explicitly including pauses between rounds. The last Windows source-sync verification is older (`aa0e90b7...`); the current code snapshot has not yet been verified in the laptop `Source` folder or loaded by a restarted backend. The historical MDT-006 audit remains a failure with 134 hard failures and 92 major findings; later prompt/schema and case-integrity changes still need a fresh full live run.
+> **Current Windows beta release snapshot — 10 November 2026:** Development branch `feature/four-round-mdt-and-performance`, commit `d9283d0db37c42f9e01881190b715695b1c19795`. PR #1 remains open, draft and unmerged; `main` remains unchanged at `39a356b8eb09399aa2da1b9b9085965999f5105a`.
+>
+> **Verified CI on this exact commit:** backend `177 passed, 1 existing deprecation warning` ([run 42710563142](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42710563142)); frontend `32 passed`, TypeScript and Vite production build passed ([run 42710563160](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42710563160)); Windows installer and installed-app smoke test passed ([run 42710563272](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42710563272)).
+>
+> The Windows x64 Setup.exe was installed and launched on a clean hosted Windows runner. The test checked the health endpoint, served frontend/JavaScript assets, all 45 specialist profiles, user-data database location, saving a training registry record, and uninstall preservation of the database. The database hash was unchanged after uninstall. No Ollama call or model inference was performed.
+>
+> **Installer artifact:** [RadOnc MDT Simulator — Windows x64](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42710563272). Artifact ID `13716081234`, ZIP digest `sha256:aa4ab02def9a9637dc6d7eade102893b20cba6d47ca6ca16abbc91b4b3d59961`. The downloaded Setup.exe checksum was independently verified as `b30f17a30de91f30ae7537255baf7bdba599f3921bcaeb5a3bff8872200b7c95`.
+>
+> **Runtime prerequisite:** Ollama and `qwen3.5:4b` are not bundled. Install Ollama separately and run `ollama pull qwen3.5:4b`. The installed RadOnc application itself does not require separate Python or Node.js installations. It serves the UI and API locally at `http://127.0.0.1:8765`; patient-training data and logs are stored under `%LOCALAPPDATA%\RadOncMDT\`. A deliberate, integrity-checked legacy database copy is documented in the installed README.
+>
+> **Not yet verified:** installation and use on the target laptop itself, current-head live four-round Ollama inference, current GPU attribution, evidence retrieval/citation verification, and clinical accuracy/guideline concordance. The historical MDT-006 audit still reported 134 hard failures and 92 major findings on an earlier code snapshot. This is an educational simulator for fictional training cases only, not clinical decision support.
+
+## Installing the Windows beta
+
+1. Download `RadOnc-MDT-Simulator-Setup.exe` from the Windows Installer Build artifact linked above.
+2. Run Setup.exe. It installs per-user and creates Start-menu shortcuts (a desktop shortcut is optional).
+3. Install Ollama separately, then download the configured model with `ollama pull qwen3.5:4b`.
+4. Start RadOnc MDT Simulator. The local dashboard opens at `http://127.0.0.1:8765`.
+5. Use the Stop shortcut before uninstalling or replacing the installation.
+
+The installer preserves `%LOCALAPPDATA%\RadOncMDT\Data` and `Logs` when the application is uninstalled. Existing development databases are **not imported automatically**. To copy one, stop the old app, make a separate backup, and follow the explicit `legacy-db-path.txt` procedure in the installed README. The migration checks both source and copied SQLite integrity, never changes the source, and never overwrites an existing destination.
+
+The installer is not configured for code signing. Windows SmartScreen may display an unfamiliar-app warning.
 
 ## Purpose
 
@@ -68,9 +90,9 @@ The target laptop uses Ollama with qwen3.5:4b and an 8 GB RTX 4060. The orchestr
 
 The model is kept warm during a run. Prompts use Ollama's schema-constrained output rather than duplicating the full JSON schema in prompt text. Context remains fixed at 4K. Initial/retry output budgets are 1,100/1,500 tokens for Round 1, 700/1,000 for Rounds 2–3, and 1,600/2,200 for the Chair.
 
-## Validation status
+## Historical validation record (older code snapshots; superseded by the current release snapshot above)
 
-### Current code/CI snapshot
+### Older code/CI snapshot
 
 The following CI checks ran against exact code snapshot `d6f7421f6c38862f5ca171b1023e94ac3fdcfb06`:
 
@@ -79,7 +101,7 @@ The following CI checks ran against exact code snapshot `d6f7421f6c38862f5ca171b
 - **Dashboard timing:** R2–R4 attempt durations and full wall-clock elapsed time through Round 4 are rendered from persisted timestamps. The overall interval begins at run creation and includes pauses between rounds; it is not pure inference time.
 - **Terminology:** generated Chair report text, agent prompts, API descriptions, validation metadata and user documentation consistently use “fictional training case” / “educational simulation” language. Internal Python/schema/DB identifiers remain unchanged for compatibility. The education-only/no-clinical-decision boundary is retained.
 
-### Local source/runtime verification
+### Historical local source/runtime verification
 
 - The last successful Windows source-sync diagnostic is [run 42576725334](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42576725334), which verified the local `Source` manifest at the older code snapshot `aa0e90b7ec6fbbea9fc359c98f2deefdad2cf902`.
 - The current code snapshot `8a318900f9a661116dba2130b118d924741bfcfe` has **not** yet been verified in the local `Source` manifest.
@@ -122,9 +144,9 @@ Evidence retrieval and citation verification are not connected yet. Evidence cla
 - Economic, policy, safeguarding, and medico-legal perspectives are issue-spotting aids, not professional advice.
 - Patient personas are discussion lenses, not demographic stereotypes or assumptions about an individual.
 
-## Local setup
+## Local development setup
 
-From the Windows Source folder, double-click Start-RadOnc-MDT.cmd. Use Stop-RadOnc-MDT.cmd to stop the backend and frontend. Ollama remains running. Services bind to localhost.
+For source-tree development only, from the Windows Source folder, double-click Start-RadOnc-MDT.cmd. Use Stop-RadOnc-MDT.cmd to stop the backend and frontend. Ollama remains running. Development services bind to localhost. Installed users should use the Start-menu or desktop shortcuts described above.
 
 ## Repository hygiene and license
 

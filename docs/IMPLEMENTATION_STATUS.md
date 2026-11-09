@@ -1,14 +1,41 @@
 # Implementation Status
 
-**Last verified:** 9 November 2026
+**Current release snapshot verified:** 10 November 2026
 **Repository:** `drvishnua/RadOnc-MDT-Simulator`
 **Development branch:** `feature/four-round-mdt-and-performance`
-**Verified code snapshot:** `d6f7421f6c38862f5ca171b1023e94ac3fdcfb06`
-**PR #1:** open, draft, unmerged; targets `main`.
+**Current commit:** `d9283d0db37c42f9e01881190b715695b1c19795`
+**PR #1:** open, draft, unmerged; targets `main` at `39a356b8eb09399aa2da1b9b9085965999f5105a`.
 
-This document distinguishes code/CI verification from local runtime loading, full live inference, GPU attribution and clinical validation. A passing CI workflow is not evidence of clinical accuracy.
+This document separates build/CI results from local installation, live inference, GPU attribution and clinical validation. A passing software test is not evidence of clinical accuracy.
 
-## Current verified snapshot
+## Current Windows beta release snapshot
+
+| Area | Current verified state | Evidence and limitation |
+|---|---|---|
+| Windows x64 installer | Built and uploaded | [Installer workflow 42710563272](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42710563272); artifact ID `13716081234` |
+| Packaged runtime | PyInstaller one-directory application with FastAPI serving the Vite production build | Installed executable passed the health test and served HTML and JavaScript assets |
+| Installer | Inno Setup 6 per-user Setup.exe | Installed and uninstalled on a clean hosted Windows runner |
+| Backend CI | **177 passed, 1 warning** | [Run 42710563142](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42710563142); existing Starlette/httpx TestClient deprecation |
+| Frontend CI | **32 passed** | [Run 42710563160](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42710563160); TypeScript and Vite production build passed |
+| Packaging prerequisites | Passed | [Run 42710563157](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42710563157) |
+| Installed application smoke test | Passed | Health, bundled frontend/assets, 45 roles, data path and training-record save verified |
+| Uninstall/data retention | Passed | Saved database remained byte-for-byte unchanged after the installed uninstaller ran |
+| Installer checksum | Independently checked | Setup.exe SHA-256: `b30f17a30de91f30ae7537255baf7bdba599f3921bcaeb5a3bff8872200b7c95` |
+| Ollama/model | External prerequisite | Ollama and `qwen3.5:4b` are not bundled; no inference was run by installer CI |
+| Target laptop install | Not yet verified | Hosted Windows CI is not a substitute for installing on the user's laptop |
+| Current-head live four-round simulation | Not run | Requires explicit authorisation; historical MDT-006 audit findings remain open |
+| Current GPU attribution | Not verified | No active inference telemetry on this commit |
+| Evidence and clinical validation | Not implemented/verified | No independent guideline retrieval, source validation or qualified clinical review |
+
+The installer serves the local dashboard at `http://127.0.0.1:8765`. Application data and logs are stored under `%LOCALAPPDATA%\RadOncMDT\`. The installed application includes its Python runtime and does not require Python or Node.js to be separately installed. Ollama and model weights remain separate prerequisites.
+
+The installer was built from the current application code and smoke-tested without contacting Ollama. The test created a fictional training registry record, checked its local RAD serial, uninstalled the application and verified that the SQLite database remained unchanged. This demonstrates software/data-path behaviour only; it does not validate model quality or clinical safety.
+
+## Historical implementation snapshot (9 November 2026; superseded)
+
+The detailed implementation, live-run, local-source and GPU records below refer to older code snapshots. They are retained for audit history and must not be interpreted as the current release status.
+
+## Historical verified snapshot
 
 | Area | State | Verification and limitation |
 |---|---|---|
