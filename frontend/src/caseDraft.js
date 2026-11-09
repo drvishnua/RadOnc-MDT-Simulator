@@ -37,3 +37,15 @@ export function writeDraft(storage, key, legacyKey, draft) {
     return false;
   }
 }
+
+/** Convert structured text arrays into actual newline-delimited form text. */
+export function listToMultilineText(values) {
+  return Array.isArray(values)
+    ? values.filter((item) => typeof item === "string").join("\n")
+    : "";
+}
+
+/** Parse newline-delimited form text back into a clean string list. */
+export function multilineTextToList(value) {
+  return value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
+}
