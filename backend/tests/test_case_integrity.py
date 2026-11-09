@@ -440,3 +440,14 @@ def test_attribution_detector_recognises_explicit_named_speakers_conservatively(
         "According to Dr Arun Kumar, the opinion remains conditional."
     )
 
+
+def test_attribution_detector_recognises_explicit_department_service_notes():
+    from app.services.case_integrity import case_summary_has_attributed_opinions
+
+    assert case_summary_has_attributed_opinions(
+        "Neurology service note proposes a specialist assessment first."
+    )
+    assert case_summary_has_attributed_opinions(
+        "Cardiology service note proposes a separate preoperative sequence."
+    )
+

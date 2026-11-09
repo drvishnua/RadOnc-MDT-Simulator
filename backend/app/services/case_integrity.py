@@ -68,6 +68,12 @@ def case_summary_has_attributed_opinions(case_summary: str) -> bool:
         r"(?i:recommends?|proposes?|suggests?|advises?|states?|reports?|says?|said|"
         r"opines?|believes?|prefers?|wishes?|requests?|argues?)\b"
     )
+    service_note_pattern = (
+        r"\b(?-i:[A-Z][A-Za-z.'-]*(?:\s+[A-Z][A-Za-z.'-]*){0,2})\s+"
+        r"(?i:(?:service|department)\s+note\s+"
+        r"(?:recommends?|proposes?|suggests?|advises?|states?|reports?|says?|said|"
+        r"opines?|believes?|prefers?|wishes?|requests?|argues?))\b"
+    )
     attributed_person_pattern = (
         r"\b(?i:according\s+to|per|as\s+(?:reported|stated|recommended)\s+by)\s+"
         r"(?:the\s+)?"
@@ -77,6 +83,7 @@ def case_summary_has_attributed_opinions(case_summary: str) -> bool:
     return any((
         re.search(role_opinion_pattern, case_summary, re.IGNORECASE),
         re.search(named_person_opinion_pattern, case_summary),
+        re.search(service_note_pattern, case_summary),
         re.search(attributed_person_pattern, case_summary),
     ))
 
