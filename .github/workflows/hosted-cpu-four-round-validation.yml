@@ -83,7 +83,6 @@ jobs:
           $tags = Get-RadOncOllamaTags -BaseUrl $ollamaUrl
           if (-not (Test-RadOncModelInstalled -Tags $tags -ModelName "qwen3.5:4b")) {
             throw "qwen3.5:4b is not present after model pull."
-          }
           $modelRecord = @($tags.models | Where-Object {
             ([string]$_.name -eq "qwen3.5:4b") -or ([string]$_.model -eq "qwen3.5:4b")
           } | Select-Object -First 1)
@@ -95,256 +94,13 @@ jobs:
           if ($hexDigest.StartsWith("sha256:",[StringComparison]::OrdinalIgnoreCase)) {
             $hexDigest = $hexDigest.Substring(7)
           }
-          if ($hexDigest.Length -ne 64 -or $hexDigest -notmatch '^[0-9a-fA-F]+          # Keep the Ollama server and all four rounds inside this same Actions
-          # step. GitHub cleans up child processes at step end, so splitting
-          # provisioning and inference into separate steps terminates Ollama.
-          $env:LOCALAPPDATA = $localAppData
-          $env:RADONC_DATA_DIR = $dataDirectory
-          $env:OLLAMA_BASE_URL = $ollamaUrl
-          $env:OLLAMA_HOST = "127.0.0.1:11435"
-          $env:OLLAMA_MODELS = Join-Path $localAppData "RadOncMDT\Models"
-          $env:OLLAMA_MODEL = "qwen3.5:4b"
-          $env:RADONC_VALIDATION_CPU_ONLY = "1"
-          $env:RADONC_AGENT_CONCURRENCY = "1"
-          Write-Host "HOSTED_CPU_OLLAMA_READY=$($version.version)"
-          Write-Host "HOSTED_CPU_MODEL_PRESENT=qwen3.5:4b"
-          Write-Host "HOSTED_CPU_ONLY=TRUE; NVIDIA telemetry is intentionally not collected."
-          Write-Host "HOSTED_CPU_VALIDATION_SOURCE_SHA=$env:GITHUB_SHA"
-          Write-Host "HOSTED_CPU_MODEL_PULL_EXIT_CODE_CAPTURE=CMD_BATCH_ERRORLEVEL_FILE"
-
-          Write-Host "HOSTED_CPU_FOUR_ROUND_VALIDATION_STARTED"
-          python backend/scripts/live_four_round_validation.py
-          if ($LASTEXITCODE -ne 0) {
-            throw "The 45-role four-round hosted CPU validation failed with exit code $LASTEXITCODE."
+          if ($hexDigest.Length -ne 64) {
+            throw "qwen3.5:4b did not return a 64-character SHA-256 digest."
           }
-
-      - name: Upload full four-round audit and isolated database
-        if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-        with:
-          name: radonc-hosted-cpu-four-round-validation
-          path: |
-            backend/validation_artifacts/live_four_round_hosted_cpu_validation.json
-            backend/validation_artifacts/live_four_round_hosted_cpu_validation.sqlite3
-            backend/validation_artifacts/live_four_round_hosted_cpu_manifest.json
-          if-no-files-found: warn
-          retention-days: 14
-
-      - name: Stop only the isolated Ollama process started by this job
-        if: always()
-        shell: powershell
-        run: |
-          $localAppData = Join-Path $env:RUNNER_TEMP "RadOnc Hosted CPU LocalAppData"
-          $pidFile = Join-Path $localAppData "RadOncMDT\AIEngine\ollama-server.pid"
-          if (-not (Test-Path -LiteralPath $pidFile -PathType Leaf)) {
-            Write-Host "No isolated Ollama PID file found; no process was stopped."
-            exit 0
-          }
-          $ollamaPid = 0
-          if (-not [int]::TryParse((Get-Content -LiteralPath $pidFile -Raw).Trim(),[ref]$ollamaPid)) {
-            Write-Warning "Invalid isolated Ollama PID file; no process was stopped."
-            exit 0
-          }
-          $processInfo = Get-CimInstance Win32_Process -Filter "ProcessId = $ollamaPid" -ErrorAction SilentlyContinue
-          if (-not $processInfo) {
-            Write-Host "The isolated Ollama process is already stopped."
-            exit 0
-          }
-          $managedRoot = [IO.Path]::GetFullPath((Join-Path $localAppData "RadOncMDT\AIEngine\Ollama")) + "\"
-          $actualPath = [string]$processInfo.ExecutablePath
-          if (-not $actualPath -or -not [IO.Path]::GetFullPath($actualPath).StartsWith($managedRoot,[StringComparison]::OrdinalIgnoreCase)) {
-            Write-Warning "PID did not resolve to the isolated Ollama executable; cleanup refused to stop it."
-            exit 0
-          }
-          Stop-Process -Id $ollamaPid -Force
-          Write-Host "HOSTED_ISOLATED_OLLAMA_STOPPED"
-) {
-            $modelDigest = "sha256:" + $modelDigest
-          }
-          if ($modelDigest -notmatch '^sha256:[0-9a-fA-F]{64}
-          # Keep the Ollama server and all four rounds inside this same Actions
-          # step. GitHub cleans up child processes at step end, so splitting
-          # provisioning and inference into separate steps terminates Ollama.
-          $env:LOCALAPPDATA = $localAppData
-          $env:RADONC_DATA_DIR = $dataDirectory
-          $env:OLLAMA_BASE_URL = $ollamaUrl
-          $env:OLLAMA_HOST = "127.0.0.1:11435"
-          $env:OLLAMA_MODELS = Join-Path $localAppData "RadOncMDT\Models"
-          $env:OLLAMA_MODEL = "qwen3.5:4b"
-          $env:RADONC_VALIDATION_CPU_ONLY = "1"
-          $env:RADONC_AGENT_CONCURRENCY = "1"
-          Write-Host "HOSTED_CPU_OLLAMA_READY=$($version.version)"
-          Write-Host "HOSTED_CPU_MODEL_PRESENT=qwen3.5:4b"
-          Write-Host "HOSTED_CPU_ONLY=TRUE; NVIDIA telemetry is intentionally not collected."
-          Write-Host "HOSTED_CPU_VALIDATION_SOURCE_SHA=$env:GITHUB_SHA"
-          Write-Host "HOSTED_CPU_MODEL_PULL_EXIT_CODE_CAPTURE=CMD_BATCH_ERRORLEVEL_FILE"
-
-          Write-Host "HOSTED_CPU_FOUR_ROUND_VALIDATION_STARTED"
-          python backend/scripts/live_four_round_validation.py
-          if ($LASTEXITCODE -ne 0) {
-            throw "The 45-role four-round hosted CPU validation failed with exit code $LASTEXITCODE."
-          }
-
-      - name: Upload full four-round audit and isolated database
-        if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-        with:
-          name: radonc-hosted-cpu-four-round-validation
-          path: |
-            backend/validation_artifacts/live_four_round_hosted_cpu_validation.json
-            backend/validation_artifacts/live_four_round_hosted_cpu_validation.sqlite3
-          if-no-files-found: warn
-          retention-days: 14
-
-      - name: Stop only the isolated Ollama process started by this job
-        if: always()
-        shell: powershell
-        run: |
-          $localAppData = Join-Path $env:RUNNER_TEMP "RadOnc Hosted CPU LocalAppData"
-          $pidFile = Join-Path $localAppData "RadOncMDT\AIEngine\ollama-server.pid"
-          if (-not (Test-Path -LiteralPath $pidFile -PathType Leaf)) {
-            Write-Host "No isolated Ollama PID file found; no process was stopped."
-            exit 0
-          }
-          $ollamaPid = 0
-          if (-not [int]::TryParse((Get-Content -LiteralPath $pidFile -Raw).Trim(),[ref]$ollamaPid)) {
-            Write-Warning "Invalid isolated Ollama PID file; no process was stopped."
-            exit 0
-          }
-          $processInfo = Get-CimInstance Win32_Process -Filter "ProcessId = $ollamaPid" -ErrorAction SilentlyContinue
-          if (-not $processInfo) {
-            Write-Host "The isolated Ollama process is already stopped."
-            exit 0
-          }
-          $managedRoot = [IO.Path]::GetFullPath((Join-Path $localAppData "RadOncMDT\AIEngine\Ollama")) + "\"
-          $actualPath = [string]$processInfo.ExecutablePath
-          if (-not $actualPath -or -not [IO.Path]::GetFullPath($actualPath).StartsWith($managedRoot,[StringComparison]::OrdinalIgnoreCase)) {
-            Write-Warning "PID did not resolve to the isolated Ollama executable; cleanup refused to stop it."
-            exit 0
-          }
-          Stop-Process -Id $ollamaPid -Force
-          Write-Host "HOSTED_ISOLATED_OLLAMA_STOPPED"
-) {
-            throw "qwen3.5:4b did not return a valid SHA-256 model digest."
-          }
-          $modelSizeBytes = 0L
-          if (-not [long]::TryParse([string]$modelRecord[0].size,[ref]$modelSizeBytes) -or $modelSizeBytes -le 0) {
-            throw "qwen3.5:4b did not return a valid positive model size."
-          }
-
-          # Persist immutable execution/model identity beside the JSON and SQLite
-          # audit outputs. This is evidence metadata, not a runtime or clinical change.
-          $artifactDirectory = Join-Path $env:GITHUB_WORKSPACE "backend\validation_artifacts"
-          New-Item -ItemType Directory -Force -Path $artifactDirectory | Out-Null
-          $manifestPath = Join-Path $artifactDirectory "live_four_round_hosted_cpu_manifest.json"
-          $manifest = [ordered]@{
-            schema_version = 1
-            validation_type = "live_four_round_hosted_cpu_synthetic_integration"
-            source = [ordered]@{
-              repository = $env:GITHUB_REPOSITORY
-              ref = $env:GITHUB_REF
-              commit_sha = $env:GITHUB_SHA
-              workflow_run_id = $env:GITHUB_RUN_ID
-              workflow_run_attempt = $env:GITHUB_RUN_ATTEMPT
-              workflow_url = "https://github.com/$($env:GITHUB_REPOSITORY)/actions/runs/$($env:GITHUB_RUN_ID)"
+          foreach ($hexChar in $hexDigest.ToCharArray()) {
+            if (-not [Uri]::IsHexDigit($hexChar)) {
+              throw "qwen3.5:4b returned a non-hexadecimal model digest."
             }
-            execution = [ordered]@{
-              runner_os = $env:RUNNER_OS
-              runner_arch = $env:RUNNER_ARCH
-              mode = "github_hosted_cpu_only"
-              gpu_measured = $false
-              agent_concurrency = 1
-              expected_role_count = 45
-              rounds = @("R1","R2","R3","R4")
-              expected_saved_contributions = 136
-            }
-            ollama = [ordered]@{
-              version = [string]$version.version
-              endpoint = $ollamaUrl
-            }
-            model = [ordered]@{
-              requested_tag = "qwen3.5:4b"
-              name = [string]$modelRecord[0].name
-              model = [string]$modelRecord[0].model
-              digest = $modelDigest
-              size_bytes = $modelSizeBytes
-              modified_at = [string]$modelRecord[0].modified_at
-              details = $modelRecord[0].details
-            }
-            outputs = [ordered]@{
-              report_json = "live_four_round_hosted_cpu_validation.json"
-              sqlite_database = "live_four_round_hosted_cpu_validation.sqlite3"
-            }
-          }
-          $manifest | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
-          Write-Host "HOSTED_CPU_MODEL_DIGEST=$modelDigest"
-          Write-Host "HOSTED_CPU_MODEL_SIZE_BYTES=$modelSizeBytes"
-          Write-Host "HOSTED_CPU_VALIDATION_MANIFEST=$manifestPath"
-
-          # Keep the Ollama server and all four rounds inside this same Actions
-          # step. GitHub cleans up child processes at step end, so splitting
-          # provisioning and inference into separate steps terminates Ollama.
-          $env:LOCALAPPDATA = $localAppData
-          $env:RADONC_DATA_DIR = $dataDirectory
-          $env:OLLAMA_BASE_URL = $ollamaUrl
-          $env:OLLAMA_HOST = "127.0.0.1:11435"
-          $env:OLLAMA_MODELS = Join-Path $localAppData "RadOncMDT\Models"
-          $env:OLLAMA_MODEL = "qwen3.5:4b"
-          $env:RADONC_VALIDATION_CPU_ONLY = "1"
-          $env:RADONC_AGENT_CONCURRENCY = "1"
-          Write-Host "HOSTED_CPU_OLLAMA_READY=$($version.version)"
-          Write-Host "HOSTED_CPU_MODEL_PRESENT=qwen3.5:4b"
-          Write-Host "HOSTED_CPU_ONLY=TRUE; NVIDIA telemetry is intentionally not collected."
-          Write-Host "HOSTED_CPU_VALIDATION_SOURCE_SHA=$env:GITHUB_SHA"
-          Write-Host "HOSTED_CPU_MODEL_PULL_EXIT_CODE_CAPTURE=CMD_BATCH_ERRORLEVEL_FILE"
-
-          Write-Host "HOSTED_CPU_FOUR_ROUND_VALIDATION_STARTED"
-          python backend/scripts/live_four_round_validation.py
-          if ($LASTEXITCODE -ne 0) {
-            throw "The 45-role four-round hosted CPU validation failed with exit code $LASTEXITCODE."
-          }
-
-      - name: Upload full four-round audit and isolated database
-        if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-        with:
-          name: radonc-hosted-cpu-four-round-validation
-          path: |
-            backend/validation_artifacts/live_four_round_hosted_cpu_validation.json
-            backend/validation_artifacts/live_four_round_hosted_cpu_validation.sqlite3
-          if-no-files-found: warn
-          retention-days: 14
-
-      - name: Stop only the isolated Ollama process started by this job
-        if: always()
-        shell: powershell
-        run: |
-          $localAppData = Join-Path $env:RUNNER_TEMP "RadOnc Hosted CPU LocalAppData"
-          $pidFile = Join-Path $localAppData "RadOncMDT\AIEngine\ollama-server.pid"
-          if (-not (Test-Path -LiteralPath $pidFile -PathType Leaf)) {
-            Write-Host "No isolated Ollama PID file found; no process was stopped."
-            exit 0
-          }
-          $ollamaPid = 0
-          if (-not [int]::TryParse((Get-Content -LiteralPath $pidFile -Raw).Trim(),[ref]$ollamaPid)) {
-            Write-Warning "Invalid isolated Ollama PID file; no process was stopped."
-            exit 0
-          }
-          $processInfo = Get-CimInstance Win32_Process -Filter "ProcessId = $ollamaPid" -ErrorAction SilentlyContinue
-          if (-not $processInfo) {
-            Write-Host "The isolated Ollama process is already stopped."
-            exit 0
-          }
-          $managedRoot = [IO.Path]::GetFullPath((Join-Path $localAppData "RadOncMDT\AIEngine\Ollama")) + "\"
-          $actualPath = [string]$processInfo.ExecutablePath
-          if (-not $actualPath -or -not [IO.Path]::GetFullPath($actualPath).StartsWith($managedRoot,[StringComparison]::OrdinalIgnoreCase)) {
-            Write-Warning "PID did not resolve to the isolated Ollama executable; cleanup refused to stop it."
-            exit 0
-          }
-          Stop-Process -Id $ollamaPid -Force
-          Write-Host "HOSTED_ISOLATED_OLLAMA_STOPPED"
-) {
-            throw "qwen3.5:4b did not return a valid SHA-256 model digest."
           }
           $modelDigest = "sha256:" + $hexDigest
           $modelSizeBytes = 0L
@@ -352,8 +108,7 @@ jobs:
             throw "qwen3.5:4b did not return a valid positive model size."
           }
 
-          # Persist immutable execution/model identity beside the JSON and SQLite
-          # audit outputs. This is evidence metadata, not a runtime or clinical change.
+          # Persist immutable execution/model identity beside the audit outputs.
           $artifactDirectory = Join-Path $env:GITHUB_WORKSPACE "backend\validation_artifacts"
           New-Item -ItemType Directory -Force -Path $artifactDirectory | Out-Null
           $manifestPath = Join-Path $artifactDirectory "live_four_round_hosted_cpu_manifest.json"
@@ -394,13 +149,16 @@ jobs:
             outputs = [ordered]@{
               report_json = "live_four_round_hosted_cpu_validation.json"
               sqlite_database = "live_four_round_hosted_cpu_validation.sqlite3"
+              manifest_json = "live_four_round_hosted_cpu_manifest.json"
             }
           }
           $manifest | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
           Write-Host "HOSTED_CPU_MODEL_DIGEST=$modelDigest"
           Write-Host "HOSTED_CPU_MODEL_SIZE_BYTES=$modelSizeBytes"
           Write-Host "HOSTED_CPU_VALIDATION_MANIFEST=$manifestPath"
-          # Keep the Ollama server and all four rounds inside this same Actions
+
+          }
+
           # Keep the Ollama server and all four rounds inside this same Actions
           # step. GitHub cleans up child processes at step end, so splitting
           # provisioning and inference into separate steps terminates Ollama.
@@ -433,191 +191,6 @@ jobs:
             backend/validation_artifacts/live_four_round_hosted_cpu_validation.json
             backend/validation_artifacts/live_four_round_hosted_cpu_validation.sqlite3
             backend/validation_artifacts/live_four_round_hosted_cpu_manifest.json
-          if-no-files-found: warn
-          retention-days: 14
-
-      - name: Stop only the isolated Ollama process started by this job
-        if: always()
-        shell: powershell
-        run: |
-          $localAppData = Join-Path $env:RUNNER_TEMP "RadOnc Hosted CPU LocalAppData"
-          $pidFile = Join-Path $localAppData "RadOncMDT\AIEngine\ollama-server.pid"
-          if (-not (Test-Path -LiteralPath $pidFile -PathType Leaf)) {
-            Write-Host "No isolated Ollama PID file found; no process was stopped."
-            exit 0
-          }
-          $ollamaPid = 0
-          if (-not [int]::TryParse((Get-Content -LiteralPath $pidFile -Raw).Trim(),[ref]$ollamaPid)) {
-            Write-Warning "Invalid isolated Ollama PID file; no process was stopped."
-            exit 0
-          }
-          $processInfo = Get-CimInstance Win32_Process -Filter "ProcessId = $ollamaPid" -ErrorAction SilentlyContinue
-          if (-not $processInfo) {
-            Write-Host "The isolated Ollama process is already stopped."
-            exit 0
-          }
-          $managedRoot = [IO.Path]::GetFullPath((Join-Path $localAppData "RadOncMDT\AIEngine\Ollama")) + "\"
-          $actualPath = [string]$processInfo.ExecutablePath
-          if (-not $actualPath -or -not [IO.Path]::GetFullPath($actualPath).StartsWith($managedRoot,[StringComparison]::OrdinalIgnoreCase)) {
-            Write-Warning "PID did not resolve to the isolated Ollama executable; cleanup refused to stop it."
-            exit 0
-          }
-          Stop-Process -Id $ollamaPid -Force
-          Write-Host "HOSTED_ISOLATED_OLLAMA_STOPPED"
-) {
-            $modelDigest = "sha256:" + $modelDigest
-          }
-          if ($modelDigest -notmatch '^sha256:[0-9a-fA-F]{64}
-          # Keep the Ollama server and all four rounds inside this same Actions
-          # step. GitHub cleans up child processes at step end, so splitting
-          # provisioning and inference into separate steps terminates Ollama.
-          $env:LOCALAPPDATA = $localAppData
-          $env:RADONC_DATA_DIR = $dataDirectory
-          $env:OLLAMA_BASE_URL = $ollamaUrl
-          $env:OLLAMA_HOST = "127.0.0.1:11435"
-          $env:OLLAMA_MODELS = Join-Path $localAppData "RadOncMDT\Models"
-          $env:OLLAMA_MODEL = "qwen3.5:4b"
-          $env:RADONC_VALIDATION_CPU_ONLY = "1"
-          $env:RADONC_AGENT_CONCURRENCY = "1"
-          Write-Host "HOSTED_CPU_OLLAMA_READY=$($version.version)"
-          Write-Host "HOSTED_CPU_MODEL_PRESENT=qwen3.5:4b"
-          Write-Host "HOSTED_CPU_ONLY=TRUE; NVIDIA telemetry is intentionally not collected."
-          Write-Host "HOSTED_CPU_VALIDATION_SOURCE_SHA=$env:GITHUB_SHA"
-          Write-Host "HOSTED_CPU_MODEL_PULL_EXIT_CODE_CAPTURE=CMD_BATCH_ERRORLEVEL_FILE"
-
-          Write-Host "HOSTED_CPU_FOUR_ROUND_VALIDATION_STARTED"
-          python backend/scripts/live_four_round_validation.py
-          if ($LASTEXITCODE -ne 0) {
-            throw "The 45-role four-round hosted CPU validation failed with exit code $LASTEXITCODE."
-          }
-
-      - name: Upload full four-round audit and isolated database
-        if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-        with:
-          name: radonc-hosted-cpu-four-round-validation
-          path: |
-            backend/validation_artifacts/live_four_round_hosted_cpu_validation.json
-            backend/validation_artifacts/live_four_round_hosted_cpu_validation.sqlite3
-          if-no-files-found: warn
-          retention-days: 14
-
-      - name: Stop only the isolated Ollama process started by this job
-        if: always()
-        shell: powershell
-        run: |
-          $localAppData = Join-Path $env:RUNNER_TEMP "RadOnc Hosted CPU LocalAppData"
-          $pidFile = Join-Path $localAppData "RadOncMDT\AIEngine\ollama-server.pid"
-          if (-not (Test-Path -LiteralPath $pidFile -PathType Leaf)) {
-            Write-Host "No isolated Ollama PID file found; no process was stopped."
-            exit 0
-          }
-          $ollamaPid = 0
-          if (-not [int]::TryParse((Get-Content -LiteralPath $pidFile -Raw).Trim(),[ref]$ollamaPid)) {
-            Write-Warning "Invalid isolated Ollama PID file; no process was stopped."
-            exit 0
-          }
-          $processInfo = Get-CimInstance Win32_Process -Filter "ProcessId = $ollamaPid" -ErrorAction SilentlyContinue
-          if (-not $processInfo) {
-            Write-Host "The isolated Ollama process is already stopped."
-            exit 0
-          }
-          $managedRoot = [IO.Path]::GetFullPath((Join-Path $localAppData "RadOncMDT\AIEngine\Ollama")) + "\"
-          $actualPath = [string]$processInfo.ExecutablePath
-          if (-not $actualPath -or -not [IO.Path]::GetFullPath($actualPath).StartsWith($managedRoot,[StringComparison]::OrdinalIgnoreCase)) {
-            Write-Warning "PID did not resolve to the isolated Ollama executable; cleanup refused to stop it."
-            exit 0
-          }
-          Stop-Process -Id $ollamaPid -Force
-          Write-Host "HOSTED_ISOLATED_OLLAMA_STOPPED"
-) {
-            throw "qwen3.5:4b did not return a valid SHA-256 model digest."
-          }
-          $modelSizeBytes = 0L
-          if (-not [long]::TryParse([string]$modelRecord[0].size,[ref]$modelSizeBytes) -or $modelSizeBytes -le 0) {
-            throw "qwen3.5:4b did not return a valid positive model size."
-          }
-
-          # Persist immutable execution/model identity beside the JSON and SQLite
-          # audit outputs. This is evidence metadata, not a runtime or clinical change.
-          $artifactDirectory = Join-Path $env:GITHUB_WORKSPACE "backend\validation_artifacts"
-          New-Item -ItemType Directory -Force -Path $artifactDirectory | Out-Null
-          $manifestPath = Join-Path $artifactDirectory "live_four_round_hosted_cpu_manifest.json"
-          $manifest = [ordered]@{
-            schema_version = 1
-            validation_type = "live_four_round_hosted_cpu_synthetic_integration"
-            source = [ordered]@{
-              repository = $env:GITHUB_REPOSITORY
-              ref = $env:GITHUB_REF
-              commit_sha = $env:GITHUB_SHA
-              workflow_run_id = $env:GITHUB_RUN_ID
-              workflow_run_attempt = $env:GITHUB_RUN_ATTEMPT
-              workflow_url = "https://github.com/$($env:GITHUB_REPOSITORY)/actions/runs/$($env:GITHUB_RUN_ID)"
-            }
-            execution = [ordered]@{
-              runner_os = $env:RUNNER_OS
-              runner_arch = $env:RUNNER_ARCH
-              mode = "github_hosted_cpu_only"
-              gpu_measured = $false
-              agent_concurrency = 1
-              expected_role_count = 45
-              rounds = @("R1","R2","R3","R4")
-              expected_saved_contributions = 136
-            }
-            ollama = [ordered]@{
-              version = [string]$version.version
-              endpoint = $ollamaUrl
-            }
-            model = [ordered]@{
-              requested_tag = "qwen3.5:4b"
-              name = [string]$modelRecord[0].name
-              model = [string]$modelRecord[0].model
-              digest = $modelDigest
-              size_bytes = $modelSizeBytes
-              modified_at = [string]$modelRecord[0].modified_at
-              details = $modelRecord[0].details
-            }
-            outputs = [ordered]@{
-              report_json = "live_four_round_hosted_cpu_validation.json"
-              sqlite_database = "live_four_round_hosted_cpu_validation.sqlite3"
-            }
-          }
-          $manifest | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
-          Write-Host "HOSTED_CPU_MODEL_DIGEST=$modelDigest"
-          Write-Host "HOSTED_CPU_MODEL_SIZE_BYTES=$modelSizeBytes"
-          Write-Host "HOSTED_CPU_VALIDATION_MANIFEST=$manifestPath"
-
-          # Keep the Ollama server and all four rounds inside this same Actions
-          # step. GitHub cleans up child processes at step end, so splitting
-          # provisioning and inference into separate steps terminates Ollama.
-          $env:LOCALAPPDATA = $localAppData
-          $env:RADONC_DATA_DIR = $dataDirectory
-          $env:OLLAMA_BASE_URL = $ollamaUrl
-          $env:OLLAMA_HOST = "127.0.0.1:11435"
-          $env:OLLAMA_MODELS = Join-Path $localAppData "RadOncMDT\Models"
-          $env:OLLAMA_MODEL = "qwen3.5:4b"
-          $env:RADONC_VALIDATION_CPU_ONLY = "1"
-          $env:RADONC_AGENT_CONCURRENCY = "1"
-          Write-Host "HOSTED_CPU_OLLAMA_READY=$($version.version)"
-          Write-Host "HOSTED_CPU_MODEL_PRESENT=qwen3.5:4b"
-          Write-Host "HOSTED_CPU_ONLY=TRUE; NVIDIA telemetry is intentionally not collected."
-          Write-Host "HOSTED_CPU_VALIDATION_SOURCE_SHA=$env:GITHUB_SHA"
-          Write-Host "HOSTED_CPU_MODEL_PULL_EXIT_CODE_CAPTURE=CMD_BATCH_ERRORLEVEL_FILE"
-
-          Write-Host "HOSTED_CPU_FOUR_ROUND_VALIDATION_STARTED"
-          python backend/scripts/live_four_round_validation.py
-          if ($LASTEXITCODE -ne 0) {
-            throw "The 45-role four-round hosted CPU validation failed with exit code $LASTEXITCODE."
-          }
-
-      - name: Upload full four-round audit and isolated database
-        if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-        with:
-          name: radonc-hosted-cpu-four-round-validation
-          path: |
-            backend/validation_artifacts/live_four_round_hosted_cpu_validation.json
-            backend/validation_artifacts/live_four_round_hosted_cpu_validation.sqlite3
           if-no-files-found: warn
           retention-days: 14
 
