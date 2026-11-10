@@ -43,6 +43,34 @@ jobs:
           Write-Host "=== NVIDIA GPU INVENTORY ==="
           & $nvidiaSmi -L
 
+      - name: Check Ollama HTTP API and configured model without inference
+        shell: powershell
+        env:
+          OLLAMA_MODEL: qwen3.5:4b
+        run: |
+          $ErrorActionPreference = "Continue"
+          Write-Host "=== OLLAMA HTTP API ==="
+          try {
+            $version = Invoke-RestMethod -Uri "http://127.0.0.1:11434/api/version" -TimeoutSec 5
+            Write-Host "OLLAMA_API_REACHABLE=True"
+            Write-Host "OLLAMA_API_VERSION=$($version.version)"
+            $tags = Invoke-RestMethod -Uri "http://127.0.0.1:11434/api/tags" -TimeoutSec 10
+            $model = @($tags.models | Where-Object {
+              $_.name -eq $env:OLLAMA_MODEL -or $_.model -eq $env:OLLAMA_MODEL
+            } | Select-Object -First 1)
+            if ($model.Count -gt 0) {
+              Write-Host "CONFIGURED_MODEL_PRESENT=True"
+              Write-Host "CONFIGURED_MODEL=$($model[0].name)"
+              Write-Host "CONFIGURED_MODEL_SIZE_BYTES=$($model[0].size)"
+            } else {
+              Write-Host "CONFIGURED_MODEL_PRESENT=False"
+              Write-Host "CONFIGURED_MODEL=$env:OLLAMA_MODEL"
+            }
+          } catch {
+            Write-Host "OLLAMA_API_REACHABLE=False"
+            Write-Host "OLLAMA_API_ERROR=$($_.Exception.Message)"
+          }
+
       - name: Inspect Ollama placement and environment overrides
         shell: powershell
         run: |
