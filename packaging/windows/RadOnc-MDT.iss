@@ -30,11 +30,14 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription:
 [Dirs]
 Name: "{localappdata}\RadOncMDT\Data"; Flags: uninsneveruninstall
 Name: "{localappdata}\RadOncMDT\Logs"; Flags: uninsneveruninstall
+Name: "{localappdata}\RadOncMDT\AIEngine"; Flags: uninsneveruninstall
+Name: "{localappdata}\RadOncMDT\Models"; Flags: uninsneveruninstall
 
 [Files]
 Source: "..\..\dist\RadOncMDT\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "Start-RadOnc-MDT.cmd"; DestDir: "{app}"; Flags: ignoreversion
 Source: "Start-RadOnc-MDT.ps1"; DestDir: "{app}"; Flags: ignoreversion
+Source: "Ensure-RadOnc-AIEngine.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "Stop-RadOnc-MDT.cmd"; DestDir: "{app}"; Flags: ignoreversion
 Source: "Stop-RadOnc-MDT.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "README.txt"; DestDir: "{app}"; Flags: ignoreversion
