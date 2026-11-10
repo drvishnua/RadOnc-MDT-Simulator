@@ -85,6 +85,38 @@ def test_hypothetical_stage_examples_and_missing_prior_records_are_not_false_pos
     assert audit_unverified_case_claims(case, payload) == []
 
 
+def test_explicitly_nonconfirmatory_n0_m0_mentions_are_not_positive_stage_assertions():
+    case = _case(clinical_n_stage=None, clinical_m_stage=None)
+    qualified = audit_unverified_case_claims(case, {
+        "uncertainty_notes": [
+            "Anatomical subsite does not confirm N0/M0.",
+            "The available case data do not establish N0 or M0.",
+        ]
+    })
+    assert not any("N-stage value" in item for item in qualified)
+    assert not any("M-stage value" in item for item in qualified)
+
+    positive = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The clinical record documents N0. The clinical record documents M0."
+    })
+    assert any("N-stage value" in item for item in positive)
+    assert any("M-stage value" in item for item in positive)
+
+
+def test_generated_audit_metadata_is_not_reaudited_as_narrative():
+    case = _case(clinical_n_stage=None, clinical_m_stage=None)
+    flags = audit_unverified_case_claims(case, {
+        "case_data_integrity_flags": [
+            "Generated narrative contains N-stage value(s) N0, but clinical_n_stage is not supplied.",
+            "Generated narrative contains M-stage value(s) M0, but clinical_m_stage is not supplied.",
+        ],
+        "source_reference_integrity_flags": [
+            "Reference R2:MO-99 was not supplied."
+        ],
+    })
+    assert flags == []
+
+
 def test_unqualified_stage_and_prior_treatment_absence_claims_remain_flagged():
     case = _case()
     payload = {
@@ -201,6 +233,20 @@ def test_unreported_investigation_results_are_flagged_but_requested_tests_are_no
     assert not any("imaging/investigation result" in item for item in audit_unverified_case_claims(
         case, {"unknowns": ["MRI staging is required; no imaging result is supplied."]}
     ))
+
+
+def test_supported_biopsy_histology_paraphrase_is_not_flagged_as_an_investigation_result():
+    case = _case(
+        histology="adenocarcinoma",
+        pathology_summary=None,
+        case_summary="Fictional case. Biopsy reports rectal adenocarcinoma.",
+    )
+    flags = audit_unverified_case_claims(case, {
+        "perspective_summary": (
+            "The biopsy confirms adenocarcinoma but staging fields are unreported."
+        )
+    })
+    assert not any("imaging/investigation result" in item for item in flags)
 
 
 def test_undocumented_patient_preference_is_flagged_but_elicitation_is_not():
