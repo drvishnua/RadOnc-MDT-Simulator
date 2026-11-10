@@ -136,25 +136,35 @@ if ($health) {
     $principal = New-ScheduledTaskPrincipal -UserId ("{0}\{1}" -f $env:USERDOMAIN, $env:USERNAME) -LogonType Interactive -RunLevel Limited
     $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Minutes 5) -MultipleInstances IgnoreNew
 
-    Register-ScheduledTask -TaskName $taskName -TaskPath $taskPath -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force | Out-Null
-    Write-Host ("SCHEDULED_TASK_REGISTERED={0}" -f $taskName)
-    Start-ScheduledTask -TaskName $taskName -TaskPath $taskPath
-
+    $taskRegistered = $false
     $ready = $false
-    for ($attempt = 0; $attempt -lt 75; $attempt++) {
-        $health = Get-InstalledAppHealth
-        if ($health) {
-            $ready = $true
-            break
+    try {
+        Register-ScheduledTask -TaskName $taskName -TaskPath $taskPath -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force | Out-Null
+        $taskRegistered = $true
+        Write-Host ("SCHEDULED_TASK_REGISTERED={0}" -f $taskName)
+        Start-ScheduledTask -TaskName $taskName -TaskPath $taskPath
+
+        for ($attempt = 0; $attempt -lt 75; $attempt++) {
+            $health = Get-InstalledAppHealth
+            if ($health) {
+                $ready = $true
+                break
+            }
+            Start-Sleep -Seconds 1
         }
-        Start-Sleep -Seconds 1
+        if (-not $ready) {
+            $taskInfo = Get-ScheduledTaskInfo -TaskName $taskName -TaskPath $taskPath -ErrorAction SilentlyContinue
+            $stderr = Join-Path (Join-Path $localAppData "RadOncMDT\Logs") "backend.stderr.log"
+            $details = if (Test-Path -LiteralPath $stderr) { (Get-Content -LiteralPath $stderr -Tail 40) -join [Environment]::NewLine } else { "No backend stderr log exists." }
+            throw ("Scheduled startup did not produce a healthy endpoint. Task result={0}. {1}" -f $taskInfo.LastTaskResult, $details)
+        }
+    } catch {
+        if ($taskRegistered) {
+            Unregister-ScheduledTask -TaskName $taskName -TaskPath $taskPath -Confirm:$false -ErrorAction SilentlyContinue
+        }
+        throw
     }
-    if (-not $ready) {
-        $taskInfo = Get-ScheduledTaskInfo -TaskName $taskName -TaskPath $taskPath -ErrorAction SilentlyContinue
-        $stderr = Join-Path (Join-Path $localAppData "RadOncMDT\Logs") "backend.stderr.log"
-        $details = if (Test-Path -LiteralPath $stderr) { (Get-Content -LiteralPath $stderr -Tail 40) -join [Environment]::NewLine } else { "No backend stderr log exists." }
-        throw ("Scheduled startup did not produce a healthy endpoint. Task result={0}. {1}" -f $taskInfo.LastTaskResult, $details)
-    }
+
     Write-Host "SCHEDULED_TASK_STARTED_APP_HEALTHY=True"
     Write-Host ("SCHEDULED_TASK_NAME={0}" -f $taskName)
     "task_name=$taskName" | Add-Content -LiteralPath $env:GITHUB_OUTPUT -Encoding UTF8
