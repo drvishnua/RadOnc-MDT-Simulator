@@ -1726,6 +1726,72 @@ def test_r3_uses_a_larger_context_window_without_changing_other_round_defaults()
     assert _context_window_for_schema(RoundContributionDraft) == 4096
     assert _context_window_for_schema(FinalReportDraft) == 4096
 
+def test_r3_does_not_promote_challenges_using_an_unsupplied_peer_id(monkeypatch):
+    from app.round_schemas import AdversarialContributionDraft, SourceOpinionReview
+    from app.services import mdt_generation
+
+    summary = (
+        "Fictional case. The neurology service note proposes a specialist assessment first, "
+        "conditional on complete staging."
+    )
+
+    async def fake_generate(prompt, schema_type, max_tokens):
+        return AdversarialContributionDraft(
+            position="insufficient_information",
+            provisional_conclusion="The source opinion remains conditional on the missing staging information.",
+            response_to_other_perspectives="The selected peer record does not establish whether the source opinion was retained.",
+            agreements=[],
+            substantive_challenges=[],
+            remaining_unknowns=["Complete staging is not supplied."],
+            risk_flags=[],
+            confidence=0.3,
+            source_opinion_reviews=[
+                SourceOpinionReview(
+                    source_id="CASE:case_summary#1",
+                    option_status="omitted",
+                    conditions_status="omitted",
+                    review_basis="The supplied peer record does not include the attributed option.",
+                    source_reference_ids=["CASE:case_summary#1", "R2:MO-99"],
+                    challenge="The supplied R2 record omits the attributed option.",
+                )
+            ],
+        )
+
+    monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate)
+    profile = {"agent_id": "RO-01", "name": "Radiation Oncology", "mandate": "Review the educational case."}
+    case = SyntheticCase(scenario_title="Unsupplied peer citation test", case_summary=summary)
+    own_r1 = {
+        "position": "insufficient_information",
+        "provisional_conclusion": "The source opinion remains conditional on missing information.",
+        "preferred_educational_option": "No final option can be established.",
+    }
+    own_r2 = {
+        "position": "insufficient_information",
+        "provisional_conclusion": "The debate remains insufficient pending review of the source opinion.",
+        "response_to_other_perspectives": "The supplied material does not establish a common sequence.",
+    }
+    peers = [{
+        "agent_id": "MO-01",
+        "agent_name": "Medical Oncology",
+        "result": {
+            "position": "insufficient_information",
+            "provisional_conclusion": "The peer record remains insufficient.",
+            "response_to_other_perspectives": "No source-linked option is established.",
+            "agreements": [],
+            "substantive_challenges": [],
+            "risk_flags": [],
+            "position_changes": [],
+        },
+    }]
+
+    result = asyncio.run(
+        mdt_generation.generate_adversarial_contribution(profile, case, own_r1, own_r2, peers)
+    )
+    assert not any("The supplied R2 record omits the attributed option." in item for item in result.substantive_challenges)
+    assert any("not promoted" in item and "valid supplied R2 peer" in item for item in result.source_reference_integrity_flags)
+
+
+
 def test_r3_uses_server_identified_opinion_ids_and_flags_duplicate_or_missing_reviews(monkeypatch):
     from app.round_schemas import AdversarialContributionDraft, SourceOpinionReview
     from app.services import mdt_generation
@@ -1759,6 +1825,7 @@ def test_r3_uses_server_identified_opinion_ids_and_flags_duplicate_or_missing_re
                     conditions_status="unclear",
                     review_basis="The bounded supplied peer sample is insufficient to assess this opinion.",
                     source_reference_ids=["CASE:case_summary#1", "R2:MO-01"],
+                    challenge="This duplicate review challenge must not be promoted.",
                 ),
                 SourceOpinionReview(
                     source_id="CASE:case_summary#1",
@@ -1815,4 +1882,5 @@ def test_r3_uses_server_identified_opinion_ids_and_flags_duplicate_or_missing_re
     assert [item["source_excerpt"] for item in result.model_dump()["source_opinion_reviews"]] == [
         expected_excerpt, expected_excerpt
     ]
+    assert not any("duplicate review challenge must not be promoted" in item for item in result.substantive_challenges)
     assert result.source_peer_ids == ["MO-01"]
