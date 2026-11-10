@@ -127,7 +127,7 @@ Write-Host "NO_PATIENT_REGISTRATION_OR_RUN_ENDPOINT_WILL_BE_CALLED"
 Add-Type -AssemblyName System.Net.Http
 $client = New-Object System.Net.Http.HttpClient
 $client.Timeout = [TimeSpan]::FromSeconds(220)
-$requestContent = New-Object System.Net.Http.StringContent($payload,[System.Text.Encoding]::UTF8,"application/json")
+$requestContent = [System.Net.Http.StringContent]::new($payload,[System.Text.Encoding]::UTF8,"application/json")
 $task = $client.PostAsync("http://127.0.0.1:8765/api/agents/RO-01/assess",$requestContent)
 
 $gpuSamples = New-Object System.Collections.Generic.List[object]
