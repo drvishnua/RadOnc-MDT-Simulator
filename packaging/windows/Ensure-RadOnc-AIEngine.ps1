@@ -308,6 +308,9 @@ function Invoke-RadOncModelPull {
             }
             Start-Sleep -Seconds 5
         }
+        # Ensure the process handle has completed before reading ExitCode.
+        $pullProcess.WaitForExit()
+        $pullProcess.Refresh()
         Write-Host ("HOSTED_CPU_MODEL_PULL_PROCESS_EXITED exit_code={0} elapsed_seconds={1}" -f $pullProcess.ExitCode, [int]$pullClock.Elapsed.TotalSeconds)
         if (Test-Path -LiteralPath $pullStdout) {
             Get-Content -LiteralPath $pullStdout -Tail 12 | ForEach-Object { if ($_ -and $_.Trim()) { Write-Host $_ } }
