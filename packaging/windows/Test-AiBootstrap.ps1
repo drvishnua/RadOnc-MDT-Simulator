@@ -50,7 +50,7 @@ foreach ($token in $requiredBootstrapTokens) {
 if ($bootstrap -match "(?im)^\s*Stop-Process\b") {
     throw "AI bootstrap must not stop an existing Ollama or model process."
 }
-if ($bootstrap -notmatch "(?s)Get-FileHash.*?if\s*\(\$actualHash\s*-ne\s*\$RadOncOllamaZipSha256\)") {
+if ($bootstrap -notmatch '(?s)Get-FileHash.*?if\s*\(\$actualHash\s*-ne\s*\$RadOncOllamaZipSha256\)') {
     throw "Portable runtime checksum must be verified before extraction."
 }
 if ($bootstrap -notmatch "(?s)Invoke-RadOncModelPull.*?Get-RadOncOllamaTags.*?Test-RadOncModelInstalled") {
