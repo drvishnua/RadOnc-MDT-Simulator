@@ -1717,6 +1717,14 @@ print(json.dumps({
     }
 
 
+def test_r3_uses_a_larger_context_window_without_changing_other_round_defaults():
+    from app.round_schemas import AdversarialContributionDraft, FinalReportDraft, RoundContributionDraft
+    from app.services.mdt_generation import _context_window_for_schema
+
+    assert _context_window_for_schema(AdversarialContributionDraft) == 6144
+    assert _context_window_for_schema(RoundContributionDraft) == 4096
+    assert _context_window_for_schema(FinalReportDraft) == 4096
+
 def test_r3_uses_server_identified_opinion_ids_and_flags_duplicate_or_missing_reviews(monkeypatch):
     from app.round_schemas import AdversarialContributionDraft, SourceOpinionReview
     from app.services import mdt_generation
@@ -1745,10 +1753,7 @@ def test_r3_uses_server_identified_opinion_ids_and_flags_duplicate_or_missing_re
             source_opinion_reviews=[
                 SourceOpinionReview(
                     source_id="CASE:case_summary#1",
-                    source_excerpt=(
-                        "the colorectal surgical note favours a surgical assessment first, "
-                        "conditional on complete local staging and resectability review"
-                    ),
+                    source_excerpt="",
                     option_status="unclear",
                     conditions_status="unclear",
                     review_basis="The bounded supplied peer sample is insufficient to assess this opinion.",
@@ -1802,4 +1807,11 @@ def test_r3_uses_server_identified_opinion_ids_and_flags_duplicate_or_missing_re
     flags = " ".join(result.source_reference_integrity_flags)
     assert "CASE:case_summary#1 has 2 duplicate R3 reviews" in flags
     assert "Required server-identified source opinion CASE:case_summary#2 has no R3 review" in flags
+    expected_excerpt = (
+        "the colorectal surgical note favours a surgical assessment first, "
+        "conditional on complete local staging and resectability review"
+    )
+    assert [item["source_excerpt"] for item in result.model_dump()["source_opinion_reviews"]] == [
+        expected_excerpt, expected_excerpt
+    ]
     assert result.source_peer_ids == ["MO-01"]
