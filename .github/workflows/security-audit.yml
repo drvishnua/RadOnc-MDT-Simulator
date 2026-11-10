@@ -104,3 +104,12 @@ jobs:
           # tree. This is a security scan, not yet a reproducible release lock.
           npm install --package-lock-only --ignore-scripts --no-audit --no-fund
           npm audit --audit-level=high
+
+      - name: Upload generated frontend lockfile for controlled review
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: radonc-frontend-package-lock
+          path: frontend/package-lock.json
+          if-no-files-found: warn
+          retention-days: 7
