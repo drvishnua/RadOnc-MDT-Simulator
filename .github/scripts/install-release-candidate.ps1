@@ -27,7 +27,7 @@ import sys
 
 path = sys.argv[1]
 active_values = {"running", "queued", "pending", "in_progress", "processing"}
-connection = sqlite3.connect(f"file:{path.replace(chr(92), '/') }?mode=ro", uri=True, timeout=5)
+connection = sqlite3.connect("file:" + __import__("pathlib").Path(path).resolve().as_uri().removeprefix("file:") + "?mode=ro", uri=True, timeout=5)
 try:
     check = connection.execute("PRAGMA quick_check").fetchone()[0]
     if check != "ok":
