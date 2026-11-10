@@ -269,61 +269,89 @@ function Invoke-RadOncModelPull {
     Write-Host "Keep this window open until the model download and verification finish."
 
     if ($OllamaExecutable -and (Test-Path -LiteralPath $OllamaExecutable -PathType Leaf)) {
-        $env:OLLAMA_HOST = ([Uri]$BaseUrl).Host + ":" + ([Uri]$BaseUrl).Port
-        # Native stderr from Ollama contains terminal progress-control records.
-        # Piping "2>&1" through PowerShell 7 converts those records into
-        # NativeCommandError objects and can terminate the bootstrap even while
-        # Ollama is successfully starting the pull. Capture the process streams
-        # to files and use its real exit code as the success/failure signal.
+        $pullHost = ([Uri]$BaseUrl).Host + ":" + ([Uri]$BaseUrl).Port
         $pullLogDirectory = Join-Path $ProductDataRoot "Logs"
         New-Item -ItemType Directory -Force -Path $pullLogDirectory | Out-Null
         $pullStdout = Join-Path $pullLogDirectory "ollama-model-pull.stdout.log"
         $pullStderr = Join-Path $pullLogDirectory "ollama-model-pull.stderr.log"
+        $pullExitCodePath = Join-Path $pullLogDirectory "ollama-model-pull.exitcode"
+        Remove-Item -LiteralPath $pullStdout,$pullStderr,$pullExitCodePath -Force -ErrorAction SilentlyContinue
         Write-Host ("Ollama model pull logs: {0}" -f $pullLogDirectory)
-        $pullProcess = Start-Process -FilePath $OllamaExecutable -ArgumentList @("pull", $RadOncModelName) -PassThru -WindowStyle Hidden -RedirectStandardOutput $pullStdout -RedirectStandardError $pullStderr
+
+        # Run the native CLI inside a PowerShell job so $LASTEXITCODE is captured
+        # by the same shell that directly invoked ollama.exe. This avoids relying
+        # on Start-Process/.NET Process.ExitCode, which returned an empty value on
+        # the verified Windows hosted runner even after the model pull succeeded.
+        $pullJob = Start-Job -ScriptBlock {
+            param($Executable,$Model,$OllamaHost,$StdoutPath,$StderrPath,$ExitCodePath)
+            $ErrorActionPreference = "Stop"
+            $env:OLLAMA_HOST = $OllamaHost
+            & $Executable pull $Model 1> $StdoutPath 2> $StderrPath
+            $nativeExitCode = $LASTEXITCODE
+            if ($null -eq $nativeExitCode) {
+                Set-Content -LiteralPath $ExitCodePath -Value "MISSING" -Encoding ASCII
+                throw "Ollama native CLI did not expose LASTEXITCODE after pull."
+            }
+            Set-Content -LiteralPath $ExitCodePath -Value ([string][int]$nativeExitCode) -Encoding ASCII
+            if ([int]$nativeExitCode -ne 0) {
+                throw ("Ollama model pull exited with code {0}." -f [int]$nativeExitCode)
+            }
+        } -ArgumentList $OllamaExecutable,$RadOncModelName,$pullHost,$pullStdout,$pullStderr,$pullExitCodePath
+
         $pullTimeoutSeconds = 5400
         $pullClock = [Diagnostics.Stopwatch]::StartNew()
         $nextPullHeartbeat = 60
-        while ($true) {
-            $pullProcess.Refresh()
-            if ($pullProcess.HasExited) { break }
-            if ($pullClock.Elapsed.TotalSeconds -ge $pullTimeoutSeconds) {
-                # Kill only the exact Process object returned by Start-Process above.
-                # Do not search for or stop Ollama by executable name, port, or PID.
-                try {
-                    $pullProcess.Kill()
-                    $null = $pullProcess.WaitForExit(10000)
-                } catch {
-                    Write-Warning ("Timed-out model-pull process could not be terminated cleanly: {0}" -f $_.Exception.Message)
+        try {
+            while ($pullJob.State -eq "NotStarted" -or $pullJob.State -eq "Running") {
+                $null = Wait-Job -Job $pullJob -Timeout 10
+                if ($pullJob.State -ne "NotStarted" -and $pullJob.State -ne "Running") { break }
+                if ($pullClock.Elapsed.TotalSeconds -ge $pullTimeoutSeconds) {
+                    Stop-Job -Job $pullJob -ErrorAction SilentlyContinue
+                    throw ("Ollama model pull exceeded {0} seconds; only the isolated pull job was stopped. Logs: {1}" -f $pullTimeoutSeconds,$pullLogDirectory)
                 }
-                throw ("Ollama model pull exceeded {0} seconds; only the exact pull process started by this bootstrap was targeted. Logs: {1}" -f $pullTimeoutSeconds, $pullLogDirectory)
+                if ($pullClock.Elapsed.TotalSeconds -ge $nextPullHeartbeat) {
+                    $stdoutBytes = 0
+                    $stderrBytes = 0
+                    if (Test-Path -LiteralPath $pullStdout) { $stdoutBytes = (Get-Item -LiteralPath $pullStdout).Length }
+                    if (Test-Path -LiteralPath $pullStderr) { $stderrBytes = (Get-Item -LiteralPath $pullStderr).Length }
+                    Write-Host ("HOSTED_CPU_MODEL_PULL_HEARTBEAT elapsed_seconds={0} stdout_bytes={1} stderr_bytes={2}" -f [int]$pullClock.Elapsed.TotalSeconds,$stdoutBytes,$stderrBytes)
+                    $nextPullHeartbeat += 60
+                }
             }
-            if ($pullClock.Elapsed.TotalSeconds -ge $nextPullHeartbeat) {
-                $stdoutBytes = 0
-                $stderrBytes = 0
-                if (Test-Path -LiteralPath $pullStdout) { $stdoutBytes = (Get-Item -LiteralPath $pullStdout).Length }
-                if (Test-Path -LiteralPath $pullStderr) { $stderrBytes = (Get-Item -LiteralPath $pullStderr).Length }
-                Write-Host ("HOSTED_CPU_MODEL_PULL_HEARTBEAT elapsed_seconds={0} stdout_bytes={1} stderr_bytes={2}" -f [int]$pullClock.Elapsed.TotalSeconds, $stdoutBytes, $stderrBytes)
-                $nextPullHeartbeat += 60
+
+            $jobOutput = Receive-Job -Job $pullJob -ErrorAction SilentlyContinue 2>&1 | Out-String
+            if ($pullJob.State -ne "Completed") {
+                throw ("Ollama model pull job ended in state {0}. {1}" -f $pullJob.State,$jobOutput)
             }
-            Start-Sleep -Seconds 5
+            if (-not (Test-Path -LiteralPath $pullExitCodePath -PathType Leaf)) {
+                throw ("Ollama model pull job completed without an exit-code record. {0}" -f $jobOutput)
+            }
+            $pullExitCodeText = (Get-Content -LiteralPath $pullExitCodePath -Raw).Trim()
+            $pullExitCode = 0
+            if (-not [int]::TryParse($pullExitCodeText,[ref]$pullExitCode)) {
+                throw ("Ollama model pull returned an invalid native exit code: '{0}'. {1}" -f $pullExitCodeText,$jobOutput)
+            }
+            Write-Host ("HOSTED_CPU_MODEL_PULL_PROCESS_EXITED exit_code={0} elapsed_seconds={1}" -f $pullExitCode,[int]$pullClock.Elapsed.TotalSeconds)
+
+            if (Test-Path -LiteralPath $pullStdout) {
+                Get-Content -LiteralPath $pullStdout -Tail 12 | ForEach-Object { if ($_ -and $_.Trim()) { Write-Host $_ } }
+            }
+            if (Test-Path -LiteralPath $pullStderr) {
+                Get-Content -LiteralPath $pullStderr -Tail 12 | ForEach-Object { if ($_ -and $_.Trim()) { Write-Host $_ } }
+            }
+            if ($pullExitCode -ne 0) {
+                $details = @()
+                if (Test-Path -LiteralPath $pullStdout) { $details += Get-Content -LiteralPath $pullStdout -Tail 20 }
+                if (Test-Path -LiteralPath $pullStderr) { $details += Get-Content -LiteralPath $pullStderr -Tail 20 }
+                throw ("Ollama model download failed with exit code {0}. {1}" -f $pullExitCode,($details -join [Environment]::NewLine))
+            }
+        } finally {
+            if ($pullJob.State -eq "NotStarted" -or $pullJob.State -eq "Running") {
+                Stop-Job -Job $pullJob -ErrorAction SilentlyContinue
+            }
+            Remove-Job -Job $pullJob -Force -ErrorAction SilentlyContinue
         }
-        # Ensure the process handle has completed before reading ExitCode.
-        $pullProcess.WaitForExit()
-        $pullProcess.Refresh()
-        Write-Host ("HOSTED_CPU_MODEL_PULL_PROCESS_EXITED exit_code={0} elapsed_seconds={1}" -f $pullProcess.ExitCode, [int]$pullClock.Elapsed.TotalSeconds)
-        if (Test-Path -LiteralPath $pullStdout) {
-            Get-Content -LiteralPath $pullStdout -Tail 12 | ForEach-Object { if ($_ -and $_.Trim()) { Write-Host $_ } }
-        }
-        if (Test-Path -LiteralPath $pullStderr) {
-            Get-Content -LiteralPath $pullStderr -Tail 12 | ForEach-Object { if ($_ -and $_.Trim()) { Write-Host $_ } }
-        }
-        if ($pullProcess.ExitCode -ne 0) {
-            $details = @()
-            if (Test-Path -LiteralPath $pullStdout) { $details += Get-Content -LiteralPath $pullStdout -Tail 20 }
-            if (Test-Path -LiteralPath $pullStderr) { $details += Get-Content -LiteralPath $pullStderr -Tail 20 }
-            throw ("Ollama model download failed with exit code {0}. {1}" -f $pullProcess.ExitCode, ($details -join [Environment]::NewLine))
-        }
+
     } else {
         $body = @{ name = $RadOncModelName; stream = $false } | ConvertTo-Json -Compress
         $pullResult = Invoke-RestMethod -Uri ($BaseUrl.TrimEnd("/") + "/api/pull") -Method Post -ContentType "application/json" -Body $body -TimeoutSec 7200
