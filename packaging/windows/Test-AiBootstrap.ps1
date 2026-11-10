@@ -56,6 +56,15 @@ if ($bootstrap -notmatch '(?s)Get-FileHash.*?if\s*\(\$actualHash\s*-ne\s*\$RadOn
 if ($bootstrap -notmatch "(?s)Invoke-RadOncModelPull.*?Get-RadOncOllamaTags.*?Test-RadOncModelInstalled") {
     throw "The model must be checked after the pull operation."
 }
+if ($bootstrap -match '(?s)&\s*\$OllamaExecutable\s+pull.*?2>&1\s*\|') {
+    throw "Ollama native progress stderr must not be piped through PowerShell's error stream."
+}
+if ($bootstrap -notmatch '(?s)\$pullProcess\s*=\s*Start-Process.*?-Wait.*?-PassThru.*?-RedirectStandardOutput.*?-RedirectStandardError') {
+    throw "Ollama model pull must capture process output without PowerShell native stderr conversion."
+}
+if ($bootstrap -notmatch '(?s)\$pullProcess\.ExitCode\s*-ne\s*0') {
+    throw "Ollama model pull must validate the native process exit code."
+}
 if ($start -notmatch "Ensure-RadOncAIEngine") {
     throw "The installed application launcher does not invoke the AI bootstrap."
 }

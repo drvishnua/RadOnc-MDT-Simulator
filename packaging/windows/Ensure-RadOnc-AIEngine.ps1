@@ -231,9 +231,28 @@ function Invoke-RadOncModelPull {
 
     if ($OllamaExecutable -and (Test-Path -LiteralPath $OllamaExecutable -PathType Leaf)) {
         $env:OLLAMA_HOST = ([Uri]$BaseUrl).Host + ":" + ([Uri]$BaseUrl).Port
-        & $OllamaExecutable pull $RadOncModelName 2>&1 | ForEach-Object { Write-Host $_ }
-        if ($LASTEXITCODE -ne 0) {
-            throw "Ollama model download failed with exit code $LASTEXITCODE."
+        # Native stderr from Ollama contains terminal progress-control records.
+        # Piping "2>&1" through PowerShell 7 converts those records into
+        # NativeCommandError objects and can terminate the bootstrap even while
+        # Ollama is successfully starting the pull. Capture the process streams
+        # to files and use its real exit code as the success/failure signal.
+        $pullLogDirectory = Join-Path $ProductDataRoot "Logs"
+        New-Item -ItemType Directory -Force -Path $pullLogDirectory | Out-Null
+        $pullStdout = Join-Path $pullLogDirectory "ollama-model-pull.stdout.log"
+        $pullStderr = Join-Path $pullLogDirectory "ollama-model-pull.stderr.log"
+        Write-Host ("Ollama model pull logs: {0}" -f $pullLogDirectory)
+        $pullProcess = Start-Process -FilePath $OllamaExecutable -ArgumentList @("pull", $RadOncModelName) -Wait -PassThru -WindowStyle Hidden -RedirectStandardOutput $pullStdout -RedirectStandardError $pullStderr
+        if (Test-Path -LiteralPath $pullStdout) {
+            Get-Content -LiteralPath $pullStdout -Tail 12 | ForEach-Object { if ($_ -and $_.Trim()) { Write-Host $_ } }
+        }
+        if (Test-Path -LiteralPath $pullStderr) {
+            Get-Content -LiteralPath $pullStderr -Tail 12 | ForEach-Object { if ($_ -and $_.Trim()) { Write-Host $_ } }
+        }
+        if ($pullProcess.ExitCode -ne 0) {
+            $details = @()
+            if (Test-Path -LiteralPath $pullStdout) { $details += Get-Content -LiteralPath $pullStdout -Tail 20 }
+            if (Test-Path -LiteralPath $pullStderr) { $details += Get-Content -LiteralPath $pullStderr -Tail 20 }
+            throw ("Ollama model download failed with exit code {0}. {1}" -f $pullProcess.ExitCode, ($details -join [Environment]::NewLine))
         }
     } else {
         $body = @{ name = $RadOncModelName; stream = $false } | ConvertTo-Json -Compress
