@@ -1,21 +1,14 @@
 # Implementation Status
 
 **Current engineering checkpoint:** 11 November 2026  
-**Development branch HEAD:** `5b8159df0b0bb6ac0bedc95046d0c87784420591`  
-**PR #1:** open, draft, unmerged; targets `main` at `39a356b8eb09399aa2da1b9b9085965999f5105a`  
-**Current-head CI:** backend 191 passed (1 existing deprecation warning); frontend 32 passed with Vite 7.3.8 and `npm ci`; patient-registry and saved MDT dashboard browser E2E passed; CodeQL (Python and JavaScript/TypeScript), Gitleaks and Python/Node dependency audits passed with zero known vulnerabilities. See [backend](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42907292247), [frontend](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42907292261), [browser E2E](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42907292298) and [security](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42907292255) run records.  
-**Current-head Windows installer:** queued in [run 42907292945](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42907292945); not yet marked passed. The previous application-code snapshot `fdb1f9ceb96d7bcc2f5357f360b2e72e5825f8b8` completed installer build, install/uninstall smoke test, clean-machine Ollama/model download and CPU inference verification in [run 42906593712](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42906593712). Later commits through the present head change CI workflow references/metadata only, but the exact-head installer run remains the required release check.  
-**Current outstanding P0:** a fresh complete 136-contribution R1–R4 Ollama run with independent audit of the saved Chair synthesis. No current-head clinical accuracy, guideline concordance or current-head full-run GPU claim is made.
+**Development branch HEAD:** `a7e38146e5d4cf626abbfc419b243e26ca02d5f3`  
+**Functional/application-code baseline:** `5b8159df0b0bb6ac0bedc95046d0c87784420591` (latest code changes are workflow/documentation-only)  
+**PR #1:** open, draft and unmerged; targets `main` at `39a356b8eb09399aa2da1b9b9085965999f5105a`.  
+**Current-head verification:** backend, frontend, browser E2E, security and packaging-prerequisite workflows passed. Exact runs: [backend 42907820055](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42907820055), [frontend 42907820019](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42907820019), [browser E2E 42907820009](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42907820009), [security 42907820027](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42907820027), [packaging prerequisites 42907820144](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42907820144). Backend suite: 191 passed, 1 existing Starlette/httpx TestClient deprecation warning. Frontend suite: 32 passed; Vite 7.3.8 and TypeScript build passed using `npm ci`. Security: both CodeQL languages, Gitleaks and pip/npm audits passed with zero known dependency vulnerabilities.  
+**Exact-head Windows installer:** queued in [run 42907820025](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42907820025); not yet passed. The prior installer run [42906593712](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42906593712) passed fresh Windows install/uninstall, clean-machine Ollama/model provisioning, CPU inference, installed-app health and 45-role verification on source SHA `fdb1f9ceb96a123641f54d6c48528c600cd3b892`. Comparison confirms later commits through functional baseline `5b8159d` changed only GitHub Actions references; this is adjacent evidence, not an exact-head installer pass.  
+**Current P0:** fresh complete 136-contribution R1–R4 Ollama run and independent audit of saved R3 provenance challenges and Chair synthesis. No current-head clinical-accuracy, guideline-concordance or full-run GPU claim is made.
 
-
-**Repository:** `drvishnua/RadOnc-MDT-Simulator`  
-**Development branch:** `feature/four-round-mdt-and-performance`  
-**Latest CI/GPU-verified code head:** `691c26a36a1b4d8dba89f2e9025c3ae87dd91335`  
-**Application-code snapshot:** `d6734b285d3fdab0f72a65c2389fe121ccf4f0ef`; subsequent commits on the branch update release documentation only  
-**Windows installer artifact built from branch head:** workflow run `42776826416`, artifact `13744775650`  
-**PR #1:** open, draft, unmerged; targets `main` at `39a356b8eb09399aa2da1b9b9085965999f5105a`.
-
-Passing software and runtime tests do not establish clinical accuracy, evidence sufficiency or guideline concordance. This section keeps installer acceptance, laptop startup, active GPU inference, full MDT validation and clinical review separate.
+Passing software and runtime tests do not establish clinical accuracy, evidence sufficiency or guideline concordance. Installer acceptance, target-laptop runtime/GPU verification, full MDT validation and qualified clinical review remain separate assurance activities.
 
 ## Current quality controls and verification
 
@@ -23,13 +16,13 @@ Passing software and runtime tests do not establish clinical accuracy, evidence 
 |---|---|---|
 | Frontend reproducibility | **Implemented** | Committed `frontend/package-lock.json` (lockfile v3, 120 packages), Vite 7.3.8, Node engine `^20.19.0 || >=22.12.0`; CI, installer, browser E2E, security audit and developer setup use `npm ci`. |
 | Backend runtime/test separation | **Implemented** | pytest removed from production `backend/requirements.txt`; test-only dependency declared in `backend/requirements-dev.txt`. A fully resolved backend lockfile remains open. |
-| Vulnerability and source analysis | **Passed on current head** | CodeQL Python and JS/TS, full-history Gitleaks, pip-audit and npm audit all passed in run 42907292255; npm audit reported zero vulnerabilities. |
-| Browser acceptance | **Passed on current head** | Run 42907292298 drove a real headless Edge browser against isolated FastAPI/Vite services and disposable SQLite data. Patient registry lifecycle and saved R1–R4 dashboard assertions passed; no Ollama calls were made. |
-| Backend regression suite | **191 passed** | Run 42907292247; one existing Starlette/httpx TestClient deprecation warning remains. |
-| Frontend regression/build | **32 passed** | Run 42907292261; TypeScript check and Vite 7.3.8 production build succeeded through npm ci. |
+| Vulnerability and source analysis | **Passed on current head** | CodeQL Python and JS/TS, full-history Gitleaks, pip-audit and npm audit all passed in run 42907820027; npm audit reported zero vulnerabilities. |
+| Browser acceptance | **Passed on current head** | Run 42907820009 drove a real headless Edge browser against isolated FastAPI/Vite services and disposable SQLite data. Patient registry lifecycle and saved R1–R4 dashboard assertions passed; no Ollama calls were made. |
+| Backend regression suite | **191 passed** | Run 42907820055; one existing Starlette/httpx TestClient deprecation warning remains. |
+| Frontend regression/build | **32 passed** | Run 42907820019; TypeScript check and Vite 7.3.8 production build succeeded through npm ci. |
 | GitHub Actions supply chain | **Primary workflows SHA-pinned** | Current primary backend, frontend, installer, hosted CPU validation, packaging, security and browser workflows use immutable action commit references. Dependabot proposes weekly updates. |
 | Branch protection | **Not enabled** | Repository branch settings still require administrative review; no settings were changed and no merge is authorised. |
-| Current-head Windows installer | **Pending** | Run 42907292945 is queued. Previous application-code snapshot fdb1... passed clean install/uninstall and real Ollama/model provisioning/CPU inference in run 42906593712. |
+| Current-head Windows installer | **Pending** | Run 42907820025 is queued. Previous application-code snapshot fdb1... passed clean install/uninstall and real Ollama/model provisioning/CPU inference in run 42906593712. |
 | Full live MDT model quality | **Not yet verified** | No fresh 136-contribution run on current head. Historical MDT-006 audit still has 134 hard failures and 92 major findings on its older code snapshot. |
 | Evidence / clinical review | **Not implemented / not performed** | No connected evidence retrieval, authoritative source verification, qualified clinical review or guideline concordance claim. |
 | Current-head full-run GPU performance | **Not verified** | Historical one-agent/currently older snapshot GPU records are not evidence of current-head full-run attribution or performance. |
