@@ -2,9 +2,9 @@ name: Verify Installed RadOnc Startup Persistence
 
 on:
   workflow_dispatch:
-  push:
+  pull_request:
     branches:
-      - feature/four-round-mdt-and-performance
+      - main
     paths:
       - ".github/workflows/verify-installed-startup.yml"
       - "packaging/windows/Verify-Installed-Startup.ps1"
