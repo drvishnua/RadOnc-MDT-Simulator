@@ -133,13 +133,15 @@ This is an evidence-based engineering status review, not a complete penetration 
 **Branch:** `feature/four-round-mdt-and-performance`; PR #1 remains open/draft/unmerged.  
 **Base main:** `39a356b8eb09399aa2da1b9b9085965999f5105a` (unchanged).
 
-**Verification passed on exact functional baseline `5b8159df...`:**
-- Backend: 191 passed, 1 existing Starlette/httpx TestClient deprecation warning ([run 42907292247](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42907292247)).
-- Frontend: 32 passed; `npm ci`, TypeScript and Vite 7.3.8 production build passed ([run 42907292261](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42907292261)).
-- Browser E2E: patient registry lifecycle and persisted four-round dashboard assertions passed in isolated headless Edge with a disposable database and no Ollama calls ([run 42907292298](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42907292298)).
-- Security: CodeQL Python and JavaScript/TypeScript, Gitleaks full-history scan, pip-audit and npm audit all passed; zero known Python/Node dependency vulnerabilities were reported ([run 42907292255](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42907292255)).
-- Windows packaging-prerequisite inspection passed ([run 42907292356](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42907292356)).
-- Latest Windows installer and clean-hosted first-run provisioning passed on release verification snapshot `5d593aa3d71e066dc6fb1d21ae1e8f493f8d6a99` ([run 42908356200](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42908356200)); artifact `13806731062`. Build/install/uninstall smoke tests, user-data preservation, pinned Ollama 0.40.14 provisioning, qwen3.5:4b download/tag verification, CPU inference, installed-app health and 45-role API checks all passed. ZIP SHA-256 `64cc3ea5963856c835340e3b567f1b35f60fd88fcbacfe24097e6fcc13d56c47`; Setup.exe SHA-256 `917c9cc45072491507cab4a8bccdae5f878f6c3961cbf62033b637612d34bd29`. This is hosted CPU evidence, not a target-laptop GPU claim.
+**Verification passed on current snapshot `aaf8fb9`:**
+- Backend: 191 passed, 1 existing Starlette/httpx TestClient deprecation warning ([run 42910431942](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42910431942)).
+- Frontend: 32 passed; npm ci, TypeScript and Vite 7.3.8 production build passed ([run 42910431710](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42910431710)).
+- Browser E2E: patient registry lifecycle and persisted R1–R4 dashboard assertions passed in isolated headless Edge with a disposable database and no Ollama calls ([run 42910431865](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42910431865)).
+- Security: CodeQL Python and JavaScript/TypeScript, Gitleaks full-history scan, pip-audit and npm audit all passed; zero known Python/Node dependency vulnerabilities were reported ([run 42910431926](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42910431926)).
+- Windows packaging-prerequisite inspection passed ([run 42910431949](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42910431949)).
+- Latest Windows installer exact-SHA build/install/uninstall and clean-hosted Ollama/model bootstrap passed ([run 42910431940](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42910431940)); artifact `13806987082`. User-data preservation, portable Ollama 0.40.14, qwen3.5:4b download/tag verification, CPU inference, installed-app health and 45-role API check passed. ZIP SHA-256 `cc00301aa95b65cc94e3a9a9c27681d8f08a47997142d3802d4e81e5b2e7fd0a`; Setup.exe SHA-256 `9a075c56a9e93d00bd6e4476aff4864a19dd89f05390a9483ce43315e76b97e2`.
+- Full live 45-role R1–R4 validation is **in progress** on this exact SHA ([run 42910414046](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42910414046)). No live result has yet been inspected. The run is CPU-only and uses concurrency 1. Its artifact is configured to include JSON, SQLite and a manifest binding source SHA, Actions run ID, Ollama version and exact qwen3.5:4b digest/size.
+- Two earlier manifest-trigger attempts failed before model execution because the digest-validation block was truncated during file editing. They did not invoke Ollama or generate MDT output. The corrected workflow was rebuilt from the clean baseline and the current run was accepted.
 
 **Open gaps and current priority:**
 
