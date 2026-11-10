@@ -71,8 +71,8 @@ if ($bootstrap -notmatch "(?s)Invoke-RadOncModelPull.*?Get-RadOncOllamaTags.*?Te
 if ($bootstrap -match '(?s)&\s*\$OllamaExecutable\s+pull.*?2>&1\s*\|') {
     throw "Ollama native progress stderr must not be piped through PowerShell's error stream."
 }
-if ($bootstrap -notmatch '(?s)\$pullProcess\.ExitCode\s*-ne\s*0') {
-    throw "Ollama model pull must validate the native process exit code."
+if ($bootstrap -notmatch '(?s)\$pullExitCode\s*-ne\s*0') {
+    throw "Ollama model pull must reject a non-zero native exit code from the CMD wrapper."
 }
 if ($start -notmatch "Ensure-RadOncAIEngine") {
     throw "The installed application launcher does not invoke the AI bootstrap."
