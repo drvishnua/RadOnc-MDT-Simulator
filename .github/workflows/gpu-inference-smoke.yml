@@ -1,0 +1,41 @@
+name: One-Agent Ollama GPU Inference Smoke Test
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/gpu-inference-smoke.yml"
+      - "packaging/windows/Run-OneAgentInferenceSmoke.ps1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: radonc-one-agent-gpu-inference-smoke
+  cancel-in-progress: false
+
+jobs:
+  inference:
+    name: One non-persisted RO-01 inference with GPU telemetry
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 8
+    steps:
+      - name: Check out smoke-test script
+        uses: actions/checkout@v4
+
+      - name: Verify backend, one structured model response, and GPU placement
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+          $script = Join-Path $env:GITHUB_WORKSPACE "packaging/windows/Run-OneAgentInferenceSmoke.ps1"
+          $tokens = $null
+          $parseErrors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile($script,[ref]$tokens,[ref]$parseErrors) | Out-Null
+          if ($parseErrors.Count -gt 0) {
+            $parseErrors | ForEach-Object { Write-Host ("PARSE_ERROR line={0} message={1}" -f $_.Extent.StartLineNumber,$_.Message) }
+            throw "One-agent inference smoke script did not parse."
+          }
+          & $script
+          if (-not $?) { throw "One-agent inference/GPU smoke test failed." }
