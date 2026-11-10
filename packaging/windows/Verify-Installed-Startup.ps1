@@ -134,7 +134,7 @@ if ($health) {
     $action = New-ScheduledTaskAction -Execute $powershellExe -Argument $arguments -WorkingDirectory $installDir
     $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(10)
     $principal = New-ScheduledTaskPrincipal -UserId ("{0}\{1}" -f $env:USERDOMAIN, $env:USERNAME) -LogonType Interactive -RunLevel Limited
-    $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Minutes 5) -MultipleInstances IgnoreNew
+    $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Minutes 5) -MultipleInstances IgnoreNew
 
     Register-ScheduledTask -TaskName $taskName -TaskPath $taskPath -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force | Out-Null
     Write-Host ("SCHEDULED_TASK_REGISTERED={0}" -f $taskName)
