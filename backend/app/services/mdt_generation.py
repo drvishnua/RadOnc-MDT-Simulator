@@ -31,6 +31,11 @@ from app.services.chair_report_quality import (
 T = TypeVar("T", bound=BaseModel)
 
 
+def _context_window_for_schema(schema_type: type[BaseModel]) -> int:
+    """Give R3 enough prompt/output room; keep other rounds at the existing context."""
+    return 6144 if schema_type is AdversarialContributionDraft else 4096
+
+
 async def _generate_structured(prompt: str, schema_type: type[T], max_tokens: int) -> T:
     system = (
         "You are part of a fictional oncology MDT education simulation. Never provide "
@@ -52,7 +57,7 @@ async def _generate_structured(prompt: str, schema_type: type[T], max_tokens: in
         "options": {
             "temperature": 0.1,
             "num_predict": max_tokens,
-            "num_ctx": 4096,
+            "num_ctx": _context_window_for_schema(schema_type),
         },
     }
     try:
@@ -710,8 +715,8 @@ async def generate_adversarial_contribution(
         "substitutes for source-linked challenges. Review only distinct attributed opinions explicitly present in the supplied verbatim case_summary; "
         "Assign stable CASE:case_summary#N identifiers in order of first appearance and keep each "
         "identifier attached to the same attributed opinion. Do not assume a fixed number of opinions, "
-        "specialty labels, or source institutions. Include source_excerpt as an exact contiguous verbatim "
-        "quotation from case_summary identifying the attributed opinion; do not paraphrase or reconstruct it. "
+        "specialty labels, or source institutions. source_excerpt is server-bound metadata; do not generate, paraphrase, or reconstruct it. "
+        "Return each server-provided source_id exactly once. After schema validation, the backend attaches the exact original case_summary excerpt by source_id and flags any conflicting model-supplied excerpt. Missing or duplicate source IDs remain validation failures. 
         "If no distinct attributed opinion is clearly present, return an empty source_opinion_reviews list. "
         "For each review, include its source ID, option_status, conditions_status, "
         "a concise review_basis, and source_reference_ids. For each review, source_reference_ids "
@@ -783,6 +788,24 @@ async def generate_adversarial_contribution(
                 review_reference_flags.append(
                     f"R3 returned an unregistered case-summary source opinion ID: {actual_id}."
                 )
+    # The exact excerpt is immutable source data already extracted by the server.
+    # Bind it deterministically instead of spending model tokens copying it or
+    # trusting a paraphrase. Unknown IDs remain unbound and are still flagged below.
+    for review in payload.get("source_opinion_reviews") or []:
+        if not isinstance(review, dict):
+            continue
+        source_id = str(review.get("source_id") or "")
+        expected_excerpt = expected_source_opinions_by_id.get(source_id)
+        if expected_excerpt is None:
+            continue
+        model_excerpt = str(review.get("source_excerpt") or "")
+        if model_excerpt and model_excerpt != expected_excerpt:
+            review_reference_flags.append(
+                f"Model-supplied excerpt for {source_id} differed from the server register; "
+                "the exact case-summary excerpt was bound by the server."
+            )
+        review["source_excerpt"] = expected_excerpt
+
     case_source_id_pattern = re.compile(r"^CASE:case_summary#([1-9][0-9]*)$")
     case_source_id_to_excerpt: dict[str, str] = {}
     case_excerpt_to_source_id: dict[str, str] = {}
