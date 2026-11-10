@@ -55,12 +55,18 @@ def test_r3_receives_server_computed_peer_provenance_flags_and_exact_excerpt(mon
     from app.schemas import SyntheticCase
     from app.services import mdt_generation
 
-    peer_response = "There is consensus across all roles for a single pathway."
+    peer_response = (
+        "Introductory review of the supplied record. " + ("Additional contextual wording. " * 12)
+        + "There is consensus across all roles for a single pathway."
+    )
     provenance_flag = _audit_source_references(
         {"response_to_other_perspectives": peer_response},
         {("R1", "RO-01"), ("R2", "MO-01")},
     )[0]
-    own_r2_response = "All 45 roles agree on this pathway."
+    own_r2_response = (
+        "Introductory review of the supplied record. " + ("Additional contextual wording. " * 12)
+        + "All 45 roles agree on this pathway."
+    )
     own_r2_flag = _audit_source_references(
         {"response_to_other_perspectives": own_r2_response},
         {("R1", "RO-01"), ("R2", "RO-01")},
@@ -118,7 +124,14 @@ def test_r3_receives_server_computed_peer_provenance_flags_and_exact_excerpt(mon
             "substantive_challenges": [],
             "risk_flags": [],
             "position_changes": [],
-            "source_reference_integrity_flags": [provenance_flag],
+            "source_reference_integrity_flags": [
+                "Reference finding before scope flag A.",
+                "Reference finding before scope flag B.",
+                "Reference finding before scope flag C.",
+                "Reference finding before scope flag D.",
+                "Reference finding before scope flag E.",
+                provenance_flag,
+            ],
         },
     }]
 

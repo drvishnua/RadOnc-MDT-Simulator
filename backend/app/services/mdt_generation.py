@@ -198,6 +198,23 @@ def _bounded_exact_excerpt(value: object, limit: int) -> str:
     boundary = source.rfind(" ", 0, limit + 1)
     return source[: boundary if boundary > 0 else limit]
 
+def _prioritized_provenance_flags(value: object, limit: int = 5) -> list[str]:
+    """Keep scope overclaims visible ahead of lower-priority citation findings."""
+    if not isinstance(value, (list, tuple)):
+        return []
+    flags = [
+        item.strip()
+        for item in value
+        if isinstance(item, str) and item.strip()
+    ]
+    flags.sort(
+        key=lambda item: (
+            not item.startswith("Peer-scope overclaim:"),
+            item.casefold(),
+        )
+    )
+    return [_compact(item, 220) for item in flags[:limit]]
+
 
 def _compact_r1_text(value: str, limit: int) -> str:
     """Keep the explicit R1 source label separate from round IDs embedded in peer prose."""
@@ -678,14 +695,12 @@ async def generate_adversarial_contribution(
                 _compact_r2_text(item, 90)
                 for item in (peer["result"].get("position_changes") or [])[:1]
             ],
-            "provenance_audit_flags": [
-                _compact(item, 220)
-                for item in (peer["result"].get("source_reference_integrity_flags") or [])[:3]
-                if isinstance(item, str) and item.strip()
-            ],
+            "provenance_audit_flags": _prioritized_provenance_flags(
+                peer["result"].get("source_reference_integrity_flags") or []
+            ),
             "provenance_excerpt": (
                 _bounded_exact_excerpt(
-                    peer["result"].get("response_to_other_perspectives", ""), 280
+                    peer["result"].get("response_to_other_perspectives", ""), 1600
                 )
                 if peer["result"].get("source_reference_integrity_flags")
                 else ""
@@ -707,14 +722,12 @@ async def generate_adversarial_contribution(
         "round2_position_changes": [_compact_r2_text(item, 100) for item in (own_debate_contribution.get("position_changes") or [])[:1]],
         "round2_unknowns": [_compact_r2_text(item, 90) for item in (own_debate_contribution.get("remaining_unknowns") or [])[:2]],
         "round2_risks": [_compact_r2_text(item, 90) for item in (own_debate_contribution.get("risk_flags") or [])[:2]],
-        "round2_provenance_audit_flags": [
-            _compact(item, 220)
-            for item in (own_debate_contribution.get("source_reference_integrity_flags") or [])[:3]
-            if isinstance(item, str) and item.strip()
-        ],
+        "round2_provenance_audit_flags": _prioritized_provenance_flags(
+            own_debate_contribution.get("source_reference_integrity_flags") or []
+        ),
         "round2_provenance_excerpt": (
             _bounded_exact_excerpt(
-                own_debate_contribution.get("response_to_other_perspectives", ""), 280
+                own_debate_contribution.get("response_to_other_perspectives", ""), 1600
             )
             if own_debate_contribution.get("source_reference_integrity_flags")
             else ""
@@ -781,8 +794,10 @@ async def generate_adversarial_contribution(
         "invalid role-range/unsupplied citation or an unsupported whole-MDT scope claim, record a "
         "concise provenance-integrity challenge in substantive_challenges naming that exact "
         "R2:AGENT_ID, explaining the attribution or scope defect (not a clinical disagreement), "
-        "and quoting a short exact contiguous excerpt from the supplied R2 response excerpt. Do "
-        "not cite the audit flag itself as a source; cite the exact R2 peer ID. Do not use a "
+        "and quoting a short exact contiguous excerpt from the supplied R2 response text. For "
+        "citation defects, quote the adjacent substantive claim rather than repeating the invalid "
+        "role range or unsupplied identifier. Do not cite the audit flag itself as a source; cite "
+        "the exact R2 source ID. Do not use a "
         "provenance flag as clinical evidence, infer a clinical disagreement, or change your "
         "clinical position solely because of it. Do not manufacture a challenge when the excerpt "
         "does not support the flag. Preserve uncertainty, conditions, and minority views. Risk "
