@@ -167,11 +167,11 @@ def _audit_source_references(payload: dict, allowed: set[tuple[str, str]]) -> li
     # Chair can disclose it instead of presenting it as cross-role agreement.
     response = str(payload.get("response_to_other_perspectives") or "").casefold()
     unsupported_scope_patterns = (
-        r"\\ball\\s+45\\s+(?:roles|agents|specialists)\\b",
-        r"\\ball\\s+(?:roles|agents|specialists)\\s+(?:agree|support|oppose|conclude)",
-        r"\\bconsensus\\s+across\\s+(?:all\\s+)?roles\\b",
-        r"\\bcomplete\\s+agreement\\s+across\\s+(?:all\\s+)?roles\\b",
-        r"\\bthe\\s+entire\\s+mdt\\s+(?:agrees|supports|opposes|concludes)",
+        r"\ball\\s+45\\s+(?:roles|agents|specialists)\\b",
+        r"\ball\\s+(?:roles|agents|specialists)\\s+(?:agree|support|oppose|conclude)",
+        r"\bconsensus\\s+across\\s+(?:all\\s+)?roles\\b",
+        r"\bcomplete\\s+agreement\\s+across\\s+(?:all\\s+)?roles\\b",
+        r"\bthe\\s+entire\\s+mdt\\s+(?:agrees|supports|opposes|concludes)",
     )
     if any(re.search(pattern, response) for pattern in unsupported_scope_patterns):
         findings.append(
