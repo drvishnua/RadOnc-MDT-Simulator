@@ -95,21 +95,9 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Resolve and audit frontend dependency ranges
+      - name: Install and audit the committed frontend lockfile
         working-directory: frontend
         shell: bash
         run: |
-          # The repository does not yet commit package-lock.json. Resolve the
-          # declared ranges for this scan, then audit that temporary dependency
-          # tree. This is a security scan, not yet a reproducible release lock.
-          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm ci --ignore-scripts --no-audit --no-fund
           npm audit --audit-level=high
-
-      - name: Upload generated frontend lockfile for controlled review
-        if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-        with:
-          name: radonc-frontend-package-lock
-          path: frontend/package-lock.json
-          if-no-files-found: warn
-          retention-days: 7
