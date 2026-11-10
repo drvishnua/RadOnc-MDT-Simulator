@@ -1,0 +1,170 @@
+name: Patient Registry and Four-Round Dashboard Browser E2E
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/four-round-mdt-and-performance
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - "scripts/test-patient-registry-browser.mjs"
+      - "scripts/seed-mdt-dashboard-e2e.py"
+      - ".github/workflows/patient-registry-browser-e2e.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - "scripts/test-patient-registry-browser.mjs"
+      - "scripts/seed-mdt-dashboard-e2e.py"
+      - ".github/workflows/patient-registry-browser-e2e.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: patient-registry-browser-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser-e2e:
+    name: Isolated patient registry and saved MDT dashboard browser workflow
+    runs-on: windows-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Check out exact source revision
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install backend dependencies in an isolated virtual environment
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+          python -m venv backend/.venv
+          $python = Join-Path $env:GITHUB_WORKSPACE "backend\.venv\Scripts\python.exe"
+          & $python -m pip install --disable-pip-version-check -r backend/requirements.txt
+          if ($LASTEXITCODE -ne 0) { throw "Backend dependency installation failed." }
+
+      - name: Install frontend dependencies
+        shell: powershell
+        working-directory: frontend
+        run: |
+          $ErrorActionPreference = "Stop"
+          npm install --no-audit --no-fund
+          if ($LASTEXITCODE -ne 0) { throw "Frontend dependency installation failed." }
+
+      - name: Run real-browser patient registry and dashboard acceptance
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+          $root = $env:GITHUB_WORKSPACE
+          $runtime = Join-Path $env:RUNNER_TEMP "RadOnc-Patient-Browser-E2E"
+          $data = Join-Path $runtime "Data"
+          $logs = Join-Path $runtime "Logs"
+          New-Item -ItemType Directory -Force -Path $data, $logs | Out-Null
+
+          # Use a disposable database. This workflow never connects to a laptop,
+          # a self-hosted runner, an existing user database, or Ollama inference.
+          $env:RADONC_DATA_DIR = $data
+          $env:RADONC_LEGACY_DB_PATH = ""
+          $env:OLLAMA_BASE_URL = "http://127.0.0.1:11434"
+          $env:OLLAMA_MODEL = "qwen3.5:4b"
+          $env:RADONC_AGENT_CONCURRENCY = "1"
+
+          $python = Join-Path $root "backend\.venv\Scripts\python.exe"
+          $backendDir = Join-Path $root "backend"
+          $frontendDir = Join-Path $root "frontend"
+          $viteEntry = Join-Path $frontendDir "node_modules\vite\bin\vite.js"
+          $node = (Get-Command node.exe -ErrorAction Stop).Source
+          $backendStdout = Join-Path $logs "backend.stdout.log"
+          $backendStderr = Join-Path $logs "backend.stderr.log"
+          $frontendStdout = Join-Path $logs "frontend.stdout.log"
+          $frontendStderr = Join-Path $logs "frontend.stderr.log"
+          $backendProcess = $null
+          $frontendProcess = $null
+
+          try {
+            $backendProcess = Start-Process -FilePath $python -ArgumentList @("-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8000") -WorkingDirectory $backendDir -PassThru -WindowStyle Hidden -RedirectStandardOutput $backendStdout -RedirectStandardError $backendStderr
+
+            $backendReady = $false
+            for ($i = 0; $i -lt 45; $i++) {
+              $backendProcess.Refresh()
+              if ($backendProcess.HasExited) {
+                throw "FastAPI exited before readiness. See backend.stderr.log."
+              }
+              try {
+                $health = Invoke-RestMethod -Uri "http://127.0.0.1:8000/health" -TimeoutSec 2
+                if ($health.status -eq "ok") { $backendReady = $true; break }
+              } catch { }
+              Start-Sleep -Seconds 1
+            }
+            if (-not $backendReady) { throw "FastAPI did not become ready within 45 seconds." }
+
+            $frontendProcess = Start-Process -FilePath $node -ArgumentList @($viteEntry, "--host", "127.0.0.1", "--port", "5173", "--strictPort") -WorkingDirectory $frontendDir -PassThru -WindowStyle Hidden -RedirectStandardOutput $frontendStdout -RedirectStandardError $frontendStderr
+
+            $frontendReady = $false
+            for ($i = 0; $i -lt 45; $i++) {
+              $frontendProcess.Refresh()
+              if ($frontendProcess.HasExited) {
+                throw "Vite exited before readiness. See frontend.stderr.log."
+              }
+              try {
+                $response = Invoke-WebRequest -Uri "http://127.0.0.1:5173/" -TimeoutSec 2
+                if ($response.StatusCode -eq 200 -and $response.Content -match 'id="root"') {
+                  $frontendReady = $true
+                  break
+                }
+              } catch { }
+              Start-Sleep -Seconds 1
+            }
+            if (-not $frontendReady) { throw "Vite did not serve the React application within 45 seconds." }
+
+            # The browser script drives the actual React application in isolated
+            # headless Microsoft Edge using the DevTools protocol. It exercises
+            # patient create, validate, save, refresh, reload, edit, version,
+            # restore and delete, then checks saved R1-R4 dashboard rendering.
+            # The deterministic R1-R4 fixture performs no model calls.
+            Push-Location $root
+            try {
+              node scripts/test-patient-registry-browser.mjs
+              if ($LASTEXITCODE -ne 0) {
+                throw "Patient registry browser E2E failed with exit code $LASTEXITCODE."
+              }
+            } finally {
+              Pop-Location
+            }
+          } finally {
+            foreach ($process in @($frontendProcess, $backendProcess)) {
+              if ($process) {
+                $process.Refresh()
+                if (-not $process.HasExited) {
+                  Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+                  $process.WaitForExit(10000) | Out-Null
+                }
+              }
+            }
+            Write-Host "Isolated browser E2E services stopped."
+          }
+
+      - name: Upload isolated E2E logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: patient-registry-browser-e2e-logs
+          path: ${{ runner.temp }}/RadOnc-Patient-Browser-E2E/Logs/
+          if-no-files-found: warn
+          retention-days: 14
