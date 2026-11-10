@@ -3,8 +3,8 @@
 **Release candidate verification date:** 10 November 2026  
 **Repository:** `drvishnua/RadOnc-MDT-Simulator`  
 **Development branch:** `feature/four-round-mdt-and-performance`  
-**Latest audited branch head:** `691c26a36a1b4d8dba89f2e9025c3ae87dd91335`  
-**Application-code snapshot:** `d6734b285d3fdab0f72a65c2389fe121ccf4f0ef` (the two following commits update release documentation only)  
+**Latest CI/GPU-verified code head:** `691c26a36a1b4d8dba89f2e9025c3ae87dd91335`  
+**Application-code snapshot:** `d6734b285d3fdab0f72a65c2389fe121ccf4f0ef`; subsequent commits on the branch update release documentation only  
 **Windows installer artifact built from branch head:** workflow run `42776826416`, artifact `13744775650`  
 **PR #1:** open, draft, unmerged; targets `main` at `39a356b8eb09399aa2da1b9b9085965999f5105a`.
 
@@ -25,7 +25,7 @@ Passing software and runtime tests do not establish clinical accuracy, evidence 
 | Active GPU attribution | **Verified during the latest inference** | 10 of 11 `nvidia-smi` samples had non-zero GPU utilisation; peak 92%; VRAM 3,815 / 8,188 MiB; `ollama ps` reported `qwen3.5:4b`, 3.1 GB, **100% GPU**, context 4096 |
 | Patient-data integrity during smoke inference | Passed | Installed SQLite SHA-256 was unchanged before/after; `NO_MDT_RUN_CREATED=True` |
 | Latest Windows Setup.exe | Built and independently checksum-verified | Artifact ID `13744775650`; [download via run 42776826416](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42776826416); artifact ZIP size **16,630,472 bytes**, ZIP SHA-256 `698539882e59f425c3fbc49d03b2bb3311d046d47401e3e131732ddc8106d1b1`; Setup.exe size **17,180,399 bytes**; artifact expires **24 November 2026** |
-| Setup.exe SHA-256 | Independently checked against the artifact's `SHA256SUMS.txt` | `074d6f04b0bd41e706afa1b64735dc5495e7156e7cc5775afdababb6339346a4` |
+| Setup.exe SHA-256 | Independently extracted from the artifact ZIP and checked against its `SHA256SUMS.txt` | `074d6f04b0bd41e706afa1b64735dc5495e7156e7cc5775afdababb6339346a4` |
 | Full 136-contribution MDT | **Not run on this release head** | Historical MDT-006 audit findings remain open; a passing one-agent smoke test is not a four-round validation |
 | Evidence retrieval / clinical validation | Not implemented/verified | No independent guideline retrieval, source verification or qualified clinical review |
 
