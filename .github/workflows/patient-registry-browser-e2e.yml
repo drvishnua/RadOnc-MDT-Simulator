@@ -2,15 +2,6 @@ name: Patient Registry and Four-Round Dashboard Browser E2E
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - feature/four-round-mdt-and-performance
-    paths:
-      - "backend/**"
-      - "frontend/**"
-      - "scripts/test-patient-registry-browser.mjs"
-      - "scripts/seed-mdt-dashboard-e2e.py"
-      - ".github/workflows/patient-registry-browser-e2e.yml"
   pull_request:
     branches:
       - main
@@ -36,17 +27,17 @@ jobs:
 
     steps:
       - name: Check out exact source revision
-        uses: actions/checkout@v4
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
         with:
           python-version: "3.11"
           cache: pip
           cache-dependency-path: backend/requirements.txt
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
         with:
           node-version: "22"
 
@@ -124,7 +115,7 @@ jobs:
               }
               try {
                 $response = Invoke-WebRequest -Uri "http://127.0.0.1:5173/" -TimeoutSec 2
-                if ($response.StatusCode -eq 200 -and $response.Content -match 'id="root"') {
+                if ($response.StatusCode -eq 200) {
                   $frontendReady = $true
                   break
                 }
@@ -138,14 +129,13 @@ jobs:
             # patient create, validate, save, refresh, reload, edit, version,
             # restore and delete, then checks saved R1-R4 dashboard rendering.
             # The deterministic R1-R4 fixture performs no model calls.
-            Push-Location $root
-            try {
-              node scripts/test-patient-registry-browser.mjs
-              if ($LASTEXITCODE -ne 0) {
-                throw "Patient registry browser E2E failed with exit code $LASTEXITCODE."
-              }
-            } finally {
-              Pop-Location
+            $testStdout = Join-Path $logs "browser-e2e.stdout.log"
+            $testStderr = Join-Path $logs "browser-e2e.stderr.log"
+            $testProcess = Start-Process -FilePath $node -ArgumentList @("scripts/test-patient-registry-browser.mjs") -WorkingDirectory $root -PassThru -Wait -NoNewWindow -RedirectStandardOutput $testStdout -RedirectStandardError $testStderr
+            if (Test-Path $testStdout) { Get-Content -LiteralPath $testStdout }
+            if (Test-Path $testStderr) { Get-Content -LiteralPath $testStderr }
+            if ($testProcess.ExitCode -ne 0) {
+              throw "Patient registry browser E2E failed with exit code $($testProcess.ExitCode). See browser-e2e logs."
             }
           } finally {
             foreach ($process in @($frontendProcess, $backendProcess)) {
@@ -162,7 +152,7 @@ jobs:
 
       - name: Upload isolated E2E logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: patient-registry-browser-e2e-logs
           path: ${{ runner.temp }}/RadOnc-Patient-Browser-E2E/Logs/
