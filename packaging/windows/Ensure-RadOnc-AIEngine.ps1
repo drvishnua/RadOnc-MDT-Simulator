@@ -214,12 +214,15 @@ function Invoke-RadOncModelPull {
     param(
         [Parameter(Mandatory = $true)][string]$BaseUrl,
         [AllowNull()][string]$OllamaExecutable,
-        [Parameter(Mandatory = $true)][string]$ProductDataRoot
+        [Parameter(Mandatory = $true)][string]$ProductDataRoot,
+        [switch]$RequireLocalDiskSpace
     )
 
-    $freeBytes = Get-RadOncFreeBytes -Path $ProductDataRoot
-    if ($freeBytes -lt 5GB) {
-        throw ("At least 5 GB of free disk space is required to download {0}. Available: {1:N1} GB." -f $RadOncModelName, ($freeBytes / 1GB))
+    if ($RequireLocalDiskSpace) {
+        $freeBytes = Get-RadOncFreeBytes -Path $ProductDataRoot
+        if ($freeBytes -lt 5GB) {
+            throw ("At least 5 GB of free disk space is required to download {0}. Available: {1:N1} GB." -f $RadOncModelName, ($freeBytes / 1GB))
+        }
     }
 
     Write-Host ""
@@ -228,7 +231,7 @@ function Invoke-RadOncModelPull {
 
     if ($OllamaExecutable -and (Test-Path -LiteralPath $OllamaExecutable -PathType Leaf)) {
         $env:OLLAMA_HOST = ([Uri]$BaseUrl).Host + ":" + ([Uri]$BaseUrl).Port
-        & $OllamaExecutable pull $RadOncModelName
+        & $OllamaExecutable pull $RadOncModelName 2>&1 | ForEach-Object { Write-Host $_ }
         if ($LASTEXITCODE -ne 0) {
             throw "Ollama model download failed with exit code $LASTEXITCODE."
         }
