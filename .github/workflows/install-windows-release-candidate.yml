@@ -1,0 +1,43 @@
+name: Install Windows Release Candidate on Target Laptop
+
+on:
+  push:
+    branches:
+      - feature/four-round-mdt-and-performance
+    paths:
+      - ".github/workflows/install-windows-release-candidate.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: install-windows-release-candidate
+  cancel-in-progress: false
+
+jobs:
+  install:
+    name: Guarded install and local first-run verification
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 100
+    steps:
+      - name: Check out release candidate
+        uses: actions/checkout@v4
+
+      - name: Download the exact verified installer artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: RadOnc-MDT-Simulator-Windows-x64
+          path: installer-artifact
+          repository: ${{ github.repository }}
+          run-id: 42768484654
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Guarded install and target-laptop validation
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+          $installer = Join-Path $env:GITHUB_WORKSPACE "installer-artifact/RadOnc-MDT-Simulator-Setup.exe"
+          $script = Join-Path $env:GITHUB_WORKSPACE ".github/scripts/install-release-candidate.ps1"
+          & $script -InstallerPath $installer -ExpectedSha256 "3be695c91231c176a9277117c6b38b194fd51bceef22db2f17e2b21eb751ef07"
+          if (-not $?) { throw "Guarded target-laptop installation or verification failed." }
