@@ -111,18 +111,24 @@ jobs:
             for ($i = 0; $i -lt 45; $i++) {
               $frontendProcess.Refresh()
               if ($frontendProcess.HasExited) {
-                throw "Vite exited before readiness. See frontend.stderr.log."
+                $details = if (Test-Path $frontendStderr) { (Get-Content $frontendStderr -Tail 40) -join [Environment]::NewLine } else { "No Vite stderr log." }
+                throw "Vite exited before readiness. $details"
               }
-              try {
-                $response = Invoke-WebRequest -Uri "http://127.0.0.1:5173/" -TimeoutSec 2
-                if ($response.StatusCode -eq 200) {
-                  $frontendReady = $true
-                  break
-                }
-              } catch { }
+              # Use the same Node runtime that launched Vite for the localhost
+              # probe. This avoids hosted-runner PowerShell web-request behaviour
+              # masking a healthy Vite server behind a false-negative timeout.
+              & $node -e "fetch('http://127.0.0.1:5173/').then(r => process.exit(r.status === 200 ? 0 : 1)).catch(() => process.exit(1))" 2>$null
+              if ($LASTEXITCODE -eq 0) {
+                $frontendReady = $true
+                break
+              }
               Start-Sleep -Seconds 1
             }
-            if (-not $frontendReady) { throw "Vite did not serve the React application within 45 seconds." }
+            if (-not $frontendReady) {
+              $out = if (Test-Path $frontendStdout) { (Get-Content $frontendStdout -Tail 40) -join [Environment]::NewLine } else { "No Vite stdout log." }
+              $err = if (Test-Path $frontendStderr) { (Get-Content $frontendStderr -Tail 40) -join [Environment]::NewLine } else { "No Vite stderr log." }
+              throw "Vite did not respond to a Node.js HTTP probe on 127.0.0.1:5173 within 45 seconds. STDOUT: $out STDERR: $err"
+            }
 
             # The browser script drives the actual React application in isolated
             # headless Microsoft Edge using the DevTools protocol. It exercises
