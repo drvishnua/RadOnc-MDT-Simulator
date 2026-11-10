@@ -9,6 +9,8 @@ on:
     paths-ignore:
       - ".github/workflows/live-four-round-validation.yml"
       - ".github/workflows/ollama-gpu-diagnostic.yml"
+      - ".github/workflows/verify-installed-startup.yml"
+      - "packaging/windows/Verify-Installed-Startup.ps1"
       - ".github/scripts/install-release-candidate.ps1"
       - ".github/workflows/install-windows-release-candidate.yml"
       - ".github/workflows/sync-local-source.yml"
