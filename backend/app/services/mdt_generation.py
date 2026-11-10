@@ -716,7 +716,7 @@ async def generate_adversarial_contribution(
         "Assign stable CASE:case_summary#N identifiers in order of first appearance and keep each "
         "identifier attached to the same attributed opinion. Do not assume a fixed number of opinions, "
         "specialty labels, or source institutions. source_excerpt is server-bound metadata; do not generate, paraphrase, or reconstruct it. "
-        "Return each server-provided source_id exactly once. After schema validation, the backend attaches the exact original case_summary excerpt by source_id and flags any conflicting model-supplied excerpt. Missing or duplicate source IDs remain validation failures. 
+        "Return each server-provided source_id exactly once. After schema validation, the backend attaches the exact original case_summary excerpt by source_id and flags any conflicting model-supplied excerpt. Missing or duplicate source IDs remain validation failures. "
         "If no distinct attributed opinion is clearly present, return an empty source_opinion_reviews list. "
         "For each review, include its source ID, option_status, conditions_status, "
         "a concise review_basis, and source_reference_ids. For each review, source_reference_ids "
