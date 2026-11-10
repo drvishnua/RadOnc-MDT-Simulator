@@ -52,7 +52,7 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
 
 
 _ATTRIBUTED_NOTE_OPINION_PATTERN = re.compile(
-    r"\b(?:the\s+)?[A-Za-z][A-Za-z.'-]*(?:\s+[A-Za-z][A-Za-z.'-]*){0,3}\s+note\s+"
+    r"\b(?:the\s+)?[A-Za-z][A-Za-z'-]*(?:\s+[A-Za-z][A-Za-z'-]*){0,3}\s+note\s+"
     r"(?:recommends?|proposes?|suggests?|advises?|opines?|believes?|prefers?|"
     r"favo[u]?rs?|supports?|advocates?|argues?|urges?)\b",
     re.IGNORECASE,
