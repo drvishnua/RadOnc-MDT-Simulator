@@ -32,8 +32,12 @@ T = TypeVar("T", bound=BaseModel)
 
 
 def _context_window_for_schema(schema_type: type[BaseModel]) -> int:
-    """Give R3 enough prompt/output room; keep other rounds at the existing context."""
-    return 6144 if schema_type is AdversarialContributionDraft else 4096
+    """Give R2 and R3 enough room for bounded peer context and structured output."""
+    return (
+        6144
+        if schema_type in (RoundContributionDraft, AdversarialContributionDraft)
+        else 4096
+    )
 
 
 async def _generate_structured(prompt: str, schema_type: type[T], max_tokens: int) -> T:
