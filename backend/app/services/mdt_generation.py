@@ -188,6 +188,17 @@ def _audit_source_references(payload: dict, allowed: set[tuple[str, str]]) -> li
         )
     return findings
 
+def _bounded_exact_excerpt(value: object, limit: int) -> str:
+    """Return a bounded contiguous excerpt without rewriting source characters."""
+    if not isinstance(value, str):
+        return ""
+    source = value.strip()
+    if len(source) <= limit:
+        return source
+    boundary = source.rfind(" ", 0, limit + 1)
+    return source[: boundary if boundary > 0 else limit]
+
+
 def _compact_r1_text(value: str, limit: int) -> str:
     """Keep the explicit R1 source label separate from round IDs embedded in peer prose."""
     neutralized = _EMBEDDED_ROUND_REFERENCE_PATTERN.sub(
@@ -667,6 +678,18 @@ async def generate_adversarial_contribution(
                 _compact_r2_text(item, 90)
                 for item in (peer["result"].get("position_changes") or [])[:1]
             ],
+            "provenance_audit_flags": [
+                _compact(item, 220)
+                for item in (peer["result"].get("source_reference_integrity_flags") or [])[:3]
+                if isinstance(item, str) and item.strip()
+            ],
+            "provenance_excerpt": (
+                _bounded_exact_excerpt(
+                    peer["result"].get("response_to_other_perspectives", ""), 280
+                )
+                if peer["result"].get("source_reference_integrity_flags")
+                else ""
+            ),
         }
         for peer in peer_debate_views[:5]
     ]
@@ -684,6 +707,18 @@ async def generate_adversarial_contribution(
         "round2_position_changes": [_compact_r2_text(item, 100) for item in (own_debate_contribution.get("position_changes") or [])[:1]],
         "round2_unknowns": [_compact_r2_text(item, 90) for item in (own_debate_contribution.get("remaining_unknowns") or [])[:2]],
         "round2_risks": [_compact_r2_text(item, 90) for item in (own_debate_contribution.get("risk_flags") or [])[:2]],
+        "round2_provenance_audit_flags": [
+            _compact(item, 220)
+            for item in (own_debate_contribution.get("source_reference_integrity_flags") or [])[:3]
+            if isinstance(item, str) and item.strip()
+        ],
+        "round2_provenance_excerpt": (
+            _bounded_exact_excerpt(
+                own_debate_contribution.get("response_to_other_perspectives", ""), 280
+            )
+            if own_debate_contribution.get("source_reference_integrity_flags")
+            else ""
+        ),
     }
     allowed_source_ids = [
         f"R1:{profile['agent_id']}",
@@ -738,8 +773,20 @@ async def generate_adversarial_contribution(
         "manufacture challenges; if the records do not support one, leave the challenge list "
         "empty and explain the limitation. The peer digest is a bounded sample of at most 5 of "
         "44 other roles, not the full MDT. Never generalise it to unshown roles or claim all roles "
-        "agree. Preserve uncertainty, conditions, and minority views. Risk flags are not "
-        "substitutes for source-linked challenges. Review only distinct attributed opinions explicitly present in the supplied verbatim case_summary; "
+        "agree. Your saved R2 contribution and each supplied peer may include server-computed "
+        "provenance audit flags and an exact excerpt from that R2 response. These flags are "
+        "deterministic source-attribution/scope audit metadata, not clinical evidence or proof that "
+        "the contributor's clinical reasoning is wrong. For each flagged R2 source (your own or a "
+        "selected peer), compare the flag with its supplied excerpt. When the excerpt supports an "
+        "invalid role-range/unsupplied citation or an unsupported whole-MDT scope claim, record a "
+        "concise provenance-integrity challenge in substantive_challenges naming that exact "
+        "R2:AGENT_ID, explaining the attribution or scope defect (not a clinical disagreement), "
+        "and quoting a short exact contiguous excerpt from the supplied R2 response excerpt. Do "
+        "not cite the audit flag itself as a source; cite the exact R2 peer ID. Do not use a "
+        "provenance flag as clinical evidence, infer a clinical disagreement, or change your "
+        "clinical position solely because of it. Do not manufacture a challenge when the excerpt "
+        "does not support the flag. Preserve uncertainty, conditions, and minority views. Risk "
+        "flags are not substitutes for source-linked challenges. Review only distinct attributed opinions explicitly present in the supplied verbatim case_summary; "
         "Assign stable CASE:case_summary#N identifiers in order of first appearance and keep each "
         "identifier attached to the same attributed opinion. Do not assume a fixed number of opinions, "
         "specialty labels, or source institutions. source_excerpt is server-bound metadata; do not generate, paraphrase, or reconstruct it. "
