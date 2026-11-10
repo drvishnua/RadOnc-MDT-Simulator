@@ -53,8 +53,8 @@ if ($bootstrap -match "(?im)^\s*Stop-Process\b") {
 if ($bootstrap -notmatch '(?s)\$pullProcess\s*=\s*Start-Process.*?-PassThru.*?-RedirectStandardOutput.*?-RedirectStandardError') {
     throw "Ollama model pull must capture process output without PowerShell native stderr conversion."
 }
-if ($bootstrap -notmatch '(?s)\$pullProcess\.Refresh\(\).*?\$pullProcess\.HasExited.*?\$pullProcess\.Kill\(\).*?\$pullProcess\.ExitCode\s*-ne\s*0') {
-    throw "Ollama model pull must use a bounded owned-process wait and validate its exit code."
+if ($bootstrap -notmatch '(?s)\$pullProcess\.Refresh\(\).*?\$pullProcess\.HasExited.*?\$pullProcess\.Kill\(\).*?\$pullProcess\.WaitForExit\(\).*?\$pullProcess\.Refresh\(\).*?\$pullProcess\.ExitCode\s*-ne\s*0') {
+    throw "Ollama model pull must wait for its owned process handle before validating the exit code."
 }
 if ($bootstrap -notmatch '(?s)\$downloadTimeoutSeconds\s*=\s*3600.*?HOSTED_CPU_RUNTIME_DOWNLOAD_HEARTBEAT') {
     throw "Portable Ollama runtime download must have a timeout and progress heartbeat."
