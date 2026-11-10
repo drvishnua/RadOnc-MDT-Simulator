@@ -90,7 +90,7 @@ jobs:
           }
           if (-not $ollamaExe) {
             Write-Host "OLLAMA_EXECUTABLE_NOT_FOUND"
-          } else {
+          }
 
           if ($ollamaExe) {
             Write-Host "=== OLLAMA VERSION AND PATH ==="
