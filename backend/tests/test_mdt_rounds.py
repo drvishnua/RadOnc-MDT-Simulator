@@ -445,7 +445,8 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
     assert "SERVER-IDENTIFIED ATTRIBUTED SOURCE OPINIONS" in prompts[1]
     assert "Neurology service note proposes a specialist assessment first, conditional on complete staging." in prompts[1]
     assert "Cardiology service note proposes a separate preoperative sequence, conditional on MRI review and documented fitness." in prompts[1]
-    assert "Include source_excerpt as an exact contiguous verbatim quotation from case_summary" in prompts[1]
+    assert "source_excerpt is server-bound metadata" in prompts[1]
+    assert "attaches the exact original case_summary excerpt by source_id" in prompts[1]
     assert "For MDT-006" not in prompts[1]
     assert "colorectal surgical note" not in prompts[1]
     assert "medical oncology note" not in prompts[1]
@@ -1240,7 +1241,7 @@ def test_r3_case_source_reviews_require_exact_case_summary_excerpt(monkeypatch):
     from app.services import mdt_generation
 
     async def fake_generate(prompt, schema_type, max_tokens):
-        assert "exact contiguous verbatim quotation from case_summary" in prompt
+        assert "source_excerpt is server-bound metadata" in prompt
         return AdversarialContributionDraft(
             position="insufficient_information",
             provisional_conclusion="The educational review remains incomplete because a source excerpt cannot be verified.",
@@ -1808,7 +1809,7 @@ def test_r3_uses_server_identified_opinion_ids_and_flags_duplicate_or_missing_re
     assert "CASE:case_summary#1 has 2 duplicate R3 reviews" in flags
     assert "Required server-identified source opinion CASE:case_summary#2 has no R3 review" in flags
     expected_excerpt = (
-        "the colorectal surgical note favours a surgical assessment first, "
+        "The colorectal surgical note favours a surgical assessment first, "
         "conditional on complete local staging and resectability review"
     )
     assert [item["source_excerpt"] for item in result.model_dump()["source_opinion_reviews"]] == [
