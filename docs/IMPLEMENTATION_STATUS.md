@@ -1,35 +1,55 @@
 # Implementation Status
 
-**Current release snapshot verified:** 10 November 2026
-**Repository:** `drvishnua/RadOnc-MDT-Simulator`
-**Development branch:** `feature/four-round-mdt-and-performance`
-**Current commit:** `d9283d0db37c42f9e01881190b715695b1c19795`
+**Release candidate verification date:** 10 November 2026  
+**Repository:** `drvishnua/RadOnc-MDT-Simulator`  
+**Development branch:** `feature/four-round-mdt-and-performance`  
+**Verified app/installer source snapshot:** `15cc2b4430689fa83d08ff2da5ca2e8da566d4d5`  
 **PR #1:** open, draft, unmerged; targets `main` at `39a356b8eb09399aa2da1b9b9085965999f5105a`.
 
-This document separates build/CI results from local installation, live inference, GPU attribution and clinical validation. A passing software test is not evidence of clinical accuracy.
+This document separates software/installer verification from first-run provisioning on the target laptop, real model inference, GPU attribution, evidence retrieval and clinical validation. Passing software tests do not establish clinical accuracy.
 
-## Current Windows beta release snapshot
+## Current Windows x64 release candidate
 
-| Area | Current verified state | Evidence and limitation |
+| Area | Verified state | Evidence and limitation |
 |---|---|---|
-| Windows x64 installer | Built and uploaded | [Installer workflow 42711448884](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42711448884); artifact ID `13714784247` |
-| Packaged runtime | PyInstaller one-directory application with FastAPI serving the Vite production build | Installed executable passed the health test and served HTML and JavaScript assets |
-| Installer | Inno Setup 6 per-user Setup.exe | Installed and uninstalled on a clean hosted Windows runner |
-| Backend CI | **177 passed, 1 warning** | [Run 42710563142](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42710563142); existing Starlette/httpx TestClient deprecation |
-| Frontend CI | **32 passed** | [Run 42710563160](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42710563160); TypeScript and Vite production build passed |
-| Packaging prerequisites | Passed | [Run 42710563157](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42710563157) |
-| Installed application smoke test | Passed | Health, bundled frontend/assets, 45 roles, data path and training-record save verified |
-| Uninstall/data retention | Passed | Saved database remained byte-for-byte unchanged after the installed uninstaller ran |
-| Installer checksum | Independently checked | Setup.exe SHA-256: `771a4f85458571e3a73adc6b5f416863c1d549163dc90a8eb36ee94f7dfbc07a` |
-| Ollama/model | External prerequisite | Ollama and `qwen3.5:4b` are not bundled; no inference was run by installer CI |
-| Target laptop install | Not yet verified | Hosted Windows CI is not a substitute for installing on the user's laptop |
-| Current-head live four-round simulation | Not run | Requires explicit authorisation; historical MDT-006 audit findings remain open |
-| Current GPU attribution | Not verified | No active inference telemetry on this commit |
-| Evidence and clinical validation | Not implemented/verified | No independent guideline retrieval, source validation or qualified clinical review |
+| Backend | **177 passed, 1 existing deprecation warning** | [Run 42768484643](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42768484643) |
+| Frontend | **32 passed**; TypeScript and Vite production build passed | [Run 42768484637](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42768484637) |
+| Windows AI-bootstrap checks | PowerShell parser, static safety checks, existing-model reuse branch and portable fallback branch passed | [Installer run 42768484654](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42768484654); branches are mocked, no real model was downloaded |
+| Windows package | PyInstaller onedir package and Inno Setup per-user Setup.exe built | [Installer run 42768484654](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42768484654) |
+| Installed-app smoke test | GUI health, HTML/JS assets, 45 specialist profiles, local DB path and training-record save passed | Same hosted Windows acceptance workflow |
+| Uninstall/data retention | Passed | SQLite database remained byte-for-byte unchanged after uninstaller |
+| Packaging prerequisites | Read-only inspection passed on the self-hosted Windows laptop runner | [Run 42768484766](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42768484766); Python 3.14.3 found, PyInstaller/Inno Setup not preinstalled; no packages/services were changed |
+| Installer artifact | Uploaded | Artifact ID `13739989673`; [download from workflow run](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42768484654); ZIP digest `sha256:7f02f86bad15fced3b81547cbd12c0f5a3d0a1ef03bdff98452eabf28b066ec0` |
+| Setup.exe checksum | Independently verified from extracted artifact against included SHA256SUMS.txt | `3be695c91231c176a9277117c6b38b194fd51bceef22db2f17e2b21eb751ef07`; 17,181,382 bytes |
+| First-run AI engine on target laptop | **Not yet run** | Hosted tests exercised mocked branch logic only; no actual Ollama download or model pull |
+| Actual current-release inference | **Not yet run** | No live local generation from the new installer |
+| Active GPU attribution | **Not yet verified** | No inference telemetry for this exact installer snapshot |
+| Fresh full four-round run | **Not run** | Historical MDT-006 audit findings remain open |
+| Evidence retrieval/clinical validation | Not implemented/verified | No independently retrieved guideline citations or qualified clinical validation |
 
-The installer serves the local dashboard at `http://127.0.0.1:8765`. Application data and logs are stored under `%LOCALAPPDATA%\RadOncMDT\`. The installed application includes its Python runtime and does not require Python or Node.js to be separately installed. Ollama and model weights remain separate prerequisites.
+### First-run AI provisioning design
 
-The installer was built from the current application code and smoke-tested without contacting Ollama. The test created a fictional training registry record, checked its local RAD serial, uninstalled the application and verified that the SQLite database remained unchanged. This demonstrates software/data-path behaviour only; it does not validate model quality or clinical safety.
+The installer includes the packaged Python application, FastAPI service, Vite production assets and PowerShell bootstrap. It does **not** embed the Ollama runtime or model weights in the Setup.exe.
+
+On first launch:
+1. The launcher probes the standard Ollama service at `127.0.0.1:11434`.
+2. If the service is reachable and `qwen3.5:4b` is present, it reuses that model.
+3. If an existing Ollama executable is found but its server is not running and the standard port is free, it starts that executable without replacing the existing installation or model directory.
+4. If Ollama is absent or the standard port is occupied by a non-Ollama process, the launcher provisions the pinned portable Windows runtime under `%LOCALAPPDATA%\RadOncMDT\AIEngine`, verifies the downloaded ZIP SHA-256, starts an isolated loopback service on port 11435, and uses `%LOCALAPPDATA%\RadOncMDT\Models` as its model store.
+5. It checks the configured model through Ollama's `/api/tags` endpoint and pulls `qwen3.5:4b` only when absent.
+
+The portable runtime is pinned to Ollama v0.40.14. Its Windows amd64 ZIP SHA-256 was checked against the official GitHub release asset listing: `65d68cade6cf6375f398b518224f8c8a15e062387f38cf477abfc848de7e7e29`. `qwen3.5:4b` is listed by the Ollama registry at approximately 3.3–4.0 GB. A fresh portable runtime download is approximately 1.49 GB. Allow at least 8 GB of free disk space for fresh provisioning. Internet access is required only to obtain missing runtime/model files; once provisioned, inference is local.
+
+The app database remains under `%LOCALAPPDATA%\RadOncMDT\Data`. App logs are under `Logs`. Installer uninstall preserves `Data`, `Logs`, `AIEngine` and `Models`. The bootstrap does not stop, upgrade, or modify a pre-existing Ollama process or model store.
+
+### Explicit release limitations
+
+- This is a **self-provisioning installer**, not an offline all-in-one Setup.exe. The runtime and model are downloaded on first launch when missing.
+- The new first-run bootstrap has passed PowerShell parsing and mocked decision-branch tests only. Its real runtime download, archive extraction, model pull and first inference are not yet verified on the target laptop.
+- The installer smoke-test launches the packaged executable directly to isolate app/data acceptance; it does not invoke the Start shortcut/bootstrap path.
+- No current-release RTX 4060 active-inference telemetry is available. GPU allocation must not be inferred from model presence or VRAM reservation alone.
+- User must retain network access and adequate disk space during first provisioning.
+
 
 ## Historical implementation snapshot (9 November 2026; superseded)
 
