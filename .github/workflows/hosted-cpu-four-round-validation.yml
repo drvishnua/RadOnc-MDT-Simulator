@@ -11,6 +11,7 @@ on:
 permissions:
   contents: read
 
+# One-time explicitly marked hosted CPU validation trigger.
 concurrency:
   group: hosted-cpu-four-round-mdt-validation
   cancel-in-progress: false
