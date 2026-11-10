@@ -631,7 +631,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     # This does not validate any additional biomarker, grade, margin, or stage claim;
     # those are checked independently by the pathology and TNM audits below/above.
     source_biopsy_statements = re.findall(
-        r"\\bbiopsy\\b[^.!?;\\n]{1,140}", case.case_summary, re.IGNORECASE
+        r"\bbiopsy\b[^.!?;\n]{1,140}", case.case_summary, re.IGNORECASE
     )
     source_biopsy_histologies = {
         histology_key(item)
@@ -639,7 +639,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         for item in _unqualified_matches(histology_pattern, statement)
     }
     def biopsy_result_is_supported(statement: str) -> bool:
-        if not re.match(r"\\bbiopsy\\b", statement, re.IGNORECASE):
+        if not re.match(r"\bbiopsy\b", statement, re.IGNORECASE):
             return False
         generated_biopsy_histologies = {
             histology_key(item)
