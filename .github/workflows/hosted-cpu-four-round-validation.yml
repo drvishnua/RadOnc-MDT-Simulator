@@ -14,14 +14,15 @@ permissions:
 # One-time explicitly marked hosted CPU validation trigger.
 concurrency:
   group: hosted-cpu-four-round-mdt-validation
-  cancel-in-progress: false
+  # A newly marked validation replaces a stale run in this isolated CPU-only group.
+  cancel-in-progress: true
 
 jobs:
   four-round-cpu-validation:
     if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[run-hosted-cpu-four-round]') }}
     name: 45-role four-round validation on isolated hosted CPU runner
     runs-on: windows-latest
-    timeout-minutes: 360
+    timeout-minutes: 250
     env:
       OLLAMA_MODEL: qwen3.5:4b
       RADONC_AGENT_CONCURRENCY: "1"
@@ -45,6 +46,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Backend dependency installation failed." }
 
       - name: Provision isolated portable Ollama and qwen3.5:4b
+        timeout-minutes: 240
         shell: powershell
         run: |
           $ErrorActionPreference = "Stop"
@@ -68,7 +70,9 @@ jobs:
           }
 
           Write-Host "HOSTED_CPU_BOOTSTRAP_STARTED"
+          Write-Host "HOSTED_CPU_OLLAMA_PROVISION_STARTED"
           $ollamaUrl = Ensure-RadOncAIEngine -DataDirectory $dataDirectory -LogDirectory $logDirectory
+          Write-Host "HOSTED_CPU_OLLAMA_PROVISION_FINISHED"
           if ($ollamaUrl -ne "http://127.0.0.1:11435") {
             throw "Expected the isolated portable Ollama endpoint on 127.0.0.1:11435."
           }
