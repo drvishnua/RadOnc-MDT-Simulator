@@ -157,7 +157,7 @@ if ($health) {
     }
     Write-Host "SCHEDULED_TASK_STARTED_APP_HEALTHY=True"
     Write-Host ("SCHEDULED_TASK_NAME={0}" -f $taskName)
-    "TASK_NAME=$taskName" | Add-Content -LiteralPath $env:GITHUB_OUTPUT -Encoding UTF8
+    "task_name=$taskName" | Add-Content -LiteralPath $env:GITHUB_OUTPUT -Encoding UTF8
 }
 
 $agents = Invoke-RestMethod -Uri "http://127.0.0.1:8765/api/agents" -TimeoutSec 10
