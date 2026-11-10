@@ -12,7 +12,7 @@ This document separates build/CI results from local installation, live inference
 
 | Area | Current verified state | Evidence and limitation |
 |---|---|---|
-| Windows x64 installer | Built and uploaded | [Installer workflow 42710563272](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42710563272); artifact ID `13716081234` |
+| Windows x64 installer | Built and uploaded | [Installer workflow 42711448884](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42711448884); artifact ID `13714784247` |
 | Packaged runtime | PyInstaller one-directory application with FastAPI serving the Vite production build | Installed executable passed the health test and served HTML and JavaScript assets |
 | Installer | Inno Setup 6 per-user Setup.exe | Installed and uninstalled on a clean hosted Windows runner |
 | Backend CI | **177 passed, 1 warning** | [Run 42710563142](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42710563142); existing Starlette/httpx TestClient deprecation |
@@ -20,7 +20,7 @@ This document separates build/CI results from local installation, live inference
 | Packaging prerequisites | Passed | [Run 42710563157](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42710563157) |
 | Installed application smoke test | Passed | Health, bundled frontend/assets, 45 roles, data path and training-record save verified |
 | Uninstall/data retention | Passed | Saved database remained byte-for-byte unchanged after the installed uninstaller ran |
-| Installer checksum | Independently checked | Setup.exe SHA-256: `b30f17a30de91f30ae7537255baf7bdba599f3921bcaeb5a3bff8872200b7c95` |
+| Installer checksum | Independently checked | Setup.exe SHA-256: `771a4f85458571e3a73adc6b5f416863c1d549163dc90a8eb36ee94f7dfbc07a` |
 | Ollama/model | External prerequisite | Ollama and `qwen3.5:4b` are not bundled; no inference was run by installer CI |
 | Target laptop install | Not yet verified | Hosted Windows CI is not a substitute for installing on the user's laptop |
 | Current-head live four-round simulation | Not run | Requires explicit authorisation; historical MDT-006 audit findings remain open |

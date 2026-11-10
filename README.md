@@ -8,7 +8,7 @@ A local-first, AI-assisted educational simulator for multidisciplinary oncology 
 >
 > The Windows x64 Setup.exe was installed and launched on a clean hosted Windows runner. The test checked the health endpoint, served frontend/JavaScript assets, all 45 specialist profiles, user-data database location, saving a training registry record, and uninstall preservation of the database. The database hash was unchanged after uninstall. No Ollama call or model inference was performed.
 >
-> **Installer artifact:** [RadOnc MDT Simulator — Windows x64](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42710563272). Artifact ID `13716081234`, ZIP digest `sha256:aa4ab02def9a9637dc6d7eade102893b20cba6d47ca6ca16abbc91b4b3d59961`. The downloaded Setup.exe checksum was independently verified as `b30f17a30de91f30ae7537255baf7bdba599f3921bcaeb5a3bff8872200b7c95`.
+> **Installer artifact:** [RadOnc MDT Simulator — Windows x64](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42710563272). Artifact ID `13714784247`, ZIP digest `sha256:ebcd4d07177d96a34a35c79858325c795b0253e7c270adf818029ad1c7f3e6cb`. The downloaded Setup.exe checksum was independently verified as `771a4f85458571e3a73adc6b5f416863c1d549163dc90a8eb36ee94f7dfbc07a`.
 >
 > **Runtime prerequisite:** Ollama and `qwen3.5:4b` are not bundled. Install Ollama separately and run `ollama pull qwen3.5:4b`. The installed RadOnc application itself does not require separate Python or Node.js installations. It serves the UI and API locally at `http://127.0.0.1:8765`; patient-training data and logs are stored under `%LOCALAPPDATA%\RadOncMDT\`. A deliberate, integrity-checked legacy database copy is documented in the installed README.
 >
