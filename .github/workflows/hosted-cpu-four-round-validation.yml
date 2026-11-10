@@ -100,6 +100,7 @@ jobs:
           Write-Host "HOSTED_CPU_MODEL_PRESENT=qwen3.5:4b"
           Write-Host "HOSTED_CPU_ONLY=TRUE; NVIDIA telemetry is intentionally not collected."
           Write-Host "HOSTED_CPU_VALIDATION_SOURCE_SHA=$env:GITHUB_SHA"
+          Write-Host "HOSTED_CPU_MODEL_PULL_EXIT_CODE_CAPTURE=POWERSHELL_JOB_LASTEXITCODE"
 
           Write-Host "HOSTED_CPU_FOUR_ROUND_VALIDATION_STARTED"
           python backend/scripts/live_four_round_validation.py
