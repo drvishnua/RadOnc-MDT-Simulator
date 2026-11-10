@@ -451,6 +451,29 @@ def test_attribution_detector_recognises_explicit_department_service_notes():
         "Cardiology service note proposes a separate preoperative sequence."
     )
 
+def test_attribution_detector_recognises_specialty_notes_that_favour_distinct_options():
+    from app.services.case_integrity import case_summary_has_attributed_opinions
+
+    case_summary = (
+        "Fictional educational scenario. The referral includes two provisional opinions: "
+        "the colorectal surgical note favours proceeding to a surgical assessment first, "
+        "conditional on complete local staging and resectability review; "
+        "the medical oncology note favours discussing a preoperative multimodality sequence, "
+        "conditional on MRI staging, metastatic work-up and fitness assessment. "
+        "Neither note establishes a final plan."
+    )
+    assert case_summary_has_attributed_opinions(case_summary)
+    assert case_summary_has_attributed_opinions(
+        "The colorectal surgical note favors a surgical assessment first, conditional on staging."
+    )
+    assert case_summary_has_attributed_opinions(
+        "The medical oncology note favours discussing a preoperative sequence."
+    )
+    assert not case_summary_has_attributed_opinions(
+        "The colorectal imaging report shows a lesion; the medical record lists staging details."
+    )
+
+
 def test_generated_tnm_values_are_checked_against_supplied_structured_stages():
     case = _case(
         clinical_t_stage="T2",
