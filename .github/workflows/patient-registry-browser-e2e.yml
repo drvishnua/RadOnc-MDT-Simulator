@@ -55,7 +55,7 @@ jobs:
         working-directory: frontend
         run: |
           $ErrorActionPreference = "Stop"
-          npm install --no-audit --no-fund
+          npm ci --no-audit --no-fund
           if ($LASTEXITCODE -ne 0) { throw "Frontend dependency installation failed." }
 
       - name: Run real-browser patient registry and dashboard acceptance
