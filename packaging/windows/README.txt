@@ -14,7 +14,7 @@ FIRST START — AUTOMATIC LOCAL AI SETUP
 - Keep the launcher window open during model download. If setup is interrupted, launch the application again to resume/complete provisioning.
 - Python and Node.js are not required to run the installed application.
 - The local application opens at http://127.0.0.1:8765.
-- The app's Stop shortcut stops the RadOnc application only; the local Ollama engine is left running and releases the model from GPU memory according to Ollama's keep-alive policy.
+- The app's Stop shortcut stops the RadOnc application only. Ollama remains a separate localhost service and is not stopped or upgraded by the app shortcut.
 
 AI ENGINE LICENCES AND VERSIONS
 - Portable Ollama runtime: version 0.40.14, obtained from the official Ollama GitHub release and verified against its published SHA-256. Ollama is MIT-licensed: https://github.com/ollama/ollama/blob/master/LICENSE
