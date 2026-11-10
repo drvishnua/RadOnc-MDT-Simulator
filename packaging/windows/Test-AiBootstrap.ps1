@@ -50,14 +50,11 @@ foreach ($token in $requiredBootstrapTokens) {
 if ($bootstrap -match "(?im)^\s*Stop-Process\b") {
     throw "AI bootstrap must not stop an existing Ollama or model process."
 }
-if ($bootstrap -notmatch '(?s)\$pullJob\s*=\s*Start-Job.*?&\s*\$Executable\s+pull\s+\$Model\s+1>\s*\$StdoutPath\s+2>\s*\$StderrPath.*?\$nativeExitCode\s*=\s*\$LASTEXITCODE') {
-    throw "Ollama model pull must capture native LASTEXITCODE in the same PowerShell job that invokes the CLI."
+if ($bootstrap -notmatch '(?s)\$pullScriptLines\s*=\s*@\(.*?%ERRORLEVEL%.*?\$pullExitCodePath.*?exit\s+/b\s+%PULL_EXIT%') {
+    throw "Ollama model pull must use a CMD wrapper that persists the native exit code."
 }
-if ($bootstrap -notmatch '(?s)\$pullExitCodePath.*?Set-Content.*?\$pullExitCodeText.*?\[int\]::TryParse') {
-    throw "Ollama model pull must persist and validate an explicit native exit-code record."
-}
-if ($bootstrap -notmatch '(?s)\$pullTimeoutSeconds\s*=\s*5400.*?Wait-Job.*?Stop-Job.*?HOSTED_CPU_MODEL_PULL_HEARTBEAT') {
-    throw "Ollama model pull must have a bounded job wait, safe job cancellation, and progress heartbeat."
+if ($bootstrap -notmatch '(?s)\$pullProcess\s*=\s*Start-Process\s+-FilePath\s+\$env:ComSpec.*?\$pullProcess\.Refresh\(\).*?\$pullProcess\.HasExited.*?taskkill\.exe.*?\$pullProcess\.Id.*?\$pullProcess\.WaitForExit\(\).*?\$pullExitCodeText.*?\[int\]::TryParse') {
+    throw "Ollama model pull must use a bounded owned wrapper process and validate its explicit exit-code file."
 }
 if ($bootstrap -notmatch '(?s)\$downloadTimeoutSeconds\s*=\s*3600.*?HOSTED_CPU_RUNTIME_DOWNLOAD_HEARTBEAT') {
     throw "Portable Ollama runtime download must have a timeout and progress heartbeat."
