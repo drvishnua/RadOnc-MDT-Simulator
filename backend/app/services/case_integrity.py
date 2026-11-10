@@ -151,10 +151,17 @@ def build_case_report_title(case: SyntheticCase) -> str:
 
 
 def _flatten_strings(value: Any) -> list[str]:
+    """Collect narrative text while excluding server-generated audit metadata."""
     if isinstance(value, str):
         return [value]
     if isinstance(value, dict):
-        return [item for nested in value.values() for item in _flatten_strings(nested)]
+        non_narrative = {"case_data_integrity_flags", "source_reference_integrity_flags"}
+        return [
+            item
+            for key, nested in value.items()
+            if key not in non_narrative
+            for item in _flatten_strings(nested)
+        ]
     if isinstance(value, (list, tuple)):
         return [item for nested in value for item in _flatten_strings(nested)]
     return []
@@ -164,7 +171,8 @@ _QUALIFIER = re.compile(
     r"not\s+(?:confirmed|documented|provided|reported|established|specified|verified)"
     r"|unconfirmed|unverified|unknown|not\s+supplied|not\s+reported"
     r"|cannot\s+be\s+assumed|should\s+not\s+be\s+assumed|do\s+not\s+assume"
-    r"|cannot\s+confirm|without\s+(?:confirmation|a\s+confirmed)"
+    r"|cannot\s+confirm|(?:does|do|did)\s+not\s+(?:confirm|establish|show|demonstrate|support|indicate|prove)"
+    r"|without\s+(?:confirmation|a\s+confirmed)"
     r"|no\s+prior\s+treatment\s+(?:data|records?|history|information|details|documentation)\b"
     r"|assum(?:e|es|ed|ing|ption|ptions)|hypothetical|provisional"
     r"|\be\.g\.?\b|for\s+example|such\s+as|\bif\b"
@@ -618,6 +626,33 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     unsupported_investigations = _unsupported_matches(
         investigation_pattern, text, investigation_source
     )
+    # A biopsy paraphrase such as "confirms adenocarcinoma" is supported when
+    # the verbatim case summary explicitly reports that same histology on biopsy.
+    # This does not validate any additional biomarker, grade, margin, or stage claim;
+    # those are checked independently by the pathology and TNM audits below/above.
+    source_biopsy_statements = re.findall(
+        r"\\bbiopsy\\b[^.!?;\\n]{1,140}", case.case_summary, re.IGNORECASE
+    )
+    source_biopsy_histologies = {
+        histology_key(item)
+        for statement in source_biopsy_statements
+        for item in _unqualified_matches(histology_pattern, statement)
+    }
+    def biopsy_result_is_supported(statement: str) -> bool:
+        if not re.match(r"\\bbiopsy\\b", statement, re.IGNORECASE):
+            return False
+        generated_biopsy_histologies = {
+            histology_key(item)
+            for item in _unqualified_matches(histology_pattern, statement)
+        }
+        return bool(
+            generated_biopsy_histologies
+            and generated_biopsy_histologies.issubset(source_biopsy_histologies)
+        )
+    unsupported_investigations = [
+        item for item in unsupported_investigations
+        if not biopsy_result_is_supported(item)
+    ]
     if unsupported_investigations:
         flags.append(
             "Generated narrative asserts imaging/investigation result(s) ("
