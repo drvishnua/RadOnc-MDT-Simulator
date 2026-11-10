@@ -426,7 +426,7 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
     assert "Missing or unfulfilled case prerequisites are case unknowns" in prompts[1]
     assert "not an assessment of clinical appropriateness" in prompts[1].casefold()
     assert "does not permit assessment, use unclear" in prompts[1]
-    assert "[embedded round ref; cite R2]" in prompts[1]
+    assert "[embedded round ref; cite R2]" not in prompts[1]
     assert "R1:SO-01" not in prompts[1]
     assert "R2:DS-02" not in prompts[1]
     assert "R2:MO-01" in prompts[1]
@@ -1112,6 +1112,8 @@ def test_r3_generation_copies_review_challenge_with_structured_source_prefix(mon
                     conditions_status="unclear",
                     review_basis="The supplied debate sample does not contain enough detail to assess this opinion.",
                     source_reference_ids=["CASE:case_summary#2", "R2:MO-01"],
+                    evidence_peer_id="R2:MO-01",
+                    evidence_excerpt="Local staging remains a prerequisite for surgical assessment.",
                     challenge="",
                 ),
             ],
@@ -1793,7 +1795,15 @@ def test_r3_does_not_promote_challenges_using_an_unsupplied_peer_id(monkeypatch)
         mdt_generation.generate_adversarial_contribution(profile, case, own_r1, own_r2, peers)
     )
     assert not any("The supplied R2 record omits the attributed option." in item for item in result.substantive_challenges)
-    assert any("not promoted" in item and "valid supplied R2 peer" in item for item in result.source_reference_integrity_flags)
+    review = result.model_dump()["source_opinion_reviews"][0]
+    assert review["evidence_validation_status"] == "missing"
+    assert review["model_reported_source_reference_ids"] == ["CASE:case_summary#1", "R2:MO-99"]
+    assert review["source_reference_ids"] == ["CASE:case_summary#1"]
+    assert any(
+        "Challenge for CASE:case_summary#1 was not promoted" in item
+        and "server-verified exact excerpt from a supplied R2 peer" in item
+        for item in result.source_reference_integrity_flags
+    )
 
 
 

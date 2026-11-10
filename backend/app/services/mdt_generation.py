@@ -975,7 +975,7 @@ async def generate_adversarial_contribution(
         }
         if source_id not in reported_reference_ids:
             review_reference_flags.append(
-                f"Model-reported references for {source_id or 'unknown source'} omit its attributed CASE source ID; the canonical CASE ID was server-bound."
+                f"Model-reported references for {source_id or 'unknown source'} omits its attributed CASE source ID; the canonical CASE ID was server-bound."
             )
         if not review_source_is_traceable:
             review_reference_flags.append(

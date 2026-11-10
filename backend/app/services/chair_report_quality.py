@@ -659,7 +659,7 @@ def build_recorded_agreements(
                 has_role_range = bool(_ROUND_REFERENCE_RANGE_PATTERN.search(cleaned))
                 unsupported_references = cited_references - allowed_references
                 citation_only = re.sub(_ROUND_REFERENCE_PATTERN, "", cleaned)
-                citation_only = re.sub(r"[\\W_]+", "", citation_only)
+                citation_only = re.sub(r"[\W_]+", "", citation_only)
                 if has_role_range or unsupported_references or not citation_only:
                     reasons = []
                     if has_role_range:
