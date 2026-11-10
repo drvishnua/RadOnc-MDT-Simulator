@@ -1380,7 +1380,13 @@ def test_r3_generation_flags_missing_verbatim_peer_evidence_without_dropping_rol
     assert result.source_reference_integrity_flags
     flags = " ".join(result.source_reference_integrity_flags)
     assert "omits its attributed CASE source ID" in flags
-    assert "omitted or partly preserved but provides no source-linked challenge" in flags
+    reviews = result.model_dump()["source_opinion_reviews"]
+    assert reviews[0]["model_reported_option_status"] == "omitted"
+    assert reviews[0]["option_status"] == "unclear"
+    assert reviews[0]["evidence_validation_status"] == "missing"
+    assert reviews[1]["model_reported_option_status"] == "preserved"
+    assert reviews[1]["option_status"] == "unclear"
+    assert reviews[1]["evidence_validation_status"] == "invalid"
     assert "no exact supporting excerpt" in flags
 
 
