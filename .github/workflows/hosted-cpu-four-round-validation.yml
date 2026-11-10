@@ -81,24 +81,22 @@ jobs:
             throw "qwen3.5:4b is not present after model pull."
           }
 
-          "LOCALAPPDATA=$localAppData" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          "RADONC_DATA_DIR=$dataDirectory" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          "OLLAMA_BASE_URL=$ollamaUrl" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          "OLLAMA_HOST=127.0.0.1:11435" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          "OLLAMA_MODELS=$(Join-Path $localAppData 'RadOncMDT\Models')" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          # Keep the Ollama server and all four rounds inside this same Actions
+          # step. GitHub cleans up child processes at step end, so splitting
+          # provisioning and inference into separate steps terminates Ollama.
+          $env:LOCALAPPDATA = $localAppData
+          $env:RADONC_DATA_DIR = $dataDirectory
+          $env:OLLAMA_BASE_URL = $ollamaUrl
+          $env:OLLAMA_HOST = "127.0.0.1:11435"
+          $env:OLLAMA_MODELS = Join-Path $localAppData "RadOncMDT\Models"
+          $env:OLLAMA_MODEL = "qwen3.5:4b"
+          $env:RADONC_VALIDATION_CPU_ONLY = "1"
+          $env:RADONC_AGENT_CONCURRENCY = "1"
           Write-Host "HOSTED_CPU_OLLAMA_READY=$($version.version)"
           Write-Host "HOSTED_CPU_MODEL_PRESENT=qwen3.5:4b"
           Write-Host "HOSTED_CPU_ONLY=TRUE; NVIDIA telemetry is intentionally not collected."
 
-      - name: Execute all four MDT rounds for 45 roles
-        shell: powershell
-        env:
-          OLLAMA_BASE_URL: http://127.0.0.1:11435
-          OLLAMA_MODEL: qwen3.5:4b
-          RADONC_VALIDATION_CPU_ONLY: "1"
-          RADONC_AGENT_CONCURRENCY: "1"
-        run: |
-          $ErrorActionPreference = "Stop"
+          Write-Host "HOSTED_CPU_FOUR_ROUND_VALIDATION_STARTED"
           python backend/scripts/live_four_round_validation.py
           if ($LASTEXITCODE -ne 0) {
             throw "The 45-role four-round hosted CPU validation failed with exit code $LASTEXITCODE."
