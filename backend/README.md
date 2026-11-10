@@ -24,8 +24,9 @@ Run:
 
 API docs: http://127.0.0.1:8000/docs
 
-Tests:
+Tests (install test-only dependencies into the same virtual environment):
 
+    pip install -r requirements-dev.txt
     pytest
 
 ## Endpoints
