@@ -166,14 +166,22 @@ def _audit_source_references(payload: dict, allowed: set[tuple[str, str]]) -> li
     # generated wording in the source contribution, but flag scope inflation so the
     # Chair can disclose it instead of presenting it as cross-role agreement.
     response = str(payload.get("response_to_other_perspectives") or "").casefold()
-    unsupported_scope_patterns = (
-        r"\ball\\s+45\\s+(?:roles|agents|specialists)\\b",
-        r"\ball\\s+(?:roles|agents|specialists)\\s+(?:agree|support|oppose|conclude)",
-        r"\bconsensus\\s+across\\s+(?:all\\s+)?roles\\b",
-        r"\bcomplete\\s+agreement\\s+across\\s+(?:all\\s+)?roles\\b",
-        r"\bthe\\s+entire\\s+mdt\\s+(?:agrees|supports|opposes|concludes)",
+    unsupported_scope_phrases = (
+        "all 45 roles",
+        "all 45 agents",
+        "all 45 specialists",
+        "all roles agree",
+        "all agents agree",
+        "all specialists agree",
+        "consensus across roles",
+        "consensus across all roles",
+        "complete agreement across roles",
+        "complete agreement across all roles",
+        "the entire mdt agrees",
+        "the entire mdt supports",
+        "the entire mdt opposes",
     )
-    if any(re.search(pattern, response) for pattern in unsupported_scope_patterns):
+    if any(phrase in response for phrase in unsupported_scope_phrases):
         findings.append(
             "Peer-scope overclaim: the response generalises agreement or conclusions beyond "
             "the individually supplied peer records; only those supplied records may be described."
