@@ -71,6 +71,25 @@ class SourceOpinionReview(StrictModel):
     source_reference_ids: list[str] = Field(default_factory=list, max_length=8)
     evidence_peer_id: str = Field(default="", max_length=100)
     evidence_excerpt: str = Field(default="", max_length=180)
+    evidence_validation_status: Literal["verified", "invalid", "missing"] = Field(
+        default="missing",
+        description="Server-computed result of checking evidence_peer_id and evidence_excerpt against the exact R2 peer material supplied to this role. Model-authored values are ignored.",
+    )
+    model_reported_option_status: str = Field(
+        default="",
+        max_length=40,
+        description="Server-preserved original model label for audit; do not author this field.",
+    )
+    model_reported_conditions_status: str = Field(
+        default="",
+        max_length=40,
+        description="Server-preserved original model label for audit; do not author this field.",
+    )
+    model_reported_source_reference_ids: list[str] = Field(
+        default_factory=list,
+        max_length=8,
+        description="Server-preserved original model references for audit; do not author this field.",
+    )
     challenge: str = Field(
         default="",
         max_length=700,
