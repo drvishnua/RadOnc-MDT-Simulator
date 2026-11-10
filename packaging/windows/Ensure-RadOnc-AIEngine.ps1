@@ -8,12 +8,12 @@ Self-provisioning local Ollama runtime for RadOnc MDT.
 - Never stops, upgrades, or overwrites an existing Ollama installation.
 #>
 
-$script:RadOncModelName = "qwen3.5:4b"
-$script:RadOncOllamaVersion = "0.40.14"
-$script:RadOncOllamaZipUrl = "https://github.com/ollama/ollama/releases/download/v0.40.14/ollama-windows-amd64.zip"
-$script:RadOncOllamaZipSha256 = "65d68cade6cf6375f398b518224f8c8a15e062387f38cf477abfc848de7e7e29"
-$script:RadOncDefaultOllamaUrl = "http://127.0.0.1:11434"
-$script:RadOncBundledOllamaUrl = "http://127.0.0.1:11435"
+$RadOncModelName = "qwen3.5:4b"
+$RadOncOllamaVersion = "0.40.14"
+$RadOncOllamaZipUrl = "https://github.com/ollama/ollama/releases/download/v0.40.14/ollama-windows-amd64.zip"
+$RadOncOllamaZipSha256 = "65d68cade6cf6375f398b518224f8c8a15e062387f38cf477abfc848de7e7e29"
+$RadOncDefaultOllamaUrl = "http://127.0.0.1:11434"
+$RadOncBundledOllamaUrl = "http://127.0.0.1:11435"
 
 function Get-RadOncOllamaVersion {
     param([Parameter(Mandatory = $true)][string]$BaseUrl)
@@ -167,17 +167,17 @@ function Install-RadOncPortableOllama {
     if (Test-Path -LiteralPath $engineRoot) { Remove-Item -LiteralPath $engineRoot -Recurse -Force }
     if (Test-Path -LiteralPath $temporaryRoot) { Remove-Item -LiteralPath $temporaryRoot -Recurse -Force }
 
-    Write-Host ("Downloading the pinned Ollama {0} Windows runtime (about 1.5 GB)..." -f $script:RadOncOllamaVersion)
+    Write-Host ("Downloading the pinned Ollama {0} Windows runtime (about 1.5 GB)..." -f $RadOncOllamaVersion)
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     $client = New-Object System.Net.WebClient
     try {
-        $client.DownloadFile($script:RadOncOllamaZipUrl, $archivePath)
+        $client.DownloadFile($RadOncOllamaZipUrl, $archivePath)
     } finally {
         $client.Dispose()
     }
 
     $actualHash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
-    if ($actualHash -ne $script:RadOncOllamaZipSha256) {
+    if ($actualHash -ne $RadOncOllamaZipSha256) {
         Remove-Item -LiteralPath $archivePath -Force -ErrorAction SilentlyContinue
         throw "The downloaded Ollama runtime failed its SHA-256 verification. It was not installed."
     }
@@ -215,22 +215,23 @@ function Invoke-RadOncModelPull {
 
     $freeBytes = Get-RadOncFreeBytes -Path $ProductDataRoot
     if ($freeBytes -lt 5GB) {
-        throw ("At least 5 GB of free disk space is required to download {0}. Available: {1:N1} GB." -f $script:RadOncModelName, ($freeBytes / 1GB))
+        throw ("At least 5 GB of free disk space is required to download {0}. Available: {1:N1} GB." -f $RadOncModelName, ($freeBytes / 1GB))
     }
 
     Write-Host ""
-    Write-Host ("The {0} model is not present. Downloading it now (approximately 3.4 GB)." -f $script:RadOncModelName)
+    Write-Host ("The {0} model is not present. Downloading it now (approximately 3.4 GB)." -f $RadOncModelName)
     Write-Host "Keep this window open until the model download and verification finish."
 
     if ($OllamaExecutable -and (Test-Path -LiteralPath $OllamaExecutable -PathType Leaf)) {
         $env:OLLAMA_HOST = ([Uri]$BaseUrl).Host + ":" + ([Uri]$BaseUrl).Port
-        & $OllamaExecutable pull $script:RadOncModelName
+        & $OllamaExecutable pull $RadOncModelName
         if ($LASTEXITCODE -ne 0) {
             throw "Ollama model download failed with exit code $LASTEXITCODE."
         }
     } else {
-        $body = @{ name = $script:RadOncModelName; stream = $false } | ConvertTo-Json -Compress
-        Invoke-RestMethod -Uri ($BaseUrl.TrimEnd("/") + "/api/pull") -Method Post -ContentType "application/json" -Body $body -TimeoutSec 7200 | Out-Null
+        $body = @{ name = $RadOncModelName; stream = $false } | ConvertTo-Json -Compress
+        $pullResult = Invoke-RestMethod -Uri ($BaseUrl.TrimEnd("/") + "/api/pull") -Method Post -ContentType "application/json" -Body $body -TimeoutSec 7200
+        if ($pullResult.error) { throw ("Ollama model download failed: " + [string]$pullResult.error) }
     }
 }
 
@@ -246,7 +247,7 @@ function Ensure-RadOncAIEngine {
 
     # Prefer a pre-existing user Ollama service on its standard port. This avoids
     # downloading a second runtime or duplicating a model already on the laptop.
-    $baseUrl = $script:RadOncDefaultOllamaUrl
+    $baseUrl = $RadOncDefaultOllamaUrl
     $version = Get-RadOncOllamaVersion -BaseUrl $baseUrl
     $ollamaExecutable = Find-RadOncOllamaExecutable
 
@@ -258,7 +259,7 @@ function Ensure-RadOncAIEngine {
     # If the default port is occupied by something other than Ollama, or Ollama
     # is not installed, use a dedicated portable runtime on port 11435.
     if (-not $version) {
-        $baseUrl = $script:RadOncBundledOllamaUrl
+        $baseUrl = $RadOncBundledOllamaUrl
         $version = Get-RadOncOllamaVersion -BaseUrl $baseUrl
 
         if (-not $version) {
@@ -279,23 +280,27 @@ function Ensure-RadOncAIEngine {
     }
 
     $tags = Get-RadOncOllamaTags -BaseUrl $baseUrl
-    if (-not (Test-RadOncModelInstalled -Tags $tags -ModelName $script:RadOncModelName)) {
-        Invoke-RadOncModelPull -BaseUrl $baseUrl -OllamaExecutable $ollamaExecutable -ProductDataRoot $productDataRoot
+    if (-not (Test-RadOncModelInstalled -Tags $tags -ModelName $RadOncModelName)) {
+        if ($baseUrl -eq $RadOncBundledOllamaUrl) {
+            Invoke-RadOncModelPull -BaseUrl $baseUrl -OllamaExecutable $ollamaExecutable -ProductDataRoot $productDataRoot -RequireLocalDiskSpace
+        } else {
+            Invoke-RadOncModelPull -BaseUrl $baseUrl -OllamaExecutable $ollamaExecutable -ProductDataRoot $productDataRoot
+        }
         $modelFound = $false
         for ($attempt = 0; $attempt -lt 30; $attempt++) {
             $tags = Get-RadOncOllamaTags -BaseUrl $baseUrl
-            if (Test-RadOncModelInstalled -Tags $tags -ModelName $script:RadOncModelName) {
+            if (Test-RadOncModelInstalled -Tags $tags -ModelName $RadOncModelName) {
                 $modelFound = $true
                 break
             }
             Start-Sleep -Seconds 2
         }
         if (-not $modelFound) {
-            throw ("Ollama completed the pull command, but {0} was not listed by /api/tags." -f $script:RadOncModelName)
+            throw ("Ollama completed the pull command, but {0} was not listed by /api/tags." -f $RadOncModelName)
         }
     }
 
-    Write-Host ("AI engine ready: Ollama {0}; model {1}; endpoint {2}" -f $version.version, $script:RadOncModelName, $baseUrl)
+    Write-Host ("AI engine ready: Ollama {0}; model {1}; endpoint {2}" -f $version.version, $RadOncModelName, $baseUrl)
     Write-Host ("Model files: {0}" -f $modelDirectory)
     return $baseUrl
 }
