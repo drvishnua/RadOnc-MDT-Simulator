@@ -173,11 +173,50 @@ function Install-RadOncPortableOllama {
 
     Write-Host ("Downloading the pinned Ollama {0} Windows runtime (about 1.5 GB)..." -f $RadOncOllamaVersion)
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    $client = New-Object System.Net.WebClient
+    $downloadTimeoutSeconds = 3600
+    $downloadJob = Start-Job -ScriptBlock {
+        param($DownloadUrl, $DestinationPath)
+        $ErrorActionPreference = "Stop"
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        $client = New-Object System.Net.WebClient
+        try {
+            $client.DownloadFile($DownloadUrl, $DestinationPath)
+        } finally {
+            $client.Dispose()
+        }
+    } -ArgumentList $RadOncOllamaZipUrl, $archivePath
+    $downloadClock = [Diagnostics.Stopwatch]::StartNew()
+    $nextDownloadHeartbeat = 30
     try {
-        $client.DownloadFile($RadOncOllamaZipUrl, $archivePath)
+        while ($downloadJob.State -eq "NotStarted" -or $downloadJob.State -eq "Running") {
+            $null = Wait-Job -Job $downloadJob -Timeout 10
+            if ($downloadJob.State -ne "NotStarted" -and $downloadJob.State -ne "Running") {
+                break
+            }
+            if ($downloadClock.Elapsed.TotalSeconds -ge $downloadTimeoutSeconds) {
+                Stop-Job -Job $downloadJob -ErrorAction SilentlyContinue
+                throw ("Pinned Ollama runtime download exceeded {0} seconds; download job was stopped." -f $downloadTimeoutSeconds)
+            }
+            if ($downloadClock.Elapsed.TotalSeconds -ge $nextDownloadHeartbeat) {
+                $downloadedBytes = 0
+                if (Test-Path -LiteralPath $archivePath -PathType Leaf) {
+                    $downloadedBytes = (Get-Item -LiteralPath $archivePath).Length
+                }
+                Write-Host ("HOSTED_CPU_RUNTIME_DOWNLOAD_HEARTBEAT elapsed_seconds={0} downloaded_bytes={1}" -f [int]$downloadClock.Elapsed.TotalSeconds, $downloadedBytes)
+                $nextDownloadHeartbeat += 30
+            }
+        }
+        if ($downloadJob.State -ne "Completed") {
+            $downloadErrors = Receive-Job -Job $downloadJob -ErrorAction SilentlyContinue 2>&1
+            throw ("Pinned Ollama runtime download ended in state {0}. {1}" -f $downloadJob.State, ($downloadErrors -join [Environment]::NewLine))
+        }
+        Receive-Job -Job $downloadJob -ErrorAction Stop | Out-Null
+        Write-Host ("HOSTED_CPU_RUNTIME_DOWNLOAD_COMPLETE elapsed_seconds={0}" -f [int]$downloadClock.Elapsed.TotalSeconds)
     } finally {
-        $client.Dispose()
+        if ($downloadJob.State -eq "Running" -or $downloadJob.State -eq "NotStarted") {
+            Stop-Job -Job $downloadJob -ErrorAction SilentlyContinue
+        }
+        Remove-Job -Job $downloadJob -Force -ErrorAction SilentlyContinue
     }
 
     $actualHash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -241,7 +280,28 @@ function Invoke-RadOncModelPull {
         $pullStdout = Join-Path $pullLogDirectory "ollama-model-pull.stdout.log"
         $pullStderr = Join-Path $pullLogDirectory "ollama-model-pull.stderr.log"
         Write-Host ("Ollama model pull logs: {0}" -f $pullLogDirectory)
-        $pullProcess = Start-Process -FilePath $OllamaExecutable -ArgumentList @("pull", $RadOncModelName) -Wait -PassThru -WindowStyle Hidden -RedirectStandardOutput $pullStdout -RedirectStandardError $pullStderr
+        $pullProcess = Start-Process -FilePath $OllamaExecutable -ArgumentList @("pull", $RadOncModelName) -PassThru -WindowStyle Hidden -RedirectStandardOutput $pullStdout -RedirectStandardError $pullStderr
+        $pullTimeoutSeconds = 5400
+        $pullClock = [Diagnostics.Stopwatch]::StartNew()
+        $nextPullHeartbeat = 60
+        while ($true) {
+            $pullProcess.Refresh()
+            if ($pullProcess.HasExited) { break }
+            if ($pullClock.Elapsed.TotalSeconds -ge $pullTimeoutSeconds) {
+                Stop-Process -Id $pullProcess.Id -Force -ErrorAction SilentlyContinue
+                throw ("Ollama model pull exceeded {0} seconds; only the pull process started by this bootstrap was stopped. Logs: {1}" -f $pullTimeoutSeconds, $pullLogDirectory)
+            }
+            if ($pullClock.Elapsed.TotalSeconds -ge $nextPullHeartbeat) {
+                $stdoutBytes = 0
+                $stderrBytes = 0
+                if (Test-Path -LiteralPath $pullStdout) { $stdoutBytes = (Get-Item -LiteralPath $pullStdout).Length }
+                if (Test-Path -LiteralPath $pullStderr) { $stderrBytes = (Get-Item -LiteralPath $pullStderr).Length }
+                Write-Host ("HOSTED_CPU_MODEL_PULL_HEARTBEAT elapsed_seconds={0} stdout_bytes={1} stderr_bytes={2}" -f [int]$pullClock.Elapsed.TotalSeconds, $stdoutBytes, $stderrBytes)
+                $nextPullHeartbeat += 60
+            }
+            Start-Sleep -Seconds 5
+        }
+        Write-Host ("HOSTED_CPU_MODEL_PULL_PROCESS_EXITED exit_code={0} elapsed_seconds={1}" -f $pullProcess.ExitCode, [int]$pullClock.Elapsed.TotalSeconds)
         if (Test-Path -LiteralPath $pullStdout) {
             Get-Content -LiteralPath $pullStdout -Tail 12 | ForEach-Object { if ($_ -and $_.Trim()) { Write-Host $_ } }
         }
@@ -305,9 +365,11 @@ function Ensure-RadOncAIEngine {
     if (-not $version) {
         throw "No working local Ollama service could be started. See the Ollama logs under %LOCALAPPDATA%\RadOncMDT\Logs."
     }
+    Write-Host ("HOSTED_CPU_OLLAMA_SERVER_READY version={0} endpoint={1}" -f $version.version, $baseUrl)
 
     $tags = Get-RadOncOllamaTags -BaseUrl $baseUrl
     if (-not (Test-RadOncModelInstalled -Tags $tags -ModelName $RadOncModelName)) {
+        Write-Host ("HOSTED_CPU_MODEL_PULL_BEGIN model={0}" -f $RadOncModelName)
         if ($baseUrl -eq $RadOncBundledOllamaUrl) {
             Invoke-RadOncModelPull -BaseUrl $baseUrl -OllamaExecutable $ollamaExecutable -ProductDataRoot $productDataRoot -RequireLocalDiskSpace
         } else {
@@ -325,6 +387,9 @@ function Ensure-RadOncAIEngine {
         if (-not $modelFound) {
             throw ("Ollama completed the pull command, but {0} was not listed by /api/tags." -f $RadOncModelName)
         }
+        Write-Host ("HOSTED_CPU_MODEL_PULL_VERIFIED model={0}" -f $RadOncModelName)
+    } else {
+        Write-Host ("HOSTED_CPU_MODEL_ALREADY_PRESENT model={0}" -f $RadOncModelName)
     }
 
     Write-Host ("AI engine ready: Ollama {0}; model {1}; endpoint {2}" -f $version.version, $RadOncModelName, $baseUrl)
