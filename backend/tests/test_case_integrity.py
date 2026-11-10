@@ -688,3 +688,54 @@ def test_explicit_suitability_followed_by_pending_prerequisites_is_not_unconditi
     })
     assert not any("treatment-suitability/eligibility" in item for item in flags)
 
+
+
+def test_attribution_note_register_assigns_exact_stable_ids_to_competing_favour_opinions():
+    from app.services.case_integrity import extract_attributed_note_opinions
+
+    summary = (
+        "Fictional educational scenario. The referral includes two provisional opinions: "
+        "the colorectal surgical note favours proceeding to a surgical assessment first, "
+        "conditional on complete local staging and resectability review; "
+        "the medical oncology note favours discussing a preoperative multimodality sequence, "
+        "conditional on MRI staging, metastatic work-up and fitness assessment. "
+        "Neither note supplies the missing investigations or establishes a final plan."
+    )
+
+    opinions = extract_attributed_note_opinions(summary)
+
+    assert [item["source_id"] for item in opinions] == [
+        "CASE:case_summary#1",
+        "CASE:case_summary#2",
+    ]
+    assert opinions[0]["source_excerpt"] == (
+        "the colorectal surgical note favours proceeding to a surgical assessment first, "
+        "conditional on complete local staging and resectability review"
+    )
+    assert opinions[1]["source_excerpt"] == (
+        "the medical oncology note favours discussing a preoperative multimodality sequence, "
+        "conditional on MRI staging, metastatic work-up and fitness assessment."
+    )
+    assert all(item["source_excerpt"] in summary for item in opinions)
+
+
+def test_attribution_note_register_extracts_service_note_opinion_spans_with_punctuation():
+    from app.services.case_integrity import extract_attributed_note_opinions
+
+    summary = (
+        "Fictional case. ENT service note proposes a surgery-led assessment, conditional on complete staging. "
+        "Cardiology service note proposes a separate preoperative sequence, conditional on MRI review."
+    )
+
+    opinions = extract_attributed_note_opinions(summary)
+
+    assert opinions == [
+        {
+            "source_id": "CASE:case_summary#1",
+            "source_excerpt": "ENT service note proposes a surgery-led assessment, conditional on complete staging.",
+        },
+        {
+            "source_id": "CASE:case_summary#2",
+            "source_excerpt": "Cardiology service note proposes a separate preoperative sequence, conditional on MRI review.",
+        },
+    ]

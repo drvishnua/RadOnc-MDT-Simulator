@@ -1712,3 +1712,91 @@ print(json.dumps({
         "chair_report_available": True,
         "chair_consensus_status": "insufficient_information",
     }
+
+
+def test_r3_uses_server_identified_opinion_ids_and_flags_duplicate_or_missing_reviews(monkeypatch):
+    from app.round_schemas import AdversarialContributionDraft, SourceOpinionReview
+    from app.services import mdt_generation
+
+    summary = (
+        "Fictional case. The colorectal surgical note favours a surgical assessment first, "
+        "conditional on complete local staging and resectability review; "
+        "the medical oncology note favours discussing a preoperative multimodality sequence, "
+        "conditional on MRI staging, metastatic work-up and fitness assessment."
+    )
+
+    async def fake_generate(prompt, schema_type, max_tokens):
+        assert "SERVER-IDENTIFIED ATTRIBUTED SOURCE OPINIONS" in prompt
+        assert "CASE:case_summary#1" in prompt and "CASE:case_summary#2" in prompt
+        assert "the colorectal surgical note favours a surgical assessment first" in prompt
+        assert "the medical oncology note favours discussing a preoperative multimodality sequence" in prompt
+        return AdversarialContributionDraft(
+            position="insufficient_information",
+            provisional_conclusion="The two source opinions remain conditional and require separate review.",
+            response_to_other_perspectives="The selected peer material does not permit an unqualified sequencing conclusion.",
+            agreements=[],
+            substantive_challenges=[],
+            remaining_unknowns=["The source conditions remain to be assessed."],
+            risk_flags=[],
+            confidence=0.4,
+            source_opinion_reviews=[
+                SourceOpinionReview(
+                    source_id="CASE:case_summary#1",
+                    source_excerpt=(
+                        "the colorectal surgical note favours a surgical assessment first, "
+                        "conditional on complete local staging and resectability review"
+                    ),
+                    option_status="unclear",
+                    conditions_status="unclear",
+                    review_basis="The bounded supplied peer sample is insufficient to assess this opinion.",
+                    source_reference_ids=["CASE:case_summary#1", "R2:MO-01"],
+                ),
+                SourceOpinionReview(
+                    source_id="CASE:case_summary#1",
+                    source_excerpt=(
+                        "the colorectal surgical note favours a surgical assessment first, "
+                        "conditional on complete local staging and resectability review"
+                    ),
+                    option_status="unclear",
+                    conditions_status="unclear",
+                    review_basis="This duplicate does not provide a separate review of the second opinion.",
+                    source_reference_ids=["CASE:case_summary#1", "R2:MO-01"],
+                ),
+            ],
+        )
+
+    monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate)
+    profile = {"agent_id": "RO-01", "name": "Radiation Oncology", "mandate": "Review the fictional case."}
+    case = SyntheticCase(scenario_title="Fictional competing source opinions", case_summary=summary)
+    own_r1 = {
+        "position": "insufficient_information",
+        "provisional_conclusion": "The independent assessment remains conditional on missing information.",
+        "preferred_educational_option": "No option is established from the supplied information.",
+    }
+    own_r2 = {
+        "position": "insufficient_information",
+        "provisional_conclusion": "The debate remains insufficient pending separate review of the source opinions.",
+        "response_to_other_perspectives": "The supplied contributions do not establish a common proposition.",
+    }
+    peers = [{
+        "agent_id": "MO-01",
+        "agent_name": "Medical Oncology",
+        "result": {
+            "position": "conditional",
+            "provisional_conclusion": "The source material remains conditional pending further information.",
+            "response_to_other_perspectives": "The selected record does not establish a shared sequence.",
+            "agreements": [],
+            "substantive_challenges": [],
+            "risk_flags": [],
+            "position_changes": [],
+        },
+    }]
+
+    result = asyncio.run(
+        mdt_generation.generate_adversarial_contribution(profile, case, own_r1, own_r2, peers)
+    )
+
+    flags = " ".join(result.source_reference_integrity_flags)
+    assert "CASE:case_summary#1 has 2 duplicate R3 reviews" in flags
+    assert "Required server-identified source opinion CASE:case_summary#2 has no R3 review" in flags
+    assert result.source_peer_ids == ["MO-01"]

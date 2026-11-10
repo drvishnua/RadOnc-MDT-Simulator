@@ -21,7 +21,7 @@ from app.round_schemas import (
     RoundContributionDraft,
 )
 from app.schemas import SyntheticCase
-from app.services.case_integrity import audit_unverified_case_claims, build_case_prompt_context, build_case_report_title, case_summary_has_attributed_opinions
+from app.services.case_integrity import audit_unverified_case_claims, build_case_prompt_context, build_case_report_title, case_summary_has_attributed_opinions, extract_attributed_note_opinions
 from app.services.chair_report_quality import (
     build_recorded_agreements,
     build_source_opinion_review_coverage,
@@ -658,7 +658,18 @@ async def generate_adversarial_contribution(
         f"R2:{profile['agent_id']}",
         *(f"R2:{peer['agent_id']}" for peer in peer_debate_views[:5]),
     ]
-    if case_summary_has_attributed_opinions(case.case_summary):
+    source_opinion_register = extract_attributed_note_opinions(case.case_summary)
+    if source_opinion_register:
+        attribution_instruction = (
+            "CASE ATTRIBUTION CHECK: the server has identified explicitly attributed note opinions in the "
+            "original case summary. The ordered server register is authoritative for source IDs and exact excerpts. "
+            "Return exactly one source_opinion_review for each listed ID, in the same order; copy source_id and "
+            "source_excerpt exactly. Do not duplicate, renumber, merge, omit, or invent an opinion. If the supplied "
+            "R2 sample is insufficient to assess an opinion, still return its one review with unclear statuses and "
+            "explain the limitation. These are source-reported opinions, not verified facts or MDT consensus. "
+            "A peer's R2 contribution is never itself a case-summary attributed opinion."
+        )
+    elif case_summary_has_attributed_opinions(case.case_summary):
         attribution_instruction = (
             "CASE ATTRIBUTION CHECK: review only clearly speaker-attributed opinions in the verbatim case summary. "
             "A peer's R2 contribution is never itself a case-summary attributed opinion. Do not create a case opinion from a peer role or its R2 ID."
@@ -730,6 +741,8 @@ async def generate_adversarial_contribution(
         f"ROLE: {profile['name']}\\nMANDATE: {profile['mandate']}\\n"
         "SUPPLIED CASE:\\n"
         + json.dumps(build_case_prompt_context(case), ensure_ascii=False, separators=(",", ":"))
+        + "\\nSERVER-IDENTIFIED ATTRIBUTED SOURCE OPINIONS (exact case-summary excerpts; not verified facts):\\n"
+        + json.dumps(source_opinion_register, ensure_ascii=False, separators=(",", ":"))
         + "\\nYOUR R1 AND COMPLETE OWN R2 RECORD (bounded fields):\\n"
         + json.dumps(own, ensure_ascii=False, separators=(",", ":"))
         + "\\nSELECTED SOURCE-LABELLED R2 PEER SAMPLE:\\n"
@@ -745,6 +758,31 @@ async def generate_adversarial_contribution(
         *allowed_peer_source_ids,
     }
     review_reference_flags: list[str] = []
+    expected_source_opinions_by_id = {
+        item["source_id"]: item["source_excerpt"]
+        for item in source_opinion_register
+    }
+    if expected_source_opinions_by_id:
+        actual_review_counts = Counter(
+            str(item.get("source_id") or "")
+            for item in (payload.get("source_opinion_reviews") or [])
+            if isinstance(item, dict)
+        )
+        for expected_id in expected_source_opinions_by_id:
+            count = actual_review_counts.get(expected_id, 0)
+            if count == 0:
+                review_reference_flags.append(
+                    f"Required server-identified source opinion {expected_id} has no R3 review."
+                )
+            elif count > 1:
+                review_reference_flags.append(
+                    f"Server-identified source opinion {expected_id} has {count} duplicate R3 reviews; exactly one is required."
+                )
+        for actual_id in sorted(set(actual_review_counts) - set(expected_source_opinions_by_id)):
+            if actual_id:
+                review_reference_flags.append(
+                    f"R3 returned an unregistered case-summary source opinion ID: {actual_id}."
+                )
     case_source_id_pattern = re.compile(r"^CASE:case_summary#([1-9][0-9]*)$")
     case_source_id_to_excerpt: dict[str, str] = {}
     case_excerpt_to_source_id: dict[str, str] = {}
@@ -760,6 +798,17 @@ async def generate_adversarial_contribution(
             review_reference_flags.append(
                 f"Review for {source_id or 'unknown source'} has an invalid CASE source identifier; "
                 "expected CASE:case_summary#N."
+            )
+            continue
+        expected_excerpt = expected_source_opinions_by_id.get(source_id)
+        if expected_source_opinions_by_id and expected_excerpt is None:
+            review_reference_flags.append(
+                f"Review for {source_id} does not match a server-identified source opinion."
+            )
+            continue
+        if expected_excerpt is not None and source_excerpt != expected_excerpt:
+            review_reference_flags.append(
+                f"Review for {source_id} does not reproduce its exact server-identified case-summary excerpt."
             )
             continue
         if not source_excerpt or source_excerpt not in case.case_summary:

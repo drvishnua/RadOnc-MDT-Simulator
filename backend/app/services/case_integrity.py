@@ -51,6 +51,38 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
     }
 
 
+_ATTRIBUTED_NOTE_OPINION_PATTERN = re.compile(
+    r"\b(?:the\s+)?[A-Za-z][A-Za-z.'-]*(?:\s+[A-Za-z][A-Za-z.'-]*){0,3}\s+note\s+"
+    r"(?:recommends?|proposes?|suggests?|advises?|opines?|believes?|prefers?|"
+    r"favo[u]?rs?|supports?|advocates?|argues?|urges?)\b",
+    re.IGNORECASE,
+)
+
+
+def extract_attributed_note_opinions(case_summary: str) -> list[dict[str, str]]:
+    """Extract explicit note-opinion spans with stable server-owned source IDs.
+
+    Each excerpt is an exact contiguous span from the original case summary.
+    This records source wording only; it does not verify the source or its
+    clinical content. The next attributed note or sentence boundary delimits
+    each span, including multiple opinions joined by semicolons.
+    """
+    matches = list(_ATTRIBUTED_NOTE_OPINION_PATTERN.finditer(case_summary))
+    opinions: list[dict[str, str]] = []
+    for index, match in enumerate(matches):
+        next_start = matches[index + 1].start() if index + 1 < len(matches) else len(case_summary)
+        segment = case_summary[match.end():next_start]
+        sentence_end = re.search(r"[.!?](?=\s|$)", segment)
+        end = match.end() + sentence_end.end() if sentence_end else next_start
+        excerpt = case_summary[match.start():end].rstrip(" \t\r\n;,:")
+        if excerpt:
+            opinions.append({
+                "source_id": f"CASE:case_summary#{len(opinions) + 1}",
+                "source_excerpt": excerpt,
+            })
+    return opinions
+
+
 def case_summary_has_attributed_opinions(case_summary: str) -> bool:
     """Detect explicit speaker-attributed recommendations/statements in case text.
 
