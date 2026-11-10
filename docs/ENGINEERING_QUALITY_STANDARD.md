@@ -126,30 +126,45 @@ These controls remain stricter than ordinary application correctness:
 
 ## 8. Current baseline findings and open gaps
 
-This is an initial inspection, not a complete penetration test or exhaustive code audit.
+This is an evidence-based engineering status review, not a complete penetration test, clinical validation or exhaustive code audit.
 
-**Verified at baseline SHA `5016e5b8270770748d9db9f85600821d723b3b2f`:**
-- Backend CI completed successfully: 191 passed, 1 Starlette/httpx TestClient deprecation warning.
-- Frontend CI completed successfully.
-- Windows installer build, installed-app smoke test and clean-hosted Ollama/model first-run provisioning completed successfully.
-- The installer artifact and checksum were generated for this exact SHA.
-- PR #1 is open and draft; the development branch is at this SHA. `main` remains at `39a356b8eb09399aa2da1b9b9085965999f5105a`.
+**Functional/application-code baseline:** `5b8159df0b0bb6ac0bedc95046d0c87784420591`  
+**Documentation-only updates:** README and implementation status were refreshed after this code baseline; they do not change the application runtime.  
+**Branch:** `feature/four-round-mdt-and-performance`; PR #1 remains open/draft/unmerged.  
+**Base main:** `39a356b8eb09399aa2da1b9b9085965999f5105a` (unchanged).
 
-**Open gaps observed in the repository at this baseline:**
+**Verification passed on exact functional baseline `5b8159df...`:**
+- Backend: 191 passed, 1 existing Starlette/httpx TestClient deprecation warning ([run 42907292247](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42907292247)).
+- Frontend: 32 passed; `npm ci`, TypeScript and Vite 7.3.8 production build passed ([run 42907292261](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42907292261)).
+- Browser E2E: patient registry lifecycle and persisted four-round dashboard assertions passed in isolated headless Edge with a disposable database and no Ollama calls ([run 42907292298](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42907292298)).
+- Security: CodeQL Python and JavaScript/TypeScript, Gitleaks full-history scan, pip-audit and npm audit all passed; zero known Python/Node dependency vulnerabilities were reported ([run 42907292255](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42907292255)).
+- Windows packaging-prerequisite inspection passed ([run 42907292356](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42907292356)).
+- Current-head installer workflow is queued ([run 42907292945](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42907292945)); it must pass before the exact-head installer is marked verified.
+- The immediately preceding installer/application snapshot `fdb1f9ceb96d7bcc2f5357f360b2e72e5825f8b8` completed clean Windows install/uninstall smoke test and actual clean-machine Ollama 0.40.14 + qwen3.5:4b provisioning, CPU inference, installed-app health and 45-role API verification ([run 42906593712](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42906593712)). This is useful adjacent evidence, but not a substitute for the queued exact-head installer result.
+
+**Open gaps and current priority:**
 
 | Priority | Gap | Why it matters | Required closure evidence |
 |---|---|---|---|
-| P0 | No fresh 136-contribution live four-round audit on SHA `5016e5b...` | Historical MDT-006 found 134 hard failures and 92 major findings on an earlier snapshot. Later R2/R3 changes have CI coverage, not live-model proof. | One exact-SHA live run; inspect all 136 saved contributions, R3 provenance challenges, Chair, failures and the full rubric output. No hidden or downgraded findings. |
-| P0 | End-to-end patient-registry browser roundtrip is not currently evidenced on this SHA | API persistence and static UI delivery do not prove real user actions, refresh, edit/versioning and recovery. | Browser-driven create, validate, save, refresh, restore, edit/version, link run, delete/clear where supported; assert DB state and browser console/network. |
-| P1 | No frontend `package-lock.json` is present in the inspected frontend directory; CI uses `npm install`. Backend requirements use version ranges without a resolved lock. | Transitive dependencies can change between builds, reducing reproducibility and forensic traceability. | Committed lockfiles, clean `npm ci`/locked Python install, repeat build comparison and dependency audit. |
-| P1 | Current workflows do not show dedicated CodeQL/SAST, Python/Node dependency audit, secret scan, lint or coverage-report gates. | Test/build success cannot detect every security, style, dead-code or dependency issue. | Pull-request workflows with actionable severity thresholds and retained reports. |
-| P1 | GitHub branch API reported branch protection disabled for both the development branch and `main` at inspection. | Required checks are not enforced by branch protection. | Configure required status checks and review rules after confirming exact check names; do not merge without explicit permission. |
-| P1 | README and `docs/IMPLEMENTATION_STATUS.md` contain an older verification snapshot (for example, 691c26a.../177 tests) rather than the current 5016e5b.../191-test CI state. | Readers can mistake historical checks for current evidence. | Update release/implementation records on each release candidate; link every result to its exact SHA and mark stale results historical. |
-| P1 | Windows installer is unsigned and SmartScreen reports an unknown publisher. | Users cannot authenticate the publisher identity from the installer signature. | Evaluate and configure an appropriate code-signing certificate, timestamping and signature verification. Do not claim trust/signing before this is done. |
-| P2 | CI workflow action references use major tags such as `@v4` rather than immutable commit SHAs. | A mutable tag is a supply-chain and reproducibility dependency. | Pin action SHAs, document versions, and schedule controlled updates. |
-| P2 | No current full-run GPU/performance evidence is attached to this exact SHA. | A one-agent inference or model residency alone does not establish full-run performance or safe concurrency. | One controlled full local run with sampled `nvidia-smi`, Ollama offload/logs, concurrency=1, latency and temperature/VRAM observations. |
+| P0 | No fresh 136-contribution live four-round audit on current code | Historical MDT-006 found 134 hard failures and 92 major findings on an earlier snapshot. Prompt/schema corrections have unit-test and CI coverage but need live-model validation. | Explicitly authorised full run on an immutable code/model/prompt snapshot; inspect all 136 saved contributions, R3 provenance challenges, Chair synthesis, failures/retries and the complete rubric. Do not downgrade findings. |
+| P0 | Clinical reasoning/evidence validation is not established | Schema-valid model output, successful inference and deterministic consistency checks do not prove clinical correctness. Evidence retrieval and source verification remain unimplemented. | Authoritative source retrieval with provenance plus independent qualified clinical review against human-authored rubrics. No guideline/clinical-accuracy claim before this. |
+| P1 | Backend dependency versions are not fully locked | Backend requirements and test-only dependencies still use version ranges, so transitive resolution can vary. | Add a reviewed, fully resolved backend lock/constraints strategy; build/test/audit from it on clean runners. |
+| P1 | Branch protection is disabled | Required checks are not enforced by repository branch rules. | Obtain repository-owner authorisation, then configure required status checks and review rules. No branch settings have been modified. |
+| P1 | Installer is unsigned | Windows cannot authenticate publisher identity; SmartScreen may show an unknown-publisher warning. | Obtain appropriate signing certificate, sign and timestamp the installer, then verify Authenticode signature. Do not claim signed/trusted before that. |
+| P1 | Backup/restore and broader lifecycle acceptance remain incomplete | Installer uninstall preservation and browser CRUD tests do not prove backup recovery, schema rollback, power-loss resilience or all upgrade paths. | Isolated backup/restore, migration from prior supported schema, crash/restart and upgrade/rollback tests, with database integrity and hashes checked. |
+| P2 | Lint/format and coverage thresholds are not yet mandatory CI gates | Passing tests and builds do not measure all maintainability or untested-path risks. | Add Python/TypeScript lint/format and coverage reports with reviewed thresholds; do not game coverage by adding low-value tests. |
+| P2 | Current-head full-run GPU/performance evidence is not available | A one-agent smoke or model residency does not establish full-run GPU attribution, thermal behaviour or throughput. | Separately authorised, controlled local run with sampled `nvidia-smi`, Ollama offload/logs, concurrency=1, latency and temperature/VRAM evidence. Do not disturb the user's running installation. |
 
-The installer workflow's hosted smoke test is valuable: it exercises setup, app health, static frontend delivery, the 45-role API, a patient save and uninstall data preservation. It is not an interactive browser E2E test. Its clean-hosted first-run job exercises real provisioning and one inference on a disposable hosted VM; it does not prove NVIDIA GPU inference on the target laptop.
+**Controls now implemented in the development branch:**
+- Frontend `package-lock.json` v3 is committed (120 packages); Vite is pinned at 7.3.8; Node engine is `^20.19.0 || >=22.12.0`.
+- CI, installer packaging, browser E2E, security audit and developer startup use `npm ci`; lockfile regeneration is restricted to trusted pushes to the development branch.
+- pytest has been removed from production/runtime requirements and isolated in `backend/requirements-dev.txt`.
+- CodeQL, Gitleaks and Python/Node dependency audits are part of PR CI; Dependabot proposes weekly dependency/action updates.
+- Primary workflows pin third-party GitHub Actions to immutable commit SHAs.
+- Duplicate push+PR CI for the development branch was removed; PR #1 is the authoritative development validation path.
+- The browser E2E uses GitHub-hosted Windows, disposable data and no model inference; it never touches the user's laptop.
+
+The installer workflow's hosted smoke test exercises package build, install, health, frontend assets, 45 role profiles, a training registry save and uninstall data preservation. The clean-hosted bootstrap separately downloads the pinned runtime/model and performs CPU inference. Neither proves the target laptop's current install or NVIDIA GPU inference for the current full four-round run.
 
 ## 9. Release gates — no waiver by green CI alone
 
