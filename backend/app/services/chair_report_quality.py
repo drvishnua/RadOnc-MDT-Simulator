@@ -82,6 +82,29 @@ _NEGATED_CONSENSUS_PATTERN = re.compile(
     r"[^.!?;]{0,100}\b(?:consensus|unanimity|unanimous\s+agreement|majority\s+agreement)\b",
     re.IGNORECASE,
 )
+_OVERBROAD_PEER_AGREEMENT_PATTERN = re.compile(
+    r"\b(?:all|every|most|(?:the\s+)?majority\s+of)\s+"
+    r"(?:selected\s+)?(?:peers?|peer\s+positions?|roles?|specialists?)\b",
+    re.IGNORECASE,
+)
+_ROUND_REFERENCE_PATTERN = re.compile(r"\bR([123]):([A-Z]{2}-[0-9]{2})\b", re.IGNORECASE)
+_ROUND_REFERENCE_RANGE_PATTERN = re.compile(
+    r"\bR([123]):([A-Z]{2}-[0-9]{2})\s*(?:through|thru|to|[-–—])\s*"
+    r"(?:R\1:)?([A-Z]{2}-[0-9]{2})\b",
+    re.IGNORECASE,
+)
+
+
+def _is_overbroad_peer_agreement(value: str) -> bool:
+    for match in _OVERBROAD_PEER_AGREEMENT_PATTERN.finditer(value):
+        prefix = value[max(0, match.start() - 40):match.start()]
+        if not re.search(
+            r"\b(?:not|no|never|without|cannot|could\s+not|do\s+not|does\s+not|should\s+not)\s*$",
+            prefix,
+            re.IGNORECASE,
+        ):
+            return True
+    return False
 
 
 def _is_positive_consensus_claim(value: str) -> bool:
@@ -284,6 +307,19 @@ def build_source_opinion_review_coverage(
                 integrity.append(
                     f"R3 source-opinion review {source_id} from {role_id} does not cite an R2 peer "
                     "recorded as supplied to that role."
+                )
+                continue
+            evidence_peer_id = str(review.get("evidence_peer_id") or "")
+            evidence_excerpt = str(review.get("evidence_excerpt") or "").strip()
+            if (
+                review.get("evidence_validation_status") != "verified"
+                or evidence_peer_id not in supplied_peer_refs
+                or evidence_peer_id not in reference_ids
+                or not evidence_excerpt
+            ):
+                integrity.append(
+                    f"R3 source-opinion review {source_id} from {role_id} lacks a server-verified "
+                    "exact excerpt from one of that role's supplied R2 peers; excluded from status coverage."
                 )
                 continue
 
@@ -586,11 +622,56 @@ def build_recorded_agreements(
                 if not cleaned or key in seen:
                     continue
                 seen.add(key)
-                if _is_positive_consensus_claim(cleaned):
+                source_label = f"R{round_number} {role_id} agreement"
+                if (
+                    _is_positive_consensus_claim(cleaned)
+                    or _is_overbroad_peer_agreement(cleaned)
+                ):
                     _note_quarantined_claims(
                         integrity_flags,
-                        f"R{round_number} {role_id} agreement",
-                        ["Positive consensus assertion withheld; this role-authored statement is not evidence of agreement by other roles."],
+                        source_label,
+                        ["Overbroad peer/consensus assertion withheld; one role-authored statement cannot establish agreement by unshown roles."],
+                    )
+                    continue
+
+                allowed_references = (
+                    {("R1", role_id)}
+                    | {
+                        ("R1", str(peer_id).strip().upper())
+                        for peer_id in (item.get("source_peer_ids") or [])
+                        if isinstance(peer_id, str) and peer_id.strip()
+                    }
+                    if round_number == 2
+                    else {
+                        ("R1", role_id),
+                        ("R2", role_id),
+                    }
+                    | {
+                        ("R2", str(peer_id).strip().upper())
+                        for peer_id in (item.get("source_peer_ids") or [])
+                        if isinstance(peer_id, str) and peer_id.strip()
+                    }
+                )
+                cited_references = {
+                    (f"R{round_ref.upper()}", agent_ref.upper())
+                    for round_ref, agent_ref in _ROUND_REFERENCE_PATTERN.findall(cleaned)
+                }
+                has_role_range = bool(_ROUND_REFERENCE_RANGE_PATTERN.search(cleaned))
+                unsupported_references = cited_references - allowed_references
+                citation_only = re.sub(_ROUND_REFERENCE_PATTERN, "", cleaned)
+                citation_only = re.sub(r"[\\W_]+", "", citation_only)
+                if has_role_range or unsupported_references or not citation_only:
+                    reasons = []
+                    if has_role_range:
+                        reasons.append("broad role range is not an attributable individual citation")
+                    if unsupported_references:
+                        reasons.append("one or more cited roles were not supplied to this contribution")
+                    if not citation_only:
+                        reasons.append("statement contains only source identifiers and no substantive proposition")
+                    _note_quarantined_claims(
+                        integrity_flags,
+                        source_label,
+                        ["; ".join(reasons) + "; original source contribution remains available in the audit record."],
                     )
                     continue
                 if case is not None:
