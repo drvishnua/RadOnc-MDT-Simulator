@@ -767,12 +767,15 @@ async def generate_adversarial_contribution(
         item["source_id"]: item["source_excerpt"]
         for item in source_opinion_register
     }
+    actual_review_counts = Counter(
+        str(item.get("source_id") or "")
+        for item in (payload.get("source_opinion_reviews") or [])
+        if isinstance(item, dict)
+    )
+    duplicate_review_ids = {
+        source_id for source_id, count in actual_review_counts.items() if source_id and count > 1
+    }
     if expected_source_opinions_by_id:
-        actual_review_counts = Counter(
-            str(item.get("source_id") or "")
-            for item in (payload.get("source_opinion_reviews") or [])
-            if isinstance(item, dict)
-        )
         for expected_id in expected_source_opinions_by_id:
             count = actual_review_counts.get(expected_id, 0)
             if count == 0:
@@ -854,7 +857,9 @@ async def generate_adversarial_contribution(
         case_source_id_to_excerpt[source_id] = source_excerpt
         case_excerpt_to_source_id[source_excerpt] = source_id
 
-    traceable_case_source_ids = set(case_source_id_to_excerpt) - conflicting_case_source_ids
+    traceable_case_source_ids = (
+        set(case_source_id_to_excerpt) - conflicting_case_source_ids - duplicate_review_ids
+    )
 
     # Preserve model-authored review challenges, but attach their explicit structured
     # source IDs before adding them to the canonical Chair-facing challenge field.
@@ -864,6 +869,11 @@ async def generate_adversarial_contribution(
             continue
         source_id = str(review.get("source_id") or "")
         reference_ids = review.get("source_reference_ids") or []
+        valid_peer_reference_ids = {
+            str(reference_id)
+            for reference_id in reference_ids
+            if str(reference_id) in allowed_peer_source_ids
+        }
         review_source_excerpt = str(review.get("source_excerpt") or "")
         review_source_is_traceable = (
             source_id in traceable_case_source_ids
@@ -953,12 +963,19 @@ async def generate_adversarial_contribution(
                     "from the cited R2 peer material actually supplied to this role."
                 )
         if challenge:
-            if not review_source_is_traceable or source_id not in reference_ids:
+            if (
+                not review_source_is_traceable
+                or source_id not in reference_ids
+                or len(valid_peer_reference_ids) != 1
+                or invalid_ids
+            ):
                 review_reference_flags.append(
-                    f"Challenge for {source_id or 'unknown source'} was not promoted because its CASE excerpt/reference is not traceable."
+                    f"Challenge for {source_id or 'unknown source'} was not promoted because it requires "
+                    "one unique CASE review and exactly one valid supplied R2 peer reference."
                 )
             else:
-                source_prefix = "[Sources: " + "; ".join(reference_ids) + "] "
+                canonical_source_ids = [source_id, next(iter(valid_peer_reference_ids))]
+                source_prefix = "[Sources: " + "; ".join(canonical_source_ids) + "] "
                 canonical_challenge = source_prefix + challenge
                 if canonical_challenge not in challenges:
                     challenges.append(canonical_challenge)
