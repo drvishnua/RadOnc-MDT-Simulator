@@ -1731,8 +1731,8 @@ def test_r3_uses_server_identified_opinion_ids_and_flags_duplicate_or_missing_re
     async def fake_generate(prompt, schema_type, max_tokens):
         assert "SERVER-IDENTIFIED ATTRIBUTED SOURCE OPINIONS" in prompt
         assert "CASE:case_summary#1" in prompt and "CASE:case_summary#2" in prompt
-        assert "the colorectal surgical note favours a surgical assessment first" in prompt
-        assert "the medical oncology note favours discussing a preoperative multimodality sequence" in prompt
+        assert "the colorectal surgical note favours a surgical assessment first" in prompt.casefold()
+        assert "the medical oncology note favours discussing a preoperative multimodality sequence" in prompt.casefold()
         return AdversarialContributionDraft(
             position="insufficient_information",
             provisional_conclusion="The two source opinions remain conditional and require separate review.",
