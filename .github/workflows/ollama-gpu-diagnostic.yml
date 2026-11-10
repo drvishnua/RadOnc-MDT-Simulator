@@ -132,6 +132,62 @@ jobs:
             Write-Host "OLLAMA_LIBRARY_ROOT_NOT_FOUND"
           }
 
+      - name: Inspect installed RadOnc application and bootstrap logs without changes
+        if: always()
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Continue"
+          $localAppData = [Environment]::GetFolderPath("LocalApplicationData")
+          $installRoot = Join-Path $localAppData "Programs\RadOncMDT"
+          $logs = Join-Path $localAppData "RadOncMDT\Logs"
+          Write-Host "=== INSTALLED RADONC APPLICATION ==="
+          Write-Host "RADONC_INSTALL_ROOT=$installRoot"
+          $exe = Join-Path $installRoot "RadOncMDT.exe"
+          if (Test-Path -LiteralPath $exe) {
+            $file = Get-Item -LiteralPath $exe
+            Write-Host "RADONC_INSTALLED_EXE_PRESENT=True"
+            Write-Host "RADONC_EXE_VERSION=$($file.VersionInfo.FileVersion)"
+            Write-Host "RADONC_EXE_SHA256=$((Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant())"
+          } else {
+            Write-Host "RADONC_INSTALLED_EXE_PRESENT=False"
+          }
+
+          $health = $null
+          try {
+            $health = Invoke-RestMethod -Uri "http://127.0.0.1:8765/health" -TimeoutSec 4
+            Write-Host "RADONC_INSTALLED_HEALTH_REACHABLE=True"
+            Write-Host ("RADONC_HEALTH=" + ($health | ConvertTo-Json -Compress -Depth 4))
+          } catch {
+            Write-Host "RADONC_INSTALLED_HEALTH_REACHABLE=False"
+          }
+
+          if ($health) {
+            try {
+              $runtime = Invoke-RestMethod -Uri "http://127.0.0.1:8765/api/runtime" -TimeoutSec 10
+              Write-Host ("RADONC_RUNTIME=" + ($runtime.ollama | ConvertTo-Json -Compress -Depth 6))
+              $agents = Invoke-RestMethod -Uri "http://127.0.0.1:8765/api/agents" -TimeoutSec 10
+              Write-Host "RADONC_API_ROLE_COUNT=$($agents.returned_agent_count)"
+            } catch {
+              Write-Host "RADONC_RUNTIME_CHECK_FAILED=$($_.Exception.Message)"
+            }
+          }
+
+          foreach ($name in @("release-candidate-bootstrap.stdout.log","release-candidate-bootstrap.stderr.log")) {
+            $path = Join-Path $logs $name
+            Write-Host "--- $name ---"
+            if (Test-Path -LiteralPath $path) { Get-Content -LiteralPath $path -Tail 50 } else { Write-Host "BOOTSTRAP_LOG_NOT_FOUND" }
+          }
+
+          $pidFile = Join-Path $logs "backend.pid"
+          if (Test-Path -LiteralPath $pidFile) {
+            $pidValue = (Get-Content -LiteralPath $pidFile -Raw).Trim()
+            Write-Host "RADONC_INSTALLED_PID=$pidValue"
+            Get-CimInstance Win32_Process -Filter ("ProcessId = " + $pidValue) -ErrorAction SilentlyContinue |
+              Select-Object ProcessId,Name,ExecutablePath,CommandLine | Format-List | Out-String | Write-Host
+          } else {
+            Write-Host "RADONC_INSTALLED_PID_FILE_NOT_FOUND"
+          }
+
       - name: Inspect Ollama server GPU discovery log
         if: always()
         shell: powershell
