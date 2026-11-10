@@ -288,8 +288,15 @@ function Invoke-RadOncModelPull {
             $pullProcess.Refresh()
             if ($pullProcess.HasExited) { break }
             if ($pullClock.Elapsed.TotalSeconds -ge $pullTimeoutSeconds) {
-                Stop-Process -Id $pullProcess.Id -Force -ErrorAction SilentlyContinue
-                throw ("Ollama model pull exceeded {0} seconds; only the pull process started by this bootstrap was stopped. Logs: {1}" -f $pullTimeoutSeconds, $pullLogDirectory)
+                # Kill only the exact Process object returned by Start-Process above.
+                # Do not search for or stop Ollama by executable name, port, or PID.
+                try {
+                    $pullProcess.Kill()
+                    $null = $pullProcess.WaitForExit(10000)
+                } catch {
+                    Write-Warning ("Timed-out model-pull process could not be terminated cleanly: {0}" -f $_.Exception.Message)
+                }
+                throw ("Ollama model pull exceeded {0} seconds; only the exact pull process started by this bootstrap was targeted. Logs: {1}" -f $pullTimeoutSeconds, $pullLogDirectory)
             }
             if ($pullClock.Elapsed.TotalSeconds -ge $nextPullHeartbeat) {
                 $stdoutBytes = 0
