@@ -46,6 +46,18 @@ if ($existing) {
     exit 0
 }
 
+Write-Host ""
+Write-Host "== Prepare local AI engine ==" -ForegroundColor Cyan
+$aiBootstrap = Join-Path $AppRoot "Ensure-RadOnc-AIEngine.ps1"
+if (-not (Test-Path -LiteralPath $aiBootstrap -PathType Leaf)) {
+    throw "The local AI engine bootstrap script is missing from the installation."
+}
+. $aiBootstrap
+$env:OLLAMA_MODEL = "qwen3.5:4b"
+$env:OLLAMA_BASE_URL = Ensure-RadOncAIEngine -DataDirectory $DataDir -LogDirectory $LogDir
+
+Write-Host ""
+Write-Host "== Start RadOnc MDT ==" -ForegroundColor Cyan
 $stdout = Join-Path $LogDir "backend.stdout.log"
 $stderr = Join-Path $LogDir "backend.stderr.log"
 $pidFile = Join-Path $LogDir "backend.pid"
@@ -85,4 +97,5 @@ Start-Process "http://127.0.0.1:$Port"
 Write-Host "RadOnc MDT is running at http://127.0.0.1:$Port"
 Write-Host "User data: $DataDir"
 Write-Host "Logs: $LogDir"
-Write-Host "Ollama is managed separately and is not stopped by this launcher."
+Write-Host "The local AI engine is configured at $env:OLLAMA_BASE_URL."
+Write-Host "Ollama remains available locally and is not stopped by the application Stop shortcut."
