@@ -34,9 +34,9 @@ class SourceOpinionReview(StrictModel):
         default="",
         max_length=400,
         description=(
-            "An exact, contiguous verbatim excerpt from the supplied case_summary that identifies "
-            "this attributed opinion. It must appear in the case text after JSON decoding; do not "
-            "paraphrase, reconstruct, or infer an excerpt."
+            "Server-bound exact contiguous excerpt from the original case_summary. The server "
+            "attaches this immutable source text using source_id after model output validation; "
+            "it is not model-authored."
         ),
     )
     option_status: Literal["preserved", "partly_preserved", "omitted", "unclear"] = Field(
