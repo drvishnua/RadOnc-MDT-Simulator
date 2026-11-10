@@ -175,10 +175,9 @@ def _compact_r1_text(value: str, limit: int) -> str:
 
 def _compact_r2_text(value: str, limit: int) -> str:
     """Keep the peer's R2 attribution but neutralize round IDs quoted inside that R2 text."""
-    neutralized = _EMBEDDED_ROUND_REFERENCE_PATTERN.sub(
-        "[embedded round ref; cite R2]",
-        value,
-    )
+    # Remove embedded citations from peer prose; placeholders can be copied and
+    # then misrepresented by the model as verbatim evidence excerpts.
+    neutralized = _EMBEDDED_ROUND_REFERENCE_PATTERN.sub("", value)
     return _compact(neutralized, limit)
 
 def _unique_strings(values: list[str], limit: int = 12) -> list[str]:
@@ -865,8 +864,62 @@ async def generate_adversarial_contribution(
         set(case_source_id_to_excerpt) - conflicting_case_source_ids - duplicate_review_ids
     )
 
-    # Preserve model-authored review challenges, but attach their explicit structured
-    # source IDs before adding them to the canonical Chair-facing challenge field.
+    # Capture the model's raw labels and references, then server-bind a trusted
+    # peer citation only when its excerpt is an exact substring of an R2 peer record
+    # that was actually supplied to this role. The model cannot self-author provenance.
+    for review in payload.get("source_opinion_reviews") or []:
+        if not isinstance(review, dict):
+            continue
+        review["model_reported_option_status"] = str(review.get("option_status") or "")
+        review["model_reported_conditions_status"] = str(review.get("conditions_status") or "")
+        reported_refs = review.get("source_reference_ids") or []
+        review["model_reported_source_reference_ids"] = [
+            str(item) for item in reported_refs if isinstance(item, str)
+        ]
+        source_id = str(review.get("source_id") or "")
+        evidence_peer_id = str(review.get("evidence_peer_id") or "")
+        evidence_excerpt = str(review.get("evidence_excerpt") or "").strip()
+        evidence_peer = next(
+            (item for item in peers if item.get("source") == evidence_peer_id),
+            None,
+        )
+        evidence_texts: list[str] = []
+        if evidence_peer:
+            for key in ("conclusion", "response"):
+                if isinstance(evidence_peer.get(key), str):
+                    evidence_texts.append(evidence_peer[key])
+            for key in ("agreements", "challenges", "risks", "position_changes"):
+                evidence_texts.extend(
+                    item for item in (evidence_peer.get(key) or [])
+                    if isinstance(item, str)
+                )
+        if not evidence_peer_id and not evidence_excerpt:
+            evidence_status = "missing"
+        elif (
+            evidence_peer is not None
+            and evidence_peer_id in allowed_peer_source_ids
+            and evidence_excerpt
+            and any(evidence_excerpt in item for item in evidence_texts)
+        ):
+            evidence_status = "verified"
+        else:
+            evidence_status = "invalid"
+        review["evidence_validation_status"] = evidence_status
+        # Rebuild canonical references from server-verified material only. The
+        # original model references remain separately persisted for audit.
+        review["source_reference_ids"] = (
+            [source_id, evidence_peer_id]
+            if source_id and evidence_status == "verified"
+            else ([source_id] if source_id else [])
+        )
+        if evidence_status != "verified":
+            if review["model_reported_option_status"] in {"preserved", "partly_preserved", "omitted"}:
+                review["option_status"] = "unclear"
+            if review["model_reported_conditions_status"] in {"preserved", "partly_preserved", "omitted"}:
+                review["conditions_status"] = "unclear"
+
+    # Preserve model-authored review challenges, but attach only server-verified
+    # CASE and peer source IDs before adding them to the Chair-facing challenge field.
     challenges = list(payload.get("substantive_challenges") or [])
     for review in payload.get("source_opinion_reviews") or []:
         if not isinstance(review, dict):
@@ -915,9 +968,14 @@ async def generate_adversarial_contribution(
                         candidate_bodies[body] = body
             if len(candidate_bodies) == 1:
                 review["challenge"] = next(iter(candidate_bodies))
-        if source_id not in reference_ids:
+        reported_reference_ids = {
+            str(item)
+            for item in (review.get("model_reported_source_reference_ids") or [])
+            if isinstance(item, str)
+        }
+        if source_id not in reported_reference_ids:
             review_reference_flags.append(
-                f"Review for {source_id or 'unknown source'} omits its attributed CASE source ID."
+                f"Model-reported references for {source_id or 'unknown source'} omit its attributed CASE source ID; the canonical CASE ID was server-bound."
             )
         if not review_source_is_traceable:
             review_reference_flags.append(
@@ -927,7 +985,7 @@ async def generate_adversarial_contribution(
             review_reference_flags.append(
                 f"Review for {source_id or 'unknown source'} does not cite an R2 peer actually supplied to this role."
             )
-        invalid_ids = sorted(set(reference_ids) - ({source_id} | allowed_review_source_ids))
+        invalid_ids = sorted(reported_reference_ids - ({source_id} | allowed_review_source_ids))
         if invalid_ids:
             review_reference_flags.append(
                 f"Review for {source_id or 'unknown source'} cites source IDs not supplied to this role: "
@@ -943,39 +1001,27 @@ async def generate_adversarial_contribution(
                 f"Review for {source_id or 'unknown source'} marks an option/condition omitted "
                 "or partly preserved but provides no source-linked challenge."
             )
-        if statuses.intersection({"preserved", "partly_preserved"}):
-            evidence_peer_id = str(review.get("evidence_peer_id") or "")
-            evidence_excerpt = str(review.get("evidence_excerpt") or "").strip()
-            peer = next(
-                (item for item in peers if item.get("source") == evidence_peer_id),
-                None,
+        model_statuses = {
+            review.get("model_reported_option_status"),
+            review.get("model_reported_conditions_status"),
+        }
+        if model_statuses.intersection({"preserved", "partly_preserved", "omitted"}) and review.get("evidence_validation_status") != "verified":
+            review_reference_flags.append(
+                f"Review for {source_id or 'unknown source'} has no exact supporting excerpt "
+                "from a cited R2 peer record actually supplied to this role; model-reported "
+                "option/condition labels were downgraded to unclear."
             )
-            peer_texts = []
-            if peer:
-                for key in ("conclusion", "response"):
-                    if isinstance(peer.get(key), str):
-                        peer_texts.append(peer[key])
-                for key in ("agreements", "challenges", "risks", "position_changes"):
-                    peer_texts.extend(
-                        value for value in (peer.get(key) or []) if isinstance(value, str)
-                    )
-            if not peer or evidence_peer_id not in reference_ids or not evidence_excerpt or not any(
-                evidence_excerpt in value for value in peer_texts
-            ):
-                review_reference_flags.append(
-                    f"Review for {source_id or 'unknown source'} has no exact supporting excerpt "
-                    "from the cited R2 peer material actually supplied to this role."
-                )
         if challenge:
             if (
                 not review_source_is_traceable
                 or source_id not in reference_ids
                 or len(valid_peer_reference_ids) != 1
                 or invalid_ids
+                or review.get("evidence_validation_status") != "verified"
             ):
                 review_reference_flags.append(
                     f"Challenge for {source_id or 'unknown source'} was not promoted because it requires "
-                    "one unique CASE review and exactly one valid supplied R2 peer reference."
+                    "one unique CASE review and one server-verified exact excerpt from a supplied R2 peer."
                 )
             else:
                 canonical_source_ids = [source_id, next(iter(valid_peer_reference_ids))]
