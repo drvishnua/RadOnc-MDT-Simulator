@@ -7,6 +7,11 @@ on:
       - feature/four-round-mdt-and-performance
     paths:
       - ".github/workflows/ollama-gpu-diagnostic.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/ollama-gpu-diagnostic.yml"
 
 permissions:
   contents: read
@@ -76,15 +81,26 @@ jobs:
         run: |
           $ErrorActionPreference = "Continue"
           $ollamaExe = (Get-Command ollama.exe -ErrorAction SilentlyContinue).Source
-          if (-not $ollamaExe) { throw "ollama.exe not found on PATH." }
+          if (-not $ollamaExe) {
+            $candidates = @(
+              (Join-Path $env:LOCALAPPDATA "Programs\Ollama\ollama.exe"),
+              (Join-Path $env:ProgramFiles "Ollama\ollama.exe")
+            )
+            $ollamaExe = $candidates | Where-Object { $_ -and (Test-Path -LiteralPath $_ -PathType Leaf) } | Select-Object -First 1
+          }
+          if (-not $ollamaExe) {
+            Write-Host "OLLAMA_EXECUTABLE_NOT_FOUND"
+          } else {
 
-          Write-Host "=== OLLAMA VERSION AND PATH ==="
-          Write-Host "OLLAMA_EXE=$ollamaExe"
-          & $ollamaExe --version
-          Write-Host "=== MODEL LIST ==="
-          & $ollamaExe list
-          Write-Host "=== CURRENT MODEL PLACEMENT ==="
-          & $ollamaExe ps
+          if ($ollamaExe) {
+            Write-Host "=== OLLAMA VERSION AND PATH ==="
+            Write-Host "OLLAMA_EXE=$ollamaExe"
+            & $ollamaExe --version
+            Write-Host "=== MODEL LIST ==="
+            & $ollamaExe list
+            Write-Host "=== CURRENT MODEL PLACEMENT ==="
+            & $ollamaExe ps
+          }
 
           Write-Host "=== CUDA / OLLAMA ENVIRONMENT (PROCESS, USER, MACHINE) ==="
           foreach ($name in @("CUDA_VISIBLE_DEVICES","CUDA_PATH","CUDA_HOME","OLLAMA_LLM_LIBRARY","OLLAMA_FLASH_ATTENTION","OLLAMA_GPU_OVERHEAD","OLLAMA_NUM_GPU","GGML_CUDA_VISIBLE_DEVICES")) {
