@@ -2,6 +2,11 @@ name: Hosted CPU Four-Round MDT Validation
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - feature/four-round-mdt-and-performance
+    paths:
+      - ".github/workflows/hosted-cpu-four-round-validation.yml"
 
 permissions:
   contents: read
@@ -12,6 +17,7 @@ concurrency:
 
 jobs:
   four-round-cpu-validation:
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[run-hosted-cpu-four-round]') }}
     name: 45-role four-round validation on isolated hosted CPU runner
     runs-on: windows-latest
     timeout-minutes: 360
