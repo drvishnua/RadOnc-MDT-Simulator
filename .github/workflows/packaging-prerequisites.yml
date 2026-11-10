@@ -1,4 +1,4 @@
-name: Windows Packaging Prerequisites
+name: GitHub-hosted Windows Packaging Prerequisites
 
 on:
   pull_request:
@@ -17,7 +17,7 @@ concurrency:
 jobs:
   inspect:
     name: Read-only Windows build-tool inspection
-    runs-on: [self-hosted, Windows, X64]
+    runs-on: windows-latest
     timeout-minutes: 5
     steps:
       - name: Check out source

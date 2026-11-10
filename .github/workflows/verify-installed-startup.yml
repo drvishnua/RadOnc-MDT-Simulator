@@ -1,93 +1,19 @@
-name: Verify Installed RadOnc Startup Persistence
-
+name: "PAUSED — Installed application startup persistence"
 on:
   workflow_dispatch:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/verify-installed-startup.yml"
-      - "packaging/windows/Verify-Installed-Startup.ps1"
 
 permissions:
   contents: read
 
-concurrency:
-  group: verify-installed-radonc-startup
-  cancel-in-progress: false
-
 jobs:
-  launch:
-    name: Launch outside the Actions process tree
-    runs-on: [self-hosted, Windows, X64]
-    timeout-minutes: 5
-    outputs:
-      task_name: ${{ steps.start.outputs.task_name }}
+  notice:
+    name: "Security pause — no target-machine test executed"
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
     steps:
-      - name: Check out diagnostic script
-        uses: actions/checkout@v4
-
-      - name: Start installed app through Windows Task Scheduler
-        id: start
-        shell: powershell
+      - name: Explain temporary hosted-runner policy
         run: |
-          $ErrorActionPreference = "Stop"
-          & (Join-Path $env:GITHUB_WORKSPACE "packaging/windows/Verify-Installed-Startup.ps1")
-          if (-not $?) { throw "Installed app startup verification failed." }
-
-  verify:
-    name: Verify app survived runner job cleanup
-    needs: launch
-    runs-on: [self-hosted, Windows, X64]
-    timeout-minutes: 3
-    steps:
-      - name: Check app after the first runner job has ended
-        shell: powershell
-        run: |
-          $ErrorActionPreference = "Stop"
-          $health = $null
-          for ($attempt = 0; $attempt -lt 30; $attempt++) {
-            try {
-              $health = Invoke-RestMethod -Uri "http://127.0.0.1:8765/health" -TimeoutSec 3
-              if ($health.status -eq "ok" -and $health.application -eq "RadOnc MDT Simulator") { break }
-              $health = $null
-            } catch { $health = $null }
-            Start-Sleep -Seconds 1
-          }
-          if (-not $health) {
-            throw "RadOnc MDT was healthy in the launch job but did not persist after that runner job ended."
-          }
-
-          $agents = Invoke-RestMethod -Uri "http://127.0.0.1:8765/api/agents" -TimeoutSec 10
-          if ($agents.returned_agent_count -ne 45) { throw "Persistent app did not expose all 45 roles." }
-
-          $runtime = Invoke-RestMethod -Uri "http://127.0.0.1:8765/api/runtime" -TimeoutSec 15
-          if (-not $runtime.ollama.reachable -or -not $runtime.ollama.configured_model_installed -or $runtime.ollama.configured_model -ne "qwen3.5:4b") {
-            throw ("Persistent app model status failed: " + ($runtime.ollama | ConvertTo-Json -Compress -Depth 5))
-          }
-
-          $localAppData = [Environment]::GetFolderPath("LocalApplicationData")
-          $pidFile = Join-Path $localAppData "RadOncMDT\Logs\backend.pid"
-          if (-not (Test-Path -LiteralPath $pidFile)) { throw "Persistent app PID file is missing." }
-          $pidValue = [int](Get-Content -LiteralPath $pidFile -Raw).Trim()
-          $process = Get-CimInstance Win32_Process -Filter ("ProcessId = " + $pidValue) -ErrorAction SilentlyContinue
-          if (-not $process -or $process.ExecutablePath -notlike "*\RadOncMDT.exe") {
-            throw "The saved installed-app PID is no longer a RadOncMDT process."
-          }
-
-          Write-Host "APP_SURVIVED_RUNNER_JOB_CLEANUP=True"
-          Write-Host "POST_JOB_HEALTH_OK=True"
-          Write-Host "POST_JOB_MODEL_STATUS_OK=True"
-          Write-Host "POST_JOB_45_ROLES_OK=True"
-          Write-Host ("PERSISTENT_APP_PID={0}" -f $pidValue)
-          Write-Host "No MDT run, model inference, patient creation, or database write was performed."
-
-      - name: Remove temporary verification task (do not stop the app)
-        if: always() && needs.launch.outputs.task_name != ''
-        shell: powershell
-        env:
-          TASK_NAME: ${{ needs.launch.outputs.task_name }}
-        run: |
-          $ErrorActionPreference = "Continue"
-          Unregister-ScheduledTask -TaskName $env:TASK_NAME -Confirm:$false -ErrorAction SilentlyContinue
-          Write-Host "Temporary scheduled-task definition removed. The running RadOnc process was not stopped."
+          echo "This workflow is intentionally paused while the repository is public."
+          echo "This workflow tested a persistent installation on the target laptop across runner jobs. It cannot be meaningfully reproduced on a fresh hosted VM."
+          echo "No laptop installation, local source sync, Ollama inference, MDT stress run, or GPU measurement was performed."
+          echo "This notice is not a functional test pass. Use the standard hosted CI workflows for code validation."

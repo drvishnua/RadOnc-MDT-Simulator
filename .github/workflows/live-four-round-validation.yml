@@ -1,80 +1,19 @@
-name: Live Four-Round Synthetic Validation
-
+name: "PAUSED — Live four-round local validation"
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - feature/four-round-mdt-and-performance
-    paths:
-      - "backend/scripts/live_four_round_validation.py"
 
 permissions:
   contents: read
 
-concurrency:
-  group: live-four-round-validation
-  cancel-in-progress: false
-
 jobs:
-  live-validation:
-    name: Run four rounds on local Ollama and RTX 4060
-    runs-on: [self-hosted, Windows, X64]
-    timeout-minutes: 120
-    env:
-      OLLAMA_MODEL: qwen3.5:4b
-      RADONC_AGENT_CONCURRENCY: "1"
+  notice:
+    name: "Security pause — no target-machine test executed"
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
     steps:
-      - name: Check out development branch
-        uses: actions/checkout@v4
-      - name: Select installed Python 3.11 or newer
-        shell: powershell
+      - name: Explain temporary hosted-runner policy
         run: |
-          $ErrorActionPreference = "Continue"
-          $launcher = Get-Command py -ErrorAction SilentlyContinue
-          $selected = $null
-          if ($launcher) {
-            foreach ($version in @("3.13", "3.12", "3.11")) {
-              $candidate = & py "-$version" -c "import sys; print(sys.executable)" 2>$null
-              if ($LASTEXITCODE -eq 0 -and $candidate) { $selected = [string]($candidate | Select-Object -Last 1); break }
-            }
-          }
-          if (-not $selected) {
-            $pythonCommand = Get-Command python -ErrorAction SilentlyContinue
-            if ($pythonCommand) { $candidate = & python -c "import sys; print(sys.executable)" 2>$null; if ($LASTEXITCODE -eq 0 -and $candidate) { $selected = [string]($candidate | Select-Object -Last 1) } }
-          }
-          if (-not $selected) { throw "No usable Python 3.11+ installation found." }
-          $versionText = & $selected -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"
-          if ([version]$versionText -lt [version]"3.11") { throw "Python 3.11+ required; found $versionText." }
-          "PYTHON_EXE=$selected" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-      - name: Create isolated validation environment and install backend dependencies
-        shell: powershell
-        run: |
-          $ErrorActionPreference = "Stop"
-          $venvPath = Join-Path $env:RUNNER_TEMP "radonc-live-validation-venv"
-          if (Test-Path $venvPath) { Remove-Item -Path $venvPath -Recurse -Force }
-          & $env:PYTHON_EXE -m venv $venvPath
-          if ($LASTEXITCODE -ne 0) { throw "Could not create the isolated live-validation virtual environment." }
-          $venvPython = Join-Path $venvPath "Scripts\python.exe"
-          & $venvPython -m pip install --disable-pip-version-check -r (Join-Path $env:GITHUB_WORKSPACE "backend\requirements.txt")
-          if ($LASTEXITCODE -ne 0) { throw "Could not install live-validation dependencies." }
-          "PYTHON_EXE=$venvPython" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-      - name: Verify Ollama and GPU before starting
-        shell: powershell
-        run: |
-          & $env:PYTHON_EXE -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:11434/api/version', timeout=5).read().decode())"
-          if ($LASTEXITCODE -ne 0) { throw "Ollama is not reachable." }
-          nvidia-smi
-          Write-Host "Model: $env:OLLAMA_MODEL; concurrency: $env:RADONC_AGENT_CONCURRENCY"
-      - name: Execute four-round baseline validation
-        shell: powershell
-        run: |
-          & $env:PYTHON_EXE (Join-Path $env:GITHUB_WORKSPACE "backend/scripts/live_four_round_validation.py")
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Upload baseline validation artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: radonc-live-four-round-validation
-          path: backend/validation_artifacts/live_four_round_validation.json
-          if-no-files-found: warn
-          retention-days: 14
+          echo "This workflow is intentionally paused while the repository is public."
+          echo "Live validation previously used local Ollama and the laptop GPU. It is not being represented as a hosted or GPU-verified run."
+          echo "No laptop installation, local source sync, Ollama inference, MDT stress run, or GPU measurement was performed."
+          echo "This notice is not a functional test pass. Use the standard hosted CI workflows for code validation."
