@@ -58,6 +58,12 @@ jobs:
           python -m pip install -r backend/requirements.txt "pyinstaller>=6.11,<7"
           if ($LASTEXITCODE -ne 0) { throw "Backend/PyInstaller dependencies failed." }
 
+      - name: Validate AI bootstrap syntax and safety guards
+        shell: powershell
+        run: |
+          & (Join-Path $env:GITHUB_WORKSPACE "packaging/windows/Test-AiBootstrap.ps1")
+          if ($LASTEXITCODE -ne 0) { throw "AI bootstrap static acceptance failed." }
+
       - name: Build packaged application
         shell: powershell
         run: |
