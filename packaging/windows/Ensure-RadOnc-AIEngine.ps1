@@ -153,6 +153,10 @@ function Install-RadOncPortableOllama {
     if (Test-Path -LiteralPath $ollamaExe -PathType Leaf) {
         return $ollamaExe
     }
+    if (Test-Path -LiteralPath $engineRoot -PathType Container) {
+        $nestedExisting = Get-ChildItem -LiteralPath $engineRoot -Filter "ollama.exe" -File -Recurse | Select-Object -First 1
+        if ($nestedExisting) { return $nestedExisting.FullName }
+    }
 
     $freeBytes = Get-RadOncFreeBytes -Path $ProductDataRoot
     $requiredBytes = 8GB
@@ -268,9 +272,10 @@ function Ensure-RadOncAIEngine {
             Start-RadOncOllamaServer -Executable $ollamaExecutable -BaseUrl $baseUrl -WorkingDirectory $engineDirectory -ModelDirectory $modelDirectory -LogDirectory $LogDirectory -ManagedRuntime | Out-Null
             $version = Get-RadOncOllamaVersion -BaseUrl $baseUrl
         } else {
-            $portableExecutable = Join-Path $productDataRoot "AIEngine\Ollama\ollama.exe"
-            if (Test-Path -LiteralPath $portableExecutable -PathType Leaf) {
-                $ollamaExecutable = $portableExecutable
+            $portableRoot = Join-Path $productDataRoot "AIEngine\Ollama"
+            $portableExecutable = Get-ChildItem -LiteralPath $portableRoot -Filter "ollama.exe" -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($portableExecutable) {
+                $ollamaExecutable = $portableExecutable.FullName
             }
         }
     }
@@ -301,6 +306,10 @@ function Ensure-RadOncAIEngine {
     }
 
     Write-Host ("AI engine ready: Ollama {0}; model {1}; endpoint {2}" -f $version.version, $RadOncModelName, $baseUrl)
-    Write-Host ("Model files: {0}" -f $modelDirectory)
+    if ($baseUrl -eq $RadOncBundledOllamaUrl) {
+        Write-Host ("Model files: {0}" -f $modelDirectory)
+    } else {
+        Write-Host "Model files remain in the existing Ollama-configured model store."
+    }
     return $baseUrl
 }
