@@ -13,7 +13,7 @@ React + Vite browser interface for the local RadOnc MDT Simulator backend.
 From the repository root:
 
     cd frontend
-    npm install
+    npm ci
     npm run dev
 
 Open http://127.0.0.1:5173.
