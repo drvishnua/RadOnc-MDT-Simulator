@@ -2,6 +2,7 @@ from app.round_schemas import FinalMDTReport
 from app.schemas import SyntheticCase
 from app.services.chair_report_quality import (
     SECTION_LIMITS,
+    build_recorded_agreements,
     build_source_opinion_review_coverage,
     ensure_chair_report_completeness,
     validate_consensus_points,
@@ -677,8 +678,9 @@ def test_final_chair_rebuilds_source_opinion_coverage_from_saved_r3_reviews():
             "conditions_status": conditions,
             "review_basis": "Representation comparison only.",
             "source_reference_ids": [source_id, f"R2:{peer_id}"],
-            "evidence_peer_id": "",
-            "evidence_excerpt": "",
+            "evidence_peer_id": f"R2:{peer_id}",
+            "evidence_excerpt": "Exact peer excerpt retained by test fixture.",
+            "evidence_validation_status": "verified",
             "challenge": "",
         }
 
@@ -766,6 +768,33 @@ def test_final_chair_rebuilds_source_opinion_coverage_from_saved_r3_reviews():
     assert "R2 duplicate-only source-reference flag" in flags
     assert "Round 2 source-reference detail (1 distinct role(s): RO-01)" in flags
     assert "unanimously" not in unresolved.casefold()
+
+def test_recorded_agreements_quarantine_overbroad_claims_and_unsupplied_sources():
+    rows = [{
+        "agent_id": "RO-01",
+        "agent_name": "Radiation Oncologist",
+        "status": "completed",
+        "result": {
+            "position": "insufficient_information",
+            "source_peer_ids": ["MO-01"],
+            "agreements": [
+                "All peers agree that a final sequence cannot be selected yet.",
+                "R1:RO-01 through R1:SV-02 agree that staging is incomplete.",
+                "R1:MO-01 | R1:RO-03",
+                "R1:MO-01 agrees that the source record does not establish a final sequence.",
+            ],
+        },
+    }]
+    flags = []
+    agreements = build_recorded_agreements(rows, [], integrity_flags=flags)
+
+    assert len(agreements) == 1
+    assert "R1:MO-01 agrees" in agreements[0]
+    joined = " ".join(flags).casefold()
+    assert "overbroad peer/consensus assertion withheld" in joined
+    assert "broad role range" in joined
+    assert "only source identifiers" in joined
+
 
 def test_source_excerpt_id_conflicts_are_flagged_even_when_one_review_has_an_invalid_peer_reference():
     source_one = "Surgical service note records a conditional surgical assessment."
