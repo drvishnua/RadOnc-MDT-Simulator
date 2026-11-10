@@ -35,13 +35,17 @@ from app.services.chair_report_quality import validate_consensus_points
 
 ARTIFACT_DIR = BACKEND_DIR / "validation_artifacts"
 ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
-run_store.DB_PATH = ARTIFACT_DIR / "live_four_round_validation.sqlite3"
-
 # Keep one bounded retry per stage; no unbounded local-model generation loop.
 MAX_STAGE_ATTEMPTS = 2
+CPU_ONLY_VALIDATION = os.environ.get("RADONC_VALIDATION_CPU_ONLY", "").strip() == "1"
+ARTIFACT_NAME = "live_four_round_hosted_cpu_validation.json" if CPU_ONLY_VALIDATION else "live_four_round_validation.json"
+DATABASE_NAME = "live_four_round_hosted_cpu_validation.sqlite3" if CPU_ONLY_VALIDATION else "live_four_round_validation.sqlite3"
+run_store.DB_PATH = ARTIFACT_DIR / DATABASE_NAME
 
 
 def gpu_snapshot() -> str:
+    if CPU_ONLY_VALIDATION:
+        return "not measured: GitHub-hosted CPU-only validation; no NVIDIA GPU claim"
     try:
         return subprocess.check_output(
             [
@@ -83,7 +87,22 @@ async def record_ollama_process_snapshot(telemetry: dict, label: str) -> None:
 
 
 async def sample_gpu_during_run(stop_event: asyncio.Event, telemetry: dict) -> None:
-    """Sample NVIDIA utilisation/VRAM during inference; poll Ollama allocation every 10s."""
+    """Sample GPU telemetry locally, or Ollama process telemetry on a hosted CPU runner."""
+    if CPU_ONLY_VALIDATION:
+        while not stop_event.is_set():
+            captured_at = datetime.now(timezone.utc).isoformat()
+            snapshot = await asyncio.to_thread(ollama_process_snapshot)
+            telemetry["cpu_samples"].append({
+                "captured_at": captured_at,
+                "ollama_process": snapshot,
+                "gpu_measured": False,
+            })
+            try:
+                await asyncio.wait_for(stop_event.wait(), timeout=10.0)
+            except asyncio.TimeoutError:
+                pass
+        return
+
     last_ollama_snapshot = 0.0
     query = [
         "nvidia-smi",
@@ -235,15 +254,19 @@ async def main() -> int:
         "round_4_attempts": [],
     }
     gpu_telemetry = {
-        "sample_interval_seconds": 1.0,
+        "sample_interval_seconds": 10.0 if CPU_ONLY_VALIDATION else 1.0,
         "samples": [],
+        "cpu_samples": [],
         "sampling_errors": [],
         "ollama_process_snapshots": [],
+        "gpu_measured": not CPU_ONLY_VALIDATION,
     }
     stop_gpu_sampler = asyncio.Event()
     gpu_sampler_task: asyncio.Task | None = None
     result_payload: dict = {
-        "validation_type": "live_four_round_synthetic_integration",
+        "validation_type": "live_four_round_hosted_cpu_synthetic_integration" if CPU_ONLY_VALIDATION else "live_four_round_synthetic_integration",
+        "execution_mode": "github_hosted_cpu_only" if CPU_ONLY_VALIDATION else "local_gpu_or_cpu",
+        "gpu_measured": not CPU_ONLY_VALIDATION,
         "synthetic_only": True,
         "started_at": started_at,
         "host_platform": platform.platform(),
@@ -526,15 +549,24 @@ async def main() -> int:
         if gpu_sampler_task is not None:
             await gpu_sampler_task
         await record_ollama_process_snapshot(gpu_telemetry, "after_validation")
-        gpu_telemetry["summary"] = summarize_gpu_telemetry(
-            gpu_telemetry["samples"],
-            gpu_telemetry["ollama_process_snapshots"],
-        )
+        if CPU_ONLY_VALIDATION:
+            gpu_telemetry["summary"] = {
+                "gpu_measured": False,
+                "execution_mode": "github_hosted_cpu_only",
+                "ollama_cpu_process_samples": len(gpu_telemetry["cpu_samples"]),
+                "ollama_process_snapshots": len(gpu_telemetry["ollama_process_snapshots"]),
+                "note": "No NVIDIA telemetry was collected or inferred from model allocation."
+            }
+        else:
+            gpu_telemetry["summary"] = summarize_gpu_telemetry(
+                gpu_telemetry["samples"],
+                gpu_telemetry["ollama_process_snapshots"],
+            )
         result_payload["finished_at"] = datetime.now(timezone.utc).isoformat()
         result_payload["total_wall_seconds"] = round(time.perf_counter() - started_all, 2)
         result_payload["gpu_after"] = gpu_snapshot()
         result_payload["gpu_telemetry"] = gpu_telemetry
-        artifact_path = ARTIFACT_DIR / "live_four_round_validation.json"
+        artifact_path = ARTIFACT_DIR / ARTIFACT_NAME
         artifact_path.write_text(
             json.dumps(result_payload, ensure_ascii=False, indent=2),
             encoding="utf-8",
