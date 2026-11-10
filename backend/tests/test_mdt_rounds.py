@@ -1718,12 +1718,12 @@ print(json.dumps({
     }
 
 
-def test_r3_uses_a_larger_context_window_without_changing_other_round_defaults():
+def test_r2_and_r3_use_larger_context_without_changing_chair_default():
     from app.round_schemas import AdversarialContributionDraft, FinalReportDraft, RoundContributionDraft
     from app.services.mdt_generation import _context_window_for_schema
 
+    assert _context_window_for_schema(RoundContributionDraft) == 6144
     assert _context_window_for_schema(AdversarialContributionDraft) == 6144
-    assert _context_window_for_schema(RoundContributionDraft) == 4096
     assert _context_window_for_schema(FinalReportDraft) == 4096
 
 def test_r3_does_not_promote_challenges_using_an_unsupplied_peer_id(monkeypatch):
@@ -1884,20 +1884,3 @@ def test_r3_uses_server_identified_opinion_ids_and_flags_duplicate_or_missing_re
     ]
     assert not any("duplicate review challenge must not be promoted" in item for item in result.substantive_challenges)
     assert result.source_peer_ids == ["MO-01"]
-
-
-def test_r2_and_r3_structured_generations_have_sufficient_context_window():
-    from app.round_schemas import (
-        AdversarialContributionDraft,
-        FinalReportDraft,
-        RoundContributionDraft,
-    )
-    from app.services.mdt_generation import _context_window_for_schema
-
-    # R2's 4,096-token context was exhausted by a 3,666-token prompt before
-    # the requested structured response could finish. R3 already uses 6,144.
-    assert _context_window_for_schema(RoundContributionDraft) == 6144
-    assert _context_window_for_schema(AdversarialContributionDraft) == 6144
-
-    # Keep the Chair's existing context unchanged; this patch is R2/R3-only.
-    assert _context_window_for_schema(FinalReportDraft) == 4096
