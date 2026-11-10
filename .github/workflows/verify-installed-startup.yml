@@ -22,7 +22,7 @@ jobs:
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 5
     outputs:
-      task_name: \${{ steps.start.outputs.task_name }}
+      task_name: ${{ steps.start.outputs.task_name }}
     steps:
       - name: Check out diagnostic script
         uses: actions/checkout@v4
@@ -86,7 +86,7 @@ jobs:
         if: always() && needs.launch.outputs.task_name != ''
         shell: powershell
         env:
-          TASK_NAME: \${{ needs.launch.outputs.task_name }}
+          TASK_NAME: ${{ needs.launch.outputs.task_name }}
         run: |
           $ErrorActionPreference = "Continue"
           Unregister-ScheduledTask -TaskName $env:TASK_NAME -Confirm:$false -ErrorAction SilentlyContinue
