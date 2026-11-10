@@ -3,8 +3,9 @@
 **Release candidate verification date:** 10 November 2026  
 **Repository:** `drvishnua/RadOnc-MDT-Simulator`  
 **Development branch:** `feature/four-round-mdt-and-performance`  
-**Latest verified repository head:** `d6734b285d3fdab0f72a65c2389fe121ccf4f0ef`  
-**Windows installer artifact built from this head:** workflow run `42775990228`, artifact `13743792835`  
+**Latest audited branch head:** `691c26a36a1b4d8dba89f2e9025c3ae87dd91335`  
+**Application-code snapshot:** `d6734b285d3fdab0f72a65c2389fe121ccf4f0ef` (the two following commits update release documentation only)  
+**Windows installer artifact built from branch head:** workflow run `42776826416`, artifact `13744775650`  
 **PR #1:** open, draft, unmerged; targets `main` at `39a356b8eb09399aa2da1b9b9085965999f5105a`.
 
 Passing software and runtime tests do not establish clinical accuracy, evidence sufficiency or guideline concordance. This section keeps installer acceptance, laptop startup, active GPU inference, full MDT validation and clinical review separate.
@@ -13,29 +14,29 @@ Passing software and runtime tests do not establish clinical accuracy, evidence 
 
 | Area | Verified state | Evidence and limitation |
 |---|---|---|
-| Backend CI | **177 passed, 1 existing deprecation warning** | [Run 42775990417](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42775990417) |
-| Frontend CI | **32 passed**; TypeScript and Vite production build passed | [Run 42775990226](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42775990226) |
-| Windows AI-bootstrap tests | PowerShell parsing, static safety checks, mocked existing-model reuse and mocked portable fallback passed | [Installer run 42775990228](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42775990228); portable download/model-pull branch is still mocked, not a real clean-machine download |
-| Hosted Windows installer | PyInstaller package and Inno Setup per-user Setup.exe built; install, health, GUI/assets, 45 roles, registry save and uninstall/data-preservation smoke test passed | [Run 42775990228](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42775990228) |
-| Laptop packaging prerequisites | Read-only inspection passed | [Run 42775990330](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42775990330); Python 3.14.3 present; no packages or existing services changed |
-| Laptop Ollama/GPU discovery | Passed | [Run 42775990178](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42775990178); Ollama 0.40.15, `qwen3.5:4b` present (3,324,173,934 bytes), NVIDIA RTX 4060 Laptop GPU, driver 591.74, CUDA 13.1 / compute 8.9 discovered |
-| Laptop installed application | Healthy and persistent across separate Actions jobs | [Run 42775990229](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42775990229); health endpoint, model status and 45 roles passed before and after the first runner job ended. The app was already healthy at the start of this check; no second server or scheduled task was created |
-| One-agent live inference | Passed twice as two isolated one-request smoke checks while finalising the telemetry script; no full MDT run | Latest [run 42775990287](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42775990287); direct `POST /api/agents/RO-01/assess`, round 1; no patient/run registration endpoint called |
+| Backend CI | **177 passed, 1 existing deprecation warning** | [Run 42776826722](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42776826722) |
+| Frontend CI | **32 passed**; TypeScript and Vite production build passed | [Run 42776826405](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42776826405) |
+| Windows AI-bootstrap tests | PowerShell parsing, static safety checks, mocked existing-model reuse and mocked portable fallback passed | [Installer run 42776826416](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42776826416); portable download/model-pull branch is still mocked, not a real clean-machine download |
+| Hosted Windows installer | PyInstaller package and Inno Setup per-user Setup.exe built; install, health, GUI/assets, 45 roles, registry save and uninstall/data-preservation smoke test passed | [Run 42776826416](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42776826416) |
+| Laptop packaging prerequisites | Read-only inspection passed | [Run 42776826426](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42776826426); Python 3.14.3 present; no packages or existing services changed |
+| Laptop Ollama/GPU discovery | Passed | [Run 42776826404](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42776826404); Ollama 0.40.15, `qwen3.5:4b` present (3,324,173,934 bytes), NVIDIA RTX 4060 Laptop GPU, driver 591.74, CUDA 13.1 / compute 8.9 discovered |
+| Laptop installed application | Healthy and persistent across separate Actions jobs | [Run 42776826422](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42776826422); health endpoint, model status and 45 roles passed before and after the first runner job ended. The app was already healthy at the start of this check (`APP_ALREADY_HEALTHY=True`); no fresh install or cold-start of the latest Setup.exe was performed, and no second server or scheduled task was created |
+| One-agent live inference | Passed twice as two isolated one-request smoke checks while finalising the telemetry script; no full MDT run | Latest [run 42776826436](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42776826436); direct `POST /api/agents/RO-01/assess`, round 1; no patient/run registration endpoint called |
 | Active GPU attribution | **Verified during the latest inference** | 10 of 11 `nvidia-smi` samples had non-zero GPU utilisation; peak 92%; VRAM 3,815 / 8,188 MiB; `ollama ps` reported `qwen3.5:4b`, 3.1 GB, **100% GPU**, context 4096 |
 | Patient-data integrity during smoke inference | Passed | Installed SQLite SHA-256 was unchanged before/after; `NO_MDT_RUN_CREATED=True` |
-| Latest Windows Setup.exe | Built and independently checksum-verified | Artifact ID `13743792835`; [download via run 42775990228](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42775990228); ZIP digest `sha256:263a7c43351d70aff6cead9697d94880f96015a8729a4296eef4b6d7fdedef40`; Setup.exe size **17,181,752 bytes** |
-| Setup.exe SHA-256 | Independently checked against the artifact's `SHA256SUMS.txt` | `9188fdb5d6d5678a677f55c2664f7310a69e0722cd12294090e80d3b91571034` |
+| Latest Windows Setup.exe | Built and independently checksum-verified | Artifact ID `13744775650`; [download via run 42776826416](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42776826416); artifact ZIP size **16,630,472 bytes**, ZIP SHA-256 `698539882e59f425c3fbc49d03b2bb3311d046d47401e3e131732ddc8106d1b1`; Setup.exe size **17,180,399 bytes**; artifact expires **24 November 2026** |
+| Setup.exe SHA-256 | Independently checked against the artifact's `SHA256SUMS.txt` | `074d6f04b0bd41e706afa1b64735dc5495e7156e7cc5775afdababb6339346a4` |
 | Full 136-contribution MDT | **Not run on this release head** | Historical MDT-006 audit findings remain open; a passing one-agent smoke test is not a four-round validation |
 | Evidence retrieval / clinical validation | Not implemented/verified | No independent guideline retrieval, source verification or qualified clinical review |
 
 ### Target laptop runtime details
 
 - Windows x64, NVIDIA GeForce RTX 4060 Laptop GPU (8,188 MiB VRAM), driver 591.74.
-- Installed Ollama 0.40.15; configured model `qwen3.5:4b` is present in the user's existing model store. The release launcher reused that installation; it did not install a second Ollama runtime or download another model on this laptop.
+- Installed Ollama 0.40.15 and the configured `qwen3.5:4b` model were already present and reachable during the target-laptop checks. Those checks did not install the current Setup.exe, run a fresh first-launch bootstrap, or download a second runtime/model.
 - Ollama's server log identifies the RTX 4060 as a discrete CUDA device (compute 8.9, CUDA 13.1). At idle, the read-only diagnostic sampled 0% utilisation, which is expected when no generation is active.
 - During the latest one-agent inference, Ollama explicitly reported 100% GPU placement at 4096 context. `nvidia-smi` showed non-zero utilisation in 10/11 samples and peaked at 92%, with VRAM usage at 3,815 MiB of 8,188 MiB.
-- The latest request took 5.17 seconds. An earlier one-request smoke check on the immediately preceding workflow version took 11.74 seconds. These are individual smoke timings, not a benchmark or a full-run runtime estimate.
-- The app was already healthy at the start of the persistence check and remained healthy in a subsequent job. The health, runtime and 45-role API checks succeeded; the backend PID still referred to the installed `RadOncMDT.exe`.
+- The latest request took 5.19 seconds. An earlier one-request smoke check on the immediately preceding workflow version took 11.74 seconds. These are individual smoke timings, not a benchmark or a full-run runtime estimate.
+- The app was already healthy at the start of the persistence check (`APP_ALREADY_HEALTHY=True`) and remained healthy in the subsequent job. Health, runtime and 45-role API checks succeeded. This verifies process persistence across jobs, not a fresh launch or the current Setup.exe install on the laptop.
 
 ### One-agent output quality review
 
