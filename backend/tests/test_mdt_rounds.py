@@ -503,6 +503,9 @@ def test_chair_source_opinion_coverage_is_dynamic_and_counts_distinct_roles():
             "option_status": option_status,
             "conditions_status": conditions_status,
             "source_reference_ids": [source_id, f"R2:{peer_id}"],
+            "evidence_peer_id": f"R2:{peer_id}",
+            "evidence_excerpt": "Exact peer excerpt retained by test fixture.",
+            "evidence_validation_status": "verified",
         }
 
     round3[0]["result"]["source_peer_ids"] = ["RO-10"]
@@ -1184,6 +1187,8 @@ def test_r3_generation_recovers_only_explicitly_source_linked_review_challenge(m
                     conditions_status="omitted",
                     review_basis="The supplied peer record does not preserve the attributed option or its prerequisite.",
                     source_reference_ids=["CASE:case_summary#1", "R2:MO-01"],
+                    evidence_peer_id="R2:MO-01",
+                    evidence_excerpt="The supplied peer record does not preserve the surgical prerequisite.",
                     challenge="",
                 ),
                 SourceOpinionReview(
