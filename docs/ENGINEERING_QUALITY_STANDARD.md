@@ -126,46 +126,68 @@ These controls remain stricter than ordinary application correctness:
 
 ## 8. Current baseline findings and open gaps
 
-This is an evidence-based engineering status review, not a complete penetration test, clinical validation or exhaustive code audit.
+This status is evidence-based but is not a complete penetration test, legal opinion, clinical validation or exhaustive code audit. Every result below is tied to the exact development SHA.
 
-**Functional/application-code baseline:** `5b8159df0b0bb6ac0bedc95046d0c87784420591`  
-**Documentation-only updates:** README and implementation status were refreshed after this code baseline; they do not change the application runtime.  
-**Branch:** `feature/four-round-mdt-and-performance`; PR #1 remains open/draft/unmerged.  
-**Base main:** `39a356b8eb09399aa2da1b9b9085965999f5105a` (unchanged).
+**Current code HEAD:** `b47ca1fb2acdc6957e26f148bc6b55a5890ee91f`  
+**Branch:** `feature/four-round-mdt-and-performance`  
+**PR #1:** open, draft, unmerged; targets `main`.  
+**Base main:** `39a356b8eb09399aa2da1b9b9085965999f5105a` (unchanged).  
+**Latest functional commits:** `4e8c3cc` (negated treatment-status qualifier and structured R3 peer-reference recovery), `b47ca1f` (require the exact CASE source ID alongside the structured R2 peer reference).
 
-**Verification passed on current snapshot `aaf8fb9`:**
-- Backend: 191 passed, 1 existing Starlette/httpx TestClient deprecation warning ([run 42910431942](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42910431942)).
-- Frontend: 32 passed; npm ci, TypeScript and Vite 7.3.8 production build passed ([run 42910431710](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42910431710)).
-- Browser E2E: patient registry lifecycle and persisted R1–R4 dashboard assertions passed in isolated headless Edge with a disposable database and no Ollama calls ([run 42910431865](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42910431865)).
-- Security: CodeQL Python and JavaScript/TypeScript, Gitleaks full-history scan, pip-audit and npm audit all passed; zero known Python/Node dependency vulnerabilities were reported ([run 42910431926](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42910431926)).
-- Windows packaging-prerequisite inspection passed ([run 42910431949](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42910431949)).
-- Latest Windows installer exact-SHA build/install/uninstall and clean-hosted Ollama/model bootstrap passed ([run 42910431940](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42910431940)); artifact `13806987082`. User-data preservation, portable Ollama 0.40.14, qwen3.5:4b download/tag verification, CPU inference, installed-app health and 45-role API check passed. ZIP SHA-256 `cc00301aa95b65cc94e3a9a9c27681d8f08a47997142d3802d4e81e5b2e7fd0a`; Setup.exe SHA-256 `9a075c56a9e93d00bd6e4476aff4864a19dd89f05390a9483ce43315e76b97e2`.
-- Full live 45-role R1–R4 validation is **in progress** on this exact SHA ([run 42910414046](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42910414046)). No live result has yet been inspected. The run is CPU-only and uses concurrency 1. Its artifact is configured to include JSON, SQLite and a manifest binding source SHA, Actions run ID, Ollama version and exact qwen3.5:4b digest/size.
-- Two earlier manifest-trigger attempts failed before model execution because the digest-validation block was truncated during file editing. They did not invoke Ollama or generate MDT output. The corrected workflow was rebuilt from the clean baseline and the current run was accepted.
+### Verification on exact HEAD `b47ca1fb2acdc6957e26f148bc6b55a5890ee91f`
 
-**Open gaps and current priority:**
+- **Backend:** 206 passed, 1 existing Starlette/httpx TestClient deprecation warning ([run 43113102935](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43113102935)).
+- **Frontend:** passed case-draft persistence tests, launcher syntax/Node compatibility checks, TypeScript check and production build ([run 43113102929](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43113102929)).
+- **Browser E2E:** passed isolated patient-registry and saved-MDT-dashboard browser workflow ([run 43113102914](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43113102914)).
+- **Security:** CodeQL Python and JavaScript/TypeScript, full-history Gitleaks, Python dependency audit and Node dependency audit passed ([run 43113102923](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43113102923)). This is not a penetration test or a guarantee of no vulnerabilities.
+- **Windows packaging prerequisites:** read-only tool inspection passed ([run 43113102963](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43113102963)).
+- **Windows installer build and clean-host live validation:** workflow [run 43113102981](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43113102981) had not yet started at the time of this status update. No installer result is claimed for HEAD `b47ca1f`.
+- **Latest completed clean-host model result on preceding HEAD `71fdefb`:** installer build and clean-host installation/runtime provisioning passed; Ollama 0.40.14 and `qwen3.5:4b` were downloaded and verified, real CPU inference succeeded, the installed app started and 45 role profiles were returned. The six-call live R2/R3 quality gate **failed** ([run 43074475749](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43074475749), clean-host job 130711471545, report artifact 13882612751). The report identified a deterministic false-positive for the negated phrase “does not imply … contraindicated”, R3 misclassification of source opinions and unresolved peer attribution. The next two commits address narrowly scoped failure modes; they do not prove that the live-model quality gate now passes.
+- **CPU/GPU:** the clean-host run on `71fdefb` used CPU inference and reported zero VRAM. This does not verify the target laptop RTX 4060. No current-HEAD active GPU utilisation, Ollama GPU offload or full-run performance claim is made.
+- **Full MDT:** no new 136-contribution four-round run has been started on this HEAD. A full run is a separately authorised milestone and must not be inferred from unit tests or a six-call sample.
+- **Clinical/evidence:** no guideline retrieval is connected; no guideline concordance, clinical accuracy or qualified clinical validation is claimed.
+
+### Changes validated by the latest backend suite
+
+- The deterministic treatment-status qualifier now recognises explicit “does not imply/mean” negation. A contrastive regression ensures a separate later positive assertion (for example, after “however”) is still flagged.
+- R3 can select a peer from a unique structured R2 reference only when the same structured reference list also contains the exact server-identified CASE source ID and the R2 peer is in the actual supplied-peer allowlist. The server still binds the excerpt to that peer's unique structured response for the same CASE opinion. Ambiguous, invalid or unpaired references remain unverified.
+- R3 instructions now explicitly require inspection of the source-specific `source_opinion_responses` entry rather than relying only on a peer's general conclusion/response.
+- Regression coverage includes the missing CASE-link failure path. These checks establish provenance/representation handling, not the clinical correctness of the quoted statements.
+
+### Open gaps and release risks
 
 | Priority | Gap | Why it matters | Required closure evidence |
 |---|---|---|---|
-| P0 | No fresh 136-contribution live four-round audit on current code | Historical MDT-006 found 134 hard failures and 92 major findings on an earlier snapshot. Prompt/schema corrections have unit-test and CI coverage but need live-model validation. | Explicitly authorised full run on an immutable code/model/prompt snapshot; inspect all 136 saved contributions, R3 provenance challenges, Chair synthesis, failures/retries and the complete rubric. Do not downgrade findings. |
-| P0 | Clinical reasoning/evidence validation is not established | Schema-valid model output, successful inference and deterministic consistency checks do not prove clinical correctness. Evidence retrieval and source verification remain unimplemented. | Authoritative source retrieval with provenance plus independent qualified clinical review against human-authored rubrics. No guideline/clinical-accuracy claim before this. |
-| P1 | Backend dependency versions are not fully locked | Backend requirements and test-only dependencies still use version ranges, so transitive resolution can vary. | Add a reviewed, fully resolved backend lock/constraints strategy; build/test/audit from it on clean runners. |
-| P1 | Branch protection is disabled | Required checks are not enforced by repository branch rules. | Obtain repository-owner authorisation, then configure required status checks and review rules. No branch settings have been modified. |
-| P1 | Installer is unsigned | Windows cannot authenticate publisher identity; SmartScreen may show an unknown-publisher warning. | Obtain appropriate signing certificate, sign and timestamp the installer, then verify Authenticode signature. Do not claim signed/trusted before that. |
-| P1 | Backup/restore and broader lifecycle acceptance remain incomplete | Installer uninstall preservation and browser CRUD tests do not prove backup recovery, schema rollback, power-loss resilience or all upgrade paths. | Isolated backup/restore, migration from prior supported schema, crash/restart and upgrade/rollback tests, with database integrity and hashes checked. |
-| P2 | Lint/format and coverage thresholds are not yet mandatory CI gates | Passing tests and builds do not measure all maintainability or untested-path risks. | Add Python/TypeScript lint/format and coverage reports with reviewed thresholds; do not game coverage by adding low-value tests. |
-| P2 | Current-head full-run GPU/performance evidence is not available | A one-agent smoke or model residency does not establish full-run GPU attribution, thermal behaviour or throughput. | Separately authorised, controlled local run with sampled `nvidia-smi`, Ollama offload/logs, concurrency=1, latency and temperature/VRAM evidence. Do not disturb the user's running installation. |
+| P0 | Latest live R2/R3 quality gate has not passed on a current checkpoint | The prior clean-host gate on `71fdefb` failed. Prompt/schema and deterministic corrections now have CI coverage, but live model behaviour must be measured again. | Run the bounded six-call current-HEAD clean-host test, retrieve the report, inspect every role/source opinion, and pass all provenance and quality gates without weakening validators. |
+| P0 | No fresh 136-contribution live four-round audit on current code | Historical MDT-006 found 134 hard failures and 92 major findings on an earlier snapshot. | Separately authorised immutable-SHA/model run; inspect all 136 records, all failures/retries, R3 provenance, R4 Chair report and an independently authored rubric. |
+| P0 | Clinical reasoning/evidence validation is not established | Schema-valid model output and traceable quotations do not prove clinical correctness. | Authoritative evidence retrieval with provenance and independent qualified clinical review against human-authored rubrics. No clinical-accuracy or guideline-compliance claims before this. |
+| P1 | Real patient data cannot be technically ruled out | The UI instructs users to enter fictional cases only, but free-text data is not reliably classified as synthetic or de-identified. SQLite persists user-entered case data locally. | Keep external/hospital use blocked; add explicit synthetic-data attestation and misuse controls; assess data minimisation, encryption, retention, access and breach response with counsel. Do not claim that a PHI detector can guarantee detection. |
+| P1 | Local API has no application authentication | The packaged server binds to loopback and CORS is restricted, but CORS is not authentication and another local process can call a loopback API. | Threat model, hostile-local-origin/CSRF/DNS-rebinding tests as applicable, and a reviewed per-install request-authentication or equivalent local trust mechanism before multi-user/network deployment. |
+| P1 | Database encryption and backup/restore are not verified | The SQLite database is stored in the local user data directory; filesystem permissions alone do not demonstrate encryption at rest or recoverability. | Security-reviewed encryption decision, privacy/retention documentation, tested backup/restore, interruption recovery and upgrade/rollback checks. |
+| P1 | Backend dependency versions are not fully locked | Backend requirements still use version ranges, so clean builds can resolve different transitive versions. | Reviewed fully resolved backend lock/constraints strategy; build, test and audit from that file on clean runners. |
+| P1 | Branch protection and required checks are disabled | GitHub branch metadata showed protection disabled for both `main` and the development branch. | Repository-owner authorisation, then enforce required checks, PR review and restrictions on direct updates. No settings were changed. |
+| P1 | Installer is unsigned | Checksums detect mismatch against a known digest but do not authenticate publisher identity. | Obtain appropriate signing certificate, sign and timestamp installer, and verify Authenticode before making publisher-trust claims. |
+| P1 | Indian legal/regulatory review and release documents are not signed off | Educational intent is relevant to medical-device scope, but product behaviour, promotion, real-data handling and commercial distribution affect legal risk. | Specialist Indian healthcare/regulatory, privacy and product-liability counsel review; approved intended-use statement, EULA, privacy notice, acceptable-use terms, warnings and incident process. See `docs/LEGAL_AND_REGULATORY_RISK_REGISTER.md`. |
+| P2 | Lint/format and coverage thresholds are not mandatory CI gates | Test passes do not provide maintainability or untested-path measurements. | Add Python/TypeScript lint/format and coverage reporting with independently reviewed thresholds. |
+| P2 | SBOM and reproducible release provenance are not complete | Dependency audit is not a complete software bill of materials or build-attestation process. | Generate and retain an SBOM and build provenance; verify installer checksums and dependency/model/runtime licences. |
+| P2 | Current-head laptop GPU/performance evidence is not available | CPU clean-host inference does not establish target RTX 4060 behaviour. | With explicit local validation window, sample `nvidia-smi`, Ollama placement/logs, latency, VRAM and thermal telemetry during real inference at concurrency 1. |
 
-**Controls now implemented in the development branch:**
-- Frontend `package-lock.json` v3 is committed (120 packages); Vite is pinned at 7.3.8; Node engine is `^20.19.0 || >=22.12.0`.
-- CI, installer packaging, browser E2E, security audit and developer startup use `npm ci`; lockfile regeneration is restricted to trusted pushes to the development branch.
-- pytest has been removed from production/runtime requirements and isolated in `backend/requirements-dev.txt`.
-- CodeQL, Gitleaks and Python/Node dependency audits are part of PR CI; Dependabot proposes weekly dependency/action updates.
-- Primary workflows pin third-party GitHub Actions to immutable commit SHAs.
-- Duplicate push+PR CI for the development branch was removed; PR #1 is the authoritative development validation path.
-- The browser E2E uses GitHub-hosted Windows, disposable data and no model inference; it never touches the user's laptop.
+### Anti-vibe-coding enforcement
 
-The installer workflow's hosted smoke test exercises package build, install, health, frontend assets, 45 role profiles, a training registry save and uninstall data preservation. The clean-hosted bootstrap separately downloads the pinned runtime/model and performs CPU inference. Neither proves the target laptop's current install or NVIDIA GPU inference for the current full four-round run.
+The existing rules in Sections 3–7 remain mandatory. For this project they mean: inspect repository state before editing; define acceptance criteria; make the smallest root-cause change; review every changed line; add a regression from an independent requirement/oracle; run the exact affected tests and CI; inspect logs and generated artefacts; preserve failing outputs; and record the tested SHA. The implementation model must not be its own sole reviewer or clinical-quality judge. No test, threshold, validator or warning may be weakened merely to obtain green CI.
+
+**Current process limitations:** Python lint/format and coverage are not mandatory CI gates; backend dependency ranges are not fully locked; human code review/required-check enforcement is not technically required by branch rules. These are known gaps, not silently accepted standards.
+
+### Controls already present
+
+- Frontend `package-lock.json` and `npm ci` are used for reproducible frontend installs; Node/Vite compatibility is checked.
+- pytest is isolated to development requirements, not production runtime.
+- PR workflows include CodeQL, Gitleaks and Python/Node dependency audits; third-party GitHub Actions are pinned to immutable commit SHAs.
+- Model generation uses structured schemas and deterministic server-side case/provenance checks; Ollama concurrency remains 1.
+- Packaged runtime binds to `127.0.0.1`; default inference is local Ollama. The installer pins the Ollama runtime archive by SHA-256 and verifies the configured model tag.
+- Patient registry names are stored separately from case JSON and are not passed to specialist agents; case versions carry snapshot hashes.
+
+These controls reduce specific risks but do not replace penetration testing, data protection review, legal advice, clinical validation or independent release acceptance.
 
 ## 9. Release gates — no waiver by green CI alone
 
