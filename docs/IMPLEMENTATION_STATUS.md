@@ -1,36 +1,31 @@
 # Implementation Status
 
 **Current engineering checkpoint:** 11 November 2026  
-**Development branch HEAD:** `aaf8fb99a8a848403eba5bb4ee91e7f7d47384d9`  
-**Functional/application-code baseline:** `5b8159df0b0bb6ac0bedc95046d0c87784420591` (later commits update CI, audit metadata and documentation; runtime code unchanged)  
-**PR #1:** open, draft and unmerged; targets `main` at `39a356b8eb09399aa2da1b9b9085965999f5105a`.
+**Development branch HEAD:** `35f32d1264143cd072d7589a53c5845154c7cae1`  
+**Latest R3 runtime-integrity change:** `c6499e72de9abc4d068324aa6c839206b867d091`  
+**Latest workflow/audit-provenance change:** `35f32d1264143cd072d7589a53c5845154c7cae1`  
+**PR #1:** open, draft and unmerged; targets `main` at `39a356b8eb09399aa2da1b9b9085965999f5105a`. No merge or `main` update has occurred.
 
-**Passed on this exact snapshot:** [backend 42910431942](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42910431942): 191 passed, 1 existing Starlette/httpx TestClient deprecation warning; [frontend 42910431710](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42910431710): 32 passed, TypeScript and Vite 7.3.8 build with npm ci; [browser E2E 42910431865](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42910431865): patient registry lifecycle and saved R1–R4 dashboard assertions passed; [security 42910431926](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42910431926): Python/JS CodeQL, Gitleaks, pip-audit and npm audit passed with zero known dependency vulnerabilities; [packaging prerequisites 42910431949](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42910431949) passed.
-
-**Latest Windows installer:** [run 42910431940](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42910431940) fully passed on this exact SHA. Artifact `13806987082`; ZIP SHA-256 `cc00301aa95b65cc94e3a9a9c27681d8f08a47997142d3802d4e81e5b2e7fd0a`; Setup.exe SHA-256 `9a075c56a9e93d00bd6e4476aff4864a19dd89f05390a9483ce43315e76b97e2`. Build/install/uninstall, user-data preservation, fresh Ollama 0.40.14 provisioning, qwen3.5:4b download/tag verification, CPU inference, installed-app health and 45-role API checks passed. This is hosted CPU validation, not target-laptop GPU evidence.
-
-**Full live MDT audit:** [run 42910414046](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/42910414046) is **in progress** on this exact SHA. It uses concurrency 1 and an isolated hosted Windows CPU runner. The combined provisioning/validation step is active; no 136-contribution result is available yet. Its audit artifact includes JSON, SQLite and a manifest intended to bind source SHA, run ID, Ollama version and exact qwen3.5:4b digest/size.
-
-Two earlier manifest-trigger attempts failed before any live model execution because digest-validation text was truncated during workflow-file editing. They were setup errors, not model or clinical failures. The workflow was rebuilt from the last clean version; the current run `42910414046` has been accepted and is active.
-
-Passing software/runtime tests do not establish clinical accuracy, evidence sufficiency or guideline concordance. A complete 136-contribution live run is execution evidence, not clinical validation. Installer acceptance, target-laptop GPU verification, model-quality audit and qualified clinical review remain separate assurance activities.
 ## Current quality controls and verification
 
 | Control | Current state | Evidence / remaining limitation |
 |---|---|---|
-| Frontend reproducibility | **Implemented** | Committed `frontend/package-lock.json` (lockfile v3, 120 packages), Vite 7.3.8, Node engine `^20.19.0 || >=22.12.0`; CI, installer, browser E2E, security audit and developer setup use `npm ci`. |
-| Backend runtime/test separation | **Implemented** | pytest removed from production `backend/requirements.txt`; test-only dependency declared in `backend/requirements-dev.txt`. A fully resolved backend lockfile remains open. |
-| Vulnerability and source analysis | **Passed on current validation snapshot** | CodeQL Python and JS/TS, full-history Gitleaks, pip-audit and npm audit all passed in run 42907820027; npm audit reported zero vulnerabilities. |
-| Browser acceptance | **Passed on current head** | Run 42907820009 drove a real headless Edge browser against isolated FastAPI/Vite services and disposable SQLite data. Patient registry lifecycle and saved R1–R4 dashboard assertions passed; no Ollama calls were made. |
-| Backend regression suite | **191 passed** | Run 42907820055; one existing Starlette/httpx TestClient deprecation warning remains. |
-| Frontend regression/build | **32 passed** | Run 42907820019; TypeScript check and Vite 7.3.8 production build succeeded through npm ci. |
-| GitHub Actions supply chain | **Primary workflows SHA-pinned** | Current primary backend, frontend, installer, hosted CPU validation, packaging, security and browser workflows use immutable action commit references. Dependabot proposes weekly updates. |
-| Branch protection | **Not enabled** | Repository branch settings still require administrative review; no settings were changed and no merge is authorised. |
-| Latest Windows installer | **Passed** | Run 42908356200 built, installed and uninstalled the app, preserved the temporary user database, downloaded the pinned portable Ollama/model on a clean hosted VM, completed CPU inference and verified app health plus all 45 roles. Artifact and Setup.exe SHA-256 values are recorded above; this is not target-laptop GPU evidence. |
-| Full live MDT model quality | **Not yet verified** | No fresh 136-contribution run on current head. Historical MDT-006 audit still has 134 hard failures and 92 major findings on its older code snapshot. |
-| Evidence / clinical review | **Not implemented / not performed** | No connected evidence retrieval, authoritative source verification, qualified clinical review or guideline concordance claim. |
-| Current-snapshot full-run GPU performance | **Not verified** | Historical one-agent/currently older snapshot GPU records are not evidence of current-head full-run attribution or performance. |
+| Backend regression suite | **Passed — 202 tests** | [Run 43062926353](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43062926353); 1 existing Starlette/httpx TestClient deprecation warning. Includes the R3 verified-quote/omission regression and the two full-run manifest workflow checks. |
+| Frontend checks | **Passed — 32 tests** | [Run 43062926546](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43062926546); launcher syntax/compatibility, TypeScript and production build passed. |
+| Browser acceptance | **Passed** | [Run 43062926282](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43062926282) used isolated FastAPI/Vite services, disposable SQLite data and headless Edge to exercise the patient-registry lifecycle and saved R1–R4 dashboard. No model inference was invoked. |
+| Security/dependency analysis | **Passed** | [Run 43062926684](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43062926684); full-history secret scan, CodeQL Python and JavaScript/TypeScript, pip-audit (no known vulnerabilities) and npm audit (0 vulnerabilities). |
+| Packaging prerequisites | **Passed** | [Run 43062926318](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43062926318); read-only inspection only. |
+| Windows package build/install/uninstall | **Passed on `35f32d1`** | [Run 43062926410](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43062926410), installer job; installed health, frontend, 45-role API, and user-database preservation passed. Setup.exe SHA-256: `bce3f2c6e306874ea79a4ae94b5dc7f5fa8afef4ddd3d51458d67bb9d6415420`. The second clean-host first-run job is still running. |
+| Clean-host Ollama/model provisioning | **Passed on prior build; repeat in progress** | On `c6499e7`, runtime download, Ollama 0.40.14 start, qwen3.5:4b pull/tag check, real CPU inference marker, app health and 45-role API all passed in [run 43059945589](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43059945589). The new `35f32d1` repeat is still running. |
+| Targeted model-output provenance | **Not yet passed** | Six real R2/R3 calls on `c6499e7` failed one R3 review for SO-02: its exact quote came from supplied peer R2:RO-01 but the model labelled it R2:MO-01. The server rejected the mismatched pair, downgraded the status to `unclear`, retained original model labels and recorded flags. Five other reviews were verified; all R2 outputs had no integrity flags. Artifact ID `13873334301` from [run 43059945589](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43059945589). Repeat on `35f32d1` is pending. |
+| Full 136-contribution current-head validation | **Not run** | Historical hosted CPU run `42910414046` completed 136/136 contributions on older SHA `aaf8fb99a8a848403eba5bb4ee91e7f7d47384d9`, but only passed structural checks; R1/R2/R3 audit findings remained. The full-run workflow on `35f32d1` was deliberately skipped because no explicit run marker was supplied. |
+| Full-run audit manifest | **Workflow defect fixed; regression-tested** | `35f32d1` moves manifest creation outside the model-missing conditional, checks manifest source SHA/model digest/model size and makes all three artefacts (JSON, SQLite, manifest) mandatory. Backend CI passed. No 136-role rerun was triggered. |
+| Current laptop source/runtime | **Not verified** | The current `35f32d1` source mirror has not been confirmed on the laptop; local browser/runtime checks remain outstanding. |
+| Current-head GPU utilisation | **Not verified** | No current-head active inference has been measured with `nvidia-smi` plus Ollama offload telemetry. Historical single-agent GPU evidence is not current-head proof. Concurrency remains 1. |
+| Evidence/clinical review | **Not implemented / not performed** | No connected guideline retrieval, claim-to-source verification, guideline concordance assessment, or qualified clinical review is claimed. |
+| Branch protection | **Not enabled** | Requires repository-owner administrative review before merge; no branch settings were changed. |
 
+**Clinical boundary:** this remains a fictional-case educational simulator, not a clinical decision-making authority or validated medical device. The 136-role historical run and six-call targeted check are software/model-behaviour validation only; neither establishes clinical accuracy.
 
 ## Historical Windows release candidate baseline — 10 November 2026
 
