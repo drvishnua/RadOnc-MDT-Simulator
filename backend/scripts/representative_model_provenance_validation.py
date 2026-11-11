@@ -11,10 +11,19 @@ import hashlib
 import json
 import platform
 import subprocess
+import sys
 import time
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
+
+# This script is invoked by path from the installer workflow, so Python sets
+# sys.path[0] to backend/scripts rather than the backend package root.
+# Add the backend root explicitly before importing the application package.
+BACKEND_DIR = Path(__file__).resolve().parents[1]
+backend_path = str(BACKEND_DIR)
+if backend_path not in sys.path:
+    sys.path.insert(0, backend_path)
 
 from app.agents.catalog import AGENT_PROFILES
 from app.config import OLLAMA_BASE_URL, OLLAMA_MODEL
@@ -26,7 +35,6 @@ from app.services.mdt_generation import (
 )
 from app.services.case_integrity import extract_attributed_note_opinions
 
-BACKEND_DIR = Path(__file__).resolve().parents[1]
 ARTIFACT_DIR = BACKEND_DIR / "validation_artifacts"
 ARTIFACT_PATH = ARTIFACT_DIR / "representative_model_provenance_validation.json"
 ROLE_IDS = ("RO-01", "SO-02", "MO-01")
