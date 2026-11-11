@@ -372,6 +372,57 @@ def _source_opinion_component_supported(
     return matched >= required
 
 
+def _select_source_opinion_evidence_excerpt(
+    source_excerpt: str,
+    evidence_texts: list[str],
+    *,
+    maximum_excerpt_chars: int = 180,
+) -> str:
+    """Select an exact contiguous excerpt containing every option/condition anchor.
+
+    The caller supplies text only from one selected R2 peer's structured response
+    for the same server-identified CASE source. This is deterministic provenance
+    binding, not semantic interpretation or clinical validation.
+    """
+    option_tokens = set(_source_opinion_component_tokens(source_excerpt, "option"))
+    condition_tokens = set(_source_opinion_component_tokens(source_excerpt, "conditions"))
+    required_tokens = option_tokens | condition_tokens
+    if not option_tokens:
+        return ""
+
+    best: tuple[int, int, int, str] | None = None
+    for text_index, value in enumerate(evidence_texts):
+        if not isinstance(value, str):
+            continue
+        normalized = " ".join(value.split())
+        if not normalized:
+            continue
+        words = list(re.finditer(r"\\S+", normalized))
+        for start_index, start_word in enumerate(words):
+            seen_tokens: set[str] = set()
+            for end_index in range(start_index, len(words)):
+                end_word = words[end_index]
+                if end_word.end() - start_word.start() > maximum_excerpt_chars:
+                    break
+                seen_tokens.update(
+                    re.findall(r"[a-z0-9]+", end_word.group(0).casefold())
+                )
+                if not required_tokens.issubset(seen_tokens):
+                    continue
+                candidate = normalized[start_word.start():end_word.end()]
+                if not all(
+                    _source_opinion_component_supported(source_excerpt, candidate, component)
+                    for component in ("option", "conditions")
+                ):
+                    break
+                option = (len(candidate), text_index, start_index, candidate)
+                if best is None or option[:3] < best[:3]:
+                    best = option
+                break
+
+    return best[3] if best is not None else ""
+
+
 def _source_opinion_component_has_any_support(
     source_excerpt: str,
     evidence_text: str,
@@ -1235,6 +1286,47 @@ async def generate_adversarial_contribution(
             if evidence_peer is not None and evidence_peer_id in allowed_peer_source_ids
             else ("", "invalid" if evidence_peer_id or model_evidence_excerpt else "missing")
         )
+        source_excerpt_for_review = expected_source_opinions_by_id.get(source_id, "")
+        matching_source_opinion_responses = [
+            item
+            for item in (evidence_peer.get("source_opinion_responses") or [])
+            if isinstance(item, dict) and item.get("source_id") == source_id
+        ] if evidence_peer is not None else []
+        source_specific_evidence_texts: list[str] = []
+        if len(matching_source_opinion_responses) == 1:
+            for key in ("analysis", "comparison"):
+                value = matching_source_opinion_responses[0].get(key)
+                if isinstance(value, str):
+                    source_specific_evidence_texts.append(value)
+
+        # A valid quote can still point to the wrong CASE opinion within the
+        # selected peer, or omit the source-specific option while quoting only
+        # its missing prerequisites. In that situation, select a bounded exact
+        # passage only from the selected peer's unique structured response for
+        # this same server-identified CASE source. Never search another peer or
+        # another CASE source; an absent/ambiguous response remains unverified.
+        if (
+            model_evidence_excerpt
+            and evidence_peer is not None
+            and evidence_peer_id in allowed_peer_source_ids
+            and source_id in traceable_case_source_ids
+            and source_excerpt_for_review
+        ):
+            quote_has_source_anchors = bool(evidence_excerpt) and all(
+                _source_opinion_component_supported(
+                    source_excerpt_for_review, evidence_excerpt, component
+                )
+                for component in ("option", "conditions")
+            )
+            if not quote_has_source_anchors:
+                server_selected_excerpt = _select_source_opinion_evidence_excerpt(
+                    source_excerpt_for_review,
+                    source_specific_evidence_texts,
+                )
+                if server_selected_excerpt:
+                    evidence_excerpt = server_selected_excerpt
+                    evidence_binding_method = "server_selected_source_match"
+
         review["evidence_excerpt"] = evidence_excerpt
         review["evidence_excerpt_binding_method"] = evidence_binding_method
         if evidence_excerpt:
@@ -1298,7 +1390,11 @@ async def generate_adversarial_contribution(
             evidence_peer is not None
             and evidence_peer_id in allowed_peer_source_ids
             and evidence_excerpt
-            and evidence_binding_method in {"exact_model_quote", "server_bound_contiguous_match"}
+            and evidence_binding_method in {
+                "exact_model_quote",
+                "server_bound_contiguous_match",
+                "server_selected_source_match",
+            }
         ):
             evidence_status = "verified"
         else:

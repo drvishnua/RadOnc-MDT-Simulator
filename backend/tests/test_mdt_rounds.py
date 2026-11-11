@@ -1144,6 +1144,252 @@ def test_source_opinion_review_keeps_semantically_incomplete_content_available_f
     assert "unknown or unmet clinical prerequisite" in conditions_description
 
 
+
+def test_r3_server_selects_exact_source_linked_excerpt_from_selected_peer(monkeypatch):
+    from app.round_schemas import AdversarialContributionDraft, SourceOpinionReview
+    from app.services import mdt_generation
+
+    source_id = "CASE:case_summary#1"
+    case = SyntheticCase(
+        scenario_title="R3 server-selected source evidence test",
+        case_summary=(
+            "Fictional case. ENT service note favours a surgery-led assessment first, "
+            "conditional on complete local staging and resectability review."
+        ),
+    )
+    peer_analysis = (
+        "The option proposed is a surgery-led assessment first, conditional on "
+        "complete local staging and resectability review. The peer notes that the "
+        "case information remains incomplete."
+    )
+
+    async def fake_generate(prompt, schema_type, max_tokens):
+        return AdversarialContributionDraft(
+            position="insufficient_information",
+            provisional_conclusion=(
+                "The supplied fictional information does not establish clinical stage "
+                "or a definitive educational pathway."
+            ),
+            response_to_other_perspectives=(
+                "The peer text retains a conditional option, but the case prerequisites "
+                "remain unverified."
+            ),
+            agreements=[],
+            substantive_challenges=[],
+            remaining_unknowns=["Clinical stage and local staging information are not supplied."],
+            risk_flags=[],
+            confidence=0.4,
+            source_opinion_reviews=[
+                SourceOpinionReview(
+                    source_id=source_id,
+                    opinion_label="ENT service note",
+                    option_status="preserved",
+                    conditions_status="preserved",
+                    review_basis="The selected peer retains the option and its prerequisites.",
+                    source_reference_ids=[source_id, "R2:MO-01"],
+                    evidence_peer_id="R2:MO-01",
+                    evidence_excerpt=(
+                        "This paraphrased model quote is not present as a contiguous "
+                        "passage in the selected peer record."
+                    ),
+                )
+            ],
+        )
+
+    monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate)
+    profile = {
+        "agent_id": "RO-01",
+        "name": "Radiation Oncology",
+        "mandate": "Review source representation and preserve uncertainty.",
+    }
+    own_r1 = {
+        "position": "insufficient_information",
+        "provisional_conclusion": "The fictional record lacks verified staging information.",
+        "preferred_educational_option": "No definitive pathway can be established.",
+    }
+    own_r2 = {
+        "position": "insufficient_information",
+        "provisional_conclusion": "The debate remains unresolved pending missing information.",
+        "response_to_other_perspectives": "The case prerequisites remain unknown.",
+    }
+    peers = [{
+        "agent_id": "MO-01",
+        "agent_name": "Medical Oncology",
+        "result": {
+            "position": "insufficient_information",
+            "provisional_conclusion": "The supplied information does not establish a pathway.",
+            "response_to_other_perspectives": "The case prerequisites remain unknown.",
+            "agreements": [],
+            "substantive_challenges": [],
+            "risk_flags": [],
+            "position_changes": [],
+            "source_opinion_responses": [{
+                "source_id": source_id,
+                "analysis": peer_analysis,
+                "comparison": "The source-linked option remains conditional in the peer text.",
+            }],
+        },
+    }]
+
+    result = asyncio.run(
+        mdt_generation.generate_adversarial_contribution(
+            profile, case, own_r1, own_r2, peers
+        )
+    )
+
+    review = result.source_opinion_reviews[0]
+    assert review.evidence_validation_status == "verified"
+    assert review.evidence_excerpt_binding_method == "server_selected_source_match"
+    assert review.model_reported_evidence_excerpt.startswith("This paraphrased model quote")
+    assert review.evidence_excerpt in peer_analysis
+    assert len(review.evidence_excerpt) <= 180
+    assert review.option_status == "preserved"
+    assert review.conditions_status == "preserved"
+    assert review.source_reference_ids == [source_id, "R2:MO-01"]
+    assert result.source_reference_integrity_flags == []
+
+
+def test_r3_source_excerpt_fallback_never_borrows_from_another_peer_or_case_opinion(monkeypatch):
+    from app.round_schemas import AdversarialContributionDraft, SourceOpinionReview
+    from app.services import mdt_generation
+
+    first_source_id = "CASE:case_summary#1"
+    second_source_id = "CASE:case_summary#2"
+    case = SyntheticCase(
+        scenario_title="R3 peer and CASE source isolation test",
+        case_summary=(
+            "Fictional case. ENT service note favours a surgery-led assessment first, "
+            "conditional on complete local staging and resectability review. "
+            "The medical oncology note favours discussing a preoperative multimodality "
+            "sequence, conditional on MRI staging, metastatic work-up and fitness assessment."
+        ),
+    )
+    second_peer_analysis = (
+        "The option proposed is discussing a preoperative multimodality sequence, "
+        "conditional on MRI staging, metastatic work-up and fitness assessment."
+    )
+    first_peer_analysis = (
+        "The option proposed is a surgery-led assessment first, conditional on "
+        "complete local staging and resectability review."
+    )
+
+    async def fake_generate(prompt, schema_type, max_tokens):
+        return AdversarialContributionDraft(
+            position="insufficient_information",
+            provisional_conclusion=(
+                "The supplied fictional information does not establish either educational pathway."
+            ),
+            response_to_other_perspectives=(
+                "The options remain conditional on information that is not supplied."
+            ),
+            agreements=[],
+            substantive_challenges=[],
+            remaining_unknowns=["Staging, investigations, fitness and patient goals are not supplied."],
+            risk_flags=[],
+            confidence=0.4,
+            source_opinion_reviews=[
+                SourceOpinionReview(
+                    source_id=first_source_id,
+                    opinion_label="ENT service note",
+                    option_status="omitted",
+                    conditions_status="omitted",
+                    review_basis="The selected peer does not provide the relevant source-specific passage.",
+                    source_reference_ids=[first_source_id, "R2:MO-01"],
+                    evidence_peer_id="R2:MO-01",
+                    evidence_excerpt="A paraphrased statement that is not present in the selected peer.",
+                ),
+                SourceOpinionReview(
+                    source_id=second_source_id,
+                    opinion_label="medical oncology note",
+                    option_status="preserved",
+                    conditions_status="preserved",
+                    review_basis="The selected peer retains this source-linked conditional option.",
+                    source_reference_ids=[second_source_id, "R2:MO-01"],
+                    evidence_peer_id="R2:MO-01",
+                    evidence_excerpt=second_peer_analysis,
+                ),
+            ],
+        )
+
+    monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate)
+    profile = {
+        "agent_id": "RO-01",
+        "name": "Radiation Oncology",
+        "mandate": "Review source representation and preserve uncertainty.",
+    }
+    own_r1 = {
+        "position": "insufficient_information",
+        "provisional_conclusion": "The fictional record lacks verified staging information.",
+        "preferred_educational_option": "No definitive pathway can be established.",
+    }
+    own_r2 = {
+        "position": "insufficient_information",
+        "provisional_conclusion": "The debate remains unresolved pending missing information.",
+        "response_to_other_perspectives": "The case prerequisites remain unknown.",
+    }
+    peers = [
+        {
+            "agent_id": "MO-01",
+            "agent_name": "Medical Oncology",
+            "result": {
+                "position": "insufficient_information",
+                "provisional_conclusion": "The case remains insufficiently specified.",
+                "response_to_other_perspectives": "The peer text records the medical oncology source opinion.",
+                "agreements": [],
+                "substantive_challenges": [],
+                "risk_flags": [],
+                "position_changes": [],
+                "source_opinion_responses": [{
+                    "source_id": second_source_id,
+                    "analysis": second_peer_analysis,
+                    "comparison": "The medical oncology option remains conditional.",
+                }],
+            },
+        },
+        {
+            "agent_id": "SO-02",
+            "agent_name": "Surgical Oncology",
+            "result": {
+                "position": "insufficient_information",
+                "provisional_conclusion": "The case remains insufficiently specified.",
+                "response_to_other_perspectives": "The peer text records the surgical source opinion.",
+                "agreements": [],
+                "substantive_challenges": [],
+                "risk_flags": [],
+                "position_changes": [],
+                "source_opinion_responses": [{
+                    "source_id": first_source_id,
+                    "analysis": first_peer_analysis,
+                    "comparison": "The surgical option remains conditional.",
+                }],
+            },
+        },
+    ]
+
+    result = asyncio.run(
+        mdt_generation.generate_adversarial_contribution(
+            profile, case, own_r1, own_r2, peers
+        )
+    )
+
+    first_review, second_review = result.source_opinion_reviews
+    assert first_review.evidence_peer_id == "R2:MO-01"
+    assert first_review.evidence_validation_status == "invalid"
+    assert first_review.evidence_excerpt_binding_method == "invalid"
+    assert first_review.option_status == "unclear"
+    assert first_review.conditions_status == "unclear"
+    assert first_review.source_reference_ids == [first_source_id]
+
+    assert second_review.evidence_validation_status == "verified"
+    assert second_review.evidence_excerpt_binding_method == "exact_model_quote"
+    assert second_review.evidence_excerpt == second_peer_analysis
+    assert second_review.source_reference_ids == [second_source_id, "R2:MO-01"]
+    assert any(
+        first_source_id in flag and "no exact supporting excerpt" in flag
+        for flag in result.source_reference_integrity_flags
+    )
+
+
 def test_r3_omission_labels_are_downgraded_when_verified_peer_excerpt_retains_source_content(monkeypatch):
     from app.round_schemas import AdversarialContributionDraft, SourceOpinionReview
     from app.services import mdt_generation

@@ -76,9 +76,12 @@ class SourceOpinionReview(StrictModel):
             "in the actual supplied Round-2 contribution text. This does not assess clinical "
             "appropriateness, eligibility, or whether case prerequisites are fulfilled. A conditional "
             "option remains represented when its option and conditional wording are retained, even "
-            "if the required MRI, staging, fitness, or other case information is missing. Use omitted "
-            "only when supplied Round-2 text itself drops or materially distorts the option; use "
-            "unclear when the supplied material is insufficient to assess."
+            "if the required MRI, staging, fitness, or other case information is missing. If Round 2 "
+            "names the option and then says it cannot be assessed, selected, or acted on until a "
+            "prerequisite is known, the option is still preserved in the text; do not label it omitted "
+            "solely because it is not actionable. Use omitted only when supplied Round-2 text itself "
+            "drops or materially distorts the option; use unclear when the supplied material is "
+            "insufficient to assess."
         )
     )
     conditions_status: Literal["preserved", "partly_preserved", "omitted", "unclear"] = Field(
@@ -86,8 +89,9 @@ class SourceOpinionReview(StrictModel):
             "Representation fidelity only: whether the prerequisite/condition attached to the "
             "attributed opinion is faithfully retained in the actual supplied Round-2 text. Do not "
             "confuse representation with fulfilment: an unknown or unmet clinical prerequisite is "
-            "not an omission if Round 2 retains the condition. Use omitted only when the supplied "
-            "Round-2 text itself drops or materially changes the condition."
+            "not an omission if Round 2 retains the condition, even when the peer says the option "
+            "cannot yet be assessed or acted on. Use omitted only when the supplied Round-2 text "
+            "itself drops or materially changes the condition."
         )
     )
     review_basis: str = Field(
@@ -103,7 +107,7 @@ class SourceOpinionReview(StrictModel):
     evidence_peer_id: str = Field(default="", max_length=100)
     evidence_excerpt: str = Field(default="", max_length=180)
     model_reported_evidence_excerpt: str = Field(default="", max_length=180, description="Original model-authored quote retained for audit; the server binds evidence_excerpt to supplied peer text.")
-    evidence_excerpt_binding_method: Literal["exact_model_quote", "server_bound_contiguous_match", "missing", "invalid"] = Field(default="missing", description="Server-computed method used to bind an exact excerpt from a supplied R2 peer record; does not validate semantic support.")
+    evidence_excerpt_binding_method: Literal["exact_model_quote", "server_bound_contiguous_match", "server_selected_source_match", "missing", "invalid"] = Field(default="missing", description="Server-computed excerpt binding method. server_selected_source_match means the server selected an exact contiguous passage from the chosen peer's unique structured response for the same CASE source ID; it does not validate semantic interpretation or clinical correctness.")
     evidence_validation_status: Literal["verified", "invalid", "missing"] = Field(
         default="missing",
         description="Server-computed result of checking evidence_peer_id and evidence_excerpt against the exact R2 peer material supplied to this role. Model-authored values are ignored.",
