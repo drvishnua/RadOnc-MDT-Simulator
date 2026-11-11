@@ -44,9 +44,10 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements-dev.txt
 
-      - name: Compile live four-round validation script
+      - name: Compile live validation scripts
         working-directory: backend
-        run: python -m py_compile scripts/live_four_round_validation.py
+        run: |
+          python -m py_compile scripts/live_four_round_validation.py scripts/representative_model_provenance_validation.py
 
       - name: Run backend tests
         working-directory: backend
