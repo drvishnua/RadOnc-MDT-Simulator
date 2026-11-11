@@ -159,3 +159,128 @@ def test_r3_receives_server_computed_peer_provenance_flags_and_exact_excerpt(mon
         for item in result.source_reference_integrity_flags
     )
 
+
+def test_r3_rejects_model_authored_case_opinion_without_server_bound_register(monkeypatch):
+    import asyncio
+
+    from app.round_schemas import AdversarialContributionDraft
+    from app.schemas import SyntheticCase
+    from app.services import mdt_generation
+    from app.services.case_integrity import (
+        case_summary_has_attributed_opinions,
+        extract_attributed_note_opinions,
+    )
+    from app.services.chair_report_quality import build_source_opinion_review_coverage
+
+    case_summary = (
+        "Fictional educational case. The surgeon recommends a surgery-led assessment first, "
+        "conditional on complete staging."
+    )
+    # The broad detector recognises speaker attribution, but the deterministic
+    # note-opinion extractor cannot create a stable source register for this wording.
+    assert case_summary_has_attributed_opinions(case_summary)
+    assert extract_attributed_note_opinions(case_summary) == []
+
+    captured = {}
+
+    async def fake_generate(prompt, schema_type, max_tokens):
+        captured["prompt"] = prompt
+        return AdversarialContributionDraft(
+            position="conditional",
+            provisional_conclusion=(
+                "The review remains conditional because the supplied case data are incomplete."
+            ),
+            response_to_other_perspectives=(
+                "The peer record was reviewed, but it cannot establish the case-summary attribution."
+            ),
+            agreements=[],
+            substantive_challenges=[],
+            remaining_unknowns=["Complete staging remains unknown."],
+            risk_flags=[],
+            confidence=0.4,
+            source_opinion_reviews=[{
+                "source_id": "CASE:case_summary#1",
+                "opinion_label": "Surgeon recommendation",
+                "source_excerpt": (
+                    "The surgeon recommends a surgery-led assessment first, "
+                    "conditional on complete staging."
+                ),
+                "option_status": "preserved",
+                "conditions_status": "preserved",
+                "review_basis": "The peer text includes a separate conditional statement.",
+                "source_reference_ids": ["CASE:case_summary#1", "R2:MO-01"],
+                "evidence_peer_id": "R2:MO-01",
+                "evidence_excerpt": "conditional on MRI review",
+                "evidence_validation_status": "verified",
+            }],
+        )
+
+    monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate)
+    profile = {
+        "agent_id": "RO-01",
+        "name": "Radiation Oncology",
+        "mandate": "Review the educational case and source attribution.",
+    }
+    case = SyntheticCase(
+        scenario_title="Unregistered attribution fallback test",
+        case_summary=case_summary,
+    )
+    own_r1 = {
+        "position": "conditional",
+        "provisional_conclusion": "The independent position remains conditional pending full case details.",
+        "preferred_educational_option": "No option is established.",
+    }
+    own_r2 = {
+        "position": "conditional",
+        "provisional_conclusion": "The debate position remains conditional pending full case details.",
+        "response_to_other_perspectives": "The debate does not establish a final educational option.",
+    }
+    peer_response = "Option remains conditional on MRI review."
+    peers = [{
+        "agent_id": "MO-01",
+        "agent_name": "Medical Oncology",
+        "result": {
+            "position": "conditional",
+            "provisional_conclusion": "The peer view remains conditional on additional records.",
+            "response_to_other_perspectives": peer_response,
+            "agreements": [],
+            "substantive_challenges": [],
+            "risk_flags": [],
+            "position_changes": [],
+        },
+    }]
+
+    result = asyncio.run(
+        mdt_generation.generate_adversarial_contribution(
+            profile, case, own_r1, own_r2, peers
+        )
+    )
+
+    review = result.source_opinion_reviews[0]
+    assert "speak" in captured["prompt"].casefold()
+    assert review.option_status == "unclear"
+    assert review.conditions_status == "unclear"
+    assert review.source_reference_ids == []
+    assert review.evidence_validation_status == "invalid"
+    assert review.model_reported_option_status == "preserved"
+    assert review.model_reported_conditions_status == "preserved"
+    assert review.model_reported_source_reference_ids == [
+        "CASE:case_summary#1",
+        "R2:MO-01",
+    ]
+    assert any(
+        "server could not bind a case-summary source-opinion register" in flag
+        for flag in result.source_reference_integrity_flags
+    )
+
+    coverage, integrity = build_source_opinion_review_coverage(
+        [{
+            "agent_id": "RO-01",
+            "agent_name": "Radiation Oncology",
+            "status": "completed",
+            "result": result.model_dump(),
+        }],
+        case_summary,
+    )
+    assert coverage == []
+    assert any("omits its exact CASE source ID" in flag for flag in integrity)
