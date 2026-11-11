@@ -71,6 +71,8 @@ class SourceOpinionReview(StrictModel):
     source_reference_ids: list[str] = Field(default_factory=list, max_length=8)
     evidence_peer_id: str = Field(default="", max_length=100)
     evidence_excerpt: str = Field(default="", max_length=180)
+    model_reported_evidence_excerpt: str = Field(default="", max_length=180, description="Original model-authored quote retained for audit; the server binds evidence_excerpt to supplied peer text.")
+    evidence_excerpt_binding_method: Literal["exact_model_quote", "server_bound_contiguous_match", "missing", "invalid"] = Field(default="missing", description="Server-computed method used to bind an exact excerpt from a supplied R2 peer record; does not validate semantic support.")
     evidence_validation_status: Literal["verified", "invalid", "missing"] = Field(
         default="missing",
         description="Server-computed result of checking evidence_peer_id and evidence_excerpt against the exact R2 peer material supplied to this role. Model-authored values are ignored.",
