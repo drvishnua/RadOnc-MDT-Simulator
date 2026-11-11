@@ -476,3 +476,110 @@ def test_r3_receives_full_peer_response_and_server_binds_preserved_and_omitted_r
         for challenge in result.substantive_challenges
     )
     assert result.source_reference_integrity_flags == []
+
+
+def test_r3_server_binds_exact_contiguous_span_when_small_model_quote_is_approximate(monkeypatch):
+    import asyncio
+
+    from app.round_schemas import AdversarialContributionDraft
+    from app.schemas import SyntheticCase
+    from app.services import mdt_generation
+    from app.services.case_integrity import extract_attributed_note_opinions
+
+    case_summary = (
+        "Fictional educational record. The surgical oncology note favours a surgery-led "
+        "assessment first, conditional on complete local staging and resectability review."
+    )
+    opinion = extract_attributed_note_opinions(case_summary)[0]
+    peer_response = (
+        "The supplied record does not establish a definitive educational pathway because "
+        "clinical stage, investigation results, fitness and patient goals are missing."
+    )
+    approximate_quote = (
+        "The supplied record does not establish a definitive educational pathway because "
+        "the clinical stage, investigation results, fitness and patient goals are missing."
+    )
+    captured = {}
+
+    async def fake_generate(prompt, schema_type, max_tokens):
+        captured["prompt"] = prompt
+        return AdversarialContributionDraft(
+            position="insufficient_information",
+            provisional_conclusion=(
+                "The supplied peer record does not establish whether the conditional source opinion was retained."
+            ),
+            response_to_other_perspectives=(
+                "The single supplied peer record reports missing case information."
+            ),
+            agreements=[],
+            substantive_challenges=[],
+            remaining_unknowns=[],
+            risk_flags=[],
+            confidence=0.4,
+            source_opinion_reviews=[{
+                "source_id": opinion["source_id"],
+                "option_status": "omitted",
+                "conditions_status": "omitted",
+                "review_basis": (
+                    "The cited R2 peer only summarizes missing information and does not retain "
+                    "the source's distinct surgery-led assessment option or its prerequisites."
+                ),
+                "source_reference_ids": [opinion["source_id"], "R2:SO-02"],
+                "evidence_peer_id": "R2:SO-02",
+                "evidence_excerpt": approximate_quote,
+                "challenge": (
+                    "The R2 peer omits the attributed surgery-led assessment and its local-staging "
+                    "and resectability prerequisites."
+                ),
+            }],
+        )
+
+    monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate)
+    result = asyncio.run(
+        mdt_generation.generate_adversarial_contribution(
+            {
+                "agent_id": "RO-01",
+                "name": "Radiation Oncology",
+                "mandate": "Audit source representation and provenance.",
+            },
+            SyntheticCase(
+                scenario_title="Approximate peer quote binding",
+                case_summary=case_summary,
+            ),
+            {
+                "position": "insufficient_information",
+                "provisional_conclusion": "The available record is insufficient.",
+                "preferred_educational_option": "No definitive pathway is established.",
+            },
+            {
+                "position": "insufficient_information",
+                "provisional_conclusion": "The available record is insufficient.",
+                "response_to_other_perspectives": "The debate remains conditional on complete information.",
+            },
+            [{
+                "agent_id": "SO-02",
+                "agent_name": "Surgical Oncology",
+                "result": {
+                    "position": "insufficient_information",
+                    "provisional_conclusion": "The case record is incomplete.",
+                    "response_to_other_perspectives": peer_response,
+                    "agreements": [],
+                    "substantive_challenges": [],
+                    "risk_flags": [],
+                    "position_changes": [],
+                },
+            }],
+        )
+    )
+
+    review = result.source_opinion_reviews[0]
+    assert review.model_reported_evidence_excerpt == approximate_quote
+    assert review.evidence_excerpt_binding_method == "server_bound_contiguous_match"
+    assert review.evidence_excerpt in peer_response
+    assert review.evidence_validation_status == "verified"
+    assert review.source_reference_ids == [opinion["source_id"], "R2:SO-02"]
+    assert result.source_reference_integrity_flags == []
+    assert any(
+        opinion["source_id"] in challenge and "R2:SO-02" in challenge
+        for challenge in result.substantive_challenges
+    )
