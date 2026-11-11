@@ -1144,6 +1144,132 @@ def test_source_opinion_review_keeps_semantically_incomplete_content_available_f
     assert "unknown or unmet clinical prerequisite" in conditions_description
 
 
+def test_r3_omission_labels_are_downgraded_when_verified_peer_excerpt_retains_source_content(monkeypatch):
+    from app.round_schemas import AdversarialContributionDraft, SourceOpinionReview
+    from app.services import mdt_generation
+
+    first_evidence = (
+        "The source proposes a 'surgery-led assessment first' option conditional on "
+        "complete local staging and resectability review."
+    )
+    second_evidence = (
+        "The source proposes discussing a 'preoperative multimodality sequence' conditional "
+        "on MRI staging, metastatic work-up, and fitness assessment."
+    )
+
+    async def fake_generate(prompt, schema_type, max_tokens):
+        assert "representation fidelity only" in prompt
+        return AdversarialContributionDraft(
+            position="insufficient_information",
+            provisional_conclusion="The supplied case does not establish either educational pathway.",
+            response_to_other_perspectives="The case prerequisites remain unknown and no definitive pathway is established.",
+            agreements=[],
+            substantive_challenges=[],
+            remaining_unknowns=["Clinical staging and the required investigations remain unknown."],
+            risk_flags=[],
+            confidence=0.4,
+            source_opinion_reviews=[
+                SourceOpinionReview(
+                    source_id="CASE:case_summary#1",
+                    option_status="omitted",
+                    conditions_status="omitted",
+                    review_basis="The option and its prerequisites are not retained because case information is missing.",
+                    source_reference_ids=["CASE:case_summary#1", "R2:MO-01"],
+                    evidence_peer_id="R2:MO-01",
+                    evidence_excerpt=first_evidence,
+                    challenge="",
+                ),
+                SourceOpinionReview(
+                    source_id="CASE:case_summary#2",
+                    option_status="omitted",
+                    conditions_status="omitted",
+                    review_basis="The option and its prerequisites are not retained because case information is missing.",
+                    source_reference_ids=["CASE:case_summary#2", "R2:MO-01"],
+                    evidence_peer_id="R2:MO-01",
+                    evidence_excerpt=second_evidence,
+                    challenge="",
+                ),
+            ],
+        )
+
+    monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate)
+    profile = {
+        "agent_id": "RO-01",
+        "name": "Radiation Oncology",
+        "mandate": "Review the educational case and preserve uncertainty.",
+    }
+    case = SyntheticCase(
+        scenario_title="Synthetic R3 verified-omission contradiction test",
+        case_summary=(
+            "Fictional case. The surgical oncology note favours a surgery-led assessment first, "
+            "conditional on complete local staging and resectability review. "
+            "The medical oncology note favours discussing a preoperative multimodality sequence, "
+            "conditional on MRI staging, metastatic work-up and fitness assessment."
+        ),
+    )
+    own_r1 = {
+        "position": "insufficient_information",
+        "provisional_conclusion": "The case is incomplete and no pathway can be established.",
+        "preferred_educational_option": "No option can be preferred from the supplied information.",
+    }
+    own_r2 = {
+        "position": "insufficient_information",
+        "provisional_conclusion": "The debate remains unresolved pending missing investigations.",
+        "response_to_other_perspectives": "The supplied information does not establish suitability for either option.",
+    }
+    peer = {
+        "agent_id": "MO-01",
+        "agent_name": "Medical Oncology",
+        "result": {
+            "position": "insufficient_information",
+            "provisional_conclusion": "The case remains insufficiently specified.",
+            "response_to_other_perspectives": "No definitive pathway can be established.",
+            "agreements": [],
+            "substantive_challenges": [],
+            "risk_flags": [],
+            "position_changes": [],
+            "source_opinion_responses": [
+                {
+                    "source_id": "CASE:case_summary#1",
+                    "analysis": first_evidence,
+                    "comparison": "The option remains conditional and cannot be assessed without its prerequisites.",
+                },
+                {
+                    "source_id": "CASE:case_summary#2",
+                    "analysis": second_evidence,
+                    "comparison": "The option remains conditional and cannot be assessed without its prerequisites.",
+                },
+            ],
+        },
+    }
+
+    result = asyncio.run(
+        mdt_generation.generate_adversarial_contribution(
+            profile, case, own_r1, own_r2, [peer]
+        )
+    )
+
+    reviews = result.model_dump()["source_opinion_reviews"]
+    assert len(reviews) == 2
+    for review in reviews:
+        assert review["evidence_validation_status"] == "verified"
+        assert review["option_status"] == "unclear"
+        assert review["conditions_status"] == "unclear"
+        assert review["model_reported_option_status"] == "omitted"
+        assert review["model_reported_conditions_status"] == "omitted"
+        assert review["challenge"] == ""
+    assert any(
+        "exact verified R2 peer excerpt contains sufficient source-specific wording"
+        in flag
+        for flag in result.source_reference_integrity_flags
+    )
+    assert not any(
+        "marks an option/condition omitted or partly preserved but provides no source-linked challenge"
+        in flag
+        for flag in result.source_reference_integrity_flags
+    )
+
+
 def test_r3_generation_copies_review_challenge_with_structured_source_prefix(monkeypatch):
     from app.round_schemas import AdversarialContributionDraft, SourceOpinionReview
     from app.services import mdt_generation

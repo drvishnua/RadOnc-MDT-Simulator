@@ -1250,11 +1250,28 @@ async def generate_adversarial_contribution(
                 partial_support = _source_opinion_component_has_any_support(
                     source_excerpt_for_review, evidence_excerpt, component
                 )
-                if (
+                source_tokens = _source_opinion_component_tokens(
+                    source_excerpt_for_review, component
+                )
+                omitted_but_supported = (
+                    reported_status in {"omitted", "partly_preserved"}
+                    and bool(source_tokens)
+                    and supported
+                )
+                unsupported_preservation = (
                     reported_status == "preserved" and not supported
                 ) or (
                     reported_status == "partly_preserved" and not partial_support
-                ):
+                )
+                if omitted_but_supported:
+                    review[field] = "unclear"
+                    review_reference_flags.append(
+                        f"R3 review for {source_id or 'unknown source'} reports the {component} as "
+                        f"{reported_status}, but the exact verified R2 peer excerpt contains "
+                        "sufficient source-specific wording; the status was downgraded to unclear. "
+                        "The model's original label remains in the audit fields."
+                    )
+                elif unsupported_preservation:
                     review[field] = "unclear"
                     review_reference_flags.append(
                         f"Review for {source_id or 'unknown source'} marks the {component} as "
