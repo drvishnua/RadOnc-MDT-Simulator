@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from difflib import SequenceMatcher
 
 import json
 from collections import Counter
@@ -231,6 +232,65 @@ def _compact_r2_text(value: str, limit: int) -> str:
     # then misrepresented by the model as verbatim evidence excerpts.
     neutralized = _EMBEDDED_ROUND_REFERENCE_PATTERN.sub("", value)
     return _compact(neutralized, limit)
+
+def _bind_exact_peer_evidence_excerpt(
+    model_excerpt: object,
+    evidence_texts: list[str],
+    *,
+    minimum_match_chars: int = 48,
+    minimum_match_ratio: float = 0.72,
+    maximum_excerpt_chars: int = 180,
+) -> tuple[str, str]:
+    """Bind a model-selected quote to a contiguous server-supplied peer-text span.
+
+    Exact matches are preferred. Small-model quote truncation/typos are tolerated
+    only when a long contiguous span matches the selected peer text. The returned
+    excerpt always comes verbatim from the supplied peer text; the model's original
+    quote is retained separately for audit. This verifies traceability, not meaning.
+    """
+    if not isinstance(model_excerpt, str):
+        return "", "missing"
+    candidate = " ".join(model_excerpt.split())
+    if not candidate:
+        return "", "missing"
+
+    best: tuple[float, int, str] | None = None
+    candidate_folded = candidate.casefold()
+    for value in evidence_texts:
+        if not isinstance(value, str):
+            continue
+        source = " ".join(value.split())
+        if not source:
+            continue
+        if candidate in source:
+            exact = candidate[:maximum_excerpt_chars]
+            return exact, "exact_model_quote"
+
+        matcher = SequenceMatcher(
+            None,
+            candidate_folded,
+            source.casefold(),
+            autojunk=False,
+        )
+        block = matcher.find_longest_match(
+            0, len(candidate_folded), 0, len(source)
+        )
+        required = max(
+            minimum_match_chars,
+            int(min(len(candidate), maximum_excerpt_chars) * minimum_match_ratio),
+        )
+        if block.size < required:
+            continue
+        bound = source[block.b:block.b + min(block.size, maximum_excerpt_chars)]
+        ratio = block.size / max(1, len(candidate))
+        option = (ratio, block.size, bound)
+        if best is None or option[:2] > best[:2]:
+            best = option
+
+    if best is None:
+        return "", "invalid"
+    return best[2], "server_bound_contiguous_match"
+
 
 def _unique_strings(values: list[str], limit: int = 12) -> list[str]:
     output: list[str] = []
@@ -973,7 +1033,8 @@ async def generate_adversarial_contribution(
         ]
         source_id = str(review.get("source_id") or "")
         evidence_peer_id = str(review.get("evidence_peer_id") or "")
-        evidence_excerpt = str(review.get("evidence_excerpt") or "").strip()
+        model_evidence_excerpt = str(review.get("evidence_excerpt") or "").strip()
+        review["model_reported_evidence_excerpt"] = model_evidence_excerpt
         evidence_peer = next(
             (item for item in peers if item.get("source") == evidence_peer_id),
             None,
@@ -988,6 +1049,13 @@ async def generate_adversarial_contribution(
                     item for item in (evidence_peer.get(key) or [])
                     if isinstance(item, str)
                 )
+        evidence_excerpt, evidence_binding_method = (
+            _bind_exact_peer_evidence_excerpt(model_evidence_excerpt, evidence_texts)
+            if evidence_peer is not None and evidence_peer_id in allowed_peer_source_ids
+            else ("", "invalid" if evidence_peer_id or model_evidence_excerpt else "missing")
+        )
+        review["evidence_excerpt"] = evidence_excerpt
+        review["evidence_excerpt_binding_method"] = evidence_binding_method
         # A model-authored CASE identifier is never sufficient to create a
         # source opinion. Only opinions extracted into the server-owned register
         # can participate in coverage or carry a verified peer citation.
@@ -1002,13 +1070,13 @@ async def generate_adversarial_contribution(
                 "the server could not bind a case-summary source-opinion register."
             )
             continue
-        if not evidence_peer_id and not evidence_excerpt:
+        if not evidence_peer_id and not model_evidence_excerpt:
             evidence_status = "missing"
         elif (
             evidence_peer is not None
             and evidence_peer_id in allowed_peer_source_ids
             and evidence_excerpt
-            and any(evidence_excerpt in item for item in evidence_texts)
+            and evidence_binding_method in {"exact_model_quote", "server_bound_contiguous_match"}
         ):
             evidence_status = "verified"
         else:
