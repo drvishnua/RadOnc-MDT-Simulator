@@ -831,7 +831,7 @@ async def generate_adversarial_contribution(
         "If a conditional option and its prerequisites are retained in a peer R2 record, mark them "
         "preserved even when those prerequisites remain unknown; this does not validate clinical "
         "suitability. Mark omitted or partly_preserved only when supplied peer R2 text itself omits "
-        "or materially distorts the attributed content. Use the full verbatim bounded peer response "
+        "or materially distorts the attributed content. Use the full bounded peer response text supplied below (with embedded round-reference tokens neutralized) "
         "and other supplied R2 fields, not only your own R2 response or abbreviated role summaries. "
         "If the peer sample contains both preserved and omitted representations, describe that mixed "
         "sample accurately in review_basis and do not generalise beyond the supplied peers. For an "
