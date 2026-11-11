@@ -21,6 +21,16 @@ AI ENGINE LICENCES AND VERSIONS
 - Model: qwen3.5:4b, obtained from the Ollama model registry. The upstream Qwen3.5-4B model is listed under Apache License 2.0: https://huggingface.co/Qwen/Qwen3.5-4B
 - Qwen model card and associated licence terms: https://huggingface.co/Qwen/Qwen3.5-4B
 
+DATA HANDLING AND LOCAL SECURITY LIMITS
+- This application is for fictional, non-identifiable training records only. Do not enter real patient names, dates of birth, hospital/MRN numbers, contact details, photographs/scans, medical-record extracts, or real patient health information.
+- The sequential RAD identifiers are local training identifiers only. They are not hospital identifiers and do not register a person with a hospital.
+- The registry display name is stored separately from the clinical case snapshot and is not sent to specialist agents. Case summaries and structured clinical fields are stored in the local SQLite database and supplied to the configured model for the educational simulation.
+- The packaged launcher is designed to use Ollama on the local computer. Do not configure the model endpoint to a remote/cloud service or connect this application to an external model unless the data-flow, privacy, security and legal implications have been reviewed and explicitly approved.
+- The backend is intended to bind only to 127.0.0.1. It has no user login or application-level authentication. Do not expose its port through LAN binding, a reverse proxy, port forwarding, remote desktop gateway or firewall rule; do not treat browser CORS restrictions as authentication.
+- The SQLite database is stored in the current Windows user's local application-data directory. This version has not been verified as encrypted at rest. Protect the Windows account and device; do not store sensitive or real patient information in this application.
+- Deleting a training record removes it from the application's active database through its normal deletion flow. It is not a guarantee of forensic erasure from SSD storage, operating-system backups, copied database files, logs or exported reports.
+- Keep the app and its data on a trusted, access-controlled device. Back up data before upgrades or migrations. Complete backup/restore and secure-erasure guarantees are not currently claimed.
+
 DATA LOCATION AND PRESERVATION
 - The application database is stored under %LOCALAPPDATA%\RadOncMDT\Data.
 - Logs are stored under %LOCALAPPDATA%\RadOncMDT\Logs.
