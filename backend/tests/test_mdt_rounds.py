@@ -1249,6 +1249,109 @@ def test_r3_server_selects_exact_source_linked_excerpt_from_selected_peer(monkey
     assert result.source_reference_integrity_flags == []
 
 
+def test_r3_binds_peer_from_unique_review_basis_reference_when_model_omits_structured_evidence_fields(monkeypatch):
+    from app.round_schemas import AdversarialContributionDraft, SourceOpinionReview
+    from app.services import mdt_generation
+
+    source_id = "CASE:case_summary#1"
+    source_analysis = (
+        "The source proposes a surgery-led assessment first, conditional on "
+        "complete local staging and resectability review."
+    )
+
+    async def fake_generate(prompt, schema_type, max_tokens):
+        return AdversarialContributionDraft(
+            position="insufficient_information",
+            provisional_conclusion="The supplied fictional information does not establish a pathway.",
+            response_to_other_perspectives="The source option remains conditional on missing prerequisites.",
+            agreements=[],
+            substantive_challenges=[],
+            remaining_unknowns=["Clinical staging and resectability review remain unknown."],
+            risk_flags=[],
+            confidence=0.4,
+            source_opinion_reviews=[
+                SourceOpinionReview(
+                    source_id=source_id,
+                    option_status="preserved",
+                    conditions_status="preserved",
+                    review_basis=(
+                        "The supplied R2:SO-02 source-specific analysis retains the option "
+                        "and its stated prerequisites."
+                    ),
+                    # The model omitted the peer from structured references and
+                    # omitted both evidence_peer_id and evidence_excerpt.
+                    source_reference_ids=[source_id],
+                    evidence_peer_id="",
+                    evidence_excerpt="",
+                )
+            ],
+        )
+
+    monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate)
+    profile = {
+        "agent_id": "RO-01",
+        "name": "Radiation Oncology",
+        "mandate": "Review source representation and preserve uncertainty.",
+    }
+    case = SyntheticCase(
+        scenario_title="Synthetic R3 structured-evidence recovery test",
+        case_summary=(
+            "Fictional case. The surgical oncology note favours a surgery-led assessment first, "
+            "conditional on complete local staging and resectability review."
+        ),
+    )
+    own_r1 = {
+        "position": "insufficient_information",
+        "provisional_conclusion": "The fictional record lacks verified staging information.",
+        "preferred_educational_option": "No definitive pathway can be established.",
+    }
+    own_r2 = {
+        "position": "insufficient_information",
+        "provisional_conclusion": "The debate remains unresolved pending missing information.",
+        "response_to_other_perspectives": "The case prerequisites remain unknown.",
+    }
+    peers = [
+        {
+            "agent_id": "SO-02",
+            "agent_name": "Surgical Oncology",
+            "result": {
+                "position": "insufficient_information",
+                "provisional_conclusion": "The case remains insufficiently specified.",
+                "response_to_other_perspectives": "The peer review retains the conditional option.",
+                "agreements": [],
+                "substantive_challenges": [],
+                "risk_flags": [],
+                "position_changes": [],
+                "source_opinion_responses": [
+                    {
+                        "source_id": source_id,
+                        "analysis": source_analysis,
+                        "comparison": "The prerequisites remain unknown.",
+                    }
+                ],
+            },
+        }
+    ]
+
+    result = asyncio.run(
+        mdt_generation.generate_adversarial_contribution(
+            profile, case, own_r1, own_r2, peers
+        )
+    )
+
+    review = result.source_opinion_reviews[0]
+    assert review.model_reported_evidence_peer_id == ""
+    assert review.evidence_peer_id == "R2:SO-02"
+    assert review.evidence_peer_selection_method == "server_bound_review_basis_reference"
+    assert review.evidence_excerpt_binding_method == "server_selected_source_match"
+    assert review.evidence_validation_status == "verified"
+    assert review.evidence_excerpt in source_analysis
+    assert review.option_status == "preserved"
+    assert review.conditions_status == "preserved"
+    assert review.source_reference_ids == [source_id, "R2:SO-02"]
+    assert result.source_reference_integrity_flags == []
+
+
 def test_r3_source_excerpt_fallback_never_borrows_from_another_peer_or_case_opinion(monkeypatch):
     from app.round_schemas import AdversarialContributionDraft, SourceOpinionReview
     from app.services import mdt_generation

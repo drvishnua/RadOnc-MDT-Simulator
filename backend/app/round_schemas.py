@@ -105,6 +105,20 @@ class SourceOpinionReview(StrictModel):
     )
     source_reference_ids: list[str] = Field(default_factory=list, max_length=8)
     evidence_peer_id: str = Field(default="", max_length=100)
+    model_reported_evidence_peer_id: str = Field(
+        default="",
+        max_length=100,
+        description="Original model-authored evidence peer ID retained for audit; do not author this field.",
+    )
+    evidence_peer_selection_method: Literal[
+        "model_reported",
+        "server_bound_review_basis_reference",
+        "missing",
+        "invalid",
+    ] = Field(
+        default="missing",
+        description="Server-computed peer selection provenance. A review_basis reference is only a selection hint; the peer must still be supplied and its exact source-specific excerpt independently bound.",
+    )
     evidence_excerpt: str = Field(default="", max_length=180)
     model_reported_evidence_excerpt: str = Field(default="", max_length=180, description="Original model-authored quote retained for audit; the server binds evidence_excerpt to supplied peer text.")
     evidence_excerpt_binding_method: Literal["exact_model_quote", "server_bound_contiguous_match", "server_selected_source_match", "missing", "invalid"] = Field(default="missing", description="Server-computed excerpt binding method. server_selected_source_match means the server selected an exact contiguous passage from the chosen peer's unique structured response for the same CASE source ID; it does not validate semantic interpretation or clinical correctness.")

@@ -1262,6 +1262,29 @@ async def generate_adversarial_contribution(
         evidence_peer_id = str(review.get("evidence_peer_id") or "")
         model_evidence_excerpt = str(review.get("evidence_excerpt") or "").strip()
         review["model_reported_evidence_excerpt"] = model_evidence_excerpt
+        review["model_reported_evidence_peer_id"] = evidence_peer_id
+        evidence_peer_selection_method = (
+            "model_reported" if evidence_peer_id in allowed_peer_source_ids else
+            ("invalid" if evidence_peer_id else "missing")
+        )
+        # Small local models may cite the correct supplied peer in review_basis but
+        # omit the dedicated evidence_peer_id field. Treat that prose citation only
+        # as an untrusted selection hint: accept it only when exactly one R2 ID is
+        # named and it is in this role's actual supplied-peer allowlist. The server
+        # still binds the evidence to that peer's unique structured response for
+        # this exact CASE source; prose alone can never verify an excerpt.
+        if not evidence_peer_id:
+            basis_peer_ids = sorted(set(re.findall(
+                r"\bR2:[A-Z]{2}-[0-9]{2}\b",
+                str(review.get("review_basis") or ""),
+            )))
+            if len(basis_peer_ids) == 1 and basis_peer_ids[0] in allowed_peer_source_ids:
+                evidence_peer_id = basis_peer_ids[0]
+                review["evidence_peer_id"] = evidence_peer_id
+                evidence_peer_selection_method = "server_bound_review_basis_reference"
+            elif basis_peer_ids:
+                evidence_peer_selection_method = "invalid"
+        review["evidence_peer_selection_method"] = evidence_peer_selection_method
         evidence_peer = next(
             (item for item in peers if item.get("source") == evidence_peer_id),
             None,
@@ -1306,7 +1329,7 @@ async def generate_adversarial_contribution(
         # this same server-identified CASE source. Never search another peer or
         # another CASE source; an absent/ambiguous response remains unverified.
         if (
-            model_evidence_excerpt
+            (model_evidence_excerpt or evidence_peer_id)
             and evidence_peer is not None
             and evidence_peer_id in allowed_peer_source_ids
             and source_id in traceable_case_source_ids
