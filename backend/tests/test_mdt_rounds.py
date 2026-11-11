@@ -427,7 +427,7 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
     assert "REPRESENTATION FIDELITY ONLY" in prompts[1]
     assert "Missing or unfulfilled case prerequisites are case unknowns" in prompts[1]
     assert "not an assessment of clinical appropriateness" in prompts[1].casefold()
-    assert "does not permit assessment, use unclear" in prompts[1]
+    assert "If no peer record permits a reliable assessment, use unclear" in prompts[1]
     assert "[embedded round ref; cite R2]" not in prompts[1]
     assert "R1:SO-01" not in prompts[1]
     assert "R2:DS-02" not in prompts[1]
@@ -439,7 +439,7 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
     assert "Cite only individual source IDs listed under ALLOWED ROUND SOURCE IDS" in prompts[1]
     assert "source_opinion_reviews" in prompts[1]
     assert "source_reference_ids" in prompts[1]
-    assert "exact CASE source ID and at least one exact R2:AGENT_ID" in prompts[1]
+    assert "exact CASE source ID and one exact R2:AGENT_ID from the supplied" in prompts[1]
     assert "CASE:case_summary#N" in prompts[1]
     assert "Do not assume a fixed number of opinions" in prompts[1]
     assert "CASE ATTRIBUTION CHECK" in prompts[1]
