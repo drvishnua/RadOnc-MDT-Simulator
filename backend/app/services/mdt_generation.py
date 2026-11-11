@@ -1050,8 +1050,14 @@ async def generate_adversarial_contribution(
         f"positions and the supplied R2 peer sample. Cite peer roles only with their exact R2:AGENT_ID labels from that sample; never relabel an R2 peer as R1. An R1 citation is permitted only for your own role's independent assessment. When discussing your own R2 record, cite it as R2:{profile['agent_id']}; do not reuse an R1 source ID merely because that ID appears inside your quoted R2 text. The only R1 source you may cite in this round is R1:{profile['agent_id']}. Never cite role ranges, a complete role directory, or an unsupplied role as evidence. Cite only individual source IDs listed under ALLOWED ROUND SOURCE IDS; if an earlier source is mentioned inside an R2 contribution and its original record was not supplied, attribute the statement to that R2 contribution instead. Do not invent or cite an unprovided role. Do not conflate different conditional options "
         "or treat shared missing investigations as agreement on a pathway. For each opinion, "
         "assess REPRESENTATION FIDELITY ONLY: whether its option and conditions are faithfully "
-        "represented in the actual R2 contribution text supplied to you. This is not an assessment "
-        "of clinical appropriateness, eligibility, or whether the case satisfies the prerequisites. "
+        "represented in the actual R2 contribution text supplied to you. Before marking an option or "
+        "condition omitted, inspect the matching source_opinion_responses entry for that exact CASE source ID "
+        "in each supplied R2 peer record. Those structured source-specific analysis and comparison fields "
+        "are part of the saved R2 contribution; do not treat an option or prerequisite as omitted merely "
+        "because it is absent from the peer's general conclusion or response_to_other_perspectives. If the "
+        "matching source-specific R2 entry retains the distinct option and its prerequisite, classify the "
+        "representation as preserved unless that same entry materially changes or contradicts it. "
+        "This is not an assessment of clinical appropriateness, eligibility, or whether the case satisfies the prerequisites. "
         "A source opinion conditional on MRI, fitness, local staging, or another prerequisite remains "
         "a represented conditional option when R2 retains that option and its conditional wording, "
         "even when the prerequisite is missing or unknown in the case. Missing or unfulfilled case "
@@ -1274,16 +1280,34 @@ async def generate_adversarial_contribution(
         # still binds the evidence to that peer's unique structured response for
         # this exact CASE source; prose alone can never verify an excerpt.
         if not evidence_peer_id:
-            basis_peer_ids = sorted(set(re.findall(
-                r"\bR2:[A-Z]{2}-[0-9]{2}\b",
-                str(review.get("review_basis") or ""),
-            )))
-            if len(basis_peer_ids) == 1 and basis_peer_ids[0] in allowed_peer_source_ids:
-                evidence_peer_id = basis_peer_ids[0]
+            structured_peer_ids = sorted({
+                str(item).strip()
+                for item in reported_refs
+                if isinstance(item, str)
+                and re.fullmatch(r"R2:[A-Z]{2}-[0-9]{2}", item.strip())
+            })
+            if (
+                len(structured_peer_ids) == 1
+                and structured_peer_ids[0] in allowed_peer_source_ids
+            ):
+                evidence_peer_id = structured_peer_ids[0]
                 review["evidence_peer_id"] = evidence_peer_id
-                evidence_peer_selection_method = "server_bound_review_basis_reference"
-            elif basis_peer_ids:
+                evidence_peer_selection_method = "server_bound_structured_source_reference"
+            elif structured_peer_ids:
+                # More than one candidate or an unsupplied candidate is ambiguous/invalid.
+                # Do not let prose override an ambiguous structured citation.
                 evidence_peer_selection_method = "invalid"
+            else:
+                basis_peer_ids = sorted(set(re.findall(
+                    r"\bR2:[A-Z]{2}-[0-9]{2}\b",
+                    str(review.get("review_basis") or ""),
+                )))
+                if len(basis_peer_ids) == 1 and basis_peer_ids[0] in allowed_peer_source_ids:
+                    evidence_peer_id = basis_peer_ids[0]
+                    review["evidence_peer_id"] = evidence_peer_id
+                    evidence_peer_selection_method = "server_bound_review_basis_reference"
+                elif basis_peer_ids:
+                    evidence_peer_selection_method = "invalid"
         review["evidence_peer_selection_method"] = evidence_peer_selection_method
         evidence_peer = next(
             (item for item in peers if item.get("source") == evidence_peer_id),

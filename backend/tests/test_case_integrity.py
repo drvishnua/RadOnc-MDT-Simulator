@@ -211,9 +211,18 @@ def test_definitive_treatment_safety_claims_are_flagged_but_conditional_risks_ar
         "risk_flags": [
             "Starting treatment without staging may be unsafe.",
             "The case does not establish whether any option may be contraindicated.",
+            "The absence of data means suitability for either option is unknown; it does not imply one is contraindicated or that the other is indicated.",
         ]
     })
     assert not any("treatment safety/indication" in item for item in conditional)
+
+    # Negation must not suppress a separate positive claim after a clause boundary.
+    contrastive = audit_unverified_case_claims(case, {
+        "risk_flags": [
+            "The absence of data does not imply chemotherapy is contraindicated; however, surgery is contraindicated."
+        ]
+    })
+    assert any("treatment safety/indication" in item for item in contrastive)
 
 
 def test_unreported_histology_and_pathology_markers_are_flagged():

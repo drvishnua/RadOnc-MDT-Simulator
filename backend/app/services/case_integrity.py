@@ -171,7 +171,7 @@ _QUALIFIER = re.compile(
     r"not\s+(?:confirmed|documented|provided|reported|established|specified|verified)"
     r"|unconfirmed|unverified|unknown|not\s+supplied|not\s+reported"
     r"|cannot\s+be\s+assumed|should\s+not\s+be\s+assumed|do\s+not\s+assume"
-    r"|cannot\s+confirm|(?:does|do|did)\s+not\s+(?:confirm|establish|show|demonstrate|support|indicate|prove)"
+    r"|cannot\s+confirm|(?:does|do|did)\s+not\s+(?:imply|mean|confirm|establish|show|demonstrate|support|indicate|prove)"
     r"|without\s+(?:confirmation|a\s+confirmed)"
     r"|no\s+prior\s+treatment\s+(?:data|records?|history|information|details|documentation)\b"
     r"|assum(?:e|es|ed|ing|ption|ptions)|hypothetical|provisional"

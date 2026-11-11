@@ -113,11 +113,12 @@ class SourceOpinionReview(StrictModel):
     evidence_peer_selection_method: Literal[
         "model_reported",
         "server_bound_review_basis_reference",
+        "server_bound_structured_source_reference",
         "missing",
         "invalid",
     ] = Field(
         default="missing",
-        description="Server-computed peer selection provenance. A review_basis reference is only a selection hint; the peer must still be supplied and its exact source-specific excerpt independently bound.",
+        description="Server-computed peer selection provenance. Structured source_reference_ids or review_basis references are selection hints only; the peer must be in the actual supplied-peer allowlist and its exact source-specific excerpt must still be independently bound.",
     )
     evidence_excerpt: str = Field(default="", max_length=180)
     model_reported_evidence_excerpt: str = Field(default="", max_length=180, description="Original model-authored quote retained for audit; the server binds evidence_excerpt to supplied peer text.")
