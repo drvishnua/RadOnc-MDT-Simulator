@@ -83,6 +83,7 @@ jobs:
           $tags = Get-RadOncOllamaTags -BaseUrl $ollamaUrl
           if (-not (Test-RadOncModelInstalled -Tags $tags -ModelName "qwen3.5:4b")) {
             throw "qwen3.5:4b is not present after model pull."
+          }
           $modelRecord = @($tags.models | Where-Object {
             ([string]$_.name -eq "qwen3.5:4b") -or ([string]$_.model -eq "qwen3.5:4b")
           } | Select-Object -First 1)
@@ -156,7 +157,18 @@ jobs:
           Write-Host "HOSTED_CPU_MODEL_DIGEST=$modelDigest"
           Write-Host "HOSTED_CPU_MODEL_SIZE_BYTES=$modelSizeBytes"
           Write-Host "HOSTED_CPU_VALIDATION_MANIFEST=$manifestPath"
-
+          if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
+            throw "The execution manifest was not written."
+          }
+          $verifiedManifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+          if ($verifiedManifest.source.commit_sha -ne $env:GITHUB_SHA) {
+            throw "The execution manifest source SHA does not match this workflow run."
+          }
+          if ($verifiedManifest.model.digest -ne $modelDigest) {
+            throw "The execution manifest model digest does not match the installed model."
+          }
+          if ([long]$verifiedManifest.model.size_bytes -ne $modelSizeBytes) {
+            throw "The execution manifest model size does not match the installed model."
           }
 
           # Keep the Ollama server and all four rounds inside this same Actions
@@ -191,7 +203,7 @@ jobs:
             backend/validation_artifacts/live_four_round_hosted_cpu_validation.json
             backend/validation_artifacts/live_four_round_hosted_cpu_validation.sqlite3
             backend/validation_artifacts/live_four_round_hosted_cpu_manifest.json
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 14
 
       - name: Stop only the isolated Ollama process started by this job
