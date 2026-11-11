@@ -667,6 +667,7 @@ async def generate_debate_contribution(
         "conclusion": _compact(own_independent_assessment.get("provisional_conclusion", ""), 240),
         "option": _compact(own_independent_assessment.get("preferred_educational_option", ""), 160),
     }
+    source_opinion_register = extract_attributed_note_opinions(case.case_summary)
     allowed_source_ids = [
         f"R1:{profile['agent_id']}",
         *(f"R1:{peer['agent_id']}" for peer in peer_views),
@@ -685,10 +686,15 @@ async def generate_debate_contribution(
         "both depend on some missing investigations. Shared uncertainty about prerequisites "
         "is not agreement on treatment sequence, option, resectability, or fitness. Do not "
         "describe different prerequisites as identical unless the source text explicitly says so. "
-        "For EACH attributed opinion, state whether its option and every condition are preserved, "
-        "partly preserved, omitted, or unclear in the selected peer digest. If omitted or "
-        "weakened, record a source-linked challenge; if the digest is insufficient, mark it "
-        "unclear rather than assuming preservation or agreement. "
+        "For EACH server-identified attributed opinion listed in the dedicated register below, "
+        "address it separately in response_to_other_perspectives. Include its exact CASE source ID, "
+        "the distinct option described, and every stated prerequisite/condition. Do not replace an "
+        "option with a generic statement that the case lacks enough information. Missing prerequisites "
+        "mean suitability is unknown; they do not erase the source's conditional option. Do not imply "
+        "that repeating a source opinion means you endorse it. Compare the opinion with your own R1 "
+        "position and only the selected peer R1 records. State whether the selected peer digest itself "
+        "preserves, partly preserves, omits or leaves unclear that source opinion. If a peer omits or "
+        "weakens it, make a source-linked challenge; if the digest is insufficient, say unclear. "
         f"ALLOWED ROUND SOURCE IDS: {', '.join(allowed_source_ids)}. "
         "Use only these exact individual source IDs when citing case or peer statements. "
         "Never cite a role range, role band, sequence of roles, or complete role directory; "
@@ -712,6 +718,8 @@ async def generate_debate_contribution(
         f"ROLE: {profile['name']}\nMANDATE: {profile['mandate']}\n"
         "SUPPLIED CASE:\n"
         + json.dumps(build_case_prompt_context(case), ensure_ascii=False, separators=(",", ":"))
+        + "\nSERVER-IDENTIFIED ATTRIBUTED SOURCE OPINIONS (exact case-summary excerpts; source statements, not verified facts or your endorsement):\n"
+        + json.dumps(source_opinion_register, ensure_ascii=False, separators=(",", ":"))
         + "\nYOUR ROUND-1 POSITION:\n"
         + json.dumps(own, ensure_ascii=False, separators=(",", ":"))
         + "\nSELECTED PEER POSITIONS (compressed for local context limits):\n"
@@ -727,7 +735,14 @@ async def generate_debate_contribution(
     else:
         payload["position_changes"] = []
     payload["source_peer_ids"] = [peer["agent_id"] for peer in peer_views]
-    payload["source_reference_integrity_flags"] = _audit_source_references(payload, allowed_sources)
+    r2_source_coverage_flags = [
+        f"R2 did not explicitly address server-identified attributed opinion {item['source_id']} in response_to_other_perspectives."
+        for item in source_opinion_register
+        if item["source_id"] not in str(payload.get("response_to_other_perspectives") or "")
+    ]
+    payload["source_reference_integrity_flags"] = (
+        _audit_source_references(payload, allowed_sources) + r2_source_coverage_flags
+    )[:20]
     return RoundContribution(
         agent_id=profile["agent_id"],
         round_number=2,
