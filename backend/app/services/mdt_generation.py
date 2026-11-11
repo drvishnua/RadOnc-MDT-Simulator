@@ -272,18 +272,32 @@ def _bind_exact_peer_evidence_excerpt(
             source.casefold(),
             autojunk=False,
         )
-        block = matcher.find_longest_match(
-            0, len(candidate_folded), 0, len(source)
-        )
+        blocks = [
+            block for block in matcher.get_matching_blocks()
+            if block.size > 0
+        ]
+        if not blocks:
+            continue
+        matched_chars = sum(block.size for block in blocks)
+        first_source = min(block.b for block in blocks)
+        last_source = max(block.b + block.size for block in blocks)
+        span_length = last_source - first_source
         required = max(
             minimum_match_chars,
             int(min(len(candidate), maximum_excerpt_chars) * minimum_match_ratio),
         )
-        if block.size < required:
+        longest_block = max(block.size for block in blocks)
+        if (
+            matched_chars < required
+            or longest_block < min(36, required)
+            or span_length > maximum_excerpt_chars
+        ):
             continue
-        bound = source[block.b:block.b + min(block.size, maximum_excerpt_chars)]
-        ratio = block.size / max(1, len(candidate))
-        option = (ratio, block.size, bound)
+        # Gaps between matching blocks are copied only from the original peer
+        # string, so the final bound remains one exact contiguous source span.
+        bound = source[first_source:last_source]
+        ratio = matched_chars / max(1, len(candidate), len(bound))
+        option = (ratio, matched_chars, bound)
         if best is None or option[:2] > best[:2]:
             best = option
 
