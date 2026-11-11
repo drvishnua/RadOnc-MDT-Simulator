@@ -350,7 +350,7 @@ def test_r3_receives_full_peer_response_and_server_binds_preserved_and_omitted_r
                     ],
                     "evidence_peer_id": "R2:MO-01",
                     "evidence_excerpt": (
-                        "surgery-led assessment first, conditional on complete local staging"
+                        "surgery-led assessment first, conditional on complete local staging and resectability review"
                     ),
                 },
                 {
@@ -449,6 +449,7 @@ def test_r3_receives_full_peer_response_and_server_binds_preserved_and_omitted_r
     # previous 100-character truncation point and remains an exact source excerpt.
     assert peer_preserved_response in captured["prompt"]
     assert "For EVERY review, including omitted and unclear reviews" in captured["prompt"]
+    assert "source-specific wording for that component" in captured["prompt"]
     assert "never cite your own R2 record as a peer" in captured["prompt"]
 
     reviews = {review.source_id: review for review in result.source_opinion_reviews}
@@ -476,6 +477,89 @@ def test_r3_receives_full_peer_response_and_server_binds_preserved_and_omitted_r
         for challenge in result.substantive_challenges
     )
     assert result.source_reference_integrity_flags == []
+
+
+def test_r3_downgrades_preserved_labels_when_exact_peer_quote_is_not_source_specific(monkeypatch):
+    import asyncio
+
+    from app.round_schemas import AdversarialContributionDraft
+    from app.schemas import SyntheticCase
+    from app.services import mdt_generation
+    from app.services.case_integrity import extract_attributed_note_opinions
+
+    case_summary = (
+        "Fictional educational record. The surgical oncology note favours a surgery-led "
+        "assessment first, conditional on complete local staging and resectability review."
+    )
+    opinion = extract_attributed_note_opinions(case_summary)[0]
+    generic_peer_text = (
+        "The supplied fictional record does not establish clinical stage, investigation results, "
+        "fitness, patient goals, or a definitive pathway."
+    )
+
+    async def fake_generate(prompt, schema_type, max_tokens):
+        return AdversarialContributionDraft(
+            position="insufficient_information",
+            provisional_conclusion="The available record does not establish a definitive pathway.",
+            response_to_other_perspectives="The selected R2 peer reports missing information.",
+            agreements=[],
+            substantive_challenges=[],
+            remaining_unknowns=[],
+            risk_flags=[],
+            confidence=0.4,
+            source_opinion_reviews=[{
+                "source_id": opinion["source_id"],
+                "option_status": "preserved",
+                "conditions_status": "preserved",
+                "review_basis": "The R2 peer retains the surgery-led option and its conditions.",
+                "source_reference_ids": [opinion["source_id"], "R2:SO-02"],
+                "evidence_peer_id": "R2:SO-02",
+                "evidence_excerpt": generic_peer_text,
+            }],
+        )
+
+    monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate)
+    result = asyncio.run(
+        mdt_generation.generate_adversarial_contribution(
+            {"agent_id": "RO-01", "name": "Radiation Oncology", "mandate": "Audit source representation."},
+            SyntheticCase(scenario_title="False preserved evidence regression", case_summary=case_summary),
+            {
+                "position": "insufficient_information",
+                "provisional_conclusion": "The supplied data do not establish a definitive pathway.",
+                "preferred_educational_option": "No definitive pathway is established.",
+            },
+            {
+                "position": "insufficient_information",
+                "provisional_conclusion": "The R2 discussion remains incomplete.",
+                "response_to_other_perspectives": "The R2 response records missing information.",
+            },
+            [{
+                "agent_id": "SO-02",
+                "agent_name": "Surgical Oncology",
+                "result": {
+                    "position": "insufficient_information",
+                    "provisional_conclusion": generic_peer_text,
+                    "response_to_other_perspectives": generic_peer_text,
+                    "agreements": [],
+                    "substantive_challenges": [],
+                    "risk_flags": [],
+                    "position_changes": [],
+                },
+            }],
+        )
+    )
+
+    review = result.source_opinion_reviews[0]
+    assert review.evidence_validation_status == "verified"  # traceability only
+    assert review.evidence_excerpt == generic_peer_text
+    assert review.model_reported_option_status == "preserved"
+    assert review.model_reported_conditions_status == "preserved"
+    assert review.option_status == "unclear"
+    assert review.conditions_status == "unclear"
+    assert any(
+        "exact R2 excerpt does not contain sufficient source-specific wording" in flag
+        for flag in result.source_reference_integrity_flags
+    )
 
 
 def test_r3_server_binds_exact_contiguous_span_when_small_model_quote_is_approximate(monkeypatch):

@@ -330,7 +330,7 @@ def test_peer_selection_excludes_failed_or_running_records():
 
 
 def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
-    from app.round_schemas import AdversarialContributionDraft, RoundContributionDraft
+    from app.round_schemas import AdversarialContributionDraft, Round2ContributionDraft, RoundContributionDraft
     from app.services import mdt_generation
 
     prompts = []
@@ -349,7 +349,23 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
         )
         if schema_type is AdversarialContributionDraft:
             return AdversarialContributionDraft(**draft_fields, source_opinion_reviews=[])
-        return RoundContributionDraft(**draft_fields)
+        if schema_type is Round2ContributionDraft:
+            return Round2ContributionDraft(
+                **draft_fields,
+                source_opinion_responses=[
+                    {
+                        "source_id": "CASE:case_summary#1",
+                        "analysis": "A specialist assessment first remains the distinct option, conditional on complete staging.",
+                        "comparison": "This differs from a generic no-pathway conclusion in the selected R1 views.",
+                    },
+                    {
+                        "source_id": "CASE:case_summary#2",
+                        "analysis": "A separate preoperative sequence is conditional on MRI review and documented fitness.",
+                        "comparison": "This remains distinct from the specialist assessment option in the selected R1 view.",
+                    },
+                ],
+            )
+        raise AssertionError(f"Unexpected generation schema: {schema_type.__name__}")
 
     monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate)
     profile = {"agent_id": "RO-01", "name": "Radiation Oncology", "mandate": "Review educational radiotherapy considerations."}
@@ -376,7 +392,13 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
             "unknowns": ["MRI is unknown; citation R1:ZZ-99 must be ignored."],
         },
     }]
-    asyncio.run(mdt_generation.generate_debate_contribution(profile, case, own, peer_r1))
+    r2_result = asyncio.run(mdt_generation.generate_debate_contribution(profile, case, own, peer_r1))
+    assert [item.source_id for item in r2_result.source_opinion_responses] == [
+        "CASE:case_summary#1",
+        "CASE:case_summary#2",
+    ]
+    assert all(item.source_excerpt for item in r2_result.source_opinion_responses)
+    assert not r2_result.source_reference_integrity_flags
     assert "R1:SO-01" in prompts[0]
     assert "ALLOWED ROUND SOURCE IDS: R1:RO-01, R1:SO-01" in prompts[0]
     assert "Never cite a role range, role band" in prompts[0]
@@ -391,7 +413,8 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
     assert "SERVER-IDENTIFIED ATTRIBUTED SOURCE OPINIONS" in prompts[0]
     assert "CASE:case_summary#1" in prompts[0]
     assert "Missing prerequisites mean suitability is unknown" in prompts[0]
-    assert "address it separately in response_to_other_perspectives" in prompts[0]
+    assert "return exactly one item in the required source_opinion_responses array" in prompts[0]
+    assert "source_opinion_responses" in prompts[0]
     # Prompt section boundaries must be actual newlines, not literal backslash-n text.
     assert "conditionality; do not convert conditional positions into support.\nROLE:" in prompts[0]
 
@@ -944,12 +967,12 @@ def test_adversarial_prompt_truncates_peer_digest_to_five_source_records(monkeyp
 
 
 def test_r2_records_exact_peer_sources_and_flags_broad_or_unsupplied_references(monkeypatch):
-    from app.round_schemas import RoundContributionDraft
+    from app.round_schemas import Round2ContributionDraft
     from app.services import mdt_generation
 
     async def fake_generate(prompt, schema_type, max_tokens):
         assert "ALLOWED ROUND SOURCE IDS: R1:RO-01, R1:MO-01" in prompt
-        return RoundContributionDraft(
+        return Round2ContributionDraft(
             position="insufficient_information",
             provisional_conclusion="The available synthetic information remains insufficient for a definitive conclusion.",
             response_to_other_perspectives=(
@@ -961,6 +984,7 @@ def test_r2_records_exact_peer_sources_and_flags_broad_or_unsupplied_references(
             remaining_unknowns=["Staging remains unknown."],
             risk_flags=[],
             confidence=0.5,
+            source_opinion_responses=[],
         )
 
     monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate)
@@ -1777,10 +1801,11 @@ print(json.dumps({
 
 
 def test_r2_and_r3_use_larger_context_without_changing_chair_default():
-    from app.round_schemas import AdversarialContributionDraft, FinalReportDraft, RoundContributionDraft
+    from app.round_schemas import AdversarialContributionDraft, FinalReportDraft, Round2ContributionDraft, RoundContributionDraft
     from app.services.mdt_generation import _context_window_for_schema
 
     assert _context_window_for_schema(RoundContributionDraft) == 6144
+    assert _context_window_for_schema(Round2ContributionDraft) == 6144
     assert _context_window_for_schema(AdversarialContributionDraft) == 6144
     assert _context_window_for_schema(FinalReportDraft) == 4096
 
@@ -1952,15 +1977,63 @@ def test_r3_uses_server_identified_opinion_ids_and_flags_duplicate_or_missing_re
     assert result.source_peer_ids == ["MO-01"]
 
 
-def test_r2_flags_unaddressed_server_registered_case_opinions(monkeypatch):
+def test_r2_flags_incomplete_structured_opinion_content(monkeypatch):
     import asyncio
 
-    from app.round_schemas import RoundContributionDraft
+    from app.round_schemas import Round2ContributionDraft
     from app.services import mdt_generation
     from app.schemas import SyntheticCase
 
     async def fake_generate(prompt, schema_type, max_tokens):
-        return RoundContributionDraft(
+        return Round2ContributionDraft(
+            position="insufficient_information",
+            provisional_conclusion="The supplied case remains incomplete pending further review.",
+            response_to_other_perspectives="The supplied peer data do not establish a definitive pathway.",
+            agreements=[],
+            substantive_challenges=[],
+            remaining_unknowns=[],
+            risk_flags=[],
+            confidence=0.4,
+            source_opinion_responses=[{
+                "source_id": "CASE:case_summary#1",
+                "analysis": "The case remains incomplete pending clinical staging and fitness review.",
+                "comparison": "The source opinion cannot be evaluated because the required information is missing.",
+            }],
+        )
+
+    monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate)
+    case = SyntheticCase(
+        scenario_title="R2 incomplete opinion response",
+        case_summary=(
+            "Fictional record. The surgical oncology note favours a surgery-led assessment first, "
+            "conditional on complete local staging and resectability review."
+        ),
+    )
+    result = asyncio.run(
+        mdt_generation.generate_debate_contribution(
+            {"agent_id": "RO-01", "name": "Radiation Oncology", "mandate": "Review options."},
+            case,
+            {
+                "position": "insufficient_information",
+                "provisional_conclusion": "The supplied case remains incomplete pending further review.",
+                "preferred_educational_option": "No definitive pathway established.",
+            },
+            [],
+        )
+    )
+    flags = " ".join(result.source_reference_integrity_flags)
+    assert "does not retain sufficient source-specific language for the distinct option" in flags
+
+
+def test_r2_flags_unaddressed_server_registered_case_opinions(monkeypatch):
+    import asyncio
+
+    from app.round_schemas import Round2ContributionDraft
+    from app.services import mdt_generation
+    from app.schemas import SyntheticCase
+
+    async def fake_generate(prompt, schema_type, max_tokens):
+        return Round2ContributionDraft(
             position="insufficient_information",
             provisional_conclusion=(
                 "The supplied case does not establish stage, fitness or a definitive pathway."
@@ -1973,6 +2046,7 @@ def test_r2_flags_unaddressed_server_registered_case_opinions(monkeypatch):
             remaining_unknowns=[],
             risk_flags=[],
             confidence=0.4,
+            source_opinion_responses=[],
         )
 
     monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate)
@@ -1996,7 +2070,7 @@ def test_r2_flags_unaddressed_server_registered_case_opinions(monkeypatch):
         )
     )
     assert any(
-        "R2 did not explicitly address server-identified attributed opinion CASE:case_summary#1"
+        "R2 has no structured response for server-identified attributed opinion CASE:case_summary#1"
         in flag
         for flag in result.source_reference_integrity_flags
     )

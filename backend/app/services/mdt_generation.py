@@ -20,6 +20,7 @@ from app.round_schemas import (
     FinalMDTReport,
     RoundContribution,
     RoundContributionDraft,
+    Round2ContributionDraft,
 )
 from app.schemas import SyntheticCase
 from app.services.case_integrity import audit_unverified_case_claims, build_case_prompt_context, build_case_report_title, case_summary_has_attributed_opinions, extract_attributed_note_opinions
@@ -36,7 +37,7 @@ def _context_window_for_schema(schema_type: type[BaseModel]) -> int:
     """Give R2 and R3 enough room for bounded peer context and structured output."""
     return (
         6144
-        if schema_type in (RoundContributionDraft, AdversarialContributionDraft)
+        if schema_type in (RoundContributionDraft, Round2ContributionDraft, AdversarialContributionDraft)
         else 4096
     )
 
@@ -304,6 +305,82 @@ def _bind_exact_peer_evidence_excerpt(
     if best is None:
         return "", "invalid"
     return best[2], "server_bound_contiguous_match"
+
+
+_OPINION_ATTRIBUTION_VERB_PATTERN = re.compile(
+    r"\b(?:favours?|favors?|proposes?|recommends?|supports?|prefers?|advocates?|suggests?)\b",
+    re.IGNORECASE,
+)
+_OPINION_CONDITION_PATTERN = re.compile(
+    r"\b(?:conditional on|subject to|provided that|contingent on|dependent on)\b",
+    re.IGNORECASE,
+)
+_OPINION_TERM_STOPWORDS = {
+    "a", "an", "the", "and", "or", "to", "on", "of", "in", "for", "with",
+    "by", "from", "as", "is", "are", "was", "were", "be", "been", "being",
+    "note", "service", "surgical", "medical", "oncology", "favours", "favour",
+    "favors", "favor", "proposes", "propose", "recommends", "recommend",
+    "supports", "support", "prefers", "prefer", "advocates", "advocate",
+    "suggests", "suggest", "conditional", "subject", "provided", "contingent",
+    "dependent", "that", "discussing", "discussion", "assessment", "review",
+}
+
+
+def _source_opinion_component_tokens(source_excerpt: str, component: str) -> list[str]:
+    """Extract source-specific lexical anchors; this is a conservative audit, not semantic proof."""
+    action = _OPINION_ATTRIBUTION_VERB_PATTERN.search(source_excerpt)
+    remainder = source_excerpt[action.end():] if action else source_excerpt
+    condition = _OPINION_CONDITION_PATTERN.search(remainder)
+    if condition:
+        option_text = remainder[:condition.start()]
+        condition_text = remainder[condition.end():]
+    else:
+        option_text = remainder
+        condition_text = ""
+    selected = option_text if component == "option" else condition_text
+    return [
+        token
+        for token in re.findall(r"[a-z0-9]+", selected.casefold())
+        if len(token) >= 3 and token not in _OPINION_TERM_STOPWORDS
+    ]
+
+
+def _source_opinion_component_match_counts(
+    source_excerpt: str,
+    evidence_text: str,
+    component: str,
+) -> tuple[int, int]:
+    source_tokens = set(_source_opinion_component_tokens(source_excerpt, component))
+    if not source_tokens:
+        return (0, 0)
+    evidence_tokens = set(re.findall(r"[a-z0-9]+", evidence_text.casefold()))
+    return len(source_tokens & evidence_tokens), len(source_tokens)
+
+
+def _source_opinion_component_supported(
+    source_excerpt: str,
+    evidence_text: str,
+    component: str,
+) -> bool:
+    """Require direct lexical support; exact quotation alone is not semantic support."""
+    matched, total = _source_opinion_component_match_counts(
+        source_excerpt, evidence_text, component
+    )
+    if total == 0:
+        return component == "conditions"
+    required = max(1, (total * 3 + 4) // 5)
+    return matched >= required
+
+
+def _source_opinion_component_has_any_support(
+    source_excerpt: str,
+    evidence_text: str,
+    component: str,
+) -> bool:
+    matched, total = _source_opinion_component_match_counts(
+        source_excerpt, evidence_text, component
+    )
+    return total == 0 or matched > 0
 
 
 def _unique_strings(values: list[str], limit: int = 12) -> list[str]:
@@ -642,7 +719,7 @@ async def generate_debate_contribution(
     case: SyntheticCase,
     own_independent_assessment: dict,
     peer_views: list[dict],
-    max_tokens: int = 700,
+    max_tokens: int = 1100,
 ) -> RoundContribution:
     peers = [
         {
@@ -686,15 +763,15 @@ async def generate_debate_contribution(
         "both depend on some missing investigations. Shared uncertainty about prerequisites "
         "is not agreement on treatment sequence, option, resectability, or fitness. Do not "
         "describe different prerequisites as identical unless the source text explicitly says so. "
-        "For EACH server-identified attributed opinion listed in the dedicated register below, "
-        "address it separately in response_to_other_perspectives. Include its exact CASE source ID, "
-        "the distinct option described, and every stated prerequisite/condition. Do not replace an "
-        "option with a generic statement that the case lacks enough information. Missing prerequisites "
+        "For EACH server-identified attributed opinion listed in the dedicated register below, return exactly "
+        "one item in the required source_opinion_responses array using that exact CASE source ID. "
+        "In its analysis, name the distinct option and every stated prerequisite/condition; in comparison, "
+        "compare it with your own R1 position and the selected peer R1 records. Do not replace an "
+        "option with generic uncertainty about missing data. Missing prerequisites "
         "mean suitability is unknown; they do not erase the source's conditional option. Do not imply "
-        "that repeating a source opinion means you endorse it. Compare the opinion with your own R1 "
-        "position and only the selected peer R1 records. State whether the selected peer digest itself "
-        "preserves, partly preserves, omits or leaves unclear that source opinion. If a peer omits or "
-        "weakens it, make a source-linked challenge; if the digest is insufficient, say unclear. "
+        "that repeating a source opinion means you endorse it. If a peer omits or weakens the option, "
+        "explain that separately without inventing evidence. If no attributed opinions are registered, "
+        "return an empty source_opinion_responses array. The server binds each exact source_excerpt after generation. "
         f"ALLOWED ROUND SOURCE IDS: {', '.join(allowed_source_ids)}. "
         "Use only these exact individual source IDs when citing case or peer statements. "
         "Never cite a role range, role band, sequence of roles, or complete role directory; "
@@ -726,8 +803,60 @@ async def generate_debate_contribution(
         + json.dumps(peers, ensure_ascii=False, separators=(",", ":"))
         + "\nReturn a concise response with specific agreements, disagreements, and any reason for changing or retaining your position. The output format is schema-enforced."
     )
-    draft = await _generate_structured(prompt, RoundContributionDraft, max_tokens)
+    draft = await _generate_structured(prompt, Round2ContributionDraft, max_tokens)
     payload = draft.model_dump()
+    expected_source_opinions = {
+        item["source_id"]: item["source_excerpt"] for item in source_opinion_register
+    }
+    reported_responses = payload.get("source_opinion_responses") or []
+    response_counts = Counter(
+        str(item.get("source_id") or "")
+        for item in reported_responses
+        if isinstance(item, dict)
+    )
+    source_opinion_response_flags: list[str] = []
+    for source_id in expected_source_opinions:
+        count = response_counts.get(source_id, 0)
+        if count == 0:
+            source_opinion_response_flags.append(
+                f"R2 has no structured response for server-identified attributed opinion {source_id}."
+            )
+        elif count > 1:
+            source_opinion_response_flags.append(
+                f"R2 has {count} structured responses for {source_id}; exactly one is required."
+            )
+    for response_item in reported_responses:
+        if not isinstance(response_item, dict):
+            source_opinion_response_flags.append(
+                "R2 returned a non-object attributed-opinion response; it was excluded."
+            )
+            continue
+        source_id = str(response_item.get("source_id") or "")
+        expected_excerpt = expected_source_opinions.get(source_id)
+        if expected_excerpt is None:
+            source_opinion_response_flags.append(
+                f"R2 returned an unregistered attributed-opinion response ID: {source_id or '(missing)'}."
+            )
+            response_item["source_excerpt"] = ""
+            continue
+        response_item["source_excerpt"] = expected_excerpt
+        analysis = str(response_item.get("analysis") or "")
+        option_supported = _source_opinion_component_supported(
+            expected_excerpt, analysis, "option"
+        )
+        conditions_supported = _source_opinion_component_supported(
+            expected_excerpt, analysis, "conditions"
+        )
+        if not option_supported or not conditions_supported:
+            missing_parts = []
+            if not option_supported:
+                missing_parts.append("distinct option")
+            if not conditions_supported:
+                missing_parts.append("stated prerequisites")
+            source_opinion_response_flags.append(
+                f"R2 structured response for {source_id} does not retain sufficient source-specific "
+                f"language for the {' and '.join(missing_parts)}."
+            )
     previous_position = own_independent_assessment.get("position", "unknown")
     if draft.position != previous_position:
         rationale = _compact(draft.response_to_other_perspectives or draft.provisional_conclusion, 320)
@@ -735,13 +864,8 @@ async def generate_debate_contribution(
     else:
         payload["position_changes"] = []
     payload["source_peer_ids"] = [peer["agent_id"] for peer in peer_views]
-    r2_source_coverage_flags = [
-        f"R2 did not explicitly address server-identified attributed opinion {item['source_id']} in response_to_other_perspectives."
-        for item in source_opinion_register
-        if item["source_id"] not in str(payload.get("response_to_other_perspectives") or "")
-    ]
     payload["source_reference_integrity_flags"] = (
-        _audit_source_references(payload, allowed_sources) + r2_source_coverage_flags
+        _audit_source_references(payload, allowed_sources) + source_opinion_response_flags
     )[:20]
     return RoundContribution(
         agent_id=profile["agent_id"],
@@ -784,6 +908,15 @@ async def generate_adversarial_contribution(
                 _compact_r2_text(item, 180)
                 for item in (peer["result"].get("position_changes") or [])[:1]
             ],
+            "source_opinion_responses": [
+                {
+                    "source_id": item.get("source_id", ""),
+                    "analysis": _compact_r2_text(item.get("analysis", ""), 600),
+                    "comparison": _compact_r2_text(item.get("comparison", ""), 300),
+                }
+                for item in (peer["result"].get("source_opinion_responses") or [])[:4]
+                if isinstance(item, dict)
+            ],
             "provenance_audit_flags": _prioritized_provenance_flags(
                 peer["result"].get("source_reference_integrity_flags") or []
             ),
@@ -811,6 +944,15 @@ async def generate_adversarial_contribution(
         "round2_position_changes": [_compact_r2_text(item, 180) for item in (own_debate_contribution.get("position_changes") or [])[:1]],
         "round2_unknowns": [_compact_r2_text(item, 90) for item in (own_debate_contribution.get("remaining_unknowns") or [])[:2]],
         "round2_risks": [_compact_r2_text(item, 90) for item in (own_debate_contribution.get("risk_flags") or [])[:2]],
+        "round2_source_opinion_responses": [
+            {
+                "source_id": item.get("source_id", ""),
+                "analysis": _compact_r2_text(item.get("analysis", ""), 600),
+                "comparison": _compact_r2_text(item.get("comparison", ""), 300),
+            }
+            for item in (own_debate_contribution.get("source_opinion_responses") or [])[:4]
+            if isinstance(item, dict)
+        ],
         "round2_provenance_audit_flags": _prioritized_provenance_flags(
             own_debate_contribution.get("source_reference_integrity_flags") or []
         ),
@@ -919,7 +1061,12 @@ async def generate_adversarial_contribution(
         "whether MRI, staging, fitness, or other clinical prerequisites are fulfilled in the case. "
         "If a conditional option and its prerequisites are retained in a peer R2 record, mark them "
         "preserved even when those prerequisites remain unknown; this does not validate clinical "
-        "suitability. Mark omitted or partly_preserved only when supplied peer R2 text itself omits "
+        "suitability. A selected evidence excerpt for a preserved option or condition must itself "
+        "contain source-specific wording for that component; an unrelated sentence about missing "
+        "stage, fitness, or investigations is not evidence that the option/condition was retained. "
+        "The saved R2 record may include structured source_opinion_responses; these are part of the "
+        "actual R2 contribution, and their analysis/comparison fields may be cited as R2 evidence. "
+        "Mark omitted or partly_preserved only when supplied peer R2 text itself omits "
         "or materially distorts the attributed content. Use the full bounded peer response text supplied below (with embedded round-reference tokens neutralized) "
         "and other supplied R2 fields, not only your own R2 response or abbreviated role summaries. "
         "If the peer sample contains both preserved and omitted representations, describe that mixed "
@@ -1078,6 +1225,11 @@ async def generate_adversarial_contribution(
                     item for item in (evidence_peer.get(key) or [])
                     if isinstance(item, str)
                 )
+            for opinion_response in evidence_peer.get("source_opinion_responses") or []:
+                if isinstance(opinion_response, dict):
+                    for key in ("analysis", "comparison"):
+                        if isinstance(opinion_response.get(key), str):
+                            evidence_texts.append(opinion_response[key])
         evidence_excerpt, evidence_binding_method = (
             _bind_exact_peer_evidence_excerpt(model_evidence_excerpt, evidence_texts)
             if evidence_peer is not None and evidence_peer_id in allowed_peer_source_ids
@@ -1085,6 +1237,30 @@ async def generate_adversarial_contribution(
         )
         review["evidence_excerpt"] = evidence_excerpt
         review["evidence_excerpt_binding_method"] = evidence_binding_method
+        if evidence_excerpt:
+            for field, model_field, component in (
+                ("option_status", "model_reported_option_status", "option"),
+                ("conditions_status", "model_reported_conditions_status", "conditions"),
+            ):
+                reported_status = review.get(model_field)
+                source_excerpt_for_review = expected_source_opinions_by_id.get(source_id, "")
+                supported = _source_opinion_component_supported(
+                    source_excerpt_for_review, evidence_excerpt, component
+                )
+                partial_support = _source_opinion_component_has_any_support(
+                    source_excerpt_for_review, evidence_excerpt, component
+                )
+                if (
+                    reported_status == "preserved" and not supported
+                ) or (
+                    reported_status == "partly_preserved" and not partial_support
+                ):
+                    review[field] = "unclear"
+                    review_reference_flags.append(
+                        f"Review for {source_id or 'unknown source'} marks the {component} as "
+                        f"{reported_status}, but its exact R2 excerpt does not contain sufficient "
+                        "source-specific wording; the status was downgraded to unclear."
+                    )
         # A model-authored CASE identifier is never sufficient to create a
         # source opinion. Only opinions extracted into the server-owned register
         # can participate in coverage or carry a verified peer citation.
@@ -1301,6 +1477,17 @@ async def generate_chair_report(
                 entry["challenges"] = [
                     _compact(value, 100)
                     for value in (result.get("substantive_challenges") or [])[:1]
+                ]
+            if round_key == "round2":
+                entry["attributed_source_opinion_responses"] = [
+                    {
+                        "source_id": item.get("source_id", ""),
+                        "source_excerpt": _compact(item.get("source_excerpt", ""), 180),
+                        "analysis": _compact(item.get("analysis", ""), 240),
+                        "comparison": _compact(item.get("comparison", ""), 160),
+                    }
+                    for item in (result.get("source_opinion_responses") or [])[:4]
+                    if isinstance(item, dict)
                 ]
             if round_key == "round3":
                 entry["risks"] = [

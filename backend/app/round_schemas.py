@@ -24,6 +24,37 @@ class RoundContributionDraft(StrictModel):
     confidence: float = Field(ge=0.0, le=1.0)
 
 
+class Round2SourceOpinionResponseDraft(StrictModel):
+    source_id: str = Field(min_length=8, max_length=100)
+    analysis: str = Field(
+        min_length=20,
+        max_length=700,
+        description=(
+            "Address this attributed opinion separately. Retain its distinct option and every "
+            "stated prerequisite, then explain how it relates to your own R1 position and the "
+            "selected peer views. Missing prerequisites remain unknown; do not imply suitability."
+        ),
+    )
+    comparison: str = Field(
+        min_length=10,
+        max_length=400,
+        description="Concise comparison with the role's own R1 position and the selected R1 peers.",
+    )
+
+
+class Round2ContributionDraft(RoundContributionDraft):
+    # Required even when empty: models must explicitly return [] when no attributed opinions exist.
+    source_opinion_responses: list[Round2SourceOpinionResponseDraft] = Field(max_length=4)
+
+
+class Round2SourceOpinionResponse(Round2SourceOpinionResponseDraft):
+    source_excerpt: str = Field(
+        default="",
+        max_length=400,
+        description="Exact case-summary excerpt bound by the server using source_id; never model-authored.",
+    )
+
+
 class SourceOpinionReview(StrictModel):
     # Keep model-authored content parseable even when its provenance is incomplete.
     # Semantic requirements are checked deterministically after parsing and persisted
@@ -116,8 +147,8 @@ class RoundContribution(StrictModel):
     response_to_other_perspectives: str = Field(min_length=20, max_length=1600)
     agreements: list[str] = Field(default_factory=list, max_length=8)
     substantive_challenges: list[str] = Field(default_factory=list, max_length=8)
-    source_opinion_reviews: list[SourceOpinionReview] = Field(default_factory=list, max_length=4)
-    position_changes: list[str] = Field(default_factory=list, max_length=5)
+    source_opinion_responses: list[Round2SourceOpinionResponse] = Field(default_factory=list, max_length=4)
+    source_opinion_reviews: list[SourceOpinionReview] = Field(default_factory=list, max_length=4) list[str] = Field(default_factory=list, max_length=5)
     remaining_unknowns: list[str] = Field(default_factory=list, max_length=8)
     risk_flags: list[str] = Field(default_factory=list, max_length=8)
     confidence: float = Field(ge=0.0, le=1.0)
