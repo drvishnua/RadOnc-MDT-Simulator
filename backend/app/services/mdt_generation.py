@@ -979,6 +979,20 @@ async def generate_adversarial_contribution(
                     item for item in (evidence_peer.get(key) or [])
                     if isinstance(item, str)
                 )
+        # A model-authored CASE identifier is never sufficient to create a
+        # source opinion. Only opinions extracted into the server-owned register
+        # can participate in coverage or carry a verified peer citation.
+        if not expected_source_opinions_by_id:
+            evidence_status = "invalid"
+            review["option_status"] = "unclear"
+            review["conditions_status"] = "unclear"
+            review["source_reference_ids"] = []
+            review["evidence_validation_status"] = evidence_status
+            review_reference_flags.append(
+                f"R3 review for {source_id or 'unknown source'} was excluded because "
+                "the server could not bind a case-summary source-opinion register."
+            )
+            continue
         if not evidence_peer_id and not evidence_excerpt:
             evidence_status = "missing"
         elif (
