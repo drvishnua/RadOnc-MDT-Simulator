@@ -677,22 +677,22 @@ async def generate_adversarial_contribution(
             "source": f"R2:{peer['agent_id']}",
             "role": peer["agent_name"],
             "position": peer["result"].get("position", "unknown"),
-            "conclusion": _bounded_exact_excerpt(peer["result"].get("provisional_conclusion", ""), 260),
-            "response": _bounded_exact_excerpt(peer["result"].get("response_to_other_perspectives", ""), 1200),
+            "conclusion": _compact_r2_text(peer["result"].get("provisional_conclusion", ""), 260),
+            "response": _compact_r2_text(peer["result"].get("response_to_other_perspectives", ""), 1200),
             "agreements": [
-                _bounded_exact_excerpt(item, 180)
+                _compact_r2_text(item, 180)
                 for item in (peer["result"].get("agreements") or [])[:1]
             ],
             "challenges": [
-                _bounded_exact_excerpt(item, 260)
+                _compact_r2_text(item, 260)
                 for item in (peer["result"].get("substantive_challenges") or [])[:1]
             ],
             "risks": [
-                _bounded_exact_excerpt(item, 160)
+                _compact_r2_text(item, 160)
                 for item in (peer["result"].get("risk_flags") or [])[:1]
             ],
             "position_changes": [
-                _bounded_exact_excerpt(item, 180)
+                _compact_r2_text(item, 180)
                 for item in (peer["result"].get("position_changes") or [])[:1]
             ],
             "provenance_audit_flags": _prioritized_provenance_flags(
@@ -715,11 +715,11 @@ async def generate_adversarial_contribution(
         "round1_option": _compact(own_independent_assessment.get("preferred_educational_option", ""), 140),
         "round2_source": f"R2:{profile['agent_id']}",
         "round2_position": own_debate_contribution.get("position"),
-        "round2_conclusion": _bounded_exact_excerpt(own_debate_contribution.get("provisional_conclusion", ""), 260),
-        "round2_response": _bounded_exact_excerpt(own_debate_contribution.get("response_to_other_perspectives", ""), 900),
-        "round2_agreements": [_bounded_exact_excerpt(item, 180) for item in (own_debate_contribution.get("agreements") or [])[:2]],
-        "round2_challenges": [_bounded_exact_excerpt(item, 220) for item in (own_debate_contribution.get("substantive_challenges") or [])[:2]],
-        "round2_position_changes": [_bounded_exact_excerpt(item, 180) for item in (own_debate_contribution.get("position_changes") or [])[:1]],
+        "round2_conclusion": _compact_r2_text(own_debate_contribution.get("provisional_conclusion", ""), 260),
+        "round2_response": _compact_r2_text(own_debate_contribution.get("response_to_other_perspectives", ""), 900),
+        "round2_agreements": [_compact_r2_text(item, 180) for item in (own_debate_contribution.get("agreements") or [])[:2]],
+        "round2_challenges": [_compact_r2_text(item, 220) for item in (own_debate_contribution.get("substantive_challenges") or [])[:2]],
+        "round2_position_changes": [_compact_r2_text(item, 180) for item in (own_debate_contribution.get("position_changes") or [])[:1]],
         "round2_unknowns": [_compact_r2_text(item, 90) for item in (own_debate_contribution.get("remaining_unknowns") or [])[:2]],
         "round2_risks": [_compact_r2_text(item, 90) for item in (own_debate_contribution.get("risk_flags") or [])[:2]],
         "round2_provenance_audit_flags": _prioritized_provenance_flags(
