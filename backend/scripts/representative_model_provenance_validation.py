@@ -153,7 +153,7 @@ async def main() -> int:
         "evidence_retrieval_connected": False,
         "synthetic_only": True,
         "created_saved_mdt_run": False,
-        "rounds_attempted": ["R2", "R3"],
+        "rounds_attempted": [],
         "rounds_completed": [],
         "r1_inputs": "Deterministic non-model fixture records; not presented as model assessments.",
         "r4_executed": False,
@@ -183,6 +183,7 @@ async def main() -> int:
         if not payload["ollama_before"].get("version"):
             raise RuntimeError("Ollama version endpoint is not reachable.")
         # Round 2: each of the three roles sees the other two R1 fixture records.
+        payload["rounds_attempted"].append("R2")
         r2_by_id = {}
         for role in roles:
             role_id = role["agent_id"]
@@ -208,6 +209,7 @@ async def main() -> int:
         payload["rounds_completed"].append("R2")
 
         # Round 3: each role receives the actual R2 records from the other two roles.
+        payload["rounds_attempted"].append("R3")
         r3_rows = []
         for role in roles:
             role_id = role["agent_id"]

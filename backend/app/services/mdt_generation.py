@@ -54,6 +54,7 @@ async def _generate_structured(prompt: str, schema_type: type[T], max_tokens: in
         "patient wishes, guideline names, trials, citations, URLs, statistics, or sources. "
         "No evidence retrieval is connected. Explicitly preserve uncertainty and disagreement. "
         "Do not label a treatment or pathway as contraindicated, unsafe, or not indicated solely because case data are missing; state that appropriateness cannot be determined. "
+        "When a prerequisite is unknown, do not convert that uncertainty into a categorical claim that neither option or no option is indicated. "
         "Be concise and return only a JSON object that validates against the supplied schema."
     )
     request_body = {

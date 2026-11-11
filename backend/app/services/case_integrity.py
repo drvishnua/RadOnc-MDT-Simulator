@@ -664,7 +664,11 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     # contraindicated, or not indicated. Flag categorical clinical status claims;
     # conditional risk language (e.g. "may be unsafe") remains an interpretation.
     treatment_status_pattern = re.compile(
-        r"\b(?:is|are|was|were|has been|remains)\s+(?:clearly\s+)?(?:contraindicated|unsafe|not indicated)\b",
+        r"\b(?:"
+        r"(?:is|are|was|were|has been|remains)\s+(?:clearly\s+)?(?:contraindicated|unsafe|not indicated)"
+        r"|neither\b[^.!?;:\n]{0,120}\b(?:is|are|was|were|has been|remains)\s+(?:clearly\s+)?(?:indicated|recommended|appropriate|suitable)"
+        r"|no\s+(?:(?:available|proposed|treatment|therapeutic)\s+)*(?:option|approach|pathway|therapy|modality|sequence)s?\s+(?:is|are|was|were|has been|remains)\s+(?:clearly\s+)?(?:indicated|recommended|appropriate|suitable)"
+        r")\b",
         re.IGNORECASE,
     )
     treatment_status_matches = _unsupported_matches(treatment_status_pattern, text, source_text)

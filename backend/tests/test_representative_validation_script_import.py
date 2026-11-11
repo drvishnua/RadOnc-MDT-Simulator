@@ -101,3 +101,21 @@ def test_timed_call_records_failed_generation_attempt_and_cause():
     assert metrics[0]["error_type"] == "RuntimeError"
     assert metrics[0]["cause_type"] == "TimeoutError"
     assert metrics[0]["wall_seconds"] >= 0
+
+
+def test_round_attempts_are_recorded_only_after_ollama_preflight():
+    backend_dir = Path(__file__).resolve().parents[1]
+    script_path = (
+        backend_dir
+        / "scripts"
+        / "representative_model_provenance_validation.py"
+    )
+    source = script_path.read_text(encoding="utf-8")
+    preflight = source.index('if not payload["ollama_before"].get("version")')
+    r2_attempt = source.index('payload["rounds_attempted"].append("R2")')
+    r2_start = source.index("# Round 2:", preflight)
+    r3_attempt = source.index('payload["rounds_attempted"].append("R3")')
+    r3_start = source.index("# Round 3:", r2_start)
+
+    assert '"rounds_attempted": []' in source
+    assert preflight < r2_start < r2_attempt < r3_start < r3_attempt

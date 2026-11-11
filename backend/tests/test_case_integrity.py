@@ -225,6 +225,44 @@ def test_definitive_treatment_safety_claims_are_flagged_but_conditional_risks_ar
     assert any("treatment safety/indication" in item for item in contrastive)
 
 
+def test_missing_information_does_not_support_neither_or_no_option_indication_claims():
+    case = _case(
+        case_summary="Fictional case with incomplete staging; MRI and fitness are not reported.",
+        clinical_t_stage=None,
+        clinical_n_stage=None,
+        clinical_m_stage=None,
+        stage_group=None,
+        performance_status=None,
+    )
+    flags = audit_unverified_case_claims(case, {
+        "source_opinion_responses": [
+            {
+                "comparison": (
+                    "Without established staging or fitness, neither option is indicated."
+                )
+            }
+        ]
+    })
+    assert any("treatment safety/indication" in item for item in flags)
+
+    no_option_flags = audit_unverified_case_claims(case, {
+        "response_to_other_perspectives": "No treatment pathway is appropriate."
+    })
+    assert any("treatment safety/indication" in item for item in no_option_flags)
+
+    uncertainty = audit_unverified_case_claims(case, {
+        "source_opinion_responses": [
+            {
+                "comparison": (
+                    "The available record does not establish whether either option is indicated; "
+                    "appropriateness cannot be determined."
+                )
+            }
+        ]
+    })
+    assert not any("treatment safety/indication" in item for item in uncertainty)
+
+
 def test_unreported_histology_and_pathology_markers_are_flagged():
     case = _case(histology=None, pathology_summary=None)
     flags = " ".join(audit_unverified_case_claims(case, {
