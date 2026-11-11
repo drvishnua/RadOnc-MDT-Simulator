@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import runpy
 import subprocess
 import sys
 from pathlib import Path
@@ -35,3 +37,31 @@ def test_representative_validation_script_imports_from_repository_root_without_i
         "from the repository root, without starting Ollama inference.\n"
         f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
     )
+
+
+
+def test_timed_call_invokes_async_callback_and_records_timing():
+    backend_dir = Path(__file__).resolve().parents[1]
+    script_path = (
+        backend_dir
+        / "scripts"
+        / "representative_model_provenance_validation.py"
+    )
+    namespace = runpy.run_path(
+        str(script_path),
+        run_name="representative_validation_timing_probe",
+    )
+    metrics = []
+
+    async def generation():
+        return {"status": "completed"}
+
+    result = asyncio.run(
+        namespace["_timed_call"]("R2:TEST", generation, metrics)
+    )
+
+    assert result == {"status": "completed"}
+    assert len(metrics) == 1
+    assert metrics[0]["stage"] == "R2:TEST"
+    assert metrics[0]["status"] == "completed"
+    assert metrics[0]["wall_seconds"] >= 0
