@@ -634,7 +634,7 @@ async def generate_debate_contribution(
         "misrepresented, and what information would resolve it. Do not manufacture challenges. "
         "If no agreement or challenge is justified, explain the evidence limitation in "
         "response_to_other_perspectives and leave the corresponding list empty. Preserve "
-        "conditionality; do not convert conditional positions into support.\\n"
+        "conditionality; do not convert conditional positions into support.\n"
         f"ROLE: {profile['name']}\nMANDATE: {profile['mandate']}\n"
         "SUPPLIED CASE:\n"
         + json.dumps(build_case_prompt_context(case), ensure_ascii=False, separators=(",", ":"))
@@ -829,19 +829,19 @@ async def generate_adversarial_contribution(
         "unshown roles omitted. For an actual R2 representation omission or distortion, write a source-linked "
         "challenge in the review and copy it into substantive_challenges. Such a challenge must cite the exact "
         "CASE source ID and at least one supplied R2 peer ID. If status is unclear, explain the limitation and "
-        "do not invent a challenge. Cases without clearly attributable opinions must have an empty review list.\\n"
-        + attribution_instruction + "\\n"
-        + f"ALLOWED ROUND SOURCE IDS: {', '.join(allowed_source_ids)}\\n"
-        f"ROLE: {profile['name']}\\nMANDATE: {profile['mandate']}\\n"
-        "SUPPLIED CASE:\\n"
+        "do not invent a challenge. Cases without clearly attributable opinions must have an empty review list.\n"
+        + attribution_instruction + "\n"
+        + f"ALLOWED ROUND SOURCE IDS: {', '.join(allowed_source_ids)}\n"
+        f"ROLE: {profile['name']}\nMANDATE: {profile['mandate']}\n"
+        "SUPPLIED CASE:\n"
         + json.dumps(build_case_prompt_context(case), ensure_ascii=False, separators=(",", ":"))
-        + "\\nSERVER-IDENTIFIED ATTRIBUTED SOURCE OPINIONS (exact case-summary excerpts; not verified facts):\\n"
+        + "\nSERVER-IDENTIFIED ATTRIBUTED SOURCE OPINIONS (exact case-summary excerpts; not verified facts):\n"
         + json.dumps(source_opinion_register, ensure_ascii=False, separators=(",", ":"))
-        + "\\nYOUR R1 AND COMPLETE OWN R2 RECORD (bounded fields):\\n"
+        + "\nYOUR R1 AND COMPLETE OWN R2 RECORD (bounded fields):\n"
         + json.dumps(own, ensure_ascii=False, separators=(",", ":"))
-        + "\\nSELECTED SOURCE-LABELLED R2 PEER SAMPLE:\\n"
+        + "\nSELECTED SOURCE-LABELLED R2 PEER SAMPLE:\n"
         + json.dumps(peers, ensure_ascii=False, separators=(",", ":"))
-        + "\\nReturn concise, concrete findings only. The output format is schema-enforced."
+        + "\nReturn concise, concrete findings only. The output format is schema-enforced."
     )
     draft = await _generate_structured(prompt, AdversarialContributionDraft, max_tokens)
     payload = draft.model_dump()

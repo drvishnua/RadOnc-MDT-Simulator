@@ -388,6 +388,8 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
     assert "Shared uncertainty about prerequisites" in prompts[0]
     assert "surgery-first/surgical-assessment" in prompts[0]
     assert "Agreement that information is missing does not establish agreement on an option" in prompts[0]
+    # Prompt section boundaries must be actual newlines, not literal backslash-n text.
+    assert "conditionality; do not convert conditional positions into support.\nROLE:" in prompts[0]
 
     own_r2 = {
         "position": "conditional",
@@ -451,6 +453,8 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
     assert "colorectal surgical note" not in prompts[1]
     assert "medical oncology note" not in prompts[1]
     assert "ALLOWED ROUND SOURCE IDS" in prompts[1]
+    assert "\nROLE: Radiation Oncology\nMANDATE:" in prompts[1]
+    assert "\nSUPPLIED CASE:\n{" in prompts[1]
 
 
 def test_chair_reconciliation_preserves_saved_round_challenges_as_unresolved():
