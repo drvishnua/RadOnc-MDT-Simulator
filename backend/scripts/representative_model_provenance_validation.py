@@ -113,7 +113,7 @@ def _role_rows():
 
 async def _timed_call(label: str, callback, metrics: list[dict]):
     started = time.perf_counter()
-    value = await asyncio.wait_for(callback, timeout=MAX_SECONDS_PER_GENERATION)
+    value = await asyncio.wait_for(callback(), timeout=MAX_SECONDS_PER_GENERATION)
     metrics.append({
         "stage": label,
         "wall_seconds": round(time.perf_counter() - started, 3),
