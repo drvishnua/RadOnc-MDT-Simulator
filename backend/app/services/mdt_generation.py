@@ -32,6 +32,10 @@ from app.services.chair_report_quality import (
 
 T = TypeVar("T", bound=BaseModel)
 
+# Large structured R2/R3 prompts can exceed four minutes on CPU-only hosts.
+# Keep the request bounded while allowing slower local inference to finish.
+GENERATION_REQUEST_TIMEOUT_SECONDS = 600.0
+
 
 def _context_window_for_schema(schema_type: type[BaseModel]) -> int:
     """Give R2 and R3 enough room for bounded peer context and structured output."""
@@ -69,7 +73,7 @@ async def _generate_structured(prompt: str, schema_type: type[T], max_tokens: in
     try:
         async with httpx.AsyncClient(
             base_url=OLLAMA_BASE_URL,
-            timeout=httpx.Timeout(240.0, connect=5.0),
+            timeout=httpx.Timeout(GENERATION_REQUEST_TIMEOUT_SECONDS, connect=5.0),
         ) as client:
             response = await client.post("/api/generate", json=request_body)
             response.raise_for_status()

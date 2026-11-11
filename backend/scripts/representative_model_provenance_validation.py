@@ -30,6 +30,7 @@ from app.config import OLLAMA_BASE_URL, OLLAMA_MODEL
 from app.schemas import SyntheticCase
 from app.services.chair_report_quality import build_source_opinion_review_coverage
 from app.services.mdt_generation import (
+    GENERATION_REQUEST_TIMEOUT_SECONDS,
     generate_adversarial_contribution,
     generate_debate_contribution,
 )
@@ -38,7 +39,7 @@ from app.services.case_integrity import extract_attributed_note_opinions
 ARTIFACT_DIR = BACKEND_DIR / "validation_artifacts"
 ARTIFACT_PATH = ARTIFACT_DIR / "representative_model_provenance_validation.json"
 ROLE_IDS = ("RO-01", "SO-02", "MO-01")
-MAX_SECONDS_PER_GENERATION = 300
+MAX_SECONDS_PER_GENERATION = GENERATION_REQUEST_TIMEOUT_SECONDS + 60.0
 
 
 def _ollama_snapshot() -> dict:
@@ -113,7 +114,18 @@ def _role_rows():
 
 async def _timed_call(label: str, callback, metrics: list[dict]):
     started = time.perf_counter()
-    value = await asyncio.wait_for(callback(), timeout=MAX_SECONDS_PER_GENERATION)
+    try:
+        value = await asyncio.wait_for(callback(), timeout=MAX_SECONDS_PER_GENERATION)
+    except Exception as exc:
+        cause = exc.__cause__
+        metrics.append({
+            "stage": label,
+            "wall_seconds": round(time.perf_counter() - started, 3),
+            "status": "failed",
+            "error_type": type(exc).__name__,
+            "cause_type": type(cause).__name__ if cause is not None else None,
+        })
+        raise
     metrics.append({
         "stage": label,
         "wall_seconds": round(time.perf_counter() - started, 3),
@@ -141,7 +153,8 @@ async def main() -> int:
         "evidence_retrieval_connected": False,
         "synthetic_only": True,
         "created_saved_mdt_run": False,
-        "rounds_executed": ["R2", "R3"],
+        "rounds_attempted": ["R2", "R3"],
+        "rounds_completed": [],
         "r1_inputs": "Deterministic non-model fixture records; not presented as model assessments.",
         "r4_executed": False,
         "started_at": datetime.now(timezone.utc).isoformat(),
@@ -192,6 +205,7 @@ async def main() -> int:
             row = contribution.model_dump()
             r2_by_id[role_id] = row
             payload["round2"].append(row)
+        payload["rounds_completed"].append("R2")
 
         # Round 3: each role receives the actual R2 records from the other two roles.
         r3_rows = []
@@ -225,6 +239,7 @@ async def main() -> int:
             }
             r3_rows.append(row)
             payload["round3"].append(row)
+        payload["rounds_completed"].append("R3")
 
         coverage, coverage_integrity = build_source_opinion_review_coverage(
             r3_rows, case.case_summary
@@ -322,6 +337,13 @@ async def main() -> int:
         payload["execution_error"] = f"{type(exc).__name__}: {exc}"
         raise
     finally:
+        payload["generation_attempt_count"] = len(payload["generation_metrics"])
+        payload["generation_completed_count"] = sum(
+            item.get("status") == "completed" for item in payload["generation_metrics"]
+        )
+        payload["generation_failed_count"] = sum(
+            item.get("status") == "failed" for item in payload["generation_metrics"]
+        )
         payload["finished_at"] = datetime.now(timezone.utc).isoformat()
         payload["ollama_after"] = _ollama_snapshot()
         payload["total_generation_wall_seconds"] = round(

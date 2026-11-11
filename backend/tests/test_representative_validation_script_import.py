@@ -65,3 +65,39 @@ def test_timed_call_invokes_async_callback_and_records_timing():
     assert metrics[0]["stage"] == "R2:TEST"
     assert metrics[0]["status"] == "completed"
     assert metrics[0]["wall_seconds"] >= 0
+
+
+
+def test_timed_call_records_failed_generation_attempt_and_cause():
+    backend_dir = Path(__file__).resolve().parents[1]
+    script_path = (
+        backend_dir
+        / "scripts"
+        / "representative_model_provenance_validation.py"
+    )
+    namespace = runpy.run_path(
+        str(script_path),
+        run_name="representative_validation_failure_timing_probe",
+    )
+    assert namespace["MAX_SECONDS_PER_GENERATION"] > namespace["GENERATION_REQUEST_TIMEOUT_SECONDS"]
+    metrics = []
+
+    async def generation():
+        try:
+            raise TimeoutError("synthetic underlying timeout")
+        except TimeoutError as cause:
+            raise RuntimeError("synthetic wrapped generation failure") from cause
+
+    try:
+        asyncio.run(namespace["_timed_call"]("R3:TEST", generation, metrics))
+    except RuntimeError as exc:
+        assert str(exc) == "synthetic wrapped generation failure"
+    else:
+        raise AssertionError("A failed generation must propagate its exception.")
+
+    assert len(metrics) == 1
+    assert metrics[0]["stage"] == "R3:TEST"
+    assert metrics[0]["status"] == "failed"
+    assert metrics[0]["error_type"] == "RuntimeError"
+    assert metrics[0]["cause_type"] == "TimeoutError"
+    assert metrics[0]["wall_seconds"] >= 0
