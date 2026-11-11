@@ -677,22 +677,22 @@ async def generate_adversarial_contribution(
             "source": f"R2:{peer['agent_id']}",
             "role": peer["agent_name"],
             "position": peer["result"].get("position", "unknown"),
-            "conclusion": _compact_r2_text(peer["result"].get("provisional_conclusion", ""), 110),
-            "response": _compact_r2_text(peer["result"].get("response_to_other_perspectives", ""), 100),
+            "conclusion": _bounded_exact_excerpt(peer["result"].get("provisional_conclusion", ""), 260),
+            "response": _bounded_exact_excerpt(peer["result"].get("response_to_other_perspectives", ""), 1200),
             "agreements": [
-                _compact_r2_text(item, 70)
+                _bounded_exact_excerpt(item, 180)
                 for item in (peer["result"].get("agreements") or [])[:1]
             ],
             "challenges": [
-                _compact_r2_text(item, 90)
+                _bounded_exact_excerpt(item, 260)
                 for item in (peer["result"].get("substantive_challenges") or [])[:1]
             ],
             "risks": [
-                _compact_r2_text(item, 70)
+                _bounded_exact_excerpt(item, 160)
                 for item in (peer["result"].get("risk_flags") or [])[:1]
             ],
             "position_changes": [
-                _compact_r2_text(item, 90)
+                _bounded_exact_excerpt(item, 180)
                 for item in (peer["result"].get("position_changes") or [])[:1]
             ],
             "provenance_audit_flags": _prioritized_provenance_flags(
@@ -715,11 +715,11 @@ async def generate_adversarial_contribution(
         "round1_option": _compact(own_independent_assessment.get("preferred_educational_option", ""), 140),
         "round2_source": f"R2:{profile['agent_id']}",
         "round2_position": own_debate_contribution.get("position"),
-        "round2_conclusion": _compact_r2_text(own_debate_contribution.get("provisional_conclusion", ""), 160),
-        "round2_response": _compact_r2_text(own_debate_contribution.get("response_to_other_perspectives", ""), 220),
-        "round2_agreements": [_compact_r2_text(item, 100) for item in (own_debate_contribution.get("agreements") or [])[:2]],
-        "round2_challenges": [_compact_r2_text(item, 120) for item in (own_debate_contribution.get("substantive_challenges") or [])[:2]],
-        "round2_position_changes": [_compact_r2_text(item, 100) for item in (own_debate_contribution.get("position_changes") or [])[:1]],
+        "round2_conclusion": _bounded_exact_excerpt(own_debate_contribution.get("provisional_conclusion", ""), 260),
+        "round2_response": _bounded_exact_excerpt(own_debate_contribution.get("response_to_other_perspectives", ""), 900),
+        "round2_agreements": [_bounded_exact_excerpt(item, 180) for item in (own_debate_contribution.get("agreements") or [])[:2]],
+        "round2_challenges": [_bounded_exact_excerpt(item, 220) for item in (own_debate_contribution.get("substantive_challenges") or [])[:2]],
+        "round2_position_changes": [_bounded_exact_excerpt(item, 180) for item in (own_debate_contribution.get("position_changes") or [])[:1]],
         "round2_unknowns": [_compact_r2_text(item, 90) for item in (own_debate_contribution.get("remaining_unknowns") or [])[:2]],
         "round2_risks": [_compact_r2_text(item, 90) for item in (own_debate_contribution.get("risk_flags") or [])[:2]],
         "round2_provenance_audit_flags": _prioritized_provenance_flags(
@@ -809,27 +809,36 @@ async def generate_adversarial_contribution(
         "If no distinct attributed opinion is clearly present, return an empty source_opinion_reviews list. "
         "For each review, include its source ID, option_status, conditions_status, "
         "a concise review_basis, and source_reference_ids. For each review, source_reference_ids "
-        "must include that review's exact CASE source ID and at least one exact R2:AGENT_ID from "
-        "the supplied peer sample. Use only IDs in ALLOWED ROUND SOURCE IDS; never invent an ID. "
-        "These structured IDs are the machine-readable provenance for the review and challenge. "
-        "Whenever option_status or conditions_status is preserved or partly_preserved, provide "
-        "evidence_peer_id as one of the exact supplied R2 peer IDs and evidence_excerpt as a short "
-        "verbatim excerpt copied from that peer's supplied conclusion, response, agreement, challenge, "
-        "risk, or position-change text. The excerpt must directly support the particular element you "
-        "say was retained; do not quote generic missing-information language as proof that an option "
-        "was preserved. Do not paraphrase or invent excerpts. If no supplied peer text supports a "
-        "retained element, use omitted or unclear rather than preserved. Omitted/unclear reviews may "
-        "leave evidence_peer_id and evidence_excerpt empty. "
-        "Assess representation fidelity only against the actual supplied R2 text, not against whether "
-        "MRI, staging, fitness, or other clinical prerequisites are fulfilled in the case. If a conditional "
-        "option and its prerequisites are retained in R2, mark them preserved even when those prerequisites "
-        "remain unknown; this does not validate clinical suitability. Mark omitted or partly_preserved only "
-        "when supplied R2 text itself omits or materially distorts the attributed content. If the bounded "
-        "peer sample does not permit assessment, use unclear and explain the limitation; do not infer what "
-        "unshown roles omitted. For an actual R2 representation omission or distortion, write a source-linked "
-        "challenge in the review and copy it into substantive_challenges. Such a challenge must cite the exact "
-        "CASE source ID and at least one supplied R2 peer ID. If status is unclear, explain the limitation and "
-        "do not invent a challenge. Cases without clearly attributable opinions must have an empty review list.\n"
+        "must include that review's exact CASE source ID and one exact R2:AGENT_ID from the supplied "
+        "peer sample. Use only IDs in ALLOWED ROUND SOURCE IDS; never invent an ID and never cite "
+        "your own R2 record as a peer. These structured IDs are the machine-readable provenance "
+        "for the review and challenge. For EVERY review, including omitted and unclear reviews, "
+        "set evidence_peer_id to the selected supplied R2 peer and evidence_excerpt to a short, "
+        "verbatim contiguous excerpt from that peer's supplied conclusion, response, agreement, "
+        "challenge, risk, or position-change text. For preserved or partly_preserved statuses, "
+        "the excerpt must directly contain the option or condition said to be retained. For an "
+        "omitted status, quote the most relevant exact text showing how that peer summarised the "
+        "issue without retaining the attributed option or condition; explain in review_basis that "
+        "the omission is determined by comparing the full cited R2 record with the exact CASE "
+        "source, and do not present the quote as affirmative evidence that the option was preserved. "
+        "For unclear, quote the relevant available context and explain why it is insufficient. "
+        "Do not paraphrase or invent excerpts. If no peer record permits a reliable assessment, "
+        "use unclear rather than guessing. The backend checks that the peer ID was supplied and "
+        "that the excerpt is an exact substring; this source-binding check does not validate the "
+        "clinical or semantic correctness of your interpretation. "
+        "Assess representation fidelity only against the actual supplied peer R2 text, not against "
+        "whether MRI, staging, fitness, or other clinical prerequisites are fulfilled in the case. "
+        "If a conditional option and its prerequisites are retained in a peer R2 record, mark them "
+        "preserved even when those prerequisites remain unknown; this does not validate clinical "
+        "suitability. Mark omitted or partly_preserved only when supplied peer R2 text itself omits "
+        "or materially distorts the attributed content. Use the full verbatim bounded peer response "
+        "and other supplied R2 fields, not only your own R2 response or abbreviated role summaries. "
+        "If the peer sample contains both preserved and omitted representations, describe that mixed "
+        "sample accurately in review_basis and do not generalise beyond the supplied peers. For an "
+        "actual R2 representation omission or distortion, write a source-linked challenge in the review "
+        "and copy it into substantive_challenges. Such a challenge must cite the exact CASE source ID "
+        "and the selected supplied R2 peer ID. If status is unclear, explain the limitation and do not "
+        "invent a challenge. Cases without clearly attributable opinions must have an empty review list.\n"
         + attribution_instruction + "\n"
         + f"ALLOWED ROUND SOURCE IDS: {', '.join(allowed_source_ids)}\n"
         f"ROLE: {profile['name']}\nMANDATE: {profile['mandate']}\n"
