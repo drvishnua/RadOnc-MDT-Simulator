@@ -2046,6 +2046,8 @@ def test_r3_generation_flags_missing_verbatim_peer_evidence_without_dropping_rol
     reviews = result.model_dump()["source_opinion_reviews"]
     assert reviews[0]["model_reported_option_status"] == "omitted"
     assert reviews[0]["option_status"] == "unclear"
+    assert reviews[0]["evidence_peer_id"] == ""
+    assert reviews[0]["evidence_peer_selection_method"] == "invalid"
     assert reviews[0]["evidence_validation_status"] == "missing"
     assert reviews[1]["model_reported_option_status"] == "preserved"
     assert reviews[1]["option_status"] == "unclear"

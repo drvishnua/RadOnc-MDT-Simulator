@@ -1286,8 +1286,13 @@ async def generate_adversarial_contribution(
                 if isinstance(item, str)
                 and re.fullmatch(r"R2:[A-Z]{2}-[0-9]{2}", item.strip())
             })
+            structured_case_source_present = any(
+                isinstance(item, str) and item.strip() == source_id
+                for item in reported_refs
+            )
             if (
-                len(structured_peer_ids) == 1
+                structured_case_source_present
+                and len(structured_peer_ids) == 1
                 and structured_peer_ids[0] in allowed_peer_source_ids
             ):
                 evidence_peer_id = structured_peer_ids[0]
