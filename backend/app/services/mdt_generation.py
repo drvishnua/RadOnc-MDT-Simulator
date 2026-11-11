@@ -397,7 +397,7 @@ def _select_source_opinion_evidence_excerpt(
         normalized = " ".join(value.split())
         if not normalized:
             continue
-        words = list(re.finditer(r"\\S+", normalized))
+        words = list(re.finditer(r"\S+", normalized))
         for start_index, start_word in enumerate(words):
             seen_tokens: set[str] = set()
             for end_index in range(start_index, len(words)):
