@@ -828,6 +828,7 @@ def test_round_three_peer_selector_enforces_small_bounded_sample():
         {
             "agent_id": profile["agent_id"],
             "agent_name": profile["name"],
+            "status": "completed",
             "result": {
                 "position": "conditional",
                 "provisional_conclusion": "The position remains conditional pending missing information.",
@@ -836,9 +837,45 @@ def test_round_three_peer_selector_enforces_small_bounded_sample():
         for profile in AGENT_PROFILES
     ]
     selected = mdt_rounds._select_peer_views(current, rows, "result", max_total=5)
-    assert len(selected) <= 5
+    assert len(selected) == 5
     assert all(item["agent_id"] != current["agent_id"] for item in selected)
     assert all("result" in item for item in selected)
+
+    profile_categories = {item["agent_id"]: item["category"] for item in AGENT_PROFILES}
+    ordered_categories = list(dict.fromkeys(item["category"] for item in AGENT_PROFILES))
+    current_index = ordered_categories.index(current["category"])
+    expected_cross_specialties = (
+        ordered_categories[current_index + 1 :] + ordered_categories[:current_index]
+    )
+    selected_categories = [profile_categories[item["agent_id"]] for item in selected]
+    assert selected_categories == expected_cross_specialties[:5]
+    assert len(set(selected_categories)) == 5
+    assert current["category"] not in selected_categories
+
+    # The 15-record R2 sample should cover all seven categories before repeats.
+    selected_r2 = mdt_rounds._select_peer_views(current, rows, "result", max_total=15)
+    r2_category_counts = {
+        category: selected_r2_categories.count(category)
+        for category in ordered_categories
+        for selected_r2_categories in [[profile_categories[item["agent_id"]] for item in selected_r2]]
+    }
+    assert len(selected_r2) == 15
+    assert r2_category_counts[current["category"]] == 3
+    assert all(
+        count == 2 for category, count in r2_category_counts.items()
+        if category != current["category"]
+    )
+
+    # A role in the last catalogue category receives a rotated cross-specialty sample.
+    last_category_role = next(
+        item for item in AGENT_PROFILES if item["category"] == ordered_categories[-1]
+    )
+    last_selected = mdt_rounds._select_peer_views(
+        last_category_role, rows, "result", max_total=5
+    )
+    last_index = ordered_categories.index(last_category_role["category"])
+    last_expected = ordered_categories[last_index + 1 :] + ordered_categories[:last_index]
+    assert [profile_categories[item["agent_id"]] for item in last_selected] == last_expected[:5]
 
 
 def test_adversarial_prompt_truncates_peer_digest_to_five_source_records(monkeypatch):

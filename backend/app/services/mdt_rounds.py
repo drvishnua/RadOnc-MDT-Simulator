@@ -32,11 +32,12 @@ def _select_peer_views(
     result_field: str,
     max_total: int = 15,
 ) -> list[dict]:
-    """Select compact cross-specialty context that fits the local context window.
+    """Select a bounded, position-aware peer sample with broad specialty coverage.
 
-    Every configured role completes its own round contribution. For each contribution,
-    peer context includes up to three same-specialty and two per other specialty. This
-    bounds prompt size rather than sending all full-length outputs to every agent.
+    Every configured role completes its own round contribution. Peer categories are
+    rotated after the current role's specialty and selected round-robin, so a small R3
+    sample is not consumed by same-specialty or early catalogue entries. The selector
+    allows up to three same-specialty peers and two from each other specialty.
     """
     profiles = _profile_map()
     current_position = None
@@ -66,8 +67,13 @@ def _select_peer_views(
         }
         grouped.setdefault(profile["category"], []).append(item)
 
-    selected: list[dict] = []
     categories = list(dict.fromkeys(p["category"] for p in AGENT_PROFILES))
+    current_category = current_profile["category"]
+    if current_category in categories:
+        current_index = categories.index(current_category)
+        # Prioritise other specialties, while rotating the order for each role.
+        categories = categories[current_index + 1 :] + categories[:current_index] + [current_category]
+
     for category in categories:
         candidates = grouped.get(category, [])
         # Prefer a peer with a different expressed position to make disagreement visible.
@@ -77,10 +83,20 @@ def _select_peer_views(
                 item["agent_id"],
             )
         )
-        limit = 3 if category == current_profile["category"] else 2
-        selected.extend(candidates[:limit])
 
-    selected = selected[:max_total]
+    selected: list[dict] = []
+    # Add one peer from each available category before considering a second.
+    # Own-specialty peers are limited to three; all other specialties to two.
+    for peer_index in range(3):
+        for category in categories:
+            category_limit = 3 if category == current_category else 2
+            candidates = grouped.get(category, [])
+            if peer_index < category_limit and peer_index < len(candidates):
+                selected.append(candidates[peer_index])
+                if len(selected) >= max_total:
+                    break
+        if len(selected) >= max_total:
+            break
     for item in selected:
         item.pop("_category", None)
     return selected
