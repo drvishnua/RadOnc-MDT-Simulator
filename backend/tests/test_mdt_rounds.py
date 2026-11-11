@@ -388,6 +388,10 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
     assert "Shared uncertainty about prerequisites" in prompts[0]
     assert "surgery-first/surgical-assessment" in prompts[0]
     assert "Agreement that information is missing does not establish agreement on an option" in prompts[0]
+    assert "SERVER-IDENTIFIED ATTRIBUTED SOURCE OPINIONS" in prompts[0]
+    assert "CASE:case_summary#1" in prompts[0]
+    assert "Missing prerequisites mean suitability is unknown" in prompts[0]
+    assert "address it separately in response_to_other_perspectives" in prompts[0]
     # Prompt section boundaries must be actual newlines, not literal backslash-n text.
     assert "conditionality; do not convert conditional positions into support.\nROLE:" in prompts[0]
 
@@ -1946,3 +1950,53 @@ def test_r3_uses_server_identified_opinion_ids_and_flags_duplicate_or_missing_re
     ]
     assert not any("duplicate review challenge must not be promoted" in item for item in result.substantive_challenges)
     assert result.source_peer_ids == ["MO-01"]
+
+
+def test_r2_flags_unaddressed_server_registered_case_opinions(monkeypatch):
+    import asyncio
+
+    from app.round_schemas import RoundContributionDraft
+    from app.services import mdt_generation
+    from app.schemas import SyntheticCase
+
+    async def fake_generate(prompt, schema_type, max_tokens):
+        return RoundContributionDraft(
+            position="insufficient_information",
+            provisional_conclusion=(
+                "The supplied case does not establish stage, fitness or a definitive pathway."
+            ),
+            response_to_other_perspectives=(
+                "The case data are incomplete and the selected peer record also reports missing information."
+            ),
+            agreements=[],
+            substantive_challenges=[],
+            remaining_unknowns=[],
+            risk_flags=[],
+            confidence=0.4,
+        )
+
+    monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate)
+    case = SyntheticCase(
+        scenario_title="R2 case opinion coverage",
+        case_summary=(
+            "Fictional record. The surgical oncology note favours a surgery-led assessment first, "
+            "conditional on complete local staging and resectability review."
+        ),
+    )
+    result = asyncio.run(
+        mdt_generation.generate_debate_contribution(
+            {"agent_id": "RO-01", "name": "Radiation Oncology", "mandate": "Review options."},
+            case,
+            {
+                "position": "insufficient_information",
+                "provisional_conclusion": "The supplied case does not establish a definitive pathway.",
+                "preferred_educational_option": "No option established.",
+            },
+            [],
+        )
+    )
+    assert any(
+        "R2 did not explicitly address server-identified attributed opinion CASE:case_summary#1"
+        in flag
+        for flag in result.source_reference_integrity_flags
+    )
