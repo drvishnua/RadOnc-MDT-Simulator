@@ -1252,6 +1252,39 @@ def test_r3_server_selects_exact_source_linked_excerpt_from_selected_peer(monkey
     assert result.source_reference_integrity_flags == []
 
 
+
+
+def test_r3_peer_excerpt_selection_uses_the_same_supported_paraphrase_threshold_as_r2():
+    from app.services.mdt_generation import (
+        _select_source_opinion_evidence_excerpt,
+        _source_opinion_component_supported,
+    )
+
+    source_excerpt = (
+        "The surgical oncology note favours a surgery-led assessment first, "
+        "conditional on complete local staging and resectability review"
+    )
+    peer_analysis = (
+        "The source states a preference for surgery-first assessment conditional "
+        "on complete local staging and resectability review."
+    )
+    selected = _select_source_opinion_evidence_excerpt(
+        source_excerpt,
+        [peer_analysis],
+    )
+    assert selected
+    assert selected in peer_analysis
+    assert len(selected) <= 180
+    assert _source_opinion_component_supported(source_excerpt, selected, "option")
+    assert _source_opinion_component_supported(source_excerpt, selected, "conditions")
+
+    unrelated = _select_source_opinion_evidence_excerpt(
+        source_excerpt,
+        ["The peer says the case information is incomplete and more investigations are needed."],
+    )
+    assert unrelated == ""
+
+
 def test_r3_binds_peer_from_unique_review_basis_reference_when_model_omits_structured_evidence_fields(monkeypatch):
     from app.round_schemas import AdversarialContributionDraft, SourceOpinionReview
     from app.services import mdt_generation
@@ -1611,6 +1644,12 @@ def test_r3_source_excerpt_fallback_never_borrows_from_another_peer_or_case_opin
     assert second_review.source_reference_ids == [second_source_id, "R2:MO-01"]
     assert any(
         first_source_id in flag and "no exact supporting excerpt" in flag
+        for flag in result.source_reference_integrity_flags
+    )
+    assert any(
+        first_source_id in flag
+        and "named supplied R2 peer(s) R2:MO-01" in flag
+        and "peer citation was withheld from canonical references" in flag
         for flag in result.source_reference_integrity_flags
     )
 

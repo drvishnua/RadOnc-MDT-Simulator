@@ -861,6 +861,7 @@ def test_explicit_denial_of_negative_prerequisite_status_is_not_flagged():
         "The prerequisite remains unknown instead of unfulfilled.",
         "The fitness prerequisite is not failed.",
         "The investigation status is not negative.",
+        "The prerequisite status is unknown rather than met or unmet.",
     ]
     for statement in explicitly_unknown:
         flags = audit_unverified_case_claims(case, {
@@ -881,7 +882,194 @@ def test_explicit_denial_of_negative_prerequisite_status_is_not_flagged():
         assert any("prerequisite(s) as unmet/not met" in item for item in flags), statement
 
 
+
+
+def test_unknown_rather_than_met_or_unmet_does_not_hide_a_separate_unmet_assertion():
+    case = _case(
+        case_summary="Fictional case; prerequisite status has not been assessed.",
+        known_unknowns=["Clinical staging and fitness are not supplied."],
+    )
+    safe_only = audit_unverified_case_claims(case, {
+        "response_to_other_perspectives": (
+            "The prerequisite status is unknown rather than met or unmet."
+        )
+    })
+    assert not any("prerequisite(s) as unmet/not met" in item for item in safe_only)
+
+    mixed = audit_unverified_case_claims(case, {
+        "response_to_other_perspectives": (
+            "The prerequisite status is unknown rather than met or unmet; "
+            "the fitness prerequisite remains unmet."
+        )
+    })
+    joined = " ".join(mixed).casefold()
+    assert "fitness prerequisite remains unmet" in joined
+
+
+
+
+def test_server_bound_peer_excerpt_is_not_a_role_authored_prerequisite_assertion():
+    case = _case(
+        case_summary="Fictional case; local staging is not supplied.",
+        known_unknowns=["Local staging is not supplied."],
+    )
+    quoted_only = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The supplied case does not establish a pathway.",
+        "source_opinion_reviews": [{
+            "source_excerpt": "A source option is conditional on staging.",
+            "evidence_excerpt": "The peer response calls the prerequisites unmet.",
+            "model_reported_evidence_excerpt": "The peer response calls the prerequisites unmet.",
+        }],
+    })
+    assert not any("prerequisite(s) as unmet/not met" in item for item in quoted_only)
+
+    authored = audit_unverified_case_claims(case, {
+        "response_to_other_perspectives": "The prerequisites remain unmet.",
+        "source_opinion_reviews": [{
+            "evidence_excerpt": "The peer response calls the prerequisites unmet.",
+        }],
+    })
+    assert any("prerequisite(s) as unmet/not met" in item for item in authored)
+
+
 def test_categorical_unmet_prerequisite_claims_remain_flagged():
+    case = _case(
+        case_summary="Fictional case; prerequisite status has not been assessed.",
+        known_unknowns=["Clinical staging and fitness are not supplied."],
+    )
+    unsafe_statements = [
+        "The prerequisites remain unmet.",
+        "The prerequisites are unmet.",
+        "The prerequisites have not been met.",
+        "The fitness prerequisite failed.",
+    ]
+    for statement in unsafe_statements:
+        flags = audit_unverified_case_claims(case, {
+            "response_to_other_perspectives": statement
+        })
+        assert any("prerequisite(s) as unmet/not met" in item for item in flags), statement
+
+
+def test_unrelated_uncertainty_does_not_hide_an_unmet_prerequisite_assertion():
+    case = _case(
+        case_summary="Fictional case; prerequisite status has not been assessed.",
+        known_unknowns=["Clinical staging is not supplied."],
+    )
+    for statement in (
+        "The imaging result is unknown and the fitness prerequisite remains unmet.",
+        "The case summary is provisional and the fitness prerequisite remains unmet.",
+    ):
+        flags = audit_unverified_case_claims(case, {
+            "response_to_other_perspectives": statement
+        })
+        assert any("prerequisite(s) as unmet/not met" in item for item in flags), statement
+
+
+def test_negated_prerequisite_wording_does_not_hide_a_separate_unmet_claim():
+    case = _case(
+        case_summary="Fictional case; prerequisite status has not been assessed.",
+        known_unknowns=["Clinical staging and fitness are not supplied."],
+    )
+    flags = audit_unverified_case_claims(case, {
+        "response_to_other_perspectives": (
+            "The staging prerequisites must not be converted into unmet conditions; "
+            "however, the fitness prerequisite remains unmet."
+        )
+    })
+    assert any("prerequisite(s) as unmet/not met" in item for item in flags)
+    assert "prerequisite remains unmet" in " ".join(flags).casefold()
+    assert "staging prerequisites must not be converted" not in " ".join(flags).casefold()
+
+    contrastive_flags = audit_unverified_case_claims(case, {
+        "response_to_other_perspectives": (
+            "The prerequisites are unknown due to missing case data, rather than treating them as unmet; "
+            "however, the fitness prerequisite remains unmet."
+        )
+    })
+    joined = " ".join(contrastive_flags).casefold()
+    assert "prerequisite remains unmet" in joined
+    assert "prerequisites are unknown" not in joined
+
+
+def test_explicit_suitability_followed_by_pending_prerequisites_is_not_unconditional_eligibility():
+    case = _case()
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": (
+            "The patient is a suitable candidate for surgery pending MRI and fitness review."
+        )
+    })
+    assert not any("treatment-suitability/eligibility" in item for item in flags)
+
+
+
+def test_attribution_note_register_assigns_exact_stable_ids_to_competing_favour_opinions():
+    from app.services.case_integrity import extract_attributed_note_opinions
+
+    summary = (
+        "Fictional educational scenario. The referral includes two provisional opinions: "
+        "the colorectal surgical note favours proceeding to a surgical assessment first, "
+        "conditional on complete local staging and resectability review; "
+        "the medical oncology note favours discussing a preoperative multimodality sequence, "
+        "conditional on MRI staging, metastatic work-up and fitness assessment. "
+        "Neither note supplies the missing investigations or establishes a final plan."
+    )
+
+    opinions = extract_attributed_note_opinions(summary)
+
+    assert [item["source_id"] for item in opinions] == [
+        "CASE:case_summary#1",
+        "CASE:case_summary#2",
+    ]
+    assert opinions[0]["source_excerpt"] == (
+        "the colorectal surgical note favours proceeding to a surgical assessment first, "
+        "conditional on complete local staging and resectability review"
+    )
+    assert opinions[1]["source_excerpt"] == (
+        "the medical oncology note favours discussing a preoperative multimodality sequence, "
+        "conditional on MRI staging, metastatic work-up and fitness assessment."
+    )
+    assert all(item["source_excerpt"] in summary for item in opinions)
+
+
+def test_attribution_note_register_extracts_service_note_opinion_spans_with_punctuation():
+    from app.services.case_integrity import extract_attributed_note_opinions
+
+    summary = (
+        "Fictional case. ENT service note proposes a surgery-led assessment, conditional on complete staging. "
+        "Cardiology service note proposes a separate preoperative sequence, conditional on MRI review."
+    )
+
+    opinions = extract_attributed_note_opinions(summary)
+
+    assert opinions == [
+        {
+            "source_id": "CASE:case_summary#1",
+            "source_excerpt": "ENT service note proposes a surgery-led assessment, conditional on complete staging.",
+        },
+        {
+            "source_id": "CASE:case_summary#2",
+            "source_excerpt": "Cardiology service note proposes a separate preoperative sequence, conditional on MRI review.",
+        },
+    ]
+
+
+def test_case_integrity_normalises_whitespace_runs_before_regex_audits():
+    from app.services.case_integrity import _collapse_horizontal_whitespace
+
+    horizontal = "Age" + (" " * 5000) + ":" + (" " * 3000) + "76"
+    multiline = horizontal + "\nECOG" + (" " * 6000) + "performance" + (" " * 4000) + "status: 2"
+    normalised = _collapse_horizontal_whitespace(multiline)
+    assert normalised == "Age : 76\nECOG performance status: 2"
+    assert normalised.count("\n") == 1
+
+    case = _case(age_years=75, performance_status=None)
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": multiline,
+    })).casefold()
+    assert "age(s)" in flags
+    assert "performance-status score" in flags
+
+
     case = _case(
         case_summary="Fictional case; prerequisite status has not been assessed.",
         known_unknowns=["Clinical staging and fitness are not supplied."],

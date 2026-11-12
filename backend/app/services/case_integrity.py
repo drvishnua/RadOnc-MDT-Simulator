@@ -155,7 +155,16 @@ def _flatten_strings(value: Any) -> list[str]:
     if isinstance(value, str):
         return [value]
     if isinstance(value, dict):
-        non_narrative = {"case_data_integrity_flags", "source_reference_integrity_flags"}
+        non_narrative = {
+            "case_data_integrity_flags",
+            "source_reference_integrity_flags",
+            # These are verbatim quotations bound to a case source or supplied peer.
+            # Audit the role's own narrative fields, not the quoted source material.
+            "source_excerpt",
+            "evidence_excerpt",
+            "model_reported_evidence_excerpt",
+            "provenance_excerpt",
+        }
         return [
             item
             for key, nested in value.items()
@@ -404,6 +413,21 @@ def _unqualified_prerequisite_status_matches(
         if (
             status_token in {"unmet", "unfulfilled", "failed", "negative"}
             and re.search(r"\b(?:not|never|rather\s+than|instead\s+of)\s*$", before_status, re.IGNORECASE)
+        ):
+            continue
+        # In "unknown rather than met or unmet", the second status word is part
+        # of a contrast describing uncertainty, not a finding of non-fulfilment.
+        # Keep this exception narrow: an independent assertion after a clause
+        # boundary (for example, "; the fitness prerequisite remains unmet")
+        # is still detected by the normal matcher.
+        if (
+            status_token == "unmet"
+            and re.search(
+                r"\b(?:unknown|unclear|undetermined|not\s+established)\b"
+                r"[^.!?;:\n]{0,80}\b(?:rather\s+than|instead\s+of)\s+met\s+or\s*$",
+                before_status,
+                re.IGNORECASE,
+            )
         ):
             continue
         token = match.group(0).strip()

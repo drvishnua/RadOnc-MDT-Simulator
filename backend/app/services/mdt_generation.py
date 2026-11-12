@@ -391,15 +391,17 @@ def _select_source_opinion_evidence_excerpt(
     *,
     maximum_excerpt_chars: int = 180,
 ) -> str:
-    """Select an exact contiguous excerpt containing every option/condition anchor.
+    """Select a verbatim peer excerpt meeting the same anchors used by R2 validation.
 
-    The caller supplies text only from one selected R2 peer's structured response
-    for the same server-identified CASE source. This is deterministic provenance
-    binding, not semantic interpretation or clinical validation.
+    R2 accepts source-specific wording when at least 60% of the component's
+    lexical anchors are retained. R3 must use that same policy: requiring every
+    token here rejects benign variants such as "surgery-first assessment" for
+    "surgery-led assessment first", even though the R2 audit accepts the match.
+    Provenance remains strict: the returned quote must be an exact contiguous
+    substring of the one selected peer's saved text and must independently
+    support both option and condition components.
     """
     option_tokens = set(_source_opinion_component_tokens(source_excerpt, "option"))
-    condition_tokens = set(_source_opinion_component_tokens(source_excerpt, "conditions"))
-    required_tokens = option_tokens | condition_tokens
     if not option_tokens:
         return ""
 
@@ -412,25 +414,21 @@ def _select_source_opinion_evidence_excerpt(
             continue
         words = list(re.finditer(r"\S+", normalized))
         for start_index, start_word in enumerate(words):
-            seen_tokens: set[str] = set()
             for end_index in range(start_index, len(words)):
                 end_word = words[end_index]
                 if end_word.end() - start_word.start() > maximum_excerpt_chars:
                     break
-                seen_tokens.update(
-                    re.findall(r"[a-z0-9]+", end_word.group(0).casefold())
-                )
-                if not required_tokens.issubset(seen_tokens):
-                    continue
                 candidate = normalized[start_word.start():end_word.end()]
                 if not all(
                     _source_opinion_component_supported(source_excerpt, candidate, component)
                     for component in ("option", "conditions")
                 ):
-                    break
+                    continue
                 option = (len(candidate), text_index, start_index, candidate)
                 if best is None or option[:3] < best[:3]:
                     best = option
+                # Extending this start can only make the excerpt longer; retain
+                # the shortest evidence window that meets both component checks.
                 break
 
     return best[3] if best is not None else ""
@@ -1802,9 +1800,24 @@ async def generate_adversarial_contribution(
                 f"Review for {source_id or 'unknown source'} is not bound to one unique exact case-summary excerpt."
             )
         if not any(reference_id in allowed_peer_source_ids for reference_id in reference_ids):
-            review_reference_flags.append(
-                f"Review for {source_id or 'unknown source'} does not cite an R2 peer actually supplied to this role."
+            model_reported_peer_ids = sorted(
+                (
+                    reported_reference_ids
+                    | {str(review.get("model_reported_evidence_peer_id") or "")}
+                )
+                & allowed_peer_source_ids
             )
+            if model_reported_peer_ids:
+                review_reference_flags.append(
+                    f"Review for {source_id or 'unknown source'} named supplied R2 peer(s) "
+                    + ", ".join(model_reported_peer_ids)
+                    + ", but no server-verified source-specific excerpt could be bound; "
+                    "the peer citation was withheld from canonical references."
+                )
+            else:
+                review_reference_flags.append(
+                    f"Review for {source_id or 'unknown source'} does not cite an R2 peer actually supplied to this role."
+                )
         invalid_ids = sorted(reported_reference_ids - ({source_id} | allowed_review_source_ids))
         if invalid_ids:
             review_reference_flags.append(
