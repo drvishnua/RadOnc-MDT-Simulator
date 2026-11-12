@@ -736,7 +736,8 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         prerequisite_status_pattern, text, source_text
     )
     if unsupported_prerequisite_status:
-        flags.append(
+        flags.insert(
+            0,
             "Generated narrative describes prerequisite(s) as unmet/not met without a matching "
             "documented assessment finding in the supplied case ("
             + "; ".join(unsupported_prerequisite_status[:3])
