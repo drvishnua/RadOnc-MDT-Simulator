@@ -1033,6 +1033,8 @@ async def generate_adversarial_contribution(
         f"R2:{profile['agent_id']}",
         *(f"R2:{peer['agent_id']}" for peer in peer_debate_views[:5]),
     ]
+    # Source-opinion reviews must cite one of the supplied R2 peers, never this role's own R2 record.
+    allowed_peer_source_ids = {f"R2:{peer['agent_id']}" for peer in peer_debate_views[:5]}
     source_opinion_register = extract_attributed_note_opinions(case.case_summary)
     if source_opinion_register:
         attribution_instruction = (
@@ -1170,7 +1172,6 @@ async def generate_adversarial_contribution(
     )
     draft = await _generate_structured(prompt, AdversarialContributionDraft, max_tokens)
     payload = draft.model_dump()
-    allowed_peer_source_ids = {f"R2:{peer['agent_id']}" for peer in peer_debate_views[:5]}
     allowed_review_source_ids = {
         f"R1:{profile['agent_id']}",
         f"R2:{profile['agent_id']}",
