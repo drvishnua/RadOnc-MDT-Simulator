@@ -323,7 +323,9 @@ _PREREQUISITE_NON_ASSERTION_PREFIX_PATTERN = re.compile(
     r"labelling|labeling|presenting|regarding)\b[^.!?;:\n]{0,100}\b(?:as|into)\s*$"
     r"|\b(?:do|does|did)\s+not\s+(?:convert|treat|describe|classify|interpret|"
     r"label|regard|present)\b[^.!?;:\n]{0,100}\b(?:as|into)\s*$"
-    r"|\b(?:not|never)\s+(?:to\s+be\s+)?(?:converted|treated|described|"
+    r"|\b(?:not|never)\s+(?:(?:to\s+be|being)\s+)?(?:converted|treated|described|"
+    r"classified|interpreted|labelled|labeled|presented|regarded)\s+as\s*$"
+    r"|\b(?:must|should|need\s+to)\s+not\s+(?:be\s+)?(?:converted|treated|described|"
     r"classified|interpreted|labelled|labeled|presented|regarded)\s+as\s*$",
     re.IGNORECASE,
 )
