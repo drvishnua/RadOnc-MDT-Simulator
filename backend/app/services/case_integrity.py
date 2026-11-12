@@ -194,7 +194,12 @@ _CLAUSE_BOUNDARY = re.compile(
 )
 
 
-def _unqualified_matches(pattern: re.Pattern[str], text: str) -> list[str]:
+def _unqualified_matches(
+    pattern: re.Pattern[str],
+    text: str,
+    *,
+    ignore_generated_prefix_pattern: re.Pattern[str] | None = None,
+) -> list[str]:
     """Return assertion-like matches, applying qualifiers only within the same clause."""
     findings: list[str] = []
     for match in pattern.finditer(text):
@@ -220,6 +225,14 @@ def _unqualified_matches(pattern: re.Pattern[str], text: str) -> list[str]:
             default=len(text),
         )
         clause = text[left:right]
+        # A reported absence of a peer's claim is not itself a clinical finding.
+        # This exception is deliberately limited to an attributed report prefix;
+        # direct assertions about an option remain subject to the normal audit.
+        if (
+            ignore_generated_prefix_pattern is not None
+            and ignore_generated_prefix_pattern.search(text[left:match.start()])
+        ):
+            continue
         if _QUALIFIER.search(clause):
             continue
         token = match.group(0).strip()
@@ -228,11 +241,21 @@ def _unqualified_matches(pattern: re.Pattern[str], text: str) -> list[str]:
     return findings
 
 
-def _unsupported_matches(pattern: re.Pattern[str], generated_text: str, source_text: str) -> list[str]:
+def _unsupported_matches(
+    pattern: re.Pattern[str],
+    generated_text: str,
+    source_text: str,
+    *,
+    ignore_generated_prefix_pattern: re.Pattern[str] | None = None,
+) -> list[str]:
     """Keep exact assertion snippets not already present in the supplied case text."""
     source_matches = {item.casefold() for item in _unqualified_matches(pattern, source_text)}
     return [
-        item for item in _unqualified_matches(pattern, generated_text)
+        item for item in _unqualified_matches(
+            pattern,
+            generated_text,
+            ignore_generated_prefix_pattern=ignore_generated_prefix_pattern,
+        )
         if item.casefold() not in source_matches
     ]
 
@@ -666,12 +689,24 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     treatment_status_pattern = re.compile(
         r"\b(?:"
         r"(?:is|are|was|were|has been|remains)\s+(?:clearly\s+)?(?:contraindicated|unsafe|not indicated)"
-        r"|neither\b[^.!?;:\n]{0,120}\b(?:is|are|was|were|has been|remains)\s+(?:clearly\s+)?(?:indicated|recommended|appropriate|suitable)"
+        r"|neither\b(?![^.!?;:\n]{0,120}\b(?:claims?|states?|says?|said|reports?|reported|asserts?|asserted|suggests?|suggested|recommends?|recommended|argues?|argued|believes?|believed)\b)[^.!?;:\n]{0,120}\b(?:is|are|was|were|has been|remains)\s+(?:clearly\s+)?(?:indicated|recommended|appropriate|suitable)"
         r"|no\s+(?:(?:available|proposed|treatment|therapeutic)\s+)*(?:option|approach|pathway|therapy|modality|sequence)s?\s+(?:is|are|was|were|has been|remains)\s+(?:clearly\s+)?(?:indicated|recommended|appropriate|suitable)"
         r")\b",
         re.IGNORECASE,
     )
-    treatment_status_matches = _unsupported_matches(treatment_status_pattern, text, source_text)
+    attributed_status_report_pattern = re.compile(
+        r"\\b(?:neither|no)\\s+(?:(?:selected|supplied|participating|other)\\s+)?"
+        r"(?:peer|source|note|role|agent|specialist|clinician|contribution|assessment|record|report)s?\\b"
+        r"[^.!?;:\\n]{0,100}\\b(?:claims?|states?|says?|said|reports?|reported|asserts?|asserted|"
+        r"suggests?|suggested|recommends?|recommended|argues?|argued|believes?|believed)\\b",
+        re.IGNORECASE,
+    )
+    treatment_status_matches = _unsupported_matches(
+        treatment_status_pattern,
+        text,
+        source_text,
+        ignore_generated_prefix_pattern=attributed_status_report_pattern,
+    )
     if treatment_status_matches:
         flags.append(
             "Generated narrative makes a definitive treatment safety/indication assertion ("

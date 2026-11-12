@@ -263,7 +263,7 @@ def test_missing_information_does_not_support_neither_or_no_option_indication_cl
     assert not any("treatment safety/indication" in item for item in uncertainty)
 
 
-def test_live_model_negative_indication_phrasing_is_flagged_for_r2_and_r3_narratives():
+def test_attributed_peer_absence_of_indication_claim_is_not_a_negative_clinical_finding():
     case = _case(
         case_summary=(
             "Fictional incomplete case. The surgical note favours a surgery-led assessment first, "
@@ -277,12 +277,22 @@ def test_live_model_negative_indication_phrasing_is_flagged_for_r2_and_r3_narrat
         stage_group=None,
         performance_status=None,
     )
-    r2_flags = audit_unverified_case_claims(case, {
+    for attributed_statement in (
+        "Neither source claims a specific treatment sequence is indicated despite the missing prerequisites.",
+        "Neither peer claims an option is indicated despite the absence of staging or fitness data.",
+        "Neither peer claims that chemotherapy is contraindicated.",
+    ):
+        flags = audit_unverified_case_claims(case, {
+            "response_to_other_perspectives": attributed_statement
+        })
+        assert not any("treatment safety/indication" in item for item in flags)
+
+    direct_negative_flags = audit_unverified_case_claims(case, {
         "response_to_other_perspectives": (
-            "Neither source claims a specific treatment sequence is indicated despite the missing prerequisites."
+            "Neither option is indicated because the required investigations are missing."
         )
     })
-    assert any("treatment safety/indication" in item for item in r2_flags)
+    assert any("treatment safety/indication" in item for item in direct_negative_flags)
 
     r3_flags = audit_unverified_case_claims(case, {
         "response_to_other_perspectives": (
