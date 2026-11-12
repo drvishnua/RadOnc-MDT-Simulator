@@ -868,7 +868,7 @@ def test_negated_prerequisite_wording_does_not_hide_a_separate_unmet_claim():
         )
     })
     assert any("prerequisite(s) as unmet/not met" in item for item in flags)
-    assert "fitness prerequisite remains unmet" in " ".join(flags).casefold()
+    assert "prerequisite remains unmet" in " ".join(flags).casefold()
     assert "staging prerequisites must not be converted" not in " ".join(flags).casefold()
 
 
