@@ -314,6 +314,82 @@ def _stage_group_supported(generated_key: str, source_keys: set[str]) -> bool:
     )
 
 
+_PREREQUISITE_STATUS_WORD_PATTERN = re.compile(
+    r"\\b(?:unmet|unfulfilled|not\\s+(?:been\\s+)?(?:met|fulfilled)|failed|negative)\\b",
+    re.IGNORECASE,
+)
+_PREREQUISITE_NON_ASSERTION_PREFIX_PATTERN = re.compile(
+    r"\\bwithout\\s+(?:converting|treating|describing|classifying|interpreting|"
+    r"labelling|labeling|presenting|regarding)\\b[^.!?;:\\n]{0,100}\\b(?:as|into)\\s*$"
+    r"|\\b(?:do|does|did)\\s+not\\s+(?:convert|treat|describe|classify|interpret|"
+    r"label|regard|present)\\b[^.!?;:\\n]{0,100}\\b(?:as|into)\\s*$"
+    r"|\\b(?:not|never)\\s+(?:to\\s+be\\s+)?(?:converted|treated|described|"
+    r"classified|interpreted|labelled|labeled|presented|regarded)\\s+as\\s*$",
+    re.IGNORECASE,
+)
+
+
+def _unqualified_prerequisite_status_matches(
+    pattern: re.Pattern[str], value: str
+) -> list[str]:
+    """Find categorical unmet-prerequisite claims without misreading explicit denials.
+
+    Unlike a generic sentence-level qualifier, the denial must directly govern
+    the status word: e.g. "without converting them into unmet conditions".
+    This keeps a negated description from suppressing a separate positive claim.
+    """
+    findings: list[str] = []
+    for match in pattern.finditer(value):
+        sentence_end = min(
+            (
+                position
+                for mark in ".!?;:\\n"
+                if (position := value.find(mark, match.end())) >= 0
+            ),
+            default=len(value),
+        )
+        if sentence_end < len(value) and value[sentence_end] == "?":
+            continue
+
+        left = max(
+            (boundary.end() for boundary in _CLAUSE_BOUNDARY.finditer(value, 0, match.start())),
+            default=0,
+        )
+        right = min(
+            (boundary.start() for boundary in _CLAUSE_BOUNDARY.finditer(value, match.end())),
+            default=len(value),
+        )
+        clause = value[left:right]
+        status_word = _PREREQUISITE_STATUS_WORD_PATTERN.search(match.group())
+        if status_word is None:
+            continue
+        before_status = value[left:match.start() + status_word.start()]
+        if _PREREQUISITE_NON_ASSERTION_PREFIX_PATTERN.search(before_status):
+            continue
+        if _QUALIFIER.search(clause):
+            continue
+
+        token = match.group(0).strip()
+        if token and token.casefold() not in {item.casefold() for item in findings}:
+            findings.append(token)
+    return findings
+
+
+def _unsupported_prerequisite_status_matches(
+    pattern: re.Pattern[str], generated_text: str, source_text: str
+) -> list[str]:
+    """Return generated unmet-prerequisite claims not explicitly present in the source."""
+    source_matches = {
+        item.casefold()
+        for item in _unqualified_prerequisite_status_matches(pattern, source_text)
+    }
+    return [
+        item
+        for item in _unqualified_prerequisite_status_matches(pattern, generated_text)
+        if item.casefold() not in source_matches
+    ]
+
+
 def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[str, Any]) -> list[str]:
     """Flag generated assertions that lack a corresponding structured source field."""
     text = " ".join(_flatten_strings(generated_payload))
@@ -767,7 +843,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         r"(?:unmet|unfulfilled|not\s+(?:been\s+)?(?:met|fulfilled)|failed|negative)\b",
         re.IGNORECASE,
     )
-    unsupported_prerequisite_status = _unsupported_matches(
+    unsupported_prerequisite_status = _unsupported_prerequisite_status_matches(
         prerequisite_status_pattern, text, source_text
     )
     if unsupported_prerequisite_status:

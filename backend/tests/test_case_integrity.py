@@ -819,6 +819,56 @@ def test_conditional_suitability_language_does_not_hide_an_unrelated_unsupported
     assert not any("treatment-suitability/eligibility" in item for item in flags)
 
 
+def test_negated_prerequisite_classification_is_not_a_categorical_unmet_claim():
+    case = _case(
+        case_summary="Fictional case; prerequisite status has not been assessed.",
+        known_unknowns=["Clinical staging and fitness are not supplied."],
+    )
+    safe_statements = [
+        "The peer conclusions identify the missing prerequisites without converting them into unmet conditions.",
+        "Do not convert missing prerequisites into unmet conditions.",
+        "Missing prerequisites are not being treated as unmet.",
+        "The record does not establish that the prerequisites are unmet.",
+    ]
+    for statement in safe_statements:
+        flags = audit_unverified_case_claims(case, {
+            "response_to_other_perspectives": statement
+        })
+        assert not any("prerequisite(s) as unmet/not met" in item for item in flags), statement
+
+
+def test_categorical_unmet_prerequisite_claims_remain_flagged():
+    case = _case(
+        case_summary="Fictional case; prerequisite status has not been assessed.",
+        known_unknowns=["Clinical staging and fitness are not supplied."],
+    )
+    unsafe_statements = [
+        "The prerequisites remain unmet.",
+        "The prerequisites are unmet.",
+        "The prerequisites have not been met.",
+        "The fitness prerequisite failed.",
+    ]
+    for statement in unsafe_statements:
+        flags = audit_unverified_case_claims(case, {
+            "response_to_other_perspectives": statement
+        })
+        assert any("prerequisite(s) as unmet/not met" in item for item in flags), statement
+
+
+def test_negated_prerequisite_wording_does_not_hide_a_separate_unmet_claim():
+    case = _case(
+        case_summary="Fictional case; prerequisite status has not been assessed.",
+        known_unknowns=["Clinical staging and fitness are not supplied."],
+    )
+    flags = audit_unverified_case_claims(case, {
+        "response_to_other_perspectives": (
+            "The staging prerequisites must not be converted into unmet conditions; "
+            "however, the fitness prerequisite remains unmet."
+        )
+    })
+    assert any("prerequisite(s) as unmet/not met" in item for item in flags)
+
+
 def test_explicit_suitability_followed_by_pending_prerequisites_is_not_unconditional_eligibility():
     case = _case()
     flags = audit_unverified_case_claims(case, {
