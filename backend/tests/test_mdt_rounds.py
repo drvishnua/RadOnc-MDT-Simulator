@@ -1627,6 +1627,10 @@ def test_r3_omission_labels_are_downgraded_when_verified_peer_excerpt_retains_so
 
     async def fake_generate(prompt, schema_type, max_tokens):
         assert "representation fidelity only" in prompt
+        assert "The fact that a peer does not endorse, validate, select, or act on a conditional option is not an omission" in prompt
+        assert "surgery-led assessment first, conditional on complete local staging and resectability review" in prompt
+        assert "partly_preserved only when the R2 text actually retains only part of the option or condition" in prompt
+        assert "Likewise, saying that no definitive pathway can yet be established does not erase that source-specific entry" in prompt
         return AdversarialContributionDraft(
             position="insufficient_information",
             provisional_conclusion="The supplied case does not establish either educational pathway.",
@@ -2668,5 +2672,102 @@ def test_r2_flags_unaddressed_server_registered_case_opinions(monkeypatch):
     assert any(
         "R2 has no structured response for server-identified attributed opinion CASE:case_summary#1"
         in flag
+        for flag in result.source_reference_integrity_flags
+    )
+
+
+def test_r2_distinguishes_unknown_prerequisites_from_assessed_unmet_prerequisites(monkeypatch):
+    import asyncio
+
+    from app.round_schemas import Round2ContributionDraft
+    from app.schemas import SyntheticCase
+    from app.services import mdt_generation
+
+    prompts = []
+    analysis = (
+        "The surgery-led assessment first remains conditional on complete local staging, "
+        "MRI staging result and fitness assessment. These prerequisites are not supplied "
+        "in the case; suitability remains unknown."
+    )
+
+    async def fake_generate(prompt, schema_type, max_tokens):
+        assert schema_type is Round2ContributionDraft
+        prompts.append(prompt)
+        return Round2ContributionDraft(
+            position="conditional",
+            provisional_conclusion=(
+                "The source proposal remains conditional; suitability cannot be determined "
+                "from the unreported prerequisite results."
+            ),
+            response_to_other_perspectives=(
+                "The conditional source option is retained as a source statement, not endorsed."
+            ),
+            agreements=[],
+            substantive_challenges=[],
+            remaining_unknowns=[
+                "MRI staging result is not supplied.",
+                "Complete staging is not documented.",
+                "Fitness assessment is not supplied.",
+            ],
+            risk_flags=[],
+            confidence=0.4,
+            source_opinion_responses=[
+                {
+                    "source_id": "CASE:case_summary#1",
+                    "analysis": analysis,
+                    "comparison": (
+                        "The proposal remains conditional; unknown prerequisite status "
+                        "does not establish that the prerequisite was unmet."
+                    ),
+                }
+            ],
+        )
+
+    monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate)
+    case = SyntheticCase(
+        scenario_title="R2 unknown-versus-unmet prerequisite test",
+        case_summary=(
+            "Fictional case. The surgical oncology note favours a surgery-led assessment first, "
+            "conditional on complete local staging, MRI staging result and fitness assessment."
+        ),
+        known_unknowns=[
+            "MRI staging result is not supplied.",
+            "Complete staging is not documented.",
+            "Fitness assessment is not supplied.",
+        ],
+    )
+    own_r1 = {
+        "position": "insufficient_information",
+        "provisional_conclusion": "The supplied record does not establish suitability.",
+        "preferred_educational_option": "The source proposal remains conditional.",
+    }
+
+    result = asyncio.run(
+        mdt_generation.generate_debate_contribution(
+            {"agent_id": "RO-01", "name": "Radiation Oncology", "mandate": "Review the fictional educational case."},
+            case,
+            own_r1,
+            [],
+        )
+    )
+
+    prompt = prompts[0]
+    assert "ABSENT-IS-NOT-UNMET RULE" in prompt
+    assert "no MRI result supplied means MRI staging is unknown" in prompt
+    assert "no staging entry means stage is undocumented" in prompt
+    assert "no fitness assessment means fitness is unknown" in prompt
+    assert "Use 'not met' or 'unmet' only when the case explicitly records that the prerequisite was assessed" in prompt
+    assert "identify that exact documented finding and do not infer a threshold" in prompt
+    assert "A conditional source option remains conditional when prerequisite status is unknown" in prompt
+    assert "MRI staging result is not supplied." in prompt
+    assert "Complete staging is not documented." in prompt
+    assert "Fitness assessment is not supplied." in prompt
+
+    assert len(result.source_opinion_responses) == 1
+    source_response = result.source_opinion_responses[0]
+    assert "conditional on complete local staging, MRI staging result and fitness assessment" in source_response.source_excerpt
+    assert "remains conditional" in source_response.analysis
+    assert not any(
+        "does not retain sufficient source-specific language" in flag
         for flag in result.source_reference_integrity_flags
     )
