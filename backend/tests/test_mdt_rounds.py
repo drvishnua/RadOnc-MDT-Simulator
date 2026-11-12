@@ -2485,10 +2485,14 @@ def test_r3_does_not_promote_challenges_using_an_unsupplied_peer_id(monkeypatch)
         {"source_id": "CASE:case_summary#1", "challenge": "none"}
     ]
     assert any(
-        "Challenge for CASE:case_summary#1 was not promoted" in item
-        and "server-verified exact excerpt from a supplied R2 peer" in item
+        "R2:MO-99" in item and "not supplied to this role" in item
         for item in result.source_reference_integrity_flags
     )
+    # The exact model sentinel remains auditable, but it is not a substantive
+    # challenge and must not create a misleading Chair record.
+    assert result.model_reported_source_review_challenges == [
+        {"source_id": "CASE:case_summary#1", "challenge": "none"}
+    ]
 
 
 
