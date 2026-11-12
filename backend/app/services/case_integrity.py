@@ -397,6 +397,15 @@ def _unqualified_prerequisite_status_matches(
         before_status = value[left:match.start() + status_word.start()]
         if _PREREQUISITE_NON_ASSERTION_PREFIX_PATTERN.search(before_status):
             continue
+        # Distinguish explicit denial of a negative-status word ("unknown, not unmet",
+        # "unknown rather than unfulfilled") from an actual failed prerequisite.
+        # Do not exempt "not met": that remains a categorical non-fulfilment assertion.
+        status_token = status_word.group().casefold()
+        if (
+            status_token in {"unmet", "unfulfilled", "failed", "negative"}
+            and re.search(r"\\b(?:not|never|rather\\s+than|instead\\s+of)\\s*$", before_status, re.IGNORECASE)
+        ):
+            continue
         token = match.group(0).strip()
         if token and token.casefold() not in {item.casefold() for item in findings}:
             findings.append(token)

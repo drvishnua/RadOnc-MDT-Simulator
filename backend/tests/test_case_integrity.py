@@ -848,6 +848,39 @@ def test_negated_prerequisite_classification_is_not_a_categorical_unmet_claim():
         assert not any("prerequisite(s) as unmet/not met" in item for item in flags), statement
 
 
+
+
+def test_explicit_denial_of_negative_prerequisite_status_is_not_flagged():
+    case = _case(
+        case_summary="Fictional case; prerequisite status has not been assessed.",
+        known_unknowns=["Clinical staging and fitness are not supplied."],
+    )
+    explicitly_unknown = [
+        "The prerequisite status is unknown, not unmet.",
+        "Prerequisites are unknown rather than unmet.",
+        "The prerequisite remains unknown instead of unfulfilled.",
+        "The fitness prerequisite is not failed.",
+        "The investigation status is not negative.",
+    ]
+    for statement in explicitly_unknown:
+        flags = audit_unverified_case_claims(case, {
+            "response_to_other_perspectives": statement,
+        })
+        assert not any("prerequisite(s) as unmet/not met" in item for item in flags), statement
+
+    # These are actual negative-status assertions and must continue to block.
+    unqualified = [
+        "The prerequisites remain unmet.",
+        "The prerequisites have not been met.",
+        "The fitness prerequisite failed.",
+    ]
+    for statement in unqualified:
+        flags = audit_unverified_case_claims(case, {
+            "response_to_other_perspectives": statement,
+        })
+        assert any("prerequisite(s) as unmet/not met" in item for item in flags), statement
+
+
 def test_categorical_unmet_prerequisite_claims_remain_flagged():
     case = _case(
         case_summary="Fictional case; prerequisite status has not been assessed.",
