@@ -695,10 +695,10 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         re.IGNORECASE,
     )
     attributed_status_report_pattern = re.compile(
-        r"\\b(?:neither|no)\\s+(?:(?:selected|supplied|participating|other)\\s+)?"
-        r"(?:peer|source|note|role|agent|specialist|clinician|contribution|assessment|record|report)s?\\b"
-        r"[^.!?;:\\n]{0,100}\\b(?:claims?|states?|says?|said|reports?|reported|asserts?|asserted|"
-        r"suggests?|suggested|recommends?|recommended|argues?|argued|believes?|believed)\\b",
+        r"\b(?:neither|no)\s+(?:(?:selected|supplied|participating|other)\s+)?"
+        r"(?:peer|source|note|role|agent|specialist|clinician|contribution|assessment|record|report)s?\b"
+        r"[^.!?;:\n]{0,100}\b(?:claims?|states?|says?|said|reports?|reported|asserts?|asserted|"
+        r"suggests?|suggested|recommends?|recommended|argues?|argued|believes?|believed)\b",
         re.IGNORECASE,
     )
     treatment_status_matches = _unsupported_matches(
