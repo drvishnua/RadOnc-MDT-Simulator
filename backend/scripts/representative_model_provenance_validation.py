@@ -1,7 +1,8 @@
-"""Bounded live R2/R3 provenance check using the configured local Ollama endpoint.
+"""Bounded live R2/R3/R4 validation using the configured local Ollama endpoint.
 
 This is a synthetic software integration check, not a clinical accuracy assessment.
-It deliberately runs three representative roles and does not create a saved MDT run.
+Three role fixtures and actual generated R2/R3 outputs are saved and reloaded from an
+isolated temporary SQLite database for Chair synthesis; no full 45-role MDT is run.
 """
 
 from __future__ import annotations
@@ -12,6 +13,7 @@ import json
 import platform
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.request
 from datetime import datetime, timezone
@@ -28,13 +30,18 @@ if backend_path not in sys.path:
 from app.agents.catalog import AGENT_PROFILES
 from app.config import OLLAMA_BASE_URL, OLLAMA_MODEL
 from app.schemas import SyntheticCase
-from app.services.chair_report_quality import build_source_opinion_review_coverage
+from app.services.chair_report_quality import (
+    build_source_opinion_review_coverage,
+    ensure_chair_report_completeness,
+)
 from app.services.mdt_generation import (
     GENERATION_REQUEST_TIMEOUT_SECONDS,
     generate_adversarial_contribution,
+    generate_chair_report,
     generate_debate_contribution,
 )
 from app.services.case_integrity import extract_attributed_note_opinions
+from app.services import run_store
 
 ARTIFACT_DIR = BACKEND_DIR / "validation_artifacts"
 ARTIFACT_PATH = ARTIFACT_DIR / "representative_model_provenance_validation.json"
@@ -134,6 +141,184 @@ async def _timed_call(label: str, callback, metrics: list[dict]):
     return value
 
 
+def _persist_bounded_round_records(
+    case: SyntheticCase,
+    roles: list[dict],
+    round2_rows: list[dict],
+    round3_rows: list[dict],
+    generation_metrics: list[dict],
+) -> dict:
+    """Persist three synthetic R1 fixtures and actual R2/R3 outputs in a disposable DB.
+
+    This deliberately does not use create_round_job or run_mdt_round: those production
+    paths correctly require all 45 preceding-role records. Only this isolated validation
+    database contains three role rows per round. Its database file is removed on return.
+    """
+    expected_ids = {role["agent_id"] for role in roles}
+    if len(expected_ids) != 3 or expected_ids != set(ROLE_IDS):
+        raise ValueError("Bounded Chair validation requires the three configured representative roles.")
+
+    original_data_dir = run_store.DATA_DIR
+    original_db_path = run_store.DB_PATH
+    original_legacy_path = run_store.LEGACY_DB_PATH
+    temporary_db_path: Path | None = None
+    result: dict | None = None
+    try:
+        with tempfile.TemporaryDirectory(prefix="radonc-bounded-chair-r4-") as temporary_root:
+            temporary_data_dir = Path(temporary_root)
+            temporary_db_path = temporary_data_dir / "simulation_runs.sqlite3"
+            run_store.DATA_DIR = temporary_data_dir
+            run_store.DB_PATH = temporary_db_path
+            run_store.LEGACY_DB_PATH = None
+
+            run = run_store.create_run(case)
+            run_id = run["run_id"]
+            for role in roles:
+                fixture = _r1_fixture(role["agent_id"])
+                run_store.save_agent_success(
+                    run_id,
+                    role["agent_id"],
+                    json.dumps(fixture, ensure_ascii=False),
+                    0.0,
+                )
+            saved_round1 = run_store.list_results(run_id)
+            completed_r1_ids = {
+                row["agent_id"] for row in saved_round1
+                if row["status"] == "completed" and row.get("assessment")
+            }
+            if completed_r1_ids != expected_ids or len(saved_round1) != 45:
+                raise RuntimeError(
+                    "Temporary R1 fixture persistence did not retain exactly three "
+                    "completed representative roles in the 45-role run structure."
+                )
+
+            metrics_by_stage = {
+                item["stage"]: item["wall_seconds"]
+                for item in generation_metrics
+                if item.get("status") == "completed"
+            }
+            saved_by_round: dict[int, list[dict]] = {}
+            summaries: dict[int, dict] = {}
+
+            for round_number, source_rows in ((2, round2_rows), (3, round3_rows)):
+                rows_by_id = {row["agent_id"]: row for row in source_rows}
+                if set(rows_by_id) != expected_ids or len(rows_by_id) != 3:
+                    raise RuntimeError(
+                        f"Round {round_number} does not contain exactly one completed "
+                        "contribution from each representative role."
+                    )
+                now = datetime.now(timezone.utc).isoformat()
+                with run_store._connect() as db:
+                    run_store._ensure_round_tables(db)
+                    db.execute(
+                        """
+                        INSERT INTO round_runs
+                        (run_id, round_number, status, total_agents, current_agent_id,
+                         created_at, updated_at, started_at, finished_at)
+                        VALUES (?, ?, 'queued', 3, NULL, ?, ?, NULL, NULL)
+                        """,
+                        (run_id, round_number, now, now),
+                    )
+                    db.executemany(
+                        """
+                        INSERT INTO agent_round_results
+                        (run_id, round_number, agent_id, agent_name, category_label, status)
+                        VALUES (?, ?, ?, ?, ?, 'queued')
+                        """,
+                        [
+                            (
+                                run_id,
+                                round_number,
+                                role["agent_id"],
+                                role["name"],
+                                role.get("category_label", role.get("category", "Specialist")),
+                            )
+                            for role in roles
+                        ],
+                    )
+
+                for role in roles:
+                    role_id = role["agent_id"]
+                    row = rows_by_id[role_id]
+                    result_field = row.get("result")
+                    if not isinstance(result_field, dict):
+                        raise RuntimeError(
+                            f"Round {round_number} {role_id} has no structured result to persist."
+                        )
+                    if result_field.get("agent_id") != role_id:
+                        raise RuntimeError(
+                            f"Round {round_number} stored contribution identity mismatch for {role_id}."
+                        )
+                    duration = metrics_by_stage.get(
+                        f"R{round_number}:{role_id}", 0.0
+                    )
+                    run_store.save_round_success(
+                        run_id,
+                        round_number,
+                        role_id,
+                        json.dumps(result_field, ensure_ascii=False),
+                        duration,
+                    )
+                run_store.mark_round_finished(run_id, round_number)
+                summary = run_store.get_round_summary(run_id, round_number)
+                persisted_rows = run_store.list_round_results(run_id, round_number)
+                if (
+                    summary["status"] != "completed"
+                    or summary["completed_count"] != 3
+                    or summary["failed_count"] != 0
+                    or len(persisted_rows) != 3
+                ):
+                    raise RuntimeError(
+                        f"Round {round_number} did not persist and reload as three "
+                        "completed contributions."
+                    )
+                summaries[round_number] = summary
+                saved_by_round[round_number] = persisted_rows
+
+            # Prove this bounded fixture cannot accidentally enter the production
+            # R2 orchestration path: that path still requires all 45 successful R1s.
+            try:
+                run_store.create_round_job(run_id, 2)
+            except ValueError as exc:
+                production_guard = str(exc)
+                if "45 successful independent assessments" not in production_guard:
+                    raise
+            else:
+                raise RuntimeError(
+                    "Production R2 creation unexpectedly accepted only three R1 fixtures."
+                )
+
+            run_summary = run_store.get_run(run_id)
+            if run_summary["patient_id"] is not None or run_summary["completed_count"] != 3:
+                raise RuntimeError(
+                    "Temporary bounded validation run has unexpected patient linkage or R1 count."
+                )
+            result = {
+                "run_id": run_id,
+                "round1_rows": saved_round1,
+                "round2_rows": saved_by_round[2],
+                "round3_rows": saved_by_round[3],
+                "round_summaries": summaries,
+                "run_summary": run_summary,
+                "production_round2_guard": production_guard,
+                "temporary_database_path": str(temporary_db_path),
+                "temporary_database_deleted": False,
+            }
+    finally:
+        run_store.DATA_DIR = original_data_dir
+        run_store.DB_PATH = original_db_path
+        run_store.LEGACY_DB_PATH = original_legacy_path
+
+    if result is None:
+        raise RuntimeError("Temporary SQLite persistence did not produce validation records.")
+    result["temporary_database_deleted"] = (
+        temporary_db_path is not None and not temporary_db_path.exists()
+    )
+    if not result["temporary_database_deleted"]:
+        raise RuntimeError("Temporary Chair-validation SQLite database was not removed.")
+    return result
+
+
 async def main() -> int:
     ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
     case = _build_case()
@@ -153,9 +338,12 @@ async def main() -> int:
         "evidence_retrieval_connected": False,
         "synthetic_only": True,
         "created_saved_mdt_run": False,
+        "created_temporary_sqlite_validation_run": False,
+        "persisted_patient_record": False,
         "rounds_attempted": [],
         "rounds_completed": [],
         "r1_inputs": "Deterministic non-model fixture records; not presented as model assessments.",
+        "r4_validation_mode": "Bounded three-role Chair synthesis; not the production 45-role R4 orchestration.",
         "r4_executed": False,
         "started_at": datetime.now(timezone.utc).isoformat(),
         "host_platform": platform.platform(),
@@ -325,10 +513,160 @@ async def main() -> int:
                 "type": "chair_source_opinion_coverage_integrity",
                 "details": coverage_integrity,
             })
-        if len(payload["generation_metrics"]) != 6:
+        # Chair R4: persist and reload actual R2/R3 outputs beside explicitly labelled R1 fixtures.
+        # The production run_mdt_round(run_id, 4) path is intentionally not called because it
+        # correctly requires 45 completed R1, R2 and R3 contributions.
+        round2_persist_rows = [
+            {
+                "agent_id": role["agent_id"],
+                "agent_name": role["name"],
+                "status": "completed",
+                "result": r2_by_id[role["agent_id"]],
+            }
+            for role in roles
+        ]
+        bounded_store = _persist_bounded_round_records(
+            case,
+            roles,
+            round2_persist_rows,
+            r3_rows,
+            payload["generation_metrics"],
+        )
+        payload["created_temporary_sqlite_validation_run"] = True
+        payload["bounded_sqlite_persistence"] = {
+            "temporary_run_id": bounded_store["run_id"],
+            "temporary_database_deleted": bounded_store["temporary_database_deleted"],
+            "patient_id": bounded_store["run_summary"]["patient_id"],
+            "configured_role_count": bounded_store["run_summary"]["total_agents"],
+            "completed_r1_fixture_roles": bounded_store["run_summary"]["completed_count"],
+            "round2_summary": bounded_store["round_summaries"][2],
+            "round3_summary": bounded_store["round_summaries"][3],
+            "production_r2_guard": bounded_store["production_round2_guard"],
+            "production_run_mdt_round_called": False,
+            "full_45_role_mdt_completed": False,
+        }
+
+        payload["rounds_attempted"].append("R4")
+        chair_draft = await _timed_call(
+            "R4:SG-07",
+            lambda: generate_chair_report(
+                bounded_store["run_id"],
+                case,
+                bounded_store["round1_rows"],
+                bounded_store["round2_rows"],
+                bounded_store["round3_rows"],
+            ),
+            payload["generation_metrics"],
+        )
+        chair_report = ensure_chair_report_completeness(
+            chair_draft,
+            case,
+            bounded_store["round1_rows"],
+            bounded_store["round2_rows"],
+            bounded_store["round3_rows"],
+        )
+        payload["r4_executed"] = True
+        payload["rounds_completed"].append("R4")
+        payload["chair_report"] = chair_report.model_dump()
+        r4_failures = []
+        if chair_report.consensus_status != "insufficient_information":
+            r4_failures.append({
+                "round": 4,
+                "type": "chair_consensus_status",
+                "expected": "insufficient_information",
+                "actual": chair_report.consensus_status,
+            })
+        if chair_report.consensus_points:
+            r4_failures.append({
+                "round": 4,
+                "type": "unsupported_proposition_consensus_points",
+                "actual": chair_report.consensus_points,
+            })
+        if "No proposition-level consensus" not in chair_report.chair_conclusion:
+            r4_failures.append({
+                "round": 4,
+                "type": "chair_conclusion_not_deterministically_reconciled",
+                "actual": chair_report.chair_conclusion,
+            })
+        if not (
+            chair_report.safety_boundary == "educational_simulation_only"
+            and chair_report.not_a_treatment_instruction is True
+            and chair_report.evidence_retrieval_connected is False
+        ):
+            r4_failures.append({
+                "round": 4,
+                "type": "chair_safety_boundary",
+                "details": {
+                    "safety_boundary": chair_report.safety_boundary,
+                    "not_a_treatment_instruction": chair_report.not_a_treatment_instruction,
+                    "evidence_retrieval_connected": chair_report.evidence_retrieval_connected,
+                },
+            })
+        for unknown in case.known_unknowns or []:
+            if unknown not in chair_report.major_uncertainties:
+                r4_failures.append({
+                    "round": 4,
+                    "type": "case_unknown_not_retained_as_major_uncertainty",
+                    "unknown": unknown,
+                })
+            if unknown not in chair_report.missing_information_before_real_world_review:
+                r4_failures.append({
+                    "round": 4,
+                    "type": "case_unknown_not_retained_as_missing_information",
+                    "unknown": unknown,
+                })
+        for source in expected_opinions:
+            matching = [
+                item for item in chair_report.unresolved_disagreements
+                if source["source_id"] in item and "3/3 roles supplied an exact source-bound review" in item
+            ]
+            if len(matching) != 1:
+                r4_failures.append({
+                    "round": 4,
+                    "type": "chair_source_opinion_review_coverage",
+                    "source_id": source["source_id"],
+                    "matching_sections": matching,
+                })
+        no_challenge_note = any(
+            "No Round-3 role saved a substantive_challenges entry" in item
+            for item in chair_report.unresolved_disagreements
+        )
+        if not no_challenge_note:
+            r4_failures.append({
+                "round": 4,
+                "type": "chair_omitted_zero_r3_challenge_disclosure",
+            })
+        payload["r4_validation"] = {
+            "status": "passed" if not r4_failures else "failed",
+            "round1_fixture_completed_roles": len({
+                row["agent_id"] for row in bounded_store["round1_rows"]
+                if row["status"] == "completed" and row.get("assessment")
+            }),
+            "round2_completed_roles_reloaded_from_sqlite": bounded_store["round_summaries"][2]["completed_count"],
+            "round3_completed_roles_reloaded_from_sqlite": bounded_store["round_summaries"][3]["completed_count"],
+            "chair_model_call_completed": True,
+            "consensus_status": chair_report.consensus_status,
+            "consensus_points": chair_report.consensus_points,
+            "position_evolution": {
+                "round1": chair_report.overall_educational_synthesis.split("Round 2:")[0],
+                "round2": chair_report.overall_educational_synthesis.split("Round 2:")[-1].split("Round 3:")[0],
+                "round3": chair_report.overall_educational_synthesis.split("Round 3:")[-1],
+            },
+            "r3_roles_with_substantive_challenges": sum(
+                bool(row["result"].get("substantive_challenges")) for row in r3_rows
+            ),
+            "r3_roles_with_risk_flags": sum(
+                bool(row["result"].get("risk_flags")) for row in r3_rows
+            ),
+            "zero_r3_challenge_disclosed_in_chair_report": no_challenge_note,
+            "quality_gate_failures": r4_failures,
+        }
+        payload["quality_gate_failures"].extend(r4_failures)
+
+        if len(payload["generation_metrics"]) != 7:
             failures.append({
                 "type": "generation_count",
-                "expected": 6,
+                "expected": 7,
                 "actual": len(payload["generation_metrics"]),
             })
 

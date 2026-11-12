@@ -402,9 +402,10 @@ jobs:
             Write-Host "HOSTED_INSTALLED_APP_MODEL_RUNTIME_OK"
             Write-Host "HOSTED_INSTALLED_APP_45_ROLES_OK"
 
-            # Run a bounded six-call R2/R3 provenance check against this exact
-            # clean-hosted Ollama/model instance. This is CPU-only and creates no
-            # saved MDT run, patient record, R1 assessment, or Chair report.
+            # Run six R2/R3 calls plus a bounded three-role Chair R4 synthesis against this
+            # exact clean-hosted Ollama/model instance. R1 uses explicit deterministic
+            # fixtures; actual R2/R3 outputs are saved/reloaded in disposable SQLite.
+            # This is CPU-only and never invokes the production 45-role round runner.
             $env:OLLAMA_BASE_URL = $ollamaUrl
             $env:OLLAMA_MODEL = $RadOncModelName
             Push-Location (Join-Path $env:GITHUB_WORKSPACE "backend")
@@ -416,8 +417,8 @@ jobs:
             } finally {
               Pop-Location
             }
-            Write-Host "HOSTED_REPRESENTATIVE_R2_R3_PROVENANCE_VALIDATION_OK"
-            Write-Host "No patient record or persisted MDT run was created."
+            Write-Host "HOSTED_REPRESENTATIVE_R2_R3_R4_VALIDATION_OK"
+            Write-Host "No patient record or durable MDT run was created; bounded rows were isolated in temporary SQLite."
           }
           finally {
             if ($appProcess) {
@@ -461,11 +462,11 @@ jobs:
             }
           }
 
-      - name: Upload representative live R2/R3 provenance report
+      - name: Upload representative live R2/R3/R4 Chair provenance report
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
-          name: representative-r2-r3-model-provenance
+          name: representative-r2-r3-r4-chair-provenance
           path: backend/validation_artifacts/representative_model_provenance_validation.json
           if-no-files-found: warn
           retention-days: 14

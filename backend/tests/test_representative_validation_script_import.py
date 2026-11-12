@@ -119,3 +119,79 @@ def test_round_attempts_are_recorded_only_after_ollama_preflight():
 
     assert '"rounds_attempted": []' in source
     assert preflight < r2_start < r2_attempt < r3_start < r3_attempt
+
+
+def test_bounded_chair_records_are_saved_and_reloaded_without_bypassing_45_role_guard(tmp_path):
+    from app.services import run_store
+
+    backend_dir = Path(__file__).resolve().parents[1]
+    script_path = (
+        backend_dir
+        / "scripts"
+        / "representative_model_provenance_validation.py"
+    )
+    namespace = runpy.run_path(
+        str(script_path),
+        run_name="representative_validation_sqlite_persistence_probe",
+    )
+    roles = namespace["_role_rows"]()
+    case = namespace["_build_case"]()
+    r2_rows = [
+        {
+            "agent_id": role["agent_id"],
+            "agent_name": role["name"],
+            "status": "completed",
+            "result": {
+                "agent_id": role["agent_id"],
+                "round_number": 2,
+                "position": "insufficient_information",
+                "provisional_conclusion": "The fictional case does not establish a definitive pathway.",
+            },
+        }
+        for role in roles
+    ]
+    r3_rows = [
+        {
+            "agent_id": role["agent_id"],
+            "agent_name": role["name"],
+            "status": "completed",
+            "result": {
+                "agent_id": role["agent_id"],
+                "round_number": 3,
+                "position": "insufficient_information",
+                "provisional_conclusion": "The fictional case still lacks the information needed for a definitive pathway.",
+            },
+        }
+        for role in roles
+    ]
+    previous_db_path = run_store.DB_PATH
+    previous_data_dir = run_store.DATA_DIR
+    previous_legacy_path = run_store.LEGACY_DB_PATH
+
+    saved = namespace["_persist_bounded_round_records"](
+        case, roles, r2_rows, r3_rows, []
+    )
+
+    assert saved["run_summary"]["total_agents"] == 45
+    assert saved["run_summary"]["patient_id"] is None
+    assert len(saved["round1_rows"]) == 45
+    assert sum(row["status"] == "completed" for row in saved["round1_rows"]) == 3
+    assert {row["agent_id"] for row in saved["round2_rows"]} == {
+        role["agent_id"] for role in roles
+    }
+    assert {row["agent_id"] for row in saved["round3_rows"]} == {
+        role["agent_id"] for role in roles
+    }
+    assert all(row["status"] == "completed" and row["result"] for row in saved["round2_rows"])
+    assert all(row["status"] == "completed" and row["result"] for row in saved["round3_rows"])
+    assert saved["round_summaries"][2]["status"] == "completed"
+    assert saved["round_summaries"][2]["total_agents"] == 3
+    assert saved["round_summaries"][3]["status"] == "completed"
+    assert saved["round_summaries"][3]["total_agents"] == 3
+    assert "45 successful independent assessments" in saved["production_round2_guard"]
+    assert saved["temporary_database_deleted"] is True
+    assert not Path(saved["temporary_database_path"]).exists()
+    assert run_store.DB_PATH == previous_db_path
+    assert run_store.DATA_DIR == previous_data_dir
+    assert run_store.LEGACY_DB_PATH == previous_legacy_path
+
