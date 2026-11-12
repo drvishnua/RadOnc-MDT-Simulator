@@ -233,7 +233,8 @@ def _unqualified_matches(
             and ignore_generated_prefix_pattern.search(text[left:match.start()])
         ):
             continue
-        # Only explicit constructions that govern this status word suppress it.
+        if _QUALIFIER.search(clause):
+            continue
         # A separate "unknown" or "unverified" phrase elsewhere in the same clause
         # must not hide a categorical unmet-prerequisite assertion.
         token = match.group(0).strip()
@@ -366,20 +367,12 @@ def _unqualified_prerequisite_status_matches(
             (boundary.end() for boundary in _CLAUSE_BOUNDARY.finditer(value, 0, match.start())),
             default=0,
         )
-        right = min(
-            (boundary.start() for boundary in _CLAUSE_BOUNDARY.finditer(value, match.end())),
-            default=len(value),
-        )
-        clause = value[left:right]
         status_word = _PREREQUISITE_STATUS_WORD_PATTERN.search(match.group())
         if status_word is None:
             continue
         before_status = value[left:match.start() + status_word.start()]
         if _PREREQUISITE_NON_ASSERTION_PREFIX_PATTERN.search(before_status):
             continue
-        if _QUALIFIER.search(clause):
-            continue
-
         token = match.group(0).strip()
         if token and token.casefold() not in {item.casefold() for item in findings}:
             findings.append(token)
