@@ -263,6 +263,43 @@ def test_missing_information_does_not_support_neither_or_no_option_indication_cl
     assert not any("treatment safety/indication" in item for item in uncertainty)
 
 
+def test_live_model_negative_indication_phrasing_is_flagged_for_r2_and_r3_narratives():
+    case = _case(
+        case_summary=(
+            "Fictional incomplete case. The surgical note favours a surgery-led assessment first, "
+            "conditional on complete local staging; the medical oncology note favours discussing "
+            "a preoperative multimodality sequence, conditional on MRI staging and fitness assessment. "
+            "Neither note supplies the missing investigations or establishes a final plan."
+        ),
+        clinical_t_stage=None,
+        clinical_n_stage=None,
+        clinical_m_stage=None,
+        stage_group=None,
+        performance_status=None,
+    )
+    r2_flags = audit_unverified_case_claims(case, {
+        "response_to_other_perspectives": (
+            "Neither source claims a specific treatment sequence is indicated despite the missing prerequisites."
+        )
+    })
+    assert any("treatment safety/indication" in item for item in r2_flags)
+
+    r3_flags = audit_unverified_case_claims(case, {
+        "response_to_other_perspectives": (
+            "No pathway is indicated because the required investigations are missing."
+        )
+    })
+    assert any("treatment safety/indication" in item for item in r3_flags)
+
+    safe_flags = audit_unverified_case_claims(case, {
+        "response_to_other_perspectives": (
+            "The supplied information does not establish whether either source option is indicated "
+            "or appropriate; indication and suitability remain undetermined."
+        )
+    })
+    assert not any("treatment safety/indication" in item for item in safe_flags)
+
+
 def test_unreported_histology_and_pathology_markers_are_flagged():
     case = _case(histology=None, pathology_summary=None)
     flags = " ".join(audit_unverified_case_claims(case, {

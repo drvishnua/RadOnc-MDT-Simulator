@@ -2505,6 +2505,8 @@ def test_r3_uses_server_identified_opinion_ids_and_flags_duplicate_or_missing_re
         assert "this exact prerequisite was assessed" in prompt
         assert "Never describe undocumented prerequisites as 'not met' or 'unmet'" in prompt
         assert "Never conclude that 'neither option is indicated'" in prompt
+        assert "Never convert 'no definitive pathway can be established from this incomplete record' into 'no pathway is indicated'" in prompt
+        assert "The supplied information does not establish whether either source option is indicated or appropriate; indication and suitability remain undetermined." in prompt
         assert "R2:MO-01" in prompt and "FORBIDDEN FOR SOURCE-OPINION REVIEWS: R2:RO-01" in prompt
         assert "the colorectal surgical note favours a surgical assessment first" in prompt.casefold()
         assert "the medical oncology note favours discussing a preoperative multimodality sequence" in prompt.casefold()
@@ -2780,6 +2782,8 @@ def test_r2_distinguishes_unknown_prerequisites_from_assessed_unmet_prerequisite
     assert "A conditional source option remains conditional when prerequisite status is unknown" in prompt
     assert "Never describe undocumented prerequisites as 'not met' or 'unmet'" in prompt
     assert "Never conclude that 'neither option is indicated'" in prompt
+    assert "Never convert 'no definitive pathway can be established from this incomplete record' into 'no pathway is indicated'" in prompt
+    assert "The supplied information does not establish whether either source option is indicated or appropriate; indication and suitability remain undetermined." in prompt
     assert "MRI staging result is not supplied." in prompt
     assert "Complete staging is not documented." in prompt
     assert "Fitness assessment is not supplied." in prompt
