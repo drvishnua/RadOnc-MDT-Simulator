@@ -245,6 +245,14 @@ def test_missing_information_does_not_support_neither_or_no_option_indication_cl
     })
     assert any("treatment safety/indication" in item for item in flags)
 
+    exact_live_r3_phrase = audit_unverified_case_claims(case, {
+        "response_to_other_perspectives": (
+            "All reviewed peers acknowledge that neither option is indicated without documented "
+            "staging, imaging, fitness, or resectability data."
+        )
+    })
+    assert any("treatment safety/indication" in item for item in exact_live_r3_phrase)
+
     no_option_flags = audit_unverified_case_claims(case, {
         "response_to_other_perspectives": "No treatment pathway is appropriate."
     })
@@ -830,6 +838,8 @@ def test_negated_prerequisite_classification_is_not_a_categorical_unmet_claim():
         "Missing prerequisites are not being treated as unmet.",
         "The record does not establish that the prerequisites are unmet.",
         "The staging prerequisites must not be converted into unmet conditions.",
+        "The peer conclusions identify the missing prerequisites (complete local staging, MRI staging, metastatic work-up, fitness assessment) without providing negative findings.",
+        "The prerequisites are unknown due to missing case data, rather than treating them as unmet or absent.",
     ]
     for statement in safe_statements:
         flags = audit_unverified_case_claims(case, {
@@ -885,6 +895,16 @@ def test_negated_prerequisite_wording_does_not_hide_a_separate_unmet_claim():
     assert any("prerequisite(s) as unmet/not met" in item for item in flags)
     assert "prerequisite remains unmet" in " ".join(flags).casefold()
     assert "staging prerequisites must not be converted" not in " ".join(flags).casefold()
+
+    contrastive_flags = audit_unverified_case_claims(case, {
+        "response_to_other_perspectives": (
+            "The prerequisites are unknown due to missing case data, rather than treating them as unmet; "
+            "however, the fitness prerequisite remains unmet."
+        )
+    })
+    joined = " ".join(contrastive_flags).casefold()
+    assert "fitness prerequisite remains unmet" in joined
+    assert "prerequisites are unknown" not in joined
 
 
 def test_explicit_suitability_followed_by_pending_prerequisites_is_not_unconditional_eligibility():

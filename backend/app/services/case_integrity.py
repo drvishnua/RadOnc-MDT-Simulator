@@ -317,7 +317,7 @@ def _stage_group_supported(generated_key: str, source_keys: set[str]) -> bool:
 
 
 _PREREQUISITE_STATUS_WORD_PATTERN = re.compile(
-    r"\b(?:unmet|unfulfilled|not\s+(?:been\s+)?(?:met|fulfilled)|failed|negative)\b",
+    r"\b(?:unmet|unfulfilled|not\s+(?:been\s+)?(?:met|fulfilled)|failed|negative(?!\s+(?:[\w-]+\s+){0,2}findings\b))\b",
     re.IGNORECASE,
 )
 _PREREQUISITE_NON_ASSERTION_PREFIX_PATTERN = re.compile(
@@ -329,6 +329,8 @@ _PREREQUISITE_NON_ASSERTION_PREFIX_PATTERN = re.compile(
     r"classified|interpreted|labelled|labeled|presented|regarded)\s+as\s*$"
     r"|\b(?:must|should|need\s+to)\s+not\s+(?:be\s+)?(?:converted|treated|described|"
     r"classified|interpreted|labelled|labeled|presented|regarded)\s+(?:as|into)\s*$"
+    r"|\brather\s+than\s+(?:converting|treating|describing|classifying|interpreting|"
+    r"labelling|labeling|presenting|regarding)\b[^.!?;:\n]{0,100}\b(?:as|into)\s*$"
     r"|\b(?:does|do|did)\s+not\s+(?:imply|mean|confirm|establish|show|demonstrate|support|indicate|prove)"
     r"\b[^.!?;:\n]{0,100}\b(?:is|are|was|were|remain(?:s)?|have(?:\s+been)?|has(?:\s+been)?)\s*$"
     r"|\bcannot\s+(?:confirm|establish|show|demonstrate|indicate)\b[^.!?;:\n]{0,100}"
@@ -844,7 +846,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         r"\b(?:unmet|unfulfilled)\s+(?:clinical\s+)?(?:prerequisite|condition|requirement)s?\b|"
         r"\b(?:clinical\s+)?(?:prerequisite|condition|requirement)s?\b"
         r"[^.!?;\n]{0,100}\b(?:remain(?:s)?|are|is|were|was|have(?:\s+been)?|has(?:\s+been)?)?\s*"
-        r"(?:unmet|unfulfilled|not\s+(?:been\s+)?(?:met|fulfilled)|failed|negative)\b",
+        r"(?:unmet|unfulfilled|not\s+(?:been\s+)?(?:met|fulfilled)|failed|negative(?!\s+(?:[\w-]+\s+){0,2}findings\b))\b",
         re.IGNORECASE,
     )
     unsupported_prerequisite_status = _unsupported_prerequisite_status_matches(
