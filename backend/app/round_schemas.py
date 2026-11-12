@@ -178,6 +178,16 @@ class RoundContribution(StrictModel):
     substantive_challenges: list[str] = Field(default_factory=list, max_length=8)
     source_opinion_responses: list[Round2SourceOpinionResponse] = Field(default_factory=list, max_length=4)
     source_opinion_reviews: list[SourceOpinionReview] = Field(default_factory=list, max_length=4)
+    model_reported_substantive_challenges: list[str] = Field(
+        default_factory=list,
+        max_length=8,
+        description="Server-preserved raw model challenge list before exact placeholder filtering; not a verified finding.",
+    )
+    model_reported_source_review_challenges: list[dict[str, str]] = Field(
+        default_factory=list,
+        max_length=4,
+        description="Server-preserved raw model source-review challenge values by CASE source ID before exact placeholder filtering.",
+    )
     source_opinion_repair_attempted: bool = False
     source_opinion_repair_status: Literal["not_needed", "completed", "incomplete", "failed"] = "not_needed"
     source_opinion_repaired_ids: list[str] = Field(default_factory=list, max_length=4)

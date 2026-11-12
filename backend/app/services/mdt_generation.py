@@ -1037,6 +1037,24 @@ async def generate_debate_contribution(
     )
 
 
+def _is_empty_challenge_placeholder(value: object) -> bool:
+    """Recognise only exact model sentinels, optionally preceded by server-style source labels."""
+    if not isinstance(value, str):
+        return True
+    body = re.sub(r"^\s*\[Sources:[^\]]+\]\s*", "", value, flags=re.IGNORECASE)
+    normalised = re.sub(r"[\W_]+", " ", body.casefold()).strip()
+    return normalised in {
+        "none",
+        "nil",
+        "n a",
+        "na",
+        "not applicable",
+        "no challenge",
+        "no substantive challenge",
+        "no source linked challenge",
+    }
+
+
 async def generate_adversarial_contribution(
     profile: dict[str, str],
     case: SyntheticCase,
@@ -1700,9 +1718,29 @@ async def generate_adversarial_contribution(
             if review["model_reported_conditions_status"] in {"preserved", "partly_preserved", "omitted"}:
                 review["conditions_status"] = "unclear"
 
-    # Preserve model-authored review challenges, but attach only server-verified
-    # CASE and peer source IDs before adding them to the Chair-facing challenge field.
-    challenges = list(payload.get("substantive_challenges") or [])
+    # Preserve raw model challenge values for audit, but do not promote exact
+    # empty-response sentinels such as "none" into substantive Chair challenges.
+    raw_challenges = [
+        item for item in (payload.get("substantive_challenges") or [])
+        if isinstance(item, str)
+    ]
+    payload["model_reported_substantive_challenges"] = raw_challenges[:8]
+    payload["model_reported_source_review_challenges"] = [
+        {
+            "source_id": str(item.get("source_id") or ""),
+            "challenge": str(item.get("challenge") or ""),
+        }
+        for item in (payload.get("source_opinion_reviews") or [])
+        if isinstance(item, dict) and str(item.get("challenge") or "").strip()
+    ][:4]
+    challenges = [
+        item for item in raw_challenges
+        if not _is_empty_challenge_placeholder(item)
+    ]
+    for review in payload.get("source_opinion_reviews") or []:
+        if isinstance(review, dict) and _is_empty_challenge_placeholder(review.get("challenge")):
+            # Preserve the original in model_reported_source_review_challenges above.
+            review["challenge"] = ""
     for review in payload.get("source_opinion_reviews") or []:
         if not isinstance(review, dict):
             continue

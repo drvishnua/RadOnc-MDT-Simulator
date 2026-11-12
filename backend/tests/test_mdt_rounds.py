@@ -2427,7 +2427,7 @@ def test_r3_does_not_promote_challenges_using_an_unsupplied_peer_id(monkeypatch)
             provisional_conclusion="The source opinion remains conditional on the missing staging information.",
             response_to_other_perspectives="The selected peer record does not establish whether the source opinion was retained.",
             agreements=[],
-            substantive_challenges=[],
+            substantive_challenges=["[Sources: CASE:case_summary#1; R2:MO-01] none"],
             remaining_unknowns=["Complete staging is not supplied."],
             risk_flags=[],
             confidence=0.3,
@@ -2438,7 +2438,7 @@ def test_r3_does_not_promote_challenges_using_an_unsupplied_peer_id(monkeypatch)
                     conditions_status="omitted",
                     review_basis="The supplied peer record does not include the attributed option.",
                     source_reference_ids=["CASE:case_summary#1", "R2:MO-99"],
-                    challenge="The supplied R2 record omits the attributed option.",
+                    challenge="none",
                 )
             ],
         )
@@ -2478,6 +2478,12 @@ def test_r3_does_not_promote_challenges_using_an_unsupplied_peer_id(monkeypatch)
     assert review["evidence_validation_status"] == "missing"
     assert review["model_reported_source_reference_ids"] == ["CASE:case_summary#1", "R2:MO-99"]
     assert review["source_reference_ids"] == ["CASE:case_summary#1"]
+    assert review["challenge"] == ""
+    assert result.substantive_challenges == []
+    assert result.model_reported_substantive_challenges == ["[Sources: CASE:case_summary#1; R2:MO-01] none"]
+    assert result.model_reported_source_review_challenges == [
+        {"source_id": "CASE:case_summary#1", "challenge": "none"}
+    ]
     assert any(
         "Challenge for CASE:case_summary#1 was not promoted" in item
         and "server-verified exact excerpt from a supplied R2 peer" in item
@@ -3052,3 +3058,15 @@ def test_source_opinion_repair_failure_remains_flagged(monkeypatch):
     assert result.source_opinion_repair_status == "failed"
     assert any("source-opinion repair failed" in flag for flag in result.source_reference_integrity_flags)
     assert any("no structured response" in flag for flag in result.source_reference_integrity_flags)
+
+
+def test_exact_empty_challenge_sentinels_are_not_treated_as_substantive_text():
+    from app.services.mdt_generation import _is_empty_challenge_placeholder
+
+    assert _is_empty_challenge_placeholder("none")
+    assert _is_empty_challenge_placeholder(" NONE. ")
+    assert _is_empty_challenge_placeholder("[Sources: CASE:case_summary#1; R2:RO-01] none")
+    assert _is_empty_challenge_placeholder("no substantive challenge")
+    assert not _is_empty_challenge_placeholder("The MRI staging result is not supplied.")
+    assert not _is_empty_challenge_placeholder("Do not infer stage from the lesion size.")
+

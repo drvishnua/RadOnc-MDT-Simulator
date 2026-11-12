@@ -5,9 +5,7 @@ The browser test must delete the temporary patient after verifying the rendered 
 """
 from __future__ import annotations
 
-import json
 import sys
-import uuid
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
@@ -21,8 +19,10 @@ from app.services import run_store
 
 def main() -> int:
     if len(sys.argv) != 2:
-        raise SystemExit("Usage: seed-mdt-dashboard-e2e.py <temporary-result-json-path>")
-    result_path = Path(sys.argv[1])
+        raise SystemExit("Usage: seed-mdt-dashboard-e2e.py <disposable-patient-name>")
+    patient_name = sys.argv[1].strip()
+    if not patient_name.startswith("Disposable dashboard E2E ") or len(patient_name) > 120:
+        raise SystemExit("A bounded disposable dashboard fixture name is required.")
     patient_id: str | None = None
     try:
         case = SyntheticCase(
@@ -37,7 +37,7 @@ def main() -> int:
             ],
         )
         patient = run_store.create_patient(
-            "Disposable dashboard E2E " + uuid.uuid4().hex[:10],
+            patient_name,
             case,
         )
         patient_id = patient["patient_id"]
@@ -160,12 +160,8 @@ def main() -> int:
         )
         run_store.mark_round_finished(run_id, 4)
 
-        result_path.write_text(
-            json.dumps({"run_id": run_id, "patient_id": patient_id}),
-            encoding="utf-8",
-        )
-        # Identifiers are handed to the parent test through a temporary file,
-        # not emitted to CI logs or standard output.
+        # The caller discovers this unique synthetic label through the local registry API.
+        # No patient/run identifiers or hashes are written to files or emitted to logs.
         print("DASHBOARD_E2E_SEED_CREATED")
         return 0
     except Exception:

@@ -292,28 +292,40 @@ async function verifyFourRoundDashboard() {
     "python.exe"
   );
   const seedScript = path.join(SCRIPT_DIR, "seed-mdt-dashboard-e2e.py");
-  const seedDirectory = await mkdtemp(path.join(os.tmpdir(), "radonc-mdt-dashboard-e2e-"));
-  const seedResultPath = path.join(seedDirectory, "seed-result.json");
-  let seed;
-  try {
-    const seedMarker = execFileSync(
-      pythonExecutable,
-      [seedScript, seedResultPath],
-      {
-        cwd: path.join(SOURCE_ROOT, "backend"),
-        encoding: "utf8",
-        windowsHide: true
-      }
-    );
-    if (seedMarker.trim() !== "DASHBOARD_E2E_SEED_CREATED") {
-      throw new Error("The dashboard fixture seeder returned an unexpected status marker.");
+  const dashboardFixtureName = "Disposable dashboard E2E " + token;
+  const seedMarker = execFileSync(
+    pythonExecutable,
+    [seedScript, dashboardFixtureName],
+    {
+      cwd: path.join(SOURCE_ROOT, "backend"),
+      encoding: "utf8",
+      windowsHide: true
     }
-    seed = JSON.parse(await readFile(seedResultPath, "utf8"));
-  } finally {
-    await rm(seedDirectory, { recursive: true, force: true });
+  );
+  if (seedMarker.trim() !== "DASHBOARD_E2E_SEED_CREATED") {
+    throw new Error("The dashboard fixture seeder returned an unexpected status marker.");
   }
-  dashboardPatientId = seed.patient_id;
-  dashboardRunId = seed.run_id;
+  const registryResponse = await fetch(API_URL + "/api/patients");
+  if (!registryResponse.ok) throw new Error("The disposable dashboard fixture could not be found in the patient registry.");
+  const registryBody = await registryResponse.json();
+  const fixturePatients = (registryBody.patients || []).filter(
+    patient => patient.patient_name === dashboardFixtureName
+  );
+  if (fixturePatients.length !== 1) {
+    throw new Error("Expected exactly one uniquely named disposable dashboard patient.");
+  }
+  dashboardPatientId = fixturePatients[0].patient_id;
+  const detailResponse = await fetch(API_URL + "/api/patients/" + dashboardPatientId);
+  if (!detailResponse.ok) throw new Error("The disposable dashboard patient detail could not be retrieved.");
+  const dashboardPatient = await detailResponse.json();
+  const fixtureVersionId = dashboardPatient.versions?.[0]?.case_version_id;
+  const fixtureRuns = (dashboardPatient.runs || []).filter(
+    run => run.case_version_id === fixtureVersionId
+  );
+  if (!fixtureVersionId || fixtureRuns.length !== 1) {
+    throw new Error("Expected exactly one saved dashboard run for the disposable case version.");
+  }
+  dashboardRunId = fixtureRuns[0].run_id;
 
   const summaryResponse = await fetch(API_URL + "/api/runs/" + dashboardRunId);
   if (!summaryResponse.ok) {
