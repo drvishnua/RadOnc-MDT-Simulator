@@ -292,16 +292,26 @@ async function verifyFourRoundDashboard() {
     "python.exe"
   );
   const seedScript = path.join(SCRIPT_DIR, "seed-mdt-dashboard-e2e.py");
-  const seedOutput = execFileSync(
-    pythonExecutable,
-    [seedScript],
-    {
-      cwd: path.join(SOURCE_ROOT, "backend"),
-      encoding: "utf8",
-      windowsHide: true
+  const seedDirectory = await mkdtemp(path.join(os.tmpdir(), "radonc-mdt-dashboard-e2e-"));
+  const seedResultPath = path.join(seedDirectory, "seed-result.json");
+  let seed;
+  try {
+    const seedMarker = execFileSync(
+      pythonExecutable,
+      [seedScript, seedResultPath],
+      {
+        cwd: path.join(SOURCE_ROOT, "backend"),
+        encoding: "utf8",
+        windowsHide: true
+      }
+    );
+    if (seedMarker.trim() !== "DASHBOARD_E2E_SEED_CREATED") {
+      throw new Error("The dashboard fixture seeder returned an unexpected status marker.");
     }
-  );
-  const seed = JSON.parse(seedOutput.trim());
+    seed = JSON.parse(await readFile(seedResultPath, "utf8"));
+  } finally {
+    await rm(seedDirectory, { recursive: true, force: true });
+  }
   dashboardPatientId = seed.patient_id;
   dashboardRunId = seed.run_id;
 

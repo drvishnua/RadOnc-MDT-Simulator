@@ -20,6 +20,9 @@ from app.services import run_store
 
 
 def main() -> int:
+    if len(sys.argv) != 2:
+        raise SystemExit("Usage: seed-mdt-dashboard-e2e.py <temporary-result-json-path>")
+    result_path = Path(sys.argv[1])
     patient_id: str | None = None
     try:
         case = SyntheticCase(
@@ -157,12 +160,13 @@ def main() -> int:
         )
         run_store.mark_round_finished(run_id, 4)
 
-        print(json.dumps({
-            "run_id": run_id,
-            "patient_id": patient_id,
-            "patient_identifier": patient["patient_identifier"],
-            "case_snapshot_sha256": run_store.get_run(run_id)["case_snapshot_sha256"],
-        }))
+        result_path.write_text(
+            json.dumps({"run_id": run_id, "patient_id": patient_id}),
+            encoding="utf-8",
+        )
+        # Identifiers are handed to the parent test through a temporary file,
+        # not emitted to CI logs or standard output.
+        print("DASHBOARD_E2E_SEED_CREATED")
         return 0
     except Exception:
         if patient_id:

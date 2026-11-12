@@ -967,3 +967,21 @@ def test_attribution_note_register_extracts_service_note_opinion_spans_with_punc
             "source_excerpt": "Cardiology service note proposes a separate preoperative sequence, conditional on MRI review.",
         },
     ]
+
+
+def test_case_integrity_normalises_whitespace_runs_before_regex_audits():
+    from app.services.case_integrity import _collapse_horizontal_whitespace
+
+    horizontal = "Age" + (" " * 5000) + ":" + (" " * 3000) + "76"
+    multiline = horizontal + "\nECOG" + (" " * 6000) + "performance" + (" " * 4000) + "status: 2"
+    normalised = _collapse_horizontal_whitespace(multiline)
+    assert normalised == "Age : 76\nECOG performance status: 2"
+    assert normalised.count("\n") == 1
+
+    case = _case(age_years=75, performance_status=None)
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": multiline,
+    })).casefold()
+    assert "age(s)" in flags
+    assert "performance-status score" in flags
+

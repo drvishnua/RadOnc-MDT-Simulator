@@ -193,6 +193,25 @@ _CLAUSE_BOUNDARY = re.compile(
     re.IGNORECASE,
 )
 
+def _collapse_horizontal_whitespace(text: str) -> str:
+    """Collapse repeated horizontal whitespace for bounded, reproducible regex matching.
+
+    This function creates an analysis-only view. The original case and model text
+    remain unchanged in their persisted source records.
+    """
+    output: list[str] = []
+    in_horizontal_run = False
+    for character in text:
+        if character in " \t\f\v":
+            if not in_horizontal_run:
+                output.append(" ")
+            in_horizontal_run = True
+        else:
+            output.append(character)
+            in_horizontal_run = False
+    return "".join(output)
+
+
 
 def _unqualified_matches(
     pattern: re.Pattern[str],
@@ -202,35 +221,38 @@ def _unqualified_matches(
 ) -> list[str]:
     """Return assertion-like matches, applying qualifiers only within the same clause."""
     findings: list[str] = []
-    for match in pattern.finditer(text):
+    # Repeated spaces/tabs are common in pasted case text. Collapse them in an
+    # analysis-only copy so whitespace-heavy input cannot amplify regex work.
+    analysis_text = _collapse_horizontal_whitespace(text)
+    for match in pattern.finditer(analysis_text):
         # Preserve the whole-sentence question safeguard even when the clause
         # itself ends at a comma or contrast marker before the question mark.
         sentence_end = min(
             (
                 position
                 for mark in ".!?;:\n"
-                if (position := text.find(mark, match.end())) >= 0
+                if (position := analysis_text.find(mark, match.end())) >= 0
             ),
-            default=len(text),
+            default=len(analysis_text),
         )
-        if sentence_end < len(text) and text[sentence_end] == "?":
+        if sentence_end < len(analysis_text) and analysis_text[sentence_end] == "?":
             continue
 
         left = max(
-            (boundary.end() for boundary in _CLAUSE_BOUNDARY.finditer(text, 0, match.start())),
+            (boundary.end() for boundary in _CLAUSE_BOUNDARY.finditer(analysis_text, 0, match.start())),
             default=0,
         )
         right = min(
-            (boundary.start() for boundary in _CLAUSE_BOUNDARY.finditer(text, match.end())),
-            default=len(text),
+            (boundary.start() for boundary in _CLAUSE_BOUNDARY.finditer(analysis_text, match.end())),
+            default=len(analysis_text),
         )
-        clause = text[left:right]
+        clause = analysis_text[left:right]
         # A reported absence of a peer's claim is not itself a clinical finding.
         # This exception is deliberately limited to an attributed report prefix;
         # direct assertions about an option remain subject to the normal audit.
         if (
             ignore_generated_prefix_pattern is not None
-            and ignore_generated_prefix_pattern.search(text[left:match.start()])
+            and ignore_generated_prefix_pattern.search(analysis_text[left:match.start()])
         ):
             continue
         if _QUALIFIER.search(clause):
@@ -290,7 +312,7 @@ def _tnm_component_values(value: str, component: str) -> set[str]:
 def _stage_group_values(value: str) -> set[str]:
     """Normalise explicit stage-group labels while retaining substage distinctions."""
     pattern = re.compile(
-        r"\b(?:clinical\s+)?stage\s*(?:group\s*)?(IV|III|II|I|[1-4])([ABC])?\b",
+        r"\b(?:clinical[ \t\r\n])?stage[ \t\r\n]?(?:group[ \t\r\n]?)?(IV|III|II|I|[1-4])([ABC])?\b",
         re.IGNORECASE,
     )
     roman_values = {"I": 1, "II": 2, "III": 3, "IV": 4}
@@ -436,9 +458,9 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     # Explicit age assertions are compared with structured age when present,
     # otherwise with the exact age stated in the verbatim source summary.
     age_pattern = re.compile(
-        r"\b(?:(\d{1,3})\s*[- ]?(?:year|yr)s?[- ]old|"
-        r"aged\s+(\d{1,3})|age\s*[:=]\s*(\d{1,3})|"
-        r"(\d{1,3})\s*y/o)\b",
+        r"\b(?:(\d{1,3})[ \t\r\n]?[ -]?(?:year|yr)s?[ -]old|"
+        r"aged[ \t\r\n](\d{1,3})|age[ \t\r\n]?[:=][ \t\r\n]?(\d{1,3})|"
+        r"(\d{1,3})[ \t\r\n]y/o)\b",
         re.IGNORECASE,
     )
 
@@ -481,7 +503,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         else _stage_group_values(case.case_summary)
     )
     generated_group_snippets = _unqualified_matches(
-        re.compile(r"\b(?:clinical\s+)?stage\s*(?:group\s*)?(IV|III|II|I|[1-4])([ABC])?\b", re.IGNORECASE),
+        re.compile(r"\b(?:clinical[ \t\r\n])?stage[ \t\r\n]?(?:group[ \t\r\n]?)?(IV|III|II|I|[1-4])([ABC])?\b", re.IGNORECASE),
         text,
     )
     unsupported_stage_groups = [
@@ -579,9 +601,9 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     # treated as findings. Exact matching source snippets remain attributed to the
     # user-provided case summary rather than being relabelled as model inventions.
     performance_pattern = re.compile(
-        r"\b(?:ECOG(?:\s*[- ]?PS|\s+performance\s+status)?|"
-        r"WHO(?:\s+performance)?\s+status)\s*[:=]?\s*[0-4]\b|"
-        r"\b(?:KPS|Karnofsky(?:\s+Performance\s+Status)?)\s*[:=]?\s*\d{2,3}\b",
+        r"\b(?:ECOG(?:[ \t\r\n]?[- ]?PS|[ \t\r\n]performance[ \t\r\n]status)?|"
+        r"WHO(?:[ \t\r\n]performance)?[ \t\r\n]status)[ \t\r\n]?[:=]?[ \t\r\n]?[0-4]\b|"
+        r"\b(?:KPS|Karnofsky(?:[ \t\r\n]Performance[ \t\r\n]Status)?)[ \t\r\n]?[:=]?[ \t\r\n]?\d{2,3}\b",
         re.IGNORECASE,
     )
     performance_source = (
@@ -887,14 +909,14 @@ def build_case_validation_warnings(case: SyntheticCase) -> list[str]:
     # Explicit contradictions are warnings for human reconciliation; neither
     # the structured field nor free text is silently preferred.
     age_pattern = re.compile(
-        r"\b(?:(\d{1,3})\s*[- ]?(?:year|yr)s?[- ]old|"
-        r"aged\s+(\d{1,3})|age\s*[:=]\s*(\d{1,3})|"
-        r"(\d{1,3})\s*y/o)\b",
+        r"\b(?:(\d{1,3})[ \t\r\n]?[ -]?(?:year|yr)s?[ -]old|"
+        r"aged[ \t\r\n](\d{1,3})|age[ \t\r\n]?[:=][ \t\r\n]?(\d{1,3})|"
+        r"(\d{1,3})[ \t\r\n]y/o)\b",
         re.IGNORECASE,
     )
     text_ages = {
         int(value)
-        for match in age_pattern.findall(summary)
+        for match in age_pattern.findall(_collapse_horizontal_whitespace(summary))
         for value in match
         if value
     }
@@ -917,7 +939,7 @@ def build_case_validation_warnings(case: SyntheticCase) -> list[str]:
 
     if case.stage_group:
         stage_group_pattern = re.compile(
-            r"\b(?:clinical\s+)?stage\s*(?:group\s*)?(IV|III|II|I|[1-4])([ABC])?\b",
+            r"\b(?:clinical[ \t\r\n])?stage[ \t\r\n]?(?:group[ \t\r\n]?)?(IV|III|II|I|[1-4])([ABC])?\b",
             re.IGNORECASE,
         )
         roman_values = {"I": 1, "II": 2, "III": 3, "IV": 4}
@@ -932,7 +954,7 @@ def build_case_validation_warnings(case: SyntheticCase) -> list[str]:
 
         text_stage_groups = {
             stage_group_key(match.group(0))
-            for match in stage_group_pattern.finditer(summary)
+            for match in stage_group_pattern.finditer(_collapse_horizontal_whitespace(summary))
         }
         structured_group = stage_group_key(case.stage_group)
 
