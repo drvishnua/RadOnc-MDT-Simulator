@@ -829,6 +829,7 @@ def test_negated_prerequisite_classification_is_not_a_categorical_unmet_claim():
         "Do not convert missing prerequisites into unmet conditions.",
         "Missing prerequisites are not being treated as unmet.",
         "The record does not establish that the prerequisites are unmet.",
+        "The staging prerequisites must not be converted into unmet conditions.",
     ]
     for statement in safe_statements:
         flags = audit_unverified_case_claims(case, {
@@ -867,6 +868,8 @@ def test_negated_prerequisite_wording_does_not_hide_a_separate_unmet_claim():
         )
     })
     assert any("prerequisite(s) as unmet/not met" in item for item in flags)
+    assert "fitness prerequisite remains unmet" in " ".join(flags).casefold()
+    assert "staging prerequisites must not be converted" not in " ".join(flags).casefold()
 
 
 def test_explicit_suitability_followed_by_pending_prerequisites_is_not_unconditional_eligibility():

@@ -326,7 +326,7 @@ _PREREQUISITE_NON_ASSERTION_PREFIX_PATTERN = re.compile(
     r"|\b(?:not|never)\s+(?:(?:to\s+be|being)\s+)?(?:converted|treated|described|"
     r"classified|interpreted|labelled|labeled|presented|regarded)\s+as\s*$"
     r"|\b(?:must|should|need\s+to)\s+not\s+(?:be\s+)?(?:converted|treated|described|"
-    r"classified|interpreted|labelled|labeled|presented|regarded)\s+as\s*$",
+    r"classified|interpreted|labelled|labeled|presented|regarded)\s+(?:as|into)\s*$",
     re.IGNORECASE,
 )
 
