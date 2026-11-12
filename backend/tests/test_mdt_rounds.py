@@ -452,7 +452,10 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
     assert "When discussing your own R2 record, cite it as R2:RO-01" in prompts[1]
     assert "The only R1 source you may cite in this round is R1:RO-01" in prompts[1]
     assert "REPRESENTATION FIDELITY ONLY" in prompts[1]
-    assert "Missing or unfulfilled case prerequisites are case unknowns" in prompts[1]
+    assert (
+        "Missing or undocumented case prerequisites are case unknowns; do not describe their "
+        "status as unfulfilled without an explicit assessed finding"
+    ) in prompts[1]
     assert "not an assessment of clinical appropriateness" in prompts[1].casefold()
     assert "If no peer record permits a reliable assessment, use unclear" in prompts[1]
     assert "[embedded round ref; cite R2]" not in prompts[1]
