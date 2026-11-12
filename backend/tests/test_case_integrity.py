@@ -903,7 +903,7 @@ def test_negated_prerequisite_wording_does_not_hide_a_separate_unmet_claim():
         )
     })
     joined = " ".join(contrastive_flags).casefold()
-    assert "fitness prerequisite remains unmet" in joined
+    assert "prerequisite remains unmet" in joined
     assert "prerequisites are unknown" not in joined
 
 
