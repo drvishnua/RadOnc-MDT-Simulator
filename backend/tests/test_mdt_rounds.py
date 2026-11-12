@@ -2503,6 +2503,8 @@ def test_r3_uses_server_identified_opinion_ids_and_flags_duplicate_or_missing_re
         assert "ALLOWED SOURCE-OPINION REVIEW PEER IDS" in prompt
         assert "ABSENT-IS-NOT-UNMET RULE" in prompt
         assert "this exact prerequisite was assessed" in prompt
+        assert "Never describe undocumented prerequisites as 'not met' or 'unmet'" in prompt
+        assert "Never conclude that 'neither option is indicated'" in prompt
         assert "R2:MO-01" in prompt and "FORBIDDEN FOR SOURCE-OPINION REVIEWS: R2:RO-01" in prompt
         assert "the colorectal surgical note favours a surgical assessment first" in prompt.casefold()
         assert "the medical oncology note favours discussing a preoperative multimodality sequence" in prompt.casefold()
@@ -2776,6 +2778,8 @@ def test_r2_distinguishes_unknown_prerequisites_from_assessed_unmet_prerequisite
     assert "Use 'not met' or 'unmet' only when the case explicitly records that the prerequisite was assessed" in prompt
     assert "identify that exact documented finding and do not infer a threshold" in prompt
     assert "A conditional source option remains conditional when prerequisite status is unknown" in prompt
+    assert "Never describe undocumented prerequisites as 'not met' or 'unmet'" in prompt
+    assert "Never conclude that 'neither option is indicated'" in prompt
     assert "MRI staging result is not supplied." in prompt
     assert "Complete staging is not documented." in prompt
     assert "Fitness assessment is not supplied." in prompt
