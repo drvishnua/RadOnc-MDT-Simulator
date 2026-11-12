@@ -725,6 +725,24 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             + "; ".join(unsupported_preferences[:2])
             + ", which are not explicitly supported by the verbatim case summary or structured patient_goals."
         )
+    prerequisite_status_pattern = re.compile(
+        r"\b(?:unmet|unfulfilled)\s+(?:clinical\s+)?(?:prerequisite|condition|requirement)s?\b|"
+        r"\b(?:clinical\s+)?(?:prerequisite|condition|requirement)s?\b"
+        r"[^.!?;\n]{0,100}\b(?:remain(?:s)?|are|is|were|was|have(?:\s+been)?|has(?:\s+been)?)?\s*"
+        r"(?:unmet|unfulfilled|not\s+(?:been\s+)?(?:met|fulfilled)|failed|negative)\b",
+        re.IGNORECASE,
+    )
+    unsupported_prerequisite_status = _unsupported_matches(
+        prerequisite_status_pattern, text, source_text
+    )
+    if unsupported_prerequisite_status:
+        flags.append(
+            "Generated narrative describes prerequisite(s) as unmet/not met without a matching "
+            "documented assessment finding in the supplied case ("
+            + "; ".join(unsupported_prerequisite_status[:3])
+            + "). Missing or undocumented prerequisites must remain unknown; review before Chair synthesis."
+        )
+
     return flags[:20]
 
 

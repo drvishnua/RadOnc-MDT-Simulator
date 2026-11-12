@@ -869,6 +869,10 @@ async def generate_debate_contribution(
     )
     draft = await _generate_structured(prompt, Round2ContributionDraft, max_tokens)
     payload = draft.model_dump()
+    payload["remaining_unknowns"] = _unique_strings(
+        list(case.known_unknowns or []) + list(payload.get("remaining_unknowns") or []),
+        limit=8,
+    )
     expected_source_opinions = {
         item["source_id"]: item["source_excerpt"] for item in source_opinion_register
     }
@@ -1059,7 +1063,15 @@ async def generate_adversarial_contribution(
         )
     prompt = (
         "ROUND 3 — ADVERSARIAL REVIEW. Educational simulation only; do not give a treatment "
-        "instruction or invent facts/evidence. Treat the verbatim case summary as attributed "
+        "instruction or invent facts/evidence. ABSENT-IS-NOT-UNMET RULE: a missing or undocumented "
+        "clinical prerequisite is unknown, not unmet, not met, failed, negative, or absent. If MRI, "
+        "local staging, metastatic work-up, resectability review, or fitness/performance assessment "
+        "is not supplied in the case, describe it as 'not supplied', 'not documented', or 'unknown'. "
+        "Never say that a prerequisite or case condition is 'unmet' or 'not met' merely because its "
+        "result or assessment is missing. Use 'unmet'/'not met' only when the case explicitly records "
+        "that this exact prerequisite was assessed and a documented finding establishes non-fulfilment; "
+        "identify that exact finding. Preserve the source option as conditional while status is unknown; "
+        "representation is not endorsement. Treat the verbatim case summary as attributed "
         "source text, not verified fact or consensus. Identify each distinct attributed opinion, "
         "its option, and every prerequisite. Compare each separately with your own saved R1/R2 "
         f"positions and the supplied R2 peer sample. Cite peer roles only with their exact R2:AGENT_ID labels from that sample; never relabel an R2 peer as R1. An R1 citation is permitted only for your own role's independent assessment. When discussing your own R2 record, cite it as R2:{profile['agent_id']}; do not reuse an R1 source ID merely because that ID appears inside your quoted R2 text. The only R1 source you may cite in this round is R1:{profile['agent_id']}. Never cite role ranges, a complete role directory, or an unsupplied role as evidence. Cite only individual source IDs listed under ALLOWED ROUND SOURCE IDS; if an earlier source is mentioned inside an R2 contribution and its original record was not supplied, attribute the statement to that R2 contribution instead. Do not invent or cite an unprovided role. Do not conflate different conditional options "
@@ -1083,8 +1095,8 @@ async def generate_adversarial_contribution(
         "This is not an assessment of clinical appropriateness, eligibility, or whether the case satisfies the prerequisites. "
         "A source opinion conditional on MRI, fitness, local staging, or another prerequisite remains "
         "a represented conditional option when R2 retains that option and its conditional wording, "
-        "even when the prerequisite is missing or unknown in the case. Missing or unfulfilled case "
-        "prerequisites are case unknowns; they are NOT, by themselves, omissions of the option or "
+        "even when the prerequisite is missing or unknown in the case. Missing or undocumented case "
+        "prerequisites are case unknowns; do not describe their status as unfulfilled without an explicit assessed finding. They are NOT, by themselves, omissions of the option or "
         "conditions from R2. Mark preserved when the supplied R2 text faithfully retains the option "
         "or condition; partly_preserved when it retains only part; omitted only when the supplied R2 "
         "text itself drops or materially distorts it; use unclear when the supplied material is "
@@ -1172,9 +1184,12 @@ async def generate_adversarial_contribution(
     )
     draft = await _generate_structured(prompt, AdversarialContributionDraft, max_tokens)
     payload = draft.model_dump()
+    payload["remaining_unknowns"] = _unique_strings(
+        list(case.known_unknowns or []) + list(payload.get("remaining_unknowns") or []),
+        limit=8,
+    )
     allowed_review_source_ids = {
         f"R1:{profile['agent_id']}",
-        f"R2:{profile['agent_id']}",
         *allowed_peer_source_ids,
     }
     review_reference_flags: list[str] = []

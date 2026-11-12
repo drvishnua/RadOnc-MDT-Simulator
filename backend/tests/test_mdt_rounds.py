@@ -2498,13 +2498,15 @@ def test_r3_uses_server_identified_opinion_ids_and_flags_duplicate_or_missing_re
         assert "SERVER-IDENTIFIED ATTRIBUTED SOURCE OPINIONS" in prompt
         assert "CASE:case_summary#1" in prompt and "CASE:case_summary#2" in prompt
         assert "ALLOWED SOURCE-OPINION REVIEW PEER IDS" in prompt
+        assert "ABSENT-IS-NOT-UNMET RULE" in prompt
+        assert "this exact prerequisite was assessed" in prompt
         assert "R2:MO-01" in prompt and "FORBIDDEN FOR SOURCE-OPINION REVIEWS: R2:RO-01" in prompt
         assert "the colorectal surgical note favours a surgical assessment first" in prompt.casefold()
         assert "the medical oncology note favours discussing a preoperative multimodality sequence" in prompt.casefold()
         return AdversarialContributionDraft(
             position="insufficient_information",
             provisional_conclusion="The two source opinions remain conditional and require separate review.",
-            response_to_other_perspectives="The selected peer material does not permit an unqualified sequencing conclusion.",
+            response_to_other_perspectives="The supplied peer records state that the prerequisites remain unmet.",
             agreements=[],
             substantive_challenges=[],
             remaining_unknowns=["The source conditions remain to be assessed."],
@@ -2517,7 +2519,7 @@ def test_r3_uses_server_identified_opinion_ids_and_flags_duplicate_or_missing_re
                     option_status="unclear",
                     conditions_status="unclear",
                     review_basis="The bounded supplied peer sample is insufficient to assess this opinion.",
-                    source_reference_ids=["CASE:case_summary#1", "R2:MO-01"],
+                    source_reference_ids=["CASE:case_summary#1", "R2:MO-01", "R2:RO-01"],
                     challenge="This duplicate review challenge must not be promoted.",
                 ),
                 SourceOpinionReview(
@@ -2536,7 +2538,11 @@ def test_r3_uses_server_identified_opinion_ids_and_flags_duplicate_or_missing_re
 
     monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate)
     profile = {"agent_id": "RO-01", "name": "Radiation Oncology", "mandate": "Review the fictional case."}
-    case = SyntheticCase(scenario_title="Fictional competing source opinions", case_summary=summary)
+    case = SyntheticCase(
+        scenario_title="Fictional competing source opinions",
+        case_summary=summary,
+        known_unknowns=["MRI staging result is not supplied."],
+    )
     own_r1 = {
         "position": "insufficient_information",
         "provisional_conclusion": "The independent assessment remains conditional on missing information.",
@@ -2577,6 +2583,15 @@ def test_r3_uses_server_identified_opinion_ids_and_flags_duplicate_or_missing_re
     ]
     assert not any("duplicate review challenge must not be promoted" in item for item in result.substantive_challenges)
     assert result.source_peer_ids == ["MO-01"]
+    assert any(
+        "R2:RO-01" in flag and "not supplied to this role" in flag
+        for flag in result.source_reference_integrity_flags
+    )
+    assert any(
+        "describes prerequisite(s) as unmet/not met" in flag
+        for flag in result.case_data_integrity_flags
+    )
+    assert "MRI staging result is not supplied." in result.remaining_unknowns
 
 
 def test_r2_flags_incomplete_structured_opinion_content(monkeypatch):
@@ -2702,15 +2717,12 @@ def test_r2_distinguishes_unknown_prerequisites_from_assessed_unmet_prerequisite
                 "from the unreported prerequisite results."
             ),
             response_to_other_perspectives=(
-                "The conditional source option is retained as a source statement, not endorsed."
+                "The conditional source option is retained as a source statement, not endorsed; "
+                "the prerequisites remain unmet."
             ),
             agreements=[],
             substantive_challenges=[],
-            remaining_unknowns=[
-                "MRI staging result is not supplied.",
-                "Complete staging is not documented.",
-                "Fitness assessment is not supplied.",
-            ],
+            remaining_unknowns=[],
             risk_flags=[],
             confidence=0.4,
             source_opinion_responses=[
@@ -2772,4 +2784,9 @@ def test_r2_distinguishes_unknown_prerequisites_from_assessed_unmet_prerequisite
     assert not any(
         "does not retain sufficient source-specific language" in flag
         for flag in result.source_reference_integrity_flags
+    )
+    assert all(item in result.remaining_unknowns for item in case.known_unknowns)
+    assert any(
+        "describes prerequisite(s) as unmet/not met" in flag
+        for flag in result.case_data_integrity_flags
     )
