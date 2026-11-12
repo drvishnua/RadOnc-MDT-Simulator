@@ -627,15 +627,33 @@ async def main() -> int:
                     "source_id": source["source_id"],
                     "matching_sections": matching,
                 })
+        r3_challenge_roles = {
+            row["agent_id"]
+            for row in r3_rows
+            if any(
+                isinstance(item, str) and item.strip()
+                for item in (row["result"].get("substantive_challenges") or [])
+            )
+        }
         no_challenge_note = any(
             "No Round-3 role saved a substantive_challenges entry" in item
             for item in chair_report.unresolved_disagreements
         )
-        if not no_challenge_note:
+        if not r3_challenge_roles and not no_challenge_note:
             r4_failures.append({
                 "round": 4,
                 "type": "chair_omitted_zero_r3_challenge_disclosure",
             })
+        for role_id in sorted(r3_challenge_roles):
+            if not any(
+                f"Round 3 recorded challenge — {role_id} (" in item
+                for item in chair_report.unresolved_disagreements
+            ):
+                r4_failures.append({
+                    "round": 4,
+                    "type": "chair_omitted_saved_r3_challenge",
+                    "role_id": role_id,
+                })
         payload["r4_validation"] = {
             "status": "passed" if not r4_failures else "failed",
             "round1_fixture_completed_roles": len({
@@ -652,9 +670,8 @@ async def main() -> int:
                 "round2": chair_report.overall_educational_synthesis.split("Round 2:")[-1].split("Round 3:")[0],
                 "round3": chair_report.overall_educational_synthesis.split("Round 3:")[-1],
             },
-            "r3_roles_with_substantive_challenges": sum(
-                bool(row["result"].get("substantive_challenges")) for row in r3_rows
-            ),
+            "r3_roles_with_substantive_challenges": len(r3_challenge_roles),
+            "r3_challenge_role_ids": sorted(r3_challenge_roles),
             "r3_roles_with_risk_flags": sum(
                 bool(row["result"].get("risk_flags")) for row in r3_rows
             ),

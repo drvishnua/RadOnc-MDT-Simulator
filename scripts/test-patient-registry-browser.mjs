@@ -470,6 +470,10 @@ try {
 
   await selectOptionByText("Saved case version", "Version 1 ·");
   await clickButton("Load version");
+  await waitForExpression(
+    "(() => { const button = [...document.querySelectorAll('button')].find(node => (node.innerText || '').trim().startsWith('Delete patient and linked results')); return !!button && !button.disabled; })()",
+    "the restored patient action controls to finish rendering before deletion"
+  );
   await assertFieldValue("Fictional patient name", originalName);
   await assertFieldValue("Clinical summary", originalSummary);
   await assertAllStructuredFieldValues();
