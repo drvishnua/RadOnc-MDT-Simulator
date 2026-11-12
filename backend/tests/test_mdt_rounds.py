@@ -2797,3 +2797,254 @@ def test_r2_distinguishes_unknown_prerequisites_from_assessed_unmet_prerequisite
         "describes prerequisite(s) as unmet/not met" in flag
         for flag in result.case_data_integrity_flags
     )
+
+
+def test_r2_repairs_only_missing_server_registered_opinion_responses(monkeypatch):
+    from app.round_schemas import (
+        Round2ContributionDraft,
+        Round2SourceOpinionResponseDraft,
+        Round2SourceOpinionResponsesRepairDraft,
+    )
+    from app.services import mdt_generation
+
+    summary = (
+        "Fictional case. The colorectal surgical note favours a surgical assessment first, "
+        "conditional on complete local staging and resectability review; the medical oncology "
+        "note favours discussing a preoperative multimodality sequence, conditional on MRI "
+        "staging, metastatic work-up and fitness assessment."
+    )
+    calls = []
+
+    async def fake_generate(prompt, schema_type, max_tokens):
+        calls.append((prompt, schema_type, max_tokens))
+        if schema_type is Round2ContributionDraft:
+            return Round2ContributionDraft(
+                position="insufficient_information",
+                provisional_conclusion="The synthetic record does not establish a definitive educational pathway.",
+                response_to_other_perspectives="The supplied peer records describe missing prerequisites without establishing their status.",
+                agreements=[],
+                substantive_challenges=[],
+                remaining_unknowns=[],
+                risk_flags=[],
+                confidence=0.4,
+                source_opinion_responses=[],
+            )
+        assert schema_type is Round2SourceOpinionResponsesRepairDraft
+        assert "CASE:case_summary#1" in prompt and "CASE:case_summary#2" in prompt
+        assert "ACTUAL SELECTED PEER R1 POSITIONS" in prompt
+        return Round2SourceOpinionResponsesRepairDraft(
+            source_opinion_responses=[
+                Round2SourceOpinionResponseDraft(
+                    source_id="CASE:case_summary#1",
+                    analysis="The surgery-led assessment first option remains conditional on complete local staging and resectability review; both prerequisites are unknown/not supplied.",
+                    comparison="This is compared separately with the own assessment and selected R1 peers, without implying endorsement.",
+                ),
+                Round2SourceOpinionResponseDraft(
+                    source_id="CASE:case_summary#2",
+                    analysis="The preoperative multimodality sequence remains conditional on MRI staging, metastatic work-up and fitness assessment; these prerequisites are unknown/not supplied.",
+                    comparison="This remains a distinct source option from the surgery-led assessment and is not endorsed as a treatment choice.",
+                ),
+            ]
+        )
+
+    monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate)
+    case = SyntheticCase(scenario_title="R2 missing-opinion repair", case_summary=summary)
+    own_r1 = {
+        "position": "insufficient_information",
+        "provisional_conclusion": "The supplied record does not establish a pathway.",
+        "preferred_educational_option": "No pathway is established from the available information.",
+    }
+    peers = [
+        {"agent_id": "SO-02", "agent_name": "Surgical Oncology", "assessment": {
+            "position": "conditional",
+            "provisional_conclusion": "The surgery-led assessment remains conditional on local staging and resectability review.",
+            "preferred_educational_option": "Surgery-led assessment first.",
+            "disagreement_notes": [], "unknowns": ["Staging is not supplied."],
+        }},
+        {"agent_id": "MO-01", "agent_name": "Medical Oncology", "assessment": {
+            "position": "insufficient_information",
+            "provisional_conclusion": "The preoperative sequence cannot be assessed without MRI and fitness information.",
+            "preferred_educational_option": "Preoperative multimodality sequence.",
+            "disagreement_notes": [], "unknowns": ["MRI and fitness are not supplied."],
+        }},
+    ]
+
+    result = asyncio.run(
+        mdt_generation.generate_debate_contribution(
+            {"agent_id": "RO-01", "name": "Radiation Oncology", "mandate": "Review educational options."},
+            case,
+            own_r1,
+            peers,
+        )
+    )
+
+    assert len(calls) == 2
+    assert calls[1][1] is Round2SourceOpinionResponsesRepairDraft
+    assert calls[1][2] == 750
+    assert [item.source_id for item in result.source_opinion_responses] == [
+        "CASE:case_summary#1", "CASE:case_summary#2"
+    ]
+    assert result.source_opinion_repair_attempted is True
+    assert result.source_opinion_repair_status == "completed"
+    assert result.source_opinion_repaired_ids == ["CASE:case_summary#1", "CASE:case_summary#2"]
+    assert not any("no structured response" in flag for flag in result.source_reference_integrity_flags)
+    assert all(item.source_excerpt for item in result.source_opinion_responses)
+
+
+def test_r3_repairs_missing_review_from_exact_supplied_peer_record(monkeypatch):
+    from app.round_schemas import (
+        AdversarialContributionDraft,
+        AdversarialSourceOpinionReviewsRepairDraft,
+        SourceOpinionReview,
+    )
+    from app.services import mdt_generation
+
+    summary = (
+        "Fictional case. The colorectal surgical note favours a surgical assessment first, "
+        "conditional on complete local staging and resectability review; the medical oncology "
+        "note favours discussing a preoperative multimodality sequence, conditional on MRI "
+        "staging, metastatic work-up and fitness assessment."
+    )
+    first_id = "CASE:case_summary#1"
+    second_id = "CASE:case_summary#2"
+    first_analysis = (
+        "The surgery-led assessment first remains conditional on complete local staging "
+        "and resectability review; both prerequisites are unknown/not supplied."
+    )
+    second_analysis = (
+        "The preoperative multimodality sequence remains conditional on MRI staging, "
+        "metastatic work-up and fitness assessment; these prerequisites are unknown/not supplied."
+    )
+    calls = []
+
+    async def fake_generate(prompt, schema_type, max_tokens):
+        calls.append((prompt, schema_type, max_tokens))
+        if schema_type is AdversarialContributionDraft:
+            return AdversarialContributionDraft(
+                position="insufficient_information",
+                provisional_conclusion="The supplied information does not establish a definitive educational pathway.",
+                response_to_other_perspectives="The selected peer R2 record retains the first conditional option; the second requires separate review.",
+                agreements=[],
+                substantive_challenges=[],
+                remaining_unknowns=["Clinical staging remains unknown."],
+                risk_flags=[],
+                confidence=0.4,
+                source_opinion_reviews=[
+                    SourceOpinionReview(
+                        source_id=first_id,
+                        option_status="preserved",
+                        conditions_status="preserved",
+                        review_basis="R2:SO-02 retains the surgery-led assessment and its complete local staging and resectability conditions.",
+                        source_reference_ids=[first_id, "R2:SO-02"],
+                        evidence_peer_id="R2:SO-02",
+                        evidence_excerpt=first_analysis,
+                    )
+                ],
+            )
+        assert schema_type is AdversarialSourceOpinionReviewsRepairDraft
+        assert second_id in prompt and "R2:SO-02" in prompt
+        assert "matching structured source_opinion_responses" in prompt
+        return AdversarialSourceOpinionReviewsRepairDraft(
+            source_opinion_reviews=[
+                SourceOpinionReview(
+                    source_id=second_id,
+                    option_status="preserved",
+                    conditions_status="preserved",
+                    review_basis="R2:SO-02 retains the preoperative multimodality sequence and its MRI, metastatic work-up and fitness conditions.",
+                    source_reference_ids=[second_id, "R2:SO-02"],
+                    evidence_peer_id="R2:SO-02",
+                    evidence_excerpt=second_analysis,
+                )
+            ]
+        )
+
+    monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate)
+    profile = {"agent_id": "RO-01", "name": "Radiation Oncology", "mandate": "Review source representation."}
+    case = SyntheticCase(scenario_title="R3 missing-review repair", case_summary=summary)
+    own_r1 = {
+        "position": "insufficient_information",
+        "provisional_conclusion": "The case data do not establish either conditional pathway.",
+        "preferred_educational_option": "No definitive pathway is established.",
+    }
+    own_r2 = {
+        "position": "insufficient_information",
+        "provisional_conclusion": "The first and second source opinions remain conditional.",
+        "response_to_other_perspectives": "Both prerequisites are unknown.",
+        "source_opinion_responses": [],
+    }
+    peer_views = [{
+        "agent_id": "SO-02",
+        "agent_name": "Surgical Oncology",
+        "result": {
+            "position": "conditional",
+            "provisional_conclusion": "Both source options remain conditional.",
+            "response_to_other_perspectives": "Both options retain their stated prerequisites.",
+            "agreements": [],
+            "substantive_challenges": [],
+            "risk_flags": [],
+            "position_changes": [],
+            "source_opinion_responses": [
+                {"source_id": first_id, "analysis": first_analysis, "comparison": "The option remains conditional."},
+                {"source_id": second_id, "analysis": second_analysis, "comparison": "The option remains conditional."},
+            ],
+            "source_reference_integrity_flags": [],
+        },
+    }]
+
+    result = asyncio.run(
+        mdt_generation.generate_adversarial_contribution(
+            profile, case, own_r1, own_r2, peer_views
+        )
+    )
+
+    assert len(calls) == 2
+    assert calls[1][1] is AdversarialSourceOpinionReviewsRepairDraft
+    assert calls[1][2] == 850
+    assert [item.source_id for item in result.source_opinion_reviews] == [first_id, second_id]
+    assert result.source_opinion_repair_attempted is True
+    assert result.source_opinion_repair_status == "completed"
+    assert result.source_opinion_repaired_ids == [second_id]
+    assert all(item.source_excerpt for item in result.source_opinion_reviews)
+    assert all(item.evidence_validation_status == "verified" for item in result.source_opinion_reviews)
+    assert not any("has no R3 review" in flag for flag in result.source_reference_integrity_flags)
+
+
+def test_source_opinion_repair_failure_remains_flagged(monkeypatch):
+    from app.round_schemas import (
+        Round2ContributionDraft,
+        Round2SourceOpinionResponsesRepairDraft,
+    )
+    from app.services import mdt_generation
+
+    case = SyntheticCase(
+        scenario_title="R2 repair failure remains visible",
+        case_summary=(
+            "Fictional case. The surgical oncology note favours a surgery-led assessment first, "
+            "conditional on complete local staging and resectability review."
+        ),
+    )
+    async def fake_generate(prompt, schema_type, max_tokens):
+        if schema_type is Round2ContributionDraft:
+            return Round2ContributionDraft(
+                position="insufficient_information",
+                provisional_conclusion="The case does not establish a definitive pathway.",
+                response_to_other_perspectives="The supplied peer views do not establish an option.",
+                agreements=[], substantive_challenges=[], remaining_unknowns=[], risk_flags=[], confidence=0.4,
+                source_opinion_responses=[],
+            )
+        assert schema_type is Round2SourceOpinionResponsesRepairDraft
+        raise RuntimeError("synthetic repair inference failure")
+
+    monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate)
+    result = asyncio.run(
+        mdt_generation.generate_debate_contribution(
+            {"agent_id": "RO-01", "name": "Radiation Oncology", "mandate": "Review educational options."},
+            case,
+            {"position": "insufficient_information", "provisional_conclusion": "No pathway is established.", "preferred_educational_option": "None established."},
+            [],
+        )
+    )
+    assert result.source_opinion_repair_attempted is True
+    assert result.source_opinion_repair_status == "failed"
+    assert any("source-opinion repair failed" in flag for flag in result.source_reference_integrity_flags)
+    assert any("no structured response" in flag for flag in result.source_reference_integrity_flags)

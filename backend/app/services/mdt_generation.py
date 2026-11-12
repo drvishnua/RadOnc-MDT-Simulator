@@ -16,11 +16,13 @@ from app.services.ollama import AgentGenerationError, OllamaUnavailable
 from app.config import OLLAMA_BASE_URL, OLLAMA_MODEL
 from app.round_schemas import (
     AdversarialContributionDraft,
+    AdversarialSourceOpinionReviewsRepairDraft,
     FinalReportDraft,
     FinalMDTReport,
     RoundContribution,
     RoundContributionDraft,
     Round2ContributionDraft,
+    Round2SourceOpinionResponsesRepairDraft,
 )
 from app.schemas import SyntheticCase
 from app.services.case_integrity import audit_unverified_case_claims, build_case_prompt_context, build_case_report_title, case_summary_has_attributed_opinions, extract_attributed_note_opinions
@@ -41,7 +43,13 @@ def _context_window_for_schema(schema_type: type[BaseModel]) -> int:
     """Give R2 and R3 enough room for bounded peer context and structured output."""
     return (
         6144
-        if schema_type in (RoundContributionDraft, Round2ContributionDraft, AdversarialContributionDraft)
+        if schema_type in (
+            RoundContributionDraft,
+            Round2ContributionDraft,
+            AdversarialContributionDraft,
+            Round2SourceOpinionResponsesRepairDraft,
+            AdversarialSourceOpinionReviewsRepairDraft,
+        )
         else 4096
     )
 
@@ -881,12 +889,85 @@ async def generate_debate_contribution(
         item["source_id"]: item["source_excerpt"] for item in source_opinion_register
     }
     reported_responses = payload.get("source_opinion_responses") or []
+    source_opinion_response_flags: list[str] = []
+    response_repair_attempted = False
+    response_repair_status = "not_needed"
+    repaired_response_ids: list[str] = []
+    initial_response_counts = Counter(
+        str(item.get("source_id") or "")
+        for item in reported_responses
+        if isinstance(item, dict)
+    )
+    missing_response_ids = [
+        source_id for source_id in expected_source_opinions
+        if initial_response_counts.get(source_id, 0) == 0
+    ]
+    if missing_response_ids:
+        response_repair_attempted = True
+        response_repair_status = "incomplete"
+        missing_register = [
+            {"source_id": source_id, "source_excerpt": expected_source_opinions[source_id]}
+            for source_id in missing_response_ids
+        ]
+        repair_prompt = (
+            "ROUND 2 SOURCE-OPINION COVERAGE REPAIR. This is a narrowly scoped completion "
+            "of structured source records omitted from your first response, not a new MDT position. "
+            "Return exactly one source_opinion_response for each item in MISSING REGISTER, in the "
+            "same order, and return no other IDs. Do not say that no peer views were supplied: "
+            "the actual selected R1 peer records are included below. For each opinion, name its "
+            "distinct educational option and every prerequisite exactly enough to preserve the "
+            "source meaning. Explain how it relates to your own R1 position and the supplied peer "
+            "R1 positions. Missing prerequisites remain unknown/not supplied, not unmet; do not "
+            "infer clinical appropriateness or endorse the source option. Do not invent peer "
+            "statements, facts, or treatment recommendations. Use only the source_id values in "
+            "MISSING REGISTER. Return only the schema fields source_id, analysis, and comparison.\n"
+            f"ROLE: {profile['name']} ({profile['agent_id']})\n"
+            "SUPPLIED CASE (source data, not verified findings):\n"
+            + json.dumps(build_case_prompt_context(case), ensure_ascii=False, separators=(",", ":"))
+            + "\nMISSING REGISTER (server-identified IDs and exact excerpts):\n"
+            + json.dumps(missing_register, ensure_ascii=False, separators=(",", ":"))
+            + "\nYOUR R1 POSITION:\n"
+            + json.dumps(own, ensure_ascii=False, separators=(",", ":"))
+            + "\nACTUAL SELECTED PEER R1 POSITIONS:\n"
+            + json.dumps(peers, ensure_ascii=False, separators=(",", ":"))
+        )
+        try:
+            repair_draft = await _generate_structured(
+                repair_prompt, Round2SourceOpinionResponsesRepairDraft, 750
+            )
+            repaired_items = [item.model_dump() for item in repair_draft.source_opinion_responses]
+            reported_responses.extend(repaired_items)
+            repaired_response_ids = list(dict.fromkeys(
+                str(item.get("source_id") or "")
+                for item in repaired_items
+                if str(item.get("source_id") or "") in missing_response_ids
+            ))
+            repaired_counts = Counter(
+                str(item.get("source_id") or "")
+                for item in repaired_items
+                if isinstance(item, dict)
+            )
+            response_repair_status = (
+                "completed"
+                if all(repaired_counts.get(source_id, 0) == 1 for source_id in missing_response_ids)
+                and all(source_id in missing_response_ids for source_id in repaired_counts)
+                else "incomplete"
+            )
+            if response_repair_status != "completed":
+                source_opinion_response_flags.append(
+                    "R2 source-opinion repair did not return exactly one response for each missing registered source ID."
+                )
+            payload["source_opinion_responses"] = reported_responses
+        except Exception as exc:
+            response_repair_status = "failed"
+            source_opinion_response_flags.append(
+                f"R2 source-opinion repair failed ({type(exc).__name__}: {str(exc)[:180]})."
+            )
     response_counts = Counter(
         str(item.get("source_id") or "")
         for item in reported_responses
         if isinstance(item, dict)
     )
-    source_opinion_response_flags: list[str] = []
     for source_id in expected_source_opinions:
         count = response_counts.get(source_id, 0)
         if count == 0:
@@ -936,6 +1017,9 @@ async def generate_debate_contribution(
     else:
         payload["position_changes"] = []
     payload["source_peer_ids"] = [peer["agent_id"] for peer in peer_views]
+    payload["source_opinion_repair_attempted"] = response_repair_attempted
+    payload["source_opinion_repair_status"] = response_repair_status
+    payload["source_opinion_repaired_ids"] = repaired_response_ids
     payload["source_reference_integrity_flags"] = (
         _audit_source_references(payload, allowed_sources) + source_opinion_response_flags
     )[:20]
@@ -1204,6 +1288,99 @@ async def generate_adversarial_contribution(
         item["source_id"]: item["source_excerpt"]
         for item in source_opinion_register
     }
+    initial_reviews = payload.get("source_opinion_reviews") or []
+    initial_review_counts = Counter(
+        str(item.get("source_id") or "")
+        for item in initial_reviews
+        if isinstance(item, dict)
+    )
+    missing_review_ids = [
+        source_id for source_id in expected_source_opinions_by_id
+        if initial_review_counts.get(source_id, 0) == 0
+    ]
+    review_repair_attempted = False
+    review_repair_status = "not_needed"
+    repaired_review_ids: list[str] = []
+    if missing_review_ids:
+        review_repair_attempted = True
+        review_repair_status = "incomplete"
+        missing_review_register = [
+            {"source_id": source_id, "source_excerpt": expected_source_opinions_by_id[source_id]}
+            for source_id in missing_review_ids
+        ]
+        repair_peer_context = []
+        for peer in peers:
+            matching_responses = [
+                item for item in (peer.get("source_opinion_responses") or [])
+                if isinstance(item, dict) and item.get("source_id") in missing_review_ids
+            ]
+            if matching_responses:
+                repair_peer_context.append({
+                    "source": peer["source"],
+                    "role": peer["role"],
+                    "source_opinion_responses": matching_responses,
+                })
+        repair_prompt = (
+            "ROUND 3 SOURCE-OPINION REVIEW COVERAGE REPAIR. Complete only the missing "
+            "server-identified source reviews listed below. Return exactly one review for each "
+            "missing ID, in the same order, and no other IDs. This is REPRESENTATION FIDELITY "
+            "ONLY: compare the original source option and its prerequisites with the matching "
+            "structured source_opinion_responses in the actually supplied R2 peer records. "
+            "Do not assess clinical appropriateness, eligibility, or whether case prerequisites "
+            "are fulfilled. A conditional option remains preserved if that exact R2 structured "
+            "response retains the option and condition, even if the general conclusion is that "
+            "no pathway can yet be established. Do not mark omitted because clinical information "
+            "is missing. If a supplied peer has a matching structured response, use one such peer "
+            "only; source_reference_ids must contain the exact CASE source ID and exactly one "
+            "matching supplied R2 peer ID, and evidence_peer_id must use that same R2 ID. "
+            "Never cite a peer lacking a matching source_opinion_responses entry. If no supplied "
+            "peer has a matching entry, return unclear statuses and explain the evidence limitation "
+            "without fabricating a citation. Do not invent facts, excerpts, or challenges. The "
+            "server will bind the exact case-summary excerpt and verify the peer evidence.\n"
+            f"ROLE: {profile['name']} ({profile['agent_id']})\n"
+            "MISSING REGISTER (server-authoritative IDs and exact excerpts):\n"
+            + json.dumps(missing_review_register, ensure_ascii=False, separators=(",", ":"))
+            + "\nACTUALLY SUPPLIED R2 PEER SOURCE-OPINION RECORDS:\n"
+            + json.dumps(repair_peer_context, ensure_ascii=False, separators=(",", ":"))
+            + "\nALLOWED R2 PEER IDS:\n"
+            + json.dumps(sorted(allowed_peer_source_ids), ensure_ascii=False, separators=(",", ":"))
+            + "\nReturn only source_id, option_status, conditions_status, review_basis, "
+            "source_reference_ids, evidence_peer_id, evidence_excerpt, and challenge. "
+            "Do not author server-computed provenance metadata."
+        )
+        try:
+            repair_draft = await _generate_structured(
+                repair_prompt, AdversarialSourceOpinionReviewsRepairDraft, 850
+            )
+            repaired_items = [item.model_dump() for item in repair_draft.source_opinion_reviews]
+            existing_reviews = list(initial_reviews)
+            existing_reviews.extend(repaired_items)
+            payload["source_opinion_reviews"] = existing_reviews
+            repaired_review_ids = list(dict.fromkeys(
+                str(item.get("source_id") or "")
+                for item in repaired_items
+                if str(item.get("source_id") or "") in missing_review_ids
+            ))
+            repaired_counts = Counter(
+                str(item.get("source_id") or "")
+                for item in repaired_items
+                if isinstance(item, dict)
+            )
+            review_repair_status = (
+                "completed"
+                if all(repaired_counts.get(source_id, 0) == 1 for source_id in missing_review_ids)
+                and all(source_id in missing_review_ids for source_id in repaired_counts)
+                else "incomplete"
+            )
+            if review_repair_status != "completed":
+                review_reference_flags.append(
+                    "R3 source-opinion review repair did not return exactly one review for each missing registered source ID."
+                )
+        except Exception as exc:
+            review_repair_status = "failed"
+            review_reference_flags.append(
+                f"R3 source-opinion review repair failed ({type(exc).__name__}: {str(exc)[:180]})."
+            )
     actual_review_counts = Counter(
         str(item.get("source_id") or "")
         for item in (payload.get("source_opinion_reviews") or [])
@@ -1640,6 +1817,9 @@ async def generate_adversarial_contribution(
         ("R2", peer["agent_id"]) for peer in peer_debate_views[:5]
     }
     payload["source_peer_ids"] = [peer["agent_id"] for peer in peer_debate_views[:5]]
+    payload["source_opinion_repair_attempted"] = review_repair_attempted
+    payload["source_opinion_repair_status"] = review_repair_status
+    payload["source_opinion_repaired_ids"] = repaired_review_ids
     payload["source_reference_integrity_flags"] = (
         _audit_source_references(payload, allowed_sources)
         + review_reference_flags

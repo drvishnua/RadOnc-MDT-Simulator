@@ -47,6 +47,11 @@ class Round2ContributionDraft(RoundContributionDraft):
     source_opinion_responses: list[Round2SourceOpinionResponseDraft] = Field(max_length=4)
 
 
+class Round2SourceOpinionResponsesRepairDraft(StrictModel):
+    # Used only to ask the model for server-identified opinion records omitted from its first R2 response.
+    source_opinion_responses: list[Round2SourceOpinionResponseDraft] = Field(max_length=4)
+
+
 class Round2SourceOpinionResponse(Round2SourceOpinionResponseDraft):
     source_excerpt: str = Field(
         default="",
@@ -153,6 +158,11 @@ class SourceOpinionReview(StrictModel):
     )
 
 
+class AdversarialSourceOpinionReviewsRepairDraft(StrictModel):
+    # Used only for missing entries in the server-identified R3 review register.
+    source_opinion_reviews: list[SourceOpinionReview] = Field(max_length=4)
+
+
 class AdversarialContributionDraft(RoundContributionDraft):
     # Required even when empty: absence of review data must be explicit in R3.
     source_opinion_reviews: list[SourceOpinionReview] = Field(max_length=4)
@@ -168,6 +178,9 @@ class RoundContribution(StrictModel):
     substantive_challenges: list[str] = Field(default_factory=list, max_length=8)
     source_opinion_responses: list[Round2SourceOpinionResponse] = Field(default_factory=list, max_length=4)
     source_opinion_reviews: list[SourceOpinionReview] = Field(default_factory=list, max_length=4)
+    source_opinion_repair_attempted: bool = False
+    source_opinion_repair_status: Literal["not_needed", "completed", "incomplete", "failed"] = "not_needed"
+    source_opinion_repaired_ids: list[str] = Field(default_factory=list, max_length=4)
     position_changes: list[str] = Field(default_factory=list, max_length=5)
     remaining_unknowns: list[str] = Field(default_factory=list, max_length=8)
     risk_flags: list[str] = Field(default_factory=list, max_length=8)
