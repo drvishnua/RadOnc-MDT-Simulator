@@ -315,16 +315,16 @@ def _stage_group_supported(generated_key: str, source_keys: set[str]) -> bool:
 
 
 _PREREQUISITE_STATUS_WORD_PATTERN = re.compile(
-    r"\\b(?:unmet|unfulfilled|not\\s+(?:been\\s+)?(?:met|fulfilled)|failed|negative)\\b",
+    r"\b(?:unmet|unfulfilled|not\s+(?:been\s+)?(?:met|fulfilled)|failed|negative)\b",
     re.IGNORECASE,
 )
 _PREREQUISITE_NON_ASSERTION_PREFIX_PATTERN = re.compile(
-    r"\\bwithout\\s+(?:converting|treating|describing|classifying|interpreting|"
-    r"labelling|labeling|presenting|regarding)\\b[^.!?;:\\n]{0,100}\\b(?:as|into)\\s*$"
-    r"|\\b(?:do|does|did)\\s+not\\s+(?:convert|treat|describe|classify|interpret|"
-    r"label|regard|present)\\b[^.!?;:\\n]{0,100}\\b(?:as|into)\\s*$"
-    r"|\\b(?:not|never)\\s+(?:to\\s+be\\s+)?(?:converted|treated|described|"
-    r"classified|interpreted|labelled|labeled|presented|regarded)\\s+as\\s*$",
+    r"\bwithout\s+(?:converting|treating|describing|classifying|interpreting|"
+    r"labelling|labeling|presenting|regarding)\b[^.!?;:\n]{0,100}\b(?:as|into)\s*$"
+    r"|\b(?:do|does|did)\s+not\s+(?:convert|treat|describe|classify|interpret|"
+    r"label|regard|present)\b[^.!?;:\n]{0,100}\b(?:as|into)\s*$"
+    r"|\b(?:not|never)\s+(?:to\s+be\s+)?(?:converted|treated|described|"
+    r"classified|interpreted|labelled|labeled|presented|regarded)\s+as\s*$",
     re.IGNORECASE,
 )
 
@@ -343,7 +343,7 @@ def _unqualified_prerequisite_status_matches(
         sentence_end = min(
             (
                 position
-                for mark in ".!?;:\\n"
+                for mark in ".!?;:\n"
                 if (position := value.find(mark, match.end())) >= 0
             ),
             default=len(value),
