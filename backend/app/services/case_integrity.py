@@ -403,7 +403,7 @@ def _unqualified_prerequisite_status_matches(
         status_token = status_word.group().casefold()
         if (
             status_token in {"unmet", "unfulfilled", "failed", "negative"}
-            and re.search(r"\\b(?:not|never|rather\\s+than|instead\\s+of)\\s*$", before_status, re.IGNORECASE)
+            and re.search(r"\b(?:not|never|rather\s+than|instead\s+of)\s*$", before_status, re.IGNORECASE)
         ):
             continue
         token = match.group(0).strip()
