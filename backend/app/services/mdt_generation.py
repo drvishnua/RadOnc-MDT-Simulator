@@ -1155,8 +1155,8 @@ async def generate_adversarial_contribution(
         "invent a challenge. Cases without clearly attributable opinions must have an empty review list.\n"
         + attribution_instruction + "\n"
         + f"ALLOWED ROUND SOURCE IDS: {', '.join(allowed_source_ids)}\n"
-        + f"ALLOWED SOURCE-OPINION REVIEW PEER IDS (the only permitted R2 evidence_peer_id values and R2 citations inside source_opinion_reviews): {', '.join(sorted(allowed_peer_source_ids))}\\n"
-        + f"FORBIDDEN FOR SOURCE-OPINION REVIEWS: R2:{profile['agent_id']} is your own R2 record, not a peer; never cite it as review evidence. This narrower peer-only list overrides ALLOWED ROUND SOURCE IDS for source_opinion_reviews.\\n"
+        + f"ALLOWED SOURCE-OPINION REVIEW PEER IDS (the only permitted R2 evidence_peer_id values and R2 citations inside source_opinion_reviews): {', '.join(sorted(allowed_peer_source_ids))}\n"
+        + f"FORBIDDEN FOR SOURCE-OPINION REVIEWS: R2:{profile['agent_id']} is your own R2 record, not a peer; never cite it as review evidence. This narrower peer-only list overrides ALLOWED ROUND SOURCE IDS for source_opinion_reviews.\n"
         f"ROLE: {profile['name']}\nMANDATE: {profile['mandate']}\n"
         "SUPPLIED CASE:\n"
         + json.dumps(build_case_prompt_context(case), ensure_ascii=False, separators=(",", ":"))
