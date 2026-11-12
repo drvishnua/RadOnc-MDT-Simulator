@@ -233,8 +233,9 @@ def _unqualified_matches(
             and ignore_generated_prefix_pattern.search(text[left:match.start()])
         ):
             continue
-        if _QUALIFIER.search(clause):
-            continue
+        # Only explicit constructions that govern this status word suppress it.
+        # A separate "unknown" or "unverified" phrase elsewhere in the same clause
+        # must not hide a categorical unmet-prerequisite assertion.
         token = match.group(0).strip()
         if token and token.casefold() not in {item.casefold() for item in findings}:
             findings.append(token)
@@ -326,7 +327,15 @@ _PREREQUISITE_NON_ASSERTION_PREFIX_PATTERN = re.compile(
     r"|\b(?:not|never)\s+(?:(?:to\s+be|being)\s+)?(?:converted|treated|described|"
     r"classified|interpreted|labelled|labeled|presented|regarded)\s+as\s*$"
     r"|\b(?:must|should|need\s+to)\s+not\s+(?:be\s+)?(?:converted|treated|described|"
-    r"classified|interpreted|labelled|labeled|presented|regarded)\s+(?:as|into)\s*$",
+    r"classified|interpreted|labelled|labeled|presented|regarded)\s+(?:as|into)\s*$"
+    r"|\b(?:does|do|did)\s+not\s+(?:imply|mean|confirm|establish|show|demonstrate|support|indicate|prove)"
+    r"\b[^.!?;:\n]{0,100}\b(?:is|are|was|were|remain(?:s)?|have(?:\s+been)?|has(?:\s+been)?)\s*$"
+    r"|\bcannot\s+(?:confirm|establish|show|demonstrate|indicate)\b[^.!?;:\n]{0,100}"
+    r"\b(?:is|are|was|were|remain(?:s)?|have(?:\s+been)?|has(?:\s+been)?)\s*$"
+    r"|\b(?:unknown|unclear|undetermined|not\s+clear)\s+whether\b[^.!?;:\n]{0,100}"
+    r"\b(?:is|are|was|were|remain(?:s)?|have(?:\s+been)?|has(?:\s+been)?)\s*$"
+    r"|\bnot\s+(?:yet\s+)?(?:confirmed|documented|provided|reported|established|specified|verified)"
+    r"\s+as\s*$",
     re.IGNORECASE,
 )
 

@@ -856,6 +856,21 @@ def test_categorical_unmet_prerequisite_claims_remain_flagged():
         assert any("prerequisite(s) as unmet/not met" in item for item in flags), statement
 
 
+def test_unrelated_uncertainty_does_not_hide_an_unmet_prerequisite_assertion():
+    case = _case(
+        case_summary="Fictional case; prerequisite status has not been assessed.",
+        known_unknowns=["Clinical staging is not supplied."],
+    )
+    for statement in (
+        "The imaging result is unknown and the fitness prerequisite remains unmet.",
+        "The case summary is provisional and the fitness prerequisite remains unmet.",
+    ):
+        flags = audit_unverified_case_claims(case, {
+            "response_to_other_perspectives": statement
+        })
+        assert any("prerequisite(s) as unmet/not met" in item for item in flags), statement
+
+
 def test_negated_prerequisite_wording_does_not_hide_a_separate_unmet_claim():
     case = _case(
         case_summary="Fictional case; prerequisite status has not been assessed.",
