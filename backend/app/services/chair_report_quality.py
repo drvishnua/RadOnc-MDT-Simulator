@@ -19,6 +19,7 @@ ROUND_SOURCES = (
 SECTION_LIMITS = {
     "consensus_points": 15,
     "recorded_agreements": 90,
+    "source_opinion_review_coverage": 15,
     "unresolved_disagreements": 15,
     "minority_and_dissenting_views": 45,
     "major_uncertainties": 20,
@@ -826,6 +827,9 @@ def ensure_chair_report_completeness(
         round3_rows, case.case_summary
     )
     quarantine_flags.extend(source_review_integrity)
+    data["source_opinion_review_coverage"] = _unique(
+        source_review_coverage, SECTION_LIMITS["source_opinion_review_coverage"]
+    )
 
     # Reconstruct source-linked challenge entries from the actual saved R2/R3 rows.
     # This makes the final boundary independently reconcile challenges rather than
@@ -849,8 +853,8 @@ def ensure_chair_report_completeness(
                 saved_challenge_items.append(
                     f"Round {round_number} recorded challenge — {role_id} ({role_name}): {cleaned}"
                 )
-    # Discard any model-authored source-review coverage and replace it with
-    # the deterministic summary above. Preserve other draft disagreement text.
+    # Discard model-authored coverage from the disagreement section. The
+    # deterministic source-bound coverage is stored in its own report field.
     draft_disagreements = [
         item
         for item in (data.get("unresolved_disagreements") or [])
@@ -865,7 +869,7 @@ def ensure_chair_report_completeness(
         )
     ]
     data["unresolved_disagreements"] = _unique(
-        [*source_review_coverage, *draft_disagreements, *saved_challenge_items],
+        [*draft_disagreements, *saved_challenge_items],
         SECTION_LIMITS["unresolved_disagreements"],
     )
 
