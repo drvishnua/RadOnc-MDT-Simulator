@@ -476,7 +476,7 @@ def test_deterministic_prerequisite_status_fallback_converts_only_unsupported_st
         ),
         (
             "The prerequisites are unmet/unknown.",
-            "the prerequisites have an undetermined fulfilment status in the supplied record",
+            "The prerequisites have an undetermined fulfilment status in the supplied record",
         ),
         (
             "Conditionality remains unmet/unknown.",
