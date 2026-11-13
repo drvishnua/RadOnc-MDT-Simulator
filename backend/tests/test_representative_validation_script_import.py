@@ -7,6 +7,7 @@ import runpy
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 
 def test_representative_validation_script_imports_from_repository_root_without_inference():
@@ -195,3 +196,76 @@ def test_bounded_chair_records_are_saved_and_reloaded_without_bypassing_45_role_
     assert run_store.DATA_DIR == previous_data_dir
     assert run_store.LEGACY_DB_PATH == previous_legacy_path
 
+
+
+
+def _coverage_gate():
+    backend_dir = Path(__file__).resolve().parents[1]
+    script_path = (
+        backend_dir
+        / "scripts"
+        / "representative_model_provenance_validation.py"
+    )
+    namespace = runpy.run_path(
+        str(script_path),
+        run_name="representative_validation_coverage_gate_probe",
+    )
+    return namespace["_chair_source_opinion_coverage_failures"]
+
+
+def test_chair_source_opinion_coverage_gate_reads_dedicated_report_field():
+    validate = _coverage_gate()
+    expected = [
+        {"source_id": "CASE:case_summary#1"},
+        {"source_id": "CASE:case_summary#2"},
+    ]
+    coverage = [
+        "R3 source-opinion review coverage — CASE:case_summary#1: "
+        "3/3 roles supplied an exact source-bound review.",
+        "R3 source-opinion review coverage — CASE:case_summary#2: "
+        "3/3 roles supplied an exact source-bound review.",
+    ]
+    report = SimpleNamespace(
+        source_opinion_review_coverage=coverage,
+        unresolved_disagreements=[
+            "No proposition-level consensus is established from the saved contributions.",
+            "No Round-3 role saved a substantive_challenges entry.",
+        ],
+    )
+
+    assert validate(report, expected, {"RO-01", "SO-02", "MO-01"}) == []
+
+
+def test_chair_source_opinion_coverage_gate_rejects_coverage_left_in_disagreements():
+    validate = _coverage_gate()
+    expected = [{"source_id": "CASE:case_summary#1"}]
+    misplaced = (
+        "R3 source-opinion review coverage — CASE:case_summary#1: "
+        "3/3 roles supplied an exact source-bound review."
+    )
+    report = SimpleNamespace(
+        source_opinion_review_coverage=[],
+        unresolved_disagreements=[misplaced],
+    )
+
+    failures = validate(report, expected, {"RO-01", "SO-02", "MO-01"})
+
+    assert any(item["type"] == "chair_source_opinion_review_coverage" for item in failures)
+    assert any(item["type"] == "chair_source_opinion_coverage_misplaced_in_disagreements" for item in failures)
+
+
+def test_chair_source_opinion_coverage_gate_rejects_partial_distinct_role_coverage():
+    validate = _coverage_gate()
+    expected = [{"source_id": "CASE:case_summary#1"}]
+    report = SimpleNamespace(
+        source_opinion_review_coverage=[
+            "R3 source-opinion review coverage — CASE:case_summary#1: "
+            "2/3 roles supplied an exact source-bound review."
+        ],
+        unresolved_disagreements=["No proposition-level consensus is established."],
+    )
+
+    failures = validate(report, expected, {"RO-01", "SO-02", "MO-01"})
+
+    assert len(failures) == 1
+    assert failures[0]["type"] == "chair_source_opinion_review_coverage_incomplete"
