@@ -220,6 +220,7 @@ type FinalMDTReport = {
   overall_educational_synthesis: string;
   consensus_points: string[];
   recorded_agreements?: string[];
+  source_opinion_review_coverage?: string[];
   unresolved_disagreements: string[];
   minority_and_dissenting_views: string[];
   major_uncertainties: string[];
@@ -1713,6 +1714,7 @@ function App() {
                     {([
                       ["Proposition-level consensus", finalReport.consensus_points],
                       ["Recorded agreements · attributed, not consensus", finalReport.recorded_agreements ?? []],
+                      ["R3 source-opinion review coverage · distinct roles; representation only", finalReport.source_opinion_review_coverage ?? []],
                       ["Unresolved disagreements", finalReport.unresolved_disagreements],
                       ["Minority and dissenting views", finalReport.minority_and_dissenting_views],
                       ["Major uncertainties", finalReport.major_uncertainties],
