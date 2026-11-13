@@ -3121,6 +3121,153 @@ def test_exact_empty_challenge_sentinels_are_not_treated_as_substantive_text():
     assert _is_empty_challenge_placeholder(" NONE. ")
     assert _is_empty_challenge_placeholder("[Sources: CASE:case_summary#1; R2:RO-01] none")
     assert _is_empty_challenge_placeholder("no substantive challenge")
+    assert _is_empty_challenge_placeholder("none_identified")
+    assert _is_empty_challenge_placeholder("[Sources: CASE:case_summary#1; R2:RO-01] none_identified")
     assert not _is_empty_challenge_placeholder("The MRI staging result is not supplied.")
     assert not _is_empty_challenge_placeholder("Do not infer stage from the lesion size.")
 
+
+
+
+def test_r2_repairs_unsupported_negative_indication_without_erasing_source_option(monkeypatch):
+    from app.round_schemas import Round2ContributionDraft, RoundTextRepairDraft
+    from app.services import mdt_generation
+
+    repair_prompt = []
+    source_id = "CASE:case_summary#1"
+    analysis = (
+        "The source proposes a surgery-led assessment first, conditional on complete local "
+        "staging and resectability review. Those prerequisites remain unknown."
+    )
+    safe_comparison = (
+        "Compared with the independent assessment, the source-reported surgery-led assessment "
+        "first remains conditional on complete local staging and resectability review. The "
+        "supplied information does not establish whether this option is indicated or appropriate; "
+        "indication and suitability remain undetermined."
+    )
+
+    async def fake_generate(prompt, schema_type, max_tokens):
+        if schema_type is Round2ContributionDraft:
+            return Round2ContributionDraft(
+                position="insufficient_information",
+                provisional_conclusion=(
+                    "The supplied fictional information does not establish clinical stage, "
+                    "investigation results, or a definitive pathway."
+                ),
+                response_to_other_perspectives=(
+                    "The conditional source option is retained, but indication and suitability "
+                    "cannot be determined from the missing prerequisites."
+                ),
+                agreements=[],
+                substantive_challenges=[],
+                remaining_unknowns=["Clinical stage and resectability review are not supplied."],
+                risk_flags=[],
+                confidence=0.4,
+                source_opinion_responses=[{
+                    "source_id": source_id,
+                    "analysis": analysis,
+                    "comparison": (
+                        "Compared with the independent assessment, the source option remains "
+                        "conditional; no option is indicated."
+                    ),
+                }],
+            )
+        assert schema_type is RoundTextRepairDraft
+        assert "negative treatment indication/safety statement" in prompt
+        assert "source_opinion_responses[0].comparison" in prompt
+        repair_prompt.append(prompt)
+        return RoundTextRepairDraft(replacements=[{
+            "field_path": "source_opinion_responses[0].comparison",
+            "replacement_text": safe_comparison,
+        }])
+
+    monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate)
+    case = SyntheticCase(
+        scenario_title="Synthetic negative-indication repair test",
+        case_summary=(
+            "Fictional case. ENT service note favours a surgery-led assessment first, "
+            "conditional on complete local staging and resectability review."
+        ),
+        known_unknowns=["Clinical stage is not supplied."],
+    )
+    result = asyncio.run(
+        mdt_generation.generate_debate_contribution(
+            {"agent_id": "RO-01", "name": "Radiation Oncology", "mandate": "Review the educational record."},
+            case,
+            {
+                "position": "insufficient_information",
+                "provisional_conclusion": "The fictional record does not establish a definitive pathway.",
+                "preferred_educational_option": "No definitive pathway is established.",
+            },
+            [],
+        )
+    )
+
+    assert result.integrity_repair_attempted is True
+    assert result.integrity_repair_status == "completed"
+    assert result.integrity_repair_applied_paths == ["source_opinion_responses[0].comparison"]
+    assert result.case_data_integrity_flags == []
+    assert result.source_opinion_responses[0].analysis == analysis
+    assert "surgery-led assessment first" in result.source_opinion_responses[0].comparison
+    assert "complete local staging and resectability review" in result.source_opinion_responses[0].comparison
+    assert "indication and suitability remain undetermined" in result.source_opinion_responses[0].comparison
+    assert "no option is indicated" not in result.source_opinion_responses[0].comparison
+    assert len(repair_prompt) == 1
+
+
+def test_chair_excludes_none_identified_r3_placeholder_and_discloses_zero_challenges():
+    from app.services.chair_report_quality import ensure_chair_report_completeness
+
+    case = SyntheticCase(
+        scenario_title="Synthetic empty R3 challenge test",
+        case_summary="Fictional case for deterministic Chair challenge accounting.",
+    )
+    round1 = _chair_rows("assessment", ["insufficient_information"] * 45)
+    round2 = _chair_rows("result", ["insufficient_information"] * 45)
+    round3 = _chair_rows("result", ["insufficient_information"] * 45)
+    round3[0]["result"]["substantive_challenges"] = [
+        "[Sources: CASE:case_summary#1; R2:MO-01] none_identified"
+    ]
+    draft = reconcile_chair_report_draft(
+        "synthetic-empty-r3-challenge", case, round1, round2, round3, _chair_draft()
+    )
+    report = ensure_chair_report_completeness(draft, case, round1, round2, round3)
+
+    assert not any(
+        "Round 3 recorded challenge" in item
+        for item in report.unresolved_disagreements
+    )
+    assert any(
+        "No Round-3 role saved a substantive_challenges entry" in item
+        for item in report.unresolved_disagreements
+    )
+    assert not any("none_identified" in item for item in report.unresolved_disagreements)
+
+
+def test_chair_keeps_genuine_r3_challenge_without_zero_challenge_disclosure():
+    from app.services.chair_report_quality import ensure_chair_report_completeness
+
+    case = SyntheticCase(
+        scenario_title="Synthetic genuine R3 challenge test",
+        case_summary="Fictional case for deterministic Chair challenge accounting.",
+    )
+    round1 = _chair_rows("assessment", ["insufficient_information"] * 45)
+    round2 = _chair_rows("result", ["insufficient_information"] * 45)
+    round3 = _chair_rows("result", ["insufficient_information"] * 45)
+    round3[0]["result"]["substantive_challenges"] = [
+        "R2:MO-01 identifies a distinct unresolved question that requires comparison with the saved source text."
+    ]
+    draft = reconcile_chair_report_draft(
+        "synthetic-genuine-r3-challenge", case, round1, round2, round3, _chair_draft()
+    )
+    report = ensure_chair_report_completeness(draft, case, round1, round2, round3)
+
+    assert any(
+        "Round 3 recorded challenge — RO-01" in item
+        and "R2:MO-01" in item
+        for item in report.unresolved_disagreements
+    )
+    assert not any(
+        "No Round-3 role saved a substantive_challenges entry" in item
+        for item in report.unresolved_disagreements
+    )
