@@ -5,6 +5,25 @@ import re
 from typing import Any
 from app.schemas import SyntheticCase
 
+
+def is_empty_challenge_placeholder(value: object) -> bool:
+    """Recognise exact empty-challenge sentinels, including source-labelled forms."""
+    if not isinstance(value, str):
+        return True
+    body = re.sub(r"^\\s*\\[Sources:[^\\]]+\\]\\s*", "", value, flags=re.IGNORECASE)
+    normalised = re.sub(r"[\\W_]+", " ", body.casefold()).strip()
+    return normalised in {
+        "none",
+        "nil",
+        "n a",
+        "na",
+        "not applicable",
+        "no challenge",
+        "no substantive challenge",
+        "no source linked challenge",
+        "none identified",
+    }
+
 _SINGLE_FIELDS = {
     "age_years": "Age (years)", "sex_at_birth": "Sex at birth",
     "primary_site": "Primary site", "histology": "Histology",
