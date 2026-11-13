@@ -7,7 +7,11 @@ import re
 
 from app.round_schemas import FinalMDTReport
 from app.schemas import SyntheticCase
-from app.services.case_integrity import (\n    audit_unverified_case_claims,\n    build_case_report_title,\n    is_empty_challenge_placeholder,\n)
+from app.services.case_integrity import (
+    audit_unverified_case_claims,
+    build_case_report_title,
+    is_empty_challenge_placeholder,
+)
 
 
 ROUND_SOURCES = (
