@@ -567,18 +567,21 @@ def test_chair_source_opinion_coverage_is_dynamic_and_counts_distinct_roles():
         round3,
         _chair_draft(),
     )
-    joined = " ".join(report.unresolved_disagreements)
+    coverage_text = " ".join(report.source_opinion_review_coverage)
+    disagreements_text = " ".join(report.unresolved_disagreements)
 
-    assert "CASE:case_summary#1" in joined
-    assert "CASE:case_summary#2" in joined
-    assert "CASE:case_summary#3" in joined
-    assert "Neurology service note" in joined
-    assert "Cardiology service note" in joined
-    assert "Psychology service note" in joined
-    assert "distinct roles" in joined
-    assert "RO-01" in joined and "conflicting duplicate-role reviews excluded" in joined
-    assert "colorectal surgical note" not in joined
-    assert "medical oncology note" not in joined
+    assert "CASE:case_summary#1" in coverage_text
+    assert "CASE:case_summary#2" in coverage_text
+    assert "CASE:case_summary#3" in coverage_text
+    assert "Neurology service note" in coverage_text
+    assert "Cardiology service note" in coverage_text
+    assert "Psychology service note" in coverage_text
+    assert "distinct roles" in coverage_text
+    assert "RO-01" in coverage_text and "conflicting duplicate-role reviews excluded" in coverage_text
+    assert "colorectal surgical note" not in coverage_text
+    assert "medical oncology note" not in coverage_text
+    assert "source-opinion review coverage" not in disagreements_text.casefold()
+    assert any("No proposition-level consensus" in item for item in report.unresolved_disagreements)
 
 
 def test_chair_preserves_round_two_and_round_three_agreements_and_unknowns_without_calling_them_consensus():
