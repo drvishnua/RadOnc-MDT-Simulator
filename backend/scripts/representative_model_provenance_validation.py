@@ -615,18 +615,13 @@ async def main() -> int:
                     "type": "case_unknown_not_retained_as_missing_information",
                     "unknown": unknown,
                 })
-        for source in expected_opinions:
-            matching = [
-                item for item in chair_report.unresolved_disagreements
-                if source["source_id"] in item and "3/3 roles supplied an exact source-bound review" in item
-            ]
-            if len(matching) != 1:
-                r4_failures.append({
-                    "round": 4,
-                    "type": "chair_source_opinion_review_coverage",
-                    "source_id": source["source_id"],
-                    "matching_sections": matching,
-                })
+        r4_failures.extend(
+            _chair_source_opinion_coverage_failures(
+                chair_report,
+                expected_opinions,
+                {role["agent_id"] for role in roles},
+            )
+        )
         r3_challenge_roles = {
             row["agent_id"]
             for row in r3_rows
