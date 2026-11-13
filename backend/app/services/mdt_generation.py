@@ -868,16 +868,43 @@ def _source_opinion_repair_preserves_anchors(
     path: str,
     replacement: str,
 ) -> bool:
-    match = re.fullmatch(r"source_opinion_responses\[(\d+)\]\.analysis", path)
-    if not match:
+    response_match = re.fullmatch(
+        r"source_opinion_responses\[(\d+)\]\.analysis", path
+    )
+    review_match = re.fullmatch(
+        r"source_opinion_reviews\[(\d+)\]\.review_basis", path
+    )
+    if not response_match and not review_match:
         return True
-    index = int(match.group(1))
-    responses = payload.get("source_opinion_responses") or []
-    if index >= len(responses) or not isinstance(responses[index], dict):
+
+    if response_match:
+        index = int(response_match.group(1))
+        records = payload.get("source_opinion_responses") or []
+        required_components = ("option", "conditions")
+    else:
+        index = int(review_match.group(1))
+        records = payload.get("source_opinion_reviews") or []
+        if index >= len(records) or not isinstance(records[index], dict):
+            return False
+        review = records[index]
+        # A review that explicitly labels a component as preserved must keep
+        # its source anchors in the repaired explanation. Omitted/unclear
+        # components are not forced to quote anchors they say are absent.
+        status_to_component = {
+            "option_status": "option",
+            "conditions_status": "conditions",
+        }
+        required_components = tuple(
+            component
+            for status_field, component in status_to_component.items()
+            if review.get(status_field) == "preserved"
+        )
+
+    if index >= len(records) or not isinstance(records[index], dict):
         return False
-    response = responses[index]
-    source_id = str(response.get("source_id") or "")
-    source_excerpt = str(response.get("source_excerpt") or "")
+    record = records[index]
+    source_id = str(record.get("source_id") or "")
+    source_excerpt = str(record.get("source_excerpt") or "")
     registered = {
         item["source_id"]: item["source_excerpt"]
         for item in extract_attributed_note_opinions(case.case_summary)
@@ -886,7 +913,7 @@ def _source_opinion_repair_preserves_anchors(
         return False
     return all(
         _source_opinion_component_supported(source_excerpt, replacement, component)
-        for component in ("option", "conditions")
+        for component in required_components
     )
 
 
@@ -963,15 +990,15 @@ async def _repair_unsupported_prerequisite_wording(
         "add, remove, rename, or move CASE:case_summary#N or R1/R2/R3:AGENT_ID references. "
         "Return exactly one replacement for every field_path, in the same order, and no other path. "
         "Do not return position, confidence, source metadata, or any other fields. A failed or incomplete "
-        "repair will be rejected and the original text retained.\\n"
-        f"ROUND: {round_number}\\nROLE: {role_name} ({role_id})\\n"
+        "repair will be rejected and the original text retained.\n"
+        f"ROUND: {round_number}\nROLE: {role_name} ({role_id})\n"
         "SAVED EDUCATIONAL POSITION (immutable): "
         + str(payload.get("position") or "unknown")
-        + "\\nSUPPLIED CASE (source data, not verified findings):\\n"
+        + "\nSUPPLIED CASE (source data, not verified findings):\n"
         + json.dumps(build_case_prompt_context(case), ensure_ascii=False, separators=(",", ":"))
-        + "\\nEXACT REPAIR REGISTER:\\n"
+        + "\nEXACT REPAIR REGISTER:\n"
         + json.dumps(repair_register, ensure_ascii=False, separators=(",", ":"))
-        + "\\nReturn only the RoundTextRepairDraft schema."
+        + "\nReturn only the RoundTextRepairDraft schema."
     )
     proposed_text: dict[str, str] = {}
     try:

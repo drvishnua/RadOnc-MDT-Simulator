@@ -369,7 +369,9 @@ _PREREQUISITE_NON_ASSERTION_PREFIX_PATTERN = re.compile(
     r"|\b(?:unknown|unclear|undetermined|not\s+clear)\s+whether\b[^.!?;:\n]{0,100}"
     r"\b(?:is|are|was|were|remain(?:s)?|have(?:\s+been)?|has(?:\s+been)?)\s*$"
     r"|\bnot\s+(?:yet\s+)?(?:confirmed|documented|provided|reported|established|specified|verified)"
-    r"\s+as\s*$",
+    r"\s+as\s*$"
+    r"|\b(?:not|never)\s+(?:a|an)\s+(?:conclusion|claim|assertion|finding|determination)\s+that\b"
+    r"[^.!?;:\n]{0,100}\s*$",
     re.IGNORECASE,
 )
 

@@ -1093,3 +1093,26 @@ def test_conditionality_cannot_be_described_as_unmet_when_prerequisite_status_is
         ),
     })
     assert not any("prerequisite(s) as unmet/not met" in item for item in safe)
+
+
+
+def test_not_a_conclusion_that_prerequisites_are_unfulfilled_is_not_a_finding():
+    case = _case(
+        case_summary="Fictional case; local staging and fitness assessment are not supplied.",
+        known_unknowns=["Local staging and fitness assessment are not supplied."],
+    )
+    safe = (
+        "This is a representation omission in that peer record, not a conclusion "
+        "that the clinical prerequisites are fulfilled or unfulfilled."
+    )
+    safe_flags = audit_unverified_case_claims(case, {
+        "response_to_other_perspectives": safe,
+    })
+    assert not any("prerequisite(s) as unmet/not met" in item for item in safe_flags)
+
+    unsafe_flags = audit_unverified_case_claims(case, {
+        "response_to_other_perspectives": (
+            "The clinical prerequisites are unfulfilled because the assessments are not supplied."
+        ),
+    })
+    assert any("prerequisite(s) as unmet/not met" in item for item in unsafe_flags)

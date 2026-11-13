@@ -225,14 +225,17 @@ def test_r3_source_review_basis_repair_preserves_all_source_reference_tokens(mon
         "conditionality remains unmet because staging is not supplied."
     )
     replacement = (
-        f"{source['source_id']} and R2:RO-01 retain the source option and condition; "
-        "staging remains unknown because the assessment is not supplied."
+        f"{source['source_id']} and R2:RO-01 retain the surgery-led assessment option "
+        "and its complete local staging condition; staging remains unknown because "
+        "the assessment is not supplied."
     )
     payload = {
         "position": "insufficient_information",
         "source_opinion_reviews": [{
             "source_id": source["source_id"],
             "source_excerpt": source["source_excerpt"],
+            "option_status": "preserved",
+            "conditions_status": "preserved",
             "review_basis": original,
             "challenge": "",
             "source_reference_ids": [source["source_id"], "R2:RO-01"],
@@ -355,4 +358,58 @@ def test_repair_generation_failure_is_recorded_without_mutating_original(monkeyp
     assert result["integrity_repair_attempted"] is True
     assert result["integrity_repair_status"] == "failed"
     assert "synthetic repair failure" in result["integrity_repair_flags"][0]
+    assert flags
+
+
+
+def test_source_review_basis_repair_rejects_replacement_that_drops_preserved_option_anchor(monkeypatch):
+    case = SyntheticCase(
+        scenario_title="Synthetic source review anchor rejection test",
+        case_summary=(
+            "Fictional case. The surgical note favours a surgery-led assessment, "
+            "conditional on complete local staging."
+        ),
+    )
+    source = extract_attributed_note_opinions(case.case_summary)[0]
+    original = (
+        "The surgery-led assessment is conditional on complete local staging; "
+        "conditionality remains unmet."
+    )
+    unsafe_replacement = (
+        "The assessment remains conditional because staging information is not supplied; "
+        "its status is unknown."
+    )
+    payload = {
+        "position": "conditional",
+        "source_opinion_reviews": [{
+            "source_id": source["source_id"],
+            "source_excerpt": source["source_excerpt"],
+            "option_status": "preserved",
+            "conditions_status": "preserved",
+            "review_basis": original,
+        }],
+    }
+
+    async def fake_generate(prompt, schema_type, max_tokens):
+        return _repair_item(
+            "source_opinion_reviews[0].review_basis",
+            unsafe_replacement,
+        )
+
+    monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate)
+    repaired, flags = asyncio.run(
+        mdt_generation._repair_unsupported_prerequisite_wording(
+            case,
+            payload,
+            round_number=3,
+            role_id="SO-02",
+            role_name="Surgical Oncology",
+            allowed_sources=set(),
+        )
+    )
+
+    assert repaired["source_opinion_reviews"][0]["review_basis"] == original
+    assert repaired["integrity_repair_status"] == "blocked"
+    assert repaired["integrity_repair_applied_paths"] == []
+    assert any("source option and prerequisite anchors" in item for item in repaired["integrity_repair_flags"])
     assert flags
