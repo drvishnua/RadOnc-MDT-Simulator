@@ -1069,3 +1069,27 @@ def test_case_integrity_normalises_whitespace_runs_before_regex_audits():
     assert "age(s)" in flags
     assert "performance-status score" in flags
 
+
+
+
+def test_conditionality_cannot_be_described_as_unmet_when_prerequisite_status_is_unknown():
+    case = _case(
+        case_summary="Fictional case; MRI and staging assessments are not supplied.",
+        known_unknowns=["MRI and staging assessments are not supplied."],
+    )
+    unsafe = [
+        "The conditionality remains unmet by the supplied record.",
+        "The conditional option remains unmet pending MRI and staging.",
+    ]
+    for statement in unsafe:
+        flags = audit_unverified_case_claims(case, {
+            "response_to_other_perspectives": statement,
+        })
+        assert any("prerequisite(s) as unmet/not met" in item for item in flags), statement
+
+    safe = audit_unverified_case_claims(case, {
+        "response_to_other_perspectives": (
+            "The option remains conditional while MRI and staging status are unknown."
+        ),
+    })
+    assert not any("prerequisite(s) as unmet/not met" in item for item in safe)

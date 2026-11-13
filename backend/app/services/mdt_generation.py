@@ -23,6 +23,7 @@ from app.round_schemas import (
     RoundContributionDraft,
     Round2ContributionDraft,
     Round2SourceOpinionResponsesRepairDraft,
+    RoundTextRepairDraft,
 )
 from app.schemas import SyntheticCase
 from app.services.case_integrity import audit_unverified_case_claims, build_case_prompt_context, build_case_report_title, case_summary_has_attributed_opinions, extract_attributed_note_opinions
@@ -49,6 +50,7 @@ def _context_window_for_schema(schema_type: type[BaseModel]) -> int:
             AdversarialContributionDraft,
             Round2SourceOpinionResponsesRepairDraft,
             AdversarialSourceOpinionReviewsRepairDraft,
+            RoundTextRepairDraft,
         )
         else 4096
     )
@@ -775,6 +777,279 @@ def reconcile_chair_report_draft(
     )
 
 
+_PREREQUISITE_INTEGRITY_FLAG_PREFIX = (
+    "Generated narrative describes prerequisite(s) as unmet/not met"
+)
+_REPAIRABLE_TOP_LEVEL_TEXT_FIELDS = (
+    "provisional_conclusion",
+    "response_to_other_perspectives",
+    "agreements",
+    "substantive_challenges",
+    "remaining_unknowns",
+    "risk_flags",
+)
+
+
+def _active_case_integrity_payload(value):
+    """Remove preserved audit copies; only current authored narrative is re-audited."""
+    if isinstance(value, dict):
+        return {
+            key: _active_case_integrity_payload(item)
+            for key, item in value.items()
+            if not key.startswith(("model_reported_", "integrity_repair_"))
+            and key not in {"case_data_integrity_flags", "source_reference_integrity_flags"}
+        }
+    if isinstance(value, (list, tuple)):
+        return [_active_case_integrity_payload(item) for item in value]
+    return value
+
+
+def _prerequisite_integrity_flags(flags: list[str]) -> list[str]:
+    return [
+        flag for flag in flags
+        if flag.startswith(_PREREQUISITE_INTEGRITY_FLAG_PREFIX)
+    ]
+
+
+def _repairable_narrative_locations(payload: dict) -> dict[str, tuple[str, int | None, str | None, str]]:
+    """Map a closed set of authored narrative paths to their container locations."""
+    locations: dict[str, tuple[str, int | None, str | None, str]] = {}
+    for field in _REPAIRABLE_TOP_LEVEL_TEXT_FIELDS:
+        value = payload.get(field)
+        if isinstance(value, str) and value.strip():
+            locations[field] = (field, None, None, value)
+        elif isinstance(value, list):
+            for index, item in enumerate(value):
+                if isinstance(item, str) and item.strip():
+                    locations[f"{field}[{index}]"] = (field, index, None, item)
+
+    for collection, subfields in (
+        ("source_opinion_responses", ("analysis", "comparison")),
+        ("source_opinion_reviews", ("review_basis", "challenge")),
+    ):
+        items = payload.get(collection)
+        if not isinstance(items, list):
+            continue
+        for index, item in enumerate(items):
+            if not isinstance(item, dict):
+                continue
+            for subfield in subfields:
+                value = item.get(subfield)
+                if isinstance(value, str) and value.strip():
+                    path = f"{collection}[{index}].{subfield}"
+                    locations[path] = (collection, index, subfield, value)
+    return locations
+
+
+def _set_repairable_narrative_text(
+    payload: dict,
+    location: tuple[str, int | None, str | None, str],
+    replacement: str,
+) -> None:
+    field, index, subfield, _ = location
+    if index is None:
+        payload[field] = replacement
+    elif subfield is None:
+        payload[field][index] = replacement
+    else:
+        payload[field][index][subfield] = replacement
+
+
+def _round_reference_tokens(value: str) -> list[str]:
+    return re.findall(
+        r"\b(?:CASE:case_summary#[1-9][0-9]*|R[123]:[A-Z]{2}-[0-9]{2})\b",
+        value,
+    )
+
+
+def _source_opinion_repair_preserves_anchors(
+    case: SyntheticCase,
+    payload: dict,
+    path: str,
+    replacement: str,
+) -> bool:
+    match = re.fullmatch(r"source_opinion_responses\[(\d+)\]\.analysis", path)
+    if not match:
+        return True
+    index = int(match.group(1))
+    responses = payload.get("source_opinion_responses") or []
+    if index >= len(responses) or not isinstance(responses[index], dict):
+        return False
+    response = responses[index]
+    source_id = str(response.get("source_id") or "")
+    source_excerpt = str(response.get("source_excerpt") or "")
+    registered = {
+        item["source_id"]: item["source_excerpt"]
+        for item in extract_attributed_note_opinions(case.case_summary)
+    }
+    if not source_id or registered.get(source_id) != source_excerpt:
+        return False
+    return all(
+        _source_opinion_component_supported(source_excerpt, replacement, component)
+        for component in ("option", "conditions")
+    )
+
+
+async def _repair_unsupported_prerequisite_wording(
+    case: SyntheticCase,
+    payload: dict,
+    *,
+    round_number: int,
+    role_id: str,
+    role_name: str,
+    allowed_sources: set[tuple[str, str]],
+) -> tuple[dict, list[str]]:
+    """Attempt one exact-path wording repair; any uncertain repair remains blocked."""
+    active_payload = _active_case_integrity_payload(payload)
+    original_flags = audit_unverified_case_claims(case, active_payload)
+    target_flags = _prerequisite_integrity_flags(original_flags)
+    if not target_flags:
+        payload.update({
+            "integrity_repair_attempted": False,
+            "integrity_repair_status": "not_needed",
+            "integrity_repair_original_text": {},
+            "integrity_repair_proposed_text": {},
+            "integrity_repair_original_flags": [],
+            "integrity_repair_applied_paths": [],
+            "integrity_repair_flags": [],
+        })
+        return payload, original_flags
+
+    locations = _repairable_narrative_locations(payload)
+    repair_targets = {
+        path: location
+        for path, location in locations.items()
+        if _prerequisite_integrity_flags(
+            audit_unverified_case_claims(case, {"candidate": location[3]})
+        )
+    }
+    original_text = {path: location[3] for path, location in repair_targets.items()}
+
+    def blocked_without_call(message: str) -> tuple[dict, list[str]]:
+        payload.update({
+            "integrity_repair_attempted": False,
+            "integrity_repair_status": "blocked",
+            "integrity_repair_original_text": original_text,
+            "integrity_repair_proposed_text": {},
+            "integrity_repair_original_flags": original_flags[:20],
+            "integrity_repair_applied_paths": [],
+            "integrity_repair_flags": [message],
+        })
+        return payload, original_flags
+
+    if not repair_targets:
+        return blocked_without_call(
+            "The prerequisite integrity finding could not be mapped to a single repairable authored text field; no automatic repair was attempted."
+        )
+    if len(repair_targets) > 12:
+        return blocked_without_call(
+            "The prerequisite integrity finding affected more than 12 text fields; bounded automatic repair was not attempted."
+        )
+
+    repair_register = [
+        {"field_path": path, "original_text": original_text[path]}
+        for path in repair_targets
+    ]
+    repair_prompt = (
+        f"ROUND {round_number} CLINICAL-INTEGRITY WORDING REPAIR. This is one narrowly scoped "
+        "correction to the exact text fields listed below, not a new clinical assessment or position. "
+        "The deterministic audit found an unsupported statement that a prerequisite or conditionality "
+        "is unmet. Rewrite each listed field so missing or undocumented assessments remain UNKNOWN / "
+        "NOT SUPPLIED, never unmet or not met. Preserve the existing educational position, all distinct "
+        "source options, every condition attached to each option, the level of uncertainty, and the "
+        "role's original reasoning. Do not add clinical facts, findings, staging, fitness, suitability, "
+        "patient preferences, recommendations, or new conclusions. Do not delete the option or its "
+        "condition to avoid the audit. Keep every source-reference token exactly as supplied: do not "
+        "add, remove, rename, or move CASE:case_summary#N or R1/R2/R3:AGENT_ID references. "
+        "Return exactly one replacement for every field_path, in the same order, and no other path. "
+        "Do not return position, confidence, source metadata, or any other fields. A failed or incomplete "
+        "repair will be rejected and the original text retained.\\n"
+        f"ROUND: {round_number}\\nROLE: {role_name} ({role_id})\\n"
+        "SAVED EDUCATIONAL POSITION (immutable): "
+        + str(payload.get("position") or "unknown")
+        + "\\nSUPPLIED CASE (source data, not verified findings):\\n"
+        + json.dumps(build_case_prompt_context(case), ensure_ascii=False, separators=(",", ":"))
+        + "\\nEXACT REPAIR REGISTER:\\n"
+        + json.dumps(repair_register, ensure_ascii=False, separators=(",", ":"))
+        + "\\nReturn only the RoundTextRepairDraft schema."
+    )
+    proposed_text: dict[str, str] = {}
+    try:
+        draft = await _generate_structured(repair_prompt, RoundTextRepairDraft, 1400)
+        returned = draft.replacements
+        returned_paths = [item.field_path for item in returned]
+        expected_paths = list(repair_targets)
+        proposed_text = {
+            item.field_path: item.replacement_text
+            for item in returned
+        }
+        if (
+            returned_paths != expected_paths
+            or len(set(returned_paths)) != len(expected_paths)
+        ):
+            raise ValueError(
+                "Repair response did not return exactly one replacement for every requested field path in order."
+            )
+        for path, replacement in proposed_text.items():
+            original = original_text[path]
+            if _round_reference_tokens(replacement) != _round_reference_tokens(original):
+                raise ValueError(
+                    f"Repair changed source-reference tokens in {path}; the original text was retained."
+                )
+            if not _source_opinion_repair_preserves_anchors(case, payload, path, replacement):
+                raise ValueError(
+                    f"Repair did not retain the registered source option and prerequisite anchors in {path}."
+                )
+
+        trial = json.loads(json.dumps(payload))
+        for path, replacement in proposed_text.items():
+            _set_repairable_narrative_text(trial, repair_targets[path], replacement)
+
+        post_active = _active_case_integrity_payload(trial)
+        post_flags = audit_unverified_case_claims(case, post_active)
+        remaining_target_flags = _prerequisite_integrity_flags(post_flags)
+        new_case_flags = [flag for flag in post_flags if flag not in original_flags]
+        prior_reference_flags = set(_audit_source_references(payload, allowed_sources))
+        repaired_reference_flags = set(_audit_source_references(trial, allowed_sources))
+        new_reference_flags = sorted(repaired_reference_flags - prior_reference_flags)
+        if remaining_target_flags or new_case_flags or new_reference_flags:
+            details = remaining_target_flags + new_case_flags + new_reference_flags
+            payload.update({
+                "integrity_repair_attempted": True,
+                "integrity_repair_status": "blocked",
+                "integrity_repair_original_text": original_text,
+                "integrity_repair_proposed_text": proposed_text,
+                "integrity_repair_original_flags": original_flags[:20],
+                "integrity_repair_applied_paths": [],
+                "integrity_repair_flags": list(dict.fromkeys(details))[:20],
+            })
+            return payload, original_flags
+
+        trial.update({
+            "integrity_repair_attempted": True,
+            "integrity_repair_status": "completed",
+            "integrity_repair_original_text": original_text,
+            "integrity_repair_proposed_text": proposed_text,
+            "integrity_repair_original_flags": original_flags[:20],
+            "integrity_repair_applied_paths": list(proposed_text),
+            "integrity_repair_flags": [],
+        })
+        return trial, post_flags
+    except Exception as exc:
+        payload.update({
+            "integrity_repair_attempted": True,
+            "integrity_repair_status": "blocked" if isinstance(exc, ValueError) or proposed_text else "failed",
+            "integrity_repair_original_text": original_text,
+            "integrity_repair_proposed_text": proposed_text,
+            "integrity_repair_original_flags": original_flags[:20],
+            "integrity_repair_applied_paths": [],
+            "integrity_repair_flags": [
+                f"{type(exc).__name__}: {str(exc)[:240]}"
+            ],
+        })
+        return payload, original_flags
+
+
 
 async def generate_debate_contribution(
     profile: dict[str, str],
@@ -1027,10 +1302,18 @@ async def generate_debate_contribution(
     payload["source_reference_integrity_flags"] = (
         _audit_source_references(payload, allowed_sources) + source_opinion_response_flags
     )[:20]
+    payload, case_integrity_flags = await _repair_unsupported_prerequisite_wording(
+        case,
+        payload,
+        round_number=2,
+        role_id=profile["agent_id"],
+        role_name=profile["name"],
+        allowed_sources=allowed_sources,
+    )
     return RoundContribution(
         agent_id=profile["agent_id"],
         round_number=2,
-        case_data_integrity_flags=audit_unverified_case_claims(case, payload),
+        case_data_integrity_flags=case_integrity_flags,
         **payload,
     )
 
@@ -1887,10 +2170,18 @@ async def generate_adversarial_contribution(
         _audit_source_references(payload, allowed_sources)
         + review_reference_flags
     )[:20]
+    payload, case_integrity_flags = await _repair_unsupported_prerequisite_wording(
+        case,
+        payload,
+        round_number=3,
+        role_id=profile["agent_id"],
+        role_name=profile["name"],
+        allowed_sources=allowed_sources,
+    )
     return RoundContribution(
         agent_id=profile["agent_id"],
         round_number=3,
-        case_data_integrity_flags=audit_unverified_case_claims(case, payload),
+        case_data_integrity_flags=case_integrity_flags,
         **payload,
     )
 

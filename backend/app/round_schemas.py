@@ -12,6 +12,19 @@ from app.schemas import StrictModel
 Position = Literal["supports", "opposes", "conditional", "insufficient_information"]
 
 
+class RoundTextRepairItem(StrictModel):
+    """One server-selected narrative field to repair after a clinical-integrity flag."""
+
+    field_path: str = Field(min_length=1, max_length=160)
+    replacement_text: str = Field(min_length=20, max_length=1600)
+
+
+class RoundTextRepairDraft(StrictModel):
+    """A bounded repair response; the server validates exact path coverage."""
+
+    replacements: list[RoundTextRepairItem] = Field(max_length=12)
+
+
 class RoundContributionDraft(StrictModel):
     position: Position
     provisional_conclusion: str = Field(min_length=20, max_length=900)
@@ -191,6 +204,15 @@ class RoundContribution(StrictModel):
     source_opinion_repair_attempted: bool = False
     source_opinion_repair_status: Literal["not_needed", "completed", "incomplete", "failed"] = "not_needed"
     source_opinion_repaired_ids: list[str] = Field(default_factory=list, max_length=4)
+    # One narrowly scoped correction may touch only text fields selected by the
+    # deterministic prerequisite audit. Original and proposed text remain auditable.
+    integrity_repair_attempted: bool = False
+    integrity_repair_status: Literal["not_needed", "completed", "blocked", "failed"] = "not_needed"
+    integrity_repair_original_text: dict[str, str] = Field(default_factory=dict, max_length=12)
+    integrity_repair_proposed_text: dict[str, str] = Field(default_factory=dict, max_length=12)
+    integrity_repair_original_flags: list[str] = Field(default_factory=list, max_length=20)
+    integrity_repair_applied_paths: list[str] = Field(default_factory=list, max_length=12)
+    integrity_repair_flags: list[str] = Field(default_factory=list, max_length=20)
     position_changes: list[str] = Field(default_factory=list, max_length=5)
     remaining_unknowns: list[str] = Field(default_factory=list, max_length=8)
     risk_flags: list[str] = Field(default_factory=list, max_length=8)

@@ -901,7 +901,10 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         r"\b(?:unmet|unfulfilled)\s+(?:clinical\s+)?(?:prerequisite|condition|requirement)s?\b|"
         r"\b(?:clinical\s+)?(?:prerequisite|condition|requirement)s?\b"
         r"[^.!?;\n]{0,100}\b(?:remain(?:s)?|are|is|were|was|have(?:\s+been)?|has(?:\s+been)?)?\s*"
-        r"(?:unmet|unfulfilled|not\s+(?:been\s+)?(?:met|fulfilled)|failed|negative(?!\s+(?:[\w-]+\s+){0,2}findings\b))\b",
+        r"(?:unmet|unfulfilled|not\s+(?:been\s+)?(?:met|fulfilled)|failed|negative(?!\s+(?:[\w-]+\s+){0,2}findings\b))\b|"
+        r"\b(?:conditionality|conditional\s+(?:status|position|option))\b"
+        r"[^.!?;\n]{0,100}\b(?:remain(?:s)?|are|is|were|was|have(?:\s+been)?|has(?:\s+been)?)?\s*"
+        r"(?:unmet|unfulfilled|not\s+(?:been\s+)?(?:met|fulfilled)|failed)\b",
         re.IGNORECASE,
     )
     unsupported_prerequisite_status = _unsupported_prerequisite_status_matches(
