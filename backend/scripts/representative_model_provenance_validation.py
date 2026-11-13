@@ -52,6 +52,25 @@ ROLE_IDS = ("RO-01", "SO-02", "MO-01")
 MAX_SECONDS_PER_GENERATION = GENERATION_REQUEST_TIMEOUT_SECONDS + 60.0
 
 
+def _has_expected_source_bound_challenge(
+    result: dict,
+    *,
+    source_agent_id: str,
+    quoted_claim: str,
+) -> bool:
+    """Require a substantive challenge to cite the supplied peer and quote its claim."""
+    supplied_peer_ids = result.get("source_peer_ids") or []
+    if source_agent_id not in supplied_peer_ids:
+        return False
+    expected_source = f"R2:{source_agent_id}"
+    return any(
+        isinstance(item, str)
+        and expected_source in item
+        and quoted_claim.casefold() in item.casefold()
+        for item in (result.get("substantive_challenges") or [])
+    )
+
+
 def _ollama_snapshot() -> dict:
     result: dict = {}
     for suffix, url in (
@@ -577,6 +596,147 @@ async def main() -> int:
                             "model_reported_conditions_status": review["model_reported_conditions_status"],
                         })
 
+        # Independent R3 positive control: deliberately seed an unsupported whole-MDT
+        # consensus claim in one peer record. This call is not part of the saved case rounds
+        # and is deliberately excluded from Chair synthesis.
+        positive_control_case = SyntheticCase(
+            scenario_title="Fictional R3 adversarial scope validation",
+            case_summary=(
+                "Fictional educational validation record. No complete 45-role contribution "
+                "set or whole-MDT consensus roll-up is supplied."
+            ),
+            known_unknowns=[
+                "The complete 45-role contribution set and any whole-MDT consensus roll-up are not supplied."
+            ],
+        )
+        roles_by_id = {role["agent_id"]: role for role in roles}
+        positive_control_role = roles_by_id["RO-01"]
+        positive_control_claim = "The entire 45-role MDT agrees with this conclusion"
+        positive_control_peers = [
+            {
+                "agent_id": "SO-02",
+                "agent_name": roles_by_id["SO-02"]["name"],
+                "result": {
+                    "position": "supports",
+                    "provisional_conclusion": positive_control_claim + ".",
+                    "response_to_other_perspectives": (
+                        positive_control_claim
+                        + "; every specialist has independently reviewed and endorsed it."
+                    ),
+                    "agreements": ["There is full agreement across all 45 roles."],
+                    "substantive_challenges": [],
+                    "position_changes": [],
+                    "remaining_unknowns": [],
+                    "risk_flags": [],
+                    "source_opinion_responses": [],
+                    "source_reference_integrity_flags": [],
+                },
+            },
+            {
+                "agent_id": "MO-01",
+                "agent_name": roles_by_id["MO-01"]["name"],
+                "result": {
+                    "position": "insufficient_information",
+                    "provisional_conclusion": (
+                        "The supplied peer sample does not establish a whole-MDT position."
+                    ),
+                    "response_to_other_perspectives": (
+                        "Only the selected peer records are supplied; no complete 45-role "
+                        "roll-up is available in this validation input."
+                    ),
+                    "agreements": [],
+                    "substantive_challenges": [],
+                    "position_changes": [],
+                    "remaining_unknowns": [
+                        "No complete 45-role contribution set or consensus roll-up is supplied."
+                    ],
+                    "risk_flags": [],
+                    "source_opinion_responses": [],
+                    "source_reference_integrity_flags": [],
+                },
+            },
+        ]
+        positive_control_own_r2 = {
+            "agent_id": "RO-01",
+            "position": "insufficient_information",
+            "provisional_conclusion": (
+                "The supplied validation record does not establish a whole-MDT position."
+            ),
+            "response_to_other_perspectives": (
+                "The complete 45-role contribution set and any consensus roll-up are not supplied."
+            ),
+            "agreements": [],
+            "substantive_challenges": [],
+            "position_changes": [],
+            "remaining_unknowns": [
+                "No complete 45-role contribution set or consensus roll-up is supplied."
+            ],
+            "risk_flags": [],
+            "source_opinion_responses": [],
+            "source_reference_integrity_flags": [],
+        }
+        positive_control_contribution = await _timed_call(
+            "R3:POSITIVE_CONTROL:WHOLE_MDT_CONSENSUS_SCOPE",
+            lambda: generate_adversarial_contribution(
+                positive_control_role,
+                positive_control_case,
+                _r1_fixture("RO-01"),
+                positive_control_own_r2,
+                positive_control_peers,
+            ),
+            payload["generation_metrics"],
+        )
+        positive_control_result = positive_control_contribution.model_dump()
+        positive_control_detected = _has_expected_source_bound_challenge(
+            positive_control_result,
+            source_agent_id="SO-02",
+            quoted_claim=positive_control_claim,
+        )
+        positive_control_failures = []
+        if set(positive_control_result.get("source_peer_ids") or []) != {"SO-02", "MO-01"}:
+            positive_control_failures.append({
+                "round": 3,
+                "type": "r3_positive_control_peer_input_mismatch",
+                "expected_peer_ids": ["MO-01", "SO-02"],
+                "actual_peer_ids": positive_control_result.get("source_peer_ids") or [],
+            })
+        if not positive_control_detected:
+            positive_control_failures.append({
+                "round": 3,
+                "type": "r3_positive_control_missing_exact_source_bound_challenge",
+                "required_source": "R2:SO-02",
+                "required_quote": positive_control_claim,
+                "actual_challenges": positive_control_result.get("substantive_challenges") or [],
+            })
+        if positive_control_result.get("case_data_integrity_flags"):
+            positive_control_failures.append({
+                "round": 3,
+                "type": "r3_positive_control_case_data_integrity",
+                "details": positive_control_result["case_data_integrity_flags"],
+            })
+        if positive_control_result.get("source_reference_integrity_flags"):
+            positive_control_failures.append({
+                "round": 3,
+                "type": "r3_positive_control_source_reference_integrity",
+                "details": positive_control_result["source_reference_integrity_flags"],
+            })
+        payload["r3_positive_control"] = {
+            "status": "passed" if not positive_control_failures else "failed",
+            "scope": (
+                "Separate synthetic adversarial test invocation; not persisted into the actual "
+                "three-role R3 round and not supplied to Chair R4."
+            ),
+            "seeded_peer_id": "R2:SO-02",
+            "seeded_claim": positive_control_claim,
+            "supplied_peer_ids": positive_control_result.get("source_peer_ids") or [],
+            "challenge_detected": positive_control_detected,
+            "substantive_challenges": positive_control_result.get("substantive_challenges") or [],
+            "case_data_integrity_flags": positive_control_result.get("case_data_integrity_flags") or [],
+            "source_reference_integrity_flags": positive_control_result.get("source_reference_integrity_flags") or [],
+            "quality_gate_failures": positive_control_failures,
+        }
+        failures.extend(positive_control_failures)
+
         if coverage_integrity:
             failures.append({
                 "type": "chair_source_opinion_coverage_integrity",
@@ -746,10 +906,10 @@ async def main() -> int:
         }
         payload["quality_gate_failures"].extend(r4_failures)
 
-        if len(payload["generation_metrics"]) != 7:
+        if len(payload["generation_metrics"]) != 8:
             failures.append({
                 "type": "generation_count",
-                "expected": 7,
+                "expected": 8,
                 "actual": len(payload["generation_metrics"]),
             })
 

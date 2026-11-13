@@ -402,10 +402,11 @@ jobs:
             Write-Host "HOSTED_INSTALLED_APP_MODEL_RUNTIME_OK"
             Write-Host "HOSTED_INSTALLED_APP_45_ROLES_OK"
 
-            # Run six R2/R3 calls plus a bounded three-role Chair R4 synthesis against this
-            # exact clean-hosted Ollama/model instance. R1 uses explicit deterministic
-            # fixtures; actual R2/R3 outputs are saved/reloaded in disposable SQLite.
-            # This is CPU-only and never invokes the production 45-role round runner.
+            # Run six actual R2/R3 round calls, one isolated R3 adversarial positive-control
+            # call, and a bounded three-role Chair R4 synthesis against this exact clean-hosted
+            # Ollama/model instance. R1 uses deterministic fixtures; only actual round outputs
+            # are saved/reloaded in disposable SQLite. This is CPU-only and does not invoke the
+            # production 45-role round runner.
             $env:OLLAMA_BASE_URL = $ollamaUrl
             $env:OLLAMA_MODEL = $RadOncModelName
             Push-Location (Join-Path $env:GITHUB_WORKSPACE "backend")
