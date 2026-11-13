@@ -26,7 +26,14 @@ from app.round_schemas import (
     RoundTextRepairDraft,
 )
 from app.schemas import SyntheticCase
-from app.services.case_integrity import (\n    audit_unverified_case_claims,\n    build_case_prompt_context,\n    build_case_report_title,\n    case_summary_has_attributed_opinions,\n    extract_attributed_note_opinions,\n    is_empty_challenge_placeholder as _is_empty_challenge_placeholder,\n)
+from app.services.case_integrity import (
+    audit_unverified_case_claims,
+    build_case_prompt_context,
+    build_case_report_title,
+    case_summary_has_attributed_opinions,
+    extract_attributed_note_opinions,
+    is_empty_challenge_placeholder as _is_empty_challenge_placeholder,
+)
 from app.services.chair_report_quality import (
     build_recorded_agreements,
     build_source_opinion_review_coverage,
