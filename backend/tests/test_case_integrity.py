@@ -1,5 +1,12 @@
 from app.schemas import SyntheticCase
-from app.services.case_integrity import audit_unverified_case_claims, build_case_prompt_context, build_case_report_title, build_case_validation_warnings, build_source_case_facts
+from app.services.case_integrity import (
+    audit_unverified_case_claims,
+    build_case_prompt_context,
+    build_case_report_title,
+    build_case_validation_warnings,
+    build_source_case_facts,
+    is_empty_challenge_placeholder,
+)
 
 
 def _case(**overrides):
@@ -1116,3 +1123,36 @@ def test_not_a_conclusion_that_prerequisites_are_unfulfilled_is_not_a_finding():
         ),
     })
     assert any("prerequisite(s) as unmet/not met" in item for item in unsafe_flags)
+
+
+def test_neither_prerequisite_is_met_is_flagged_but_qualified_uncertainty_is_not():
+    case = _case(
+        case_summary="Fictional record; prerequisite assessments are not supplied.",
+        known_unknowns=["The relevant prerequisite assessments are not supplied."],
+    )
+    unsafe = audit_unverified_case_claims(case, {
+        "response_to_other_perspectives": "Neither prerequisite is met in the record."
+    })
+    assert any("prerequisite(s) as unmet/not met" in item for item in unsafe)
+
+    safe_statements = [
+        "The record does not establish that neither prerequisite is met.",
+        "It remains unclear whether neither of the two prerequisites is met.",
+    ]
+    for statement in safe_statements:
+        flags = audit_unverified_case_claims(case, {
+            "response_to_other_perspectives": statement
+        })
+        assert not any("prerequisite(s) as unmet/not met" in item for item in flags), statement
+
+
+def test_source_labelled_none_prefix_with_explanation_is_still_an_empty_challenge():
+    placeholder = (
+        "[Sources: CASE:case_summary#2; R2:RO-01] None; the peer explicitly "
+        "acknowledges that indication cannot be determined due to missing prerequisite data."
+    )
+    assert is_empty_challenge_placeholder(placeholder)
+    assert not is_empty_challenge_placeholder(
+        "[Sources: CASE:case_summary#2; R2:RO-01] None of the supplied records "
+        "establishes a whole-MDT consensus."
+    )

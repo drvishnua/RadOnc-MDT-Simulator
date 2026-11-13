@@ -11,6 +11,17 @@ def is_empty_challenge_placeholder(value: object) -> bool:
     if not isinstance(value, str):
         return True
     body = re.sub(r"^\s*\[Sources:[^\]]+\]\s*", "", value, flags=re.IGNORECASE)
+    # Some small models emit an empty sentinel followed by an explanation. Treat
+    # only an explicit sentinel followed by punctuation as empty; do not mistake
+    # phrases such as "None of the supplied records..." for a placeholder.
+    if re.match(
+        r"^\s*(?:none|nil|n/?a|no\s+(?:substantive\s+)?challenge|"
+        r"no\s+source[\s-]+linked\s+challenge|none\s+identified)\s*"
+        r"(?:[;:,.!?—–-]|$)",
+        body,
+        flags=re.IGNORECASE,
+    ):
+        return True
     normalised = re.sub(r"[\W_]+", " ", body.casefold()).strip()
     return normalised in {
         "none",
@@ -367,7 +378,7 @@ def _stage_group_supported(generated_key: str, source_keys: set[str]) -> bool:
 
 
 _PREREQUISITE_STATUS_WORD_PATTERN = re.compile(
-    r"\b(?:unmet|unfulfilled|not\s+(?:been\s+)?(?:met|fulfilled)|failed|negative(?!\s+(?:[\w-]+\s+){0,2}findings\b))\b",
+    r"\b(?:unmet|unfulfilled|not\s+(?:been\s+)?(?:met|fulfilled)|failed|negative(?!\s+(?:[\w-]+\s+){0,2}findings\b)|met)\b",
     re.IGNORECASE,
 )
 _PREREQUISITE_NON_ASSERTION_PREFIX_PATTERN = re.compile(
@@ -919,6 +930,11 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             + ", which are not explicitly supported by the verbatim case summary or structured patient_goals."
         )
     prerequisite_status_pattern = re.compile(
+        # Explicit "neither prerequisite is met" is a negative-status assertion,
+        # even though it does not contain the literal words "not met" or "unmet".
+        r"\bneither\s+(?:(?:of\s+)?(?:the\s+)?(?:two|both|these|those)\s+)?(?:the\s+)?"
+        r"(?:clinical\s+)?(?:prerequisite|condition|requirement)s?\b"
+        r"[^.!?;:\n]{0,80}\b(?:is|are|was|were|has\s+been|have\s+been)\s+met\b|"
         r"\b(?:unmet|unfulfilled)\s+(?:clinical\s+)?(?:prerequisite|condition|requirement)s?\b|"
         r"\b(?:clinical\s+)?(?:prerequisite|condition|requirement)s?\b"
         r"[^.!?;\n]{0,100}\b(?:remain(?:s)?|are|is|were|was|have(?:\s+been)?|has(?:\s+been)?)?\s*"

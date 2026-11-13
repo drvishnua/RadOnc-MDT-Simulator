@@ -928,6 +928,25 @@ def _deterministically_neutralise_unsupported_prerequisite_status(value: str) ->
         flags=re.IGNORECASE,
     )
 
+    # "neither prerequisite is met" is also a categorical negative status, even
+    # though it does not contain the literal phrase "not met".
+    def neutralise_neither_status(match: re.Match[str]) -> str:
+        prefix = repaired[:match.start()]
+        lead = "The" if not prefix.strip() or prefix.rstrip().endswith((".", "!", "?", "\n")) else "the"
+        return (
+            f"{lead} fulfilment status of the referenced "
+            f"{match.group('subject')} is undetermined"
+        )
+
+    repaired, neither_status_replacements = re.subn(
+        r"\bneither\s+(?:(?:of\s+)?(?:the\s+)?(?:two|both|these|those)\s+)?(?:the\s+)?"
+        r"(?P<subject>(?:clinical\s+)?(?:prerequisite|condition|requirement)s?)\s+"
+        r"(?:is|are|was|were|has\s+been|have\s+been)\s+met\b",
+        neutralise_neither_status,
+        repaired,
+        flags=re.IGNORECASE,
+    )
+
     # "conditionality remains unmet" is also an unsupported categorical status.
     repaired, conditionality_replacements = re.subn(
         r"\b(?P<subject>conditionality|conditional\s+(?:status|position|option))\s+"
@@ -941,7 +960,7 @@ def _deterministically_neutralise_unsupported_prerequisite_status(value: str) ->
         flags=re.IGNORECASE,
     )
 
-    if noun_replacements + predicate_replacements + conditionality_replacements == 0:
+    if noun_replacements + predicate_replacements + neither_status_replacements + conditionality_replacements == 0:
         return None
     return repaired if repaired != value else None
 
@@ -1711,7 +1730,15 @@ async def generate_adversarial_contribution(
         "options converted into unconditional directions; contradictions between position and "
         "narrative/structured fields; overbroad agreement or consensus claims; unsupported "
         "efficacy, safety, guideline, trial, or citation claims; and omitted case-stated "
-        "uncertainties or supplied patient, resource, or governance constraints. Check only the "
+        "uncertainties or supplied patient, resource, or governance constraints. "
+        "WHOLE-MDT CONSENSUS SCOPE CHECK: the supplied peer sample is not a complete 45-role roll-up. "
+        "When a supplied R2 record claims that the entire MDT or all 45 roles agree without a complete "
+        "45-role contribution set and deterministic proposition-level roll-up in this input, create a "
+        "source-linked substantive_challenges entry naming that exact R2:AGENT_ID and quoting a short "
+        "exact contiguous phrase from that peer's supplied R2 text. Explain that the bounded sample "
+        "cannot establish whole-MDT agreement. A generic collective critique without the individual "
+        "R2 source ID and exact quote is not auditable and does not satisfy this check. Do not challenge "
+        "a claim that is explicitly limited to the supplied sample. Check only the "
         "case and R2 text actually supplied; do not import external clinical assumptions. "
         "For each concrete defect, add a concise substantive_challenges item with the exact "
         "R2:AGENT_ID, a short exact quote from that R2 text, the unsupported assumption or "

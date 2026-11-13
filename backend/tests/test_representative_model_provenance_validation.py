@@ -64,3 +64,18 @@ def test_positive_control_rejects_quote_from_peer_not_in_supplied_sample():
         source_agent_id="SO-02",
         quoted_claim="The entire 45-role MDT agrees with this conclusion",
     )
+
+
+def test_positive_control_rejects_source_identifier_prefix_collision():
+    result = {
+        "source_peer_ids": ["SO-02", "MO-01"],
+        "substantive_challenges": [
+            'R2:SO-02-extra states "The entire 45-role MDT agrees with this conclusion".'
+        ],
+    }
+
+    assert not _has_expected_source_bound_challenge(
+        result,
+        source_agent_id="SO-02",
+        quoted_claim="The entire 45-role MDT agrees with this conclusion",
+    )

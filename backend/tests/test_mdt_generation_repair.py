@@ -593,3 +593,14 @@ def test_r3_deterministic_fallback_repairs_model_disclaimer_that_leaves_unmet_st
     assert "conditionality remains unresolved in the supplied record" in repaired_text
     assert not flags
     assert repaired["integrity_repair_flags"] == []
+
+
+def test_deterministic_fallback_neutralises_neither_prerequisite_is_met():
+    original = "Neither prerequisite is met in the record (R2:RO-01)."
+    repaired = mdt_generation._deterministically_neutralise_unsupported_prerequisite_status(
+        original
+    )
+    assert repaired == (
+        "The fulfilment status of the referenced prerequisite is undetermined in the record "
+        "(R2:RO-01)."
+    )

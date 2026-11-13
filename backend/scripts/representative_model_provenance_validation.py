@@ -11,6 +11,7 @@ import asyncio
 import hashlib
 import json
 import platform
+import re
 import subprocess
 import sys
 import tempfile
@@ -63,9 +64,14 @@ def _has_expected_source_bound_challenge(
     if source_agent_id not in supplied_peer_ids:
         return False
     expected_source = f"R2:{source_agent_id}"
+    # A substring check would incorrectly accept identifiers such as
+    # R2:SO-02-extra. Require a complete source token on both sides.
+    source_token = re.compile(
+        rf"(?<![A-Za-z0-9_-]){re.escape(expected_source)}(?![A-Za-z0-9_-])"
+    )
     return any(
         isinstance(item, str)
-        and expected_source in item
+        and source_token.search(item)
         and quoted_claim.casefold() in item.casefold()
         for item in (result.get("substantive_challenges") or [])
     )
@@ -595,6 +601,50 @@ async def main() -> int:
                             "model_reported_option_status": review["model_reported_option_status"],
                             "model_reported_conditions_status": review["model_reported_conditions_status"],
                         })
+
+        # Clean-record negative control: the representative ordinary case deliberately
+        # contains no unsupported whole-MDT assertion or source-opinion distortion.
+        # Empty model sentinels (including source-review fields) must not become challenges.
+        clean_record_challenges = []
+        for row in r3_rows:
+            result = row["result"]
+            for index, challenge in enumerate(result.get("substantive_challenges") or []):
+                if (
+                    isinstance(challenge, str)
+                    and challenge.strip()
+                    and not is_empty_challenge_placeholder(challenge)
+                ):
+                    clean_record_challenges.append({
+                        "role_id": row["agent_id"],
+                        "field": f"substantive_challenges[{index}]",
+                        "text": challenge,
+                    })
+            for index, review in enumerate(result.get("source_opinion_reviews") or []):
+                challenge = review.get("challenge") if isinstance(review, dict) else None
+                if (
+                    isinstance(challenge, str)
+                    and challenge.strip()
+                    and not is_empty_challenge_placeholder(challenge)
+                ):
+                    clean_record_challenges.append({
+                        "role_id": row["agent_id"],
+                        "field": f"source_opinion_reviews[{index}].challenge",
+                        "text": challenge,
+                    })
+        payload["r3_clean_record_negative_control"] = {
+            "status": "passed" if not clean_record_challenges else "failed",
+            "scope": (
+                "Ordinary three-role R3 sample; no seeded defect is present in its R2 inputs. "
+                "This negative control is separate from and does not replace the seeded positive control."
+            ),
+            "genuine_challenge_entries": clean_record_challenges,
+        }
+        if clean_record_challenges:
+            failures.append({
+                "round": 3,
+                "type": "r3_clean_record_negative_control_unexpected_challenge",
+                "details": clean_record_challenges,
+            })
 
         # Independent R3 positive control: deliberately seed an unsupported whole-MDT
         # consensus claim in one peer record. This call is not part of the saved case rounds
