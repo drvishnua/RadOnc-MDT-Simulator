@@ -266,7 +266,7 @@ def test_r3_source_review_basis_repair_preserves_all_source_reference_tokens(mon
     assert not any("prerequisite(s) as unmet/not met" in flag for flag in flags)
 
 
-def test_repair_rejects_unsafe_replacement_and_retains_original(monkeypatch):
+def test_repair_uses_deterministic_fallback_when_model_replacement_remains_unsafe(monkeypatch):
     case = _case()
     original = "The MRI prerequisite remains unmet because no MRI result was supplied."
     payload = {
@@ -295,11 +295,17 @@ def test_repair_rejects_unsafe_replacement_and_retains_original(monkeypatch):
         )
     )
 
-    assert result["response_to_other_perspectives"] == original
-    assert result["integrity_repair_status"] == "blocked"
-    assert result["integrity_repair_applied_paths"] == []
-    assert result["integrity_repair_proposed_text"]["response_to_other_perspectives"]
-    assert any("prerequisite(s) as unmet/not met" in flag for flag in flags)
+    assert result["response_to_other_perspectives"] != original
+    assert "undetermined fulfilment status" in result["response_to_other_perspectives"]
+    assert result["position"] == "conditional"
+    assert result["integrity_repair_status"] == "completed"
+    assert result["integrity_repair_applied_paths"] == [
+        "response_to_other_perspectives"
+    ]
+    assert result["integrity_repair_proposed_text"]["response_to_other_perspectives"] == (
+        result["response_to_other_perspectives"]
+    )
+    assert not flags
 
 
 def test_repair_rejects_incomplete_path_coverage_and_preserves_original(monkeypatch):
