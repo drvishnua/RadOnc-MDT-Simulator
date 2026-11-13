@@ -119,6 +119,72 @@ def _role_rows():
     return [by_id[role_id] for role_id in ROLE_IDS]
 
 
+def _chair_source_opinion_coverage_failures(
+    chair_report,
+    expected_opinions: list[dict],
+    expected_role_ids: set[str],
+) -> list[dict]:
+    """Validate source-review coverage in its dedicated report section."""
+    failures: list[dict] = []
+    coverage_items = getattr(chair_report, "source_opinion_review_coverage", None)
+    disagreements = getattr(chair_report, "unresolved_disagreements", None)
+
+    if not isinstance(coverage_items, list):
+        return [{
+            "round": 4,
+            "type": "chair_source_opinion_review_coverage_field_missing_or_invalid",
+        }]
+    if not isinstance(disagreements, list):
+        failures.append({
+            "round": 4,
+            "type": "chair_unresolved_disagreements_field_missing_or_invalid",
+        })
+        disagreements = []
+
+    misplaced = [
+        item for item in disagreements
+        if isinstance(item, str) and "source-opinion review coverage" in item.casefold()
+    ]
+    if misplaced:
+        failures.append({
+            "round": 4,
+            "type": "chair_source_opinion_coverage_misplaced_in_disagreements",
+            "matching_sections": misplaced,
+        })
+
+    expected_count = len(expected_role_ids)
+    for source in expected_opinions:
+        source_id = source["source_id"]
+        matching = [
+            item for item in coverage_items
+            if isinstance(item, str)
+            and source_id in item
+            and "roles supplied an exact source-bound review" in item
+        ]
+        if len(matching) != 1:
+            failures.append({
+                "round": 4,
+                "type": "chair_source_opinion_review_coverage",
+                "source_id": source_id,
+                "matching_sections": matching,
+            })
+            continue
+
+        expected_summary = (
+            f"{expected_count}/{expected_count} roles supplied an exact source-bound review"
+        )
+        if expected_summary not in matching[0]:
+            failures.append({
+                "round": 4,
+                "type": "chair_source_opinion_review_coverage_incomplete",
+                "source_id": source_id,
+                "expected": expected_summary,
+                "actual": matching[0],
+            })
+
+    return failures
+
+
 async def _timed_call(label: str, callback, metrics: list[dict]):
     started = time.perf_counter()
     try:
