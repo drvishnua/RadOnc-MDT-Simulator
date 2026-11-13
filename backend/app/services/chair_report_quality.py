@@ -864,93 +864,99 @@ def ensure_chair_report_completeness(
                 saved_challenge_items.append(
                     f"Round {round_number} recorded challenge — {role_id} ({role_name}): {cleaned}"
                 )
-    # Discard model-authored coverage from the disagreement section. The
-    # deterministic source-bound coverage is stored in its own report field.
+    # Discard model-authored coverage and all earlier derived challenge/position
+    # summaries. The final Chair boundary rebuilds these exclusively from saved rows.
+    stale_derived_markers = (
+        "r3 source-opinion review coverage",
+        "r3 source-opinion coverage",
+        "source review coverage",
+        "no round-3 role saved a substantive_challenges entry",
+        "round 2 recorded challenge —",
+        "round 3 recorded challenge —",
+        "round-3 positions were non-uniform",
+        "round-3 positions have no unique modal label",
+        "round-3 positions were uniform",
+        "no non-uniform position labels were recorded",
+        "no proposition-level consensus is established by free-text agreement notes",
+    )
     draft_disagreements = [
         item
         for item in (data.get("unresolved_disagreements") or [])
         if isinstance(item, str)
-        and not any(
-            marker in item.casefold()
-            for marker in (
-                "r3 source-opinion review coverage",
-                "r3 source-opinion coverage",
-                "source review coverage",
-            )
-        )
-        and "no round-3 role saved a substantive_challenges entry" not in item.casefold()
+        and not any(marker in item.casefold() for marker in stale_derived_markers)
     ]
+
+    # Always rebuild a position-distribution/history note, even when genuine
+    # disagreements or the zero-challenge disclosure are also present.
+    if len(final_counts) > 1:
+        distribution = ", ".join(
+            f"{count}/{sum(final_counts.values())} {position.replace('_', '-')}"
+            for position, count in sorted(final_counts.items())
+        )
+        highest_count = max(final_counts.values())
+        tied_positions = sorted(
+            position for position, count in final_counts.items() if count == highest_count
+        )
+        if len(tied_positions) > 1:
+            position_note = (
+                "Round-3 positions have no unique modal label because the highest "
+                "counts are tied (" + distribution + "). All non-insufficient position "
+                "groups are retained; the labels do not by themselves establish opposing treatment views."
+            )
+        else:
+            position_note = (
+                "Round-3 positions were non-uniform (" + distribution
+                + "); these labels do not by themselves establish opposing treatment views."
+            )
+    elif len(final_counts) == 1 and any(
+        final_counts.get(position)
+        for position in ("supports", "opposes", "conditional")
+    ):
+        distribution = ", ".join(
+            f"{count}/{sum(final_counts.values())} {position.replace('_', '-')}"
+            for position, count in sorted(final_counts.items())
+        )
+        position_note = (
+            "Round-3 positions were uniform (" + distribution
+            + "), but the saved contributions do not establish one shared, "
+            "proposition-level educational option. Uniform labels alone do not prove consensus."
+        )
+    else:
+        earlier_variation = any(
+            len(counts_by_round[round_number]) > 1
+            for round_number in (1, 2)
+        )
+        if earlier_variation:
+            position_note = (
+                "Round-3 position labels were uniform, while at least one earlier "
+                "round contained differing positions. Earlier role-level variation "
+                "is retained in the minority-view history; uniform labels do not "
+                "prove that clinical questions are resolved."
+            )
+        else:
+            position_note = (
+                "No non-uniform position labels were recorded across the completed "
+                "rounds. This absence of recorded label variation is not proof of "
+                "clinical unanimity or clinical validity."
+            )
+
     r3_challenge_disclosure = [] if saved_round3_challenge_count else [
         "No Round-3 role saved a substantive_challenges entry; this is a report of the saved records, not evidence that no risks or defects exist."
     ]
-    data["unresolved_disagreements"] = _unique(
-        [*r3_challenge_disclosure, *saved_challenge_items, *draft_disagreements],
-        SECTION_LIMITS["unresolved_disagreements"] - 2,
+    proposition_consensus_note = (
+        "No proposition-level consensus is established by free-text agreement notes; "
+        "position labels and repeated wording are not counted as votes."
     )
-
-    if not data["unresolved_disagreements"]:
-        if len(final_counts) > 1:
-            distribution = ", ".join(
-                f"{count}/{sum(final_counts.values())} {position.replace('_', '-')}"
-                for position, count in sorted(final_counts.items())
-            )
-            highest_count = max(final_counts.values())
-            tied_positions = sorted(
-                position for position, count in final_counts.items() if count == highest_count
-            )
-            if len(tied_positions) > 1:
-                note = (
-                    "Round-3 positions have no unique modal label because the highest "
-                    "counts are tied (" + distribution + "). All non-insufficient position "
-                    "groups are retained; the labels do not by themselves establish opposing treatment views."
-                )
-            else:
-                note = (
-                    "Round-3 positions were non-uniform (" + distribution
-                    + "); these labels do not by themselves establish opposing treatment views."
-                )
-        elif len(final_counts) == 1 and any(
-            final_counts.get(position)
-            for position in ("supports", "opposes", "conditional")
-        ):
-            distribution = ", ".join(
-                f"{count}/{sum(final_counts.values())} {position.replace('_', '-')}"
-                for position, count in sorted(final_counts.items())
-            )
-            note = (
-                "Round-3 positions were uniform (" + distribution
-                + "), but the saved contributions do not establish one shared, "
-                "proposition-level educational option. Uniform labels alone do not prove consensus."
-            )
-        else:
-            earlier_variation = any(
-                len(counts_by_round[round_number]) > 1
-                for round_number in (1, 2)
-            )
-            if earlier_variation:
-                note = (
-                    "Round-3 position labels were uniform, while at least one earlier "
-                    "round contained differing positions. Earlier role-level variation "
-                    "is retained in the minority-view history; uniform labels do not "
-                    "prove that clinical questions are resolved."
-                )
-            else:
-                note = (
-                    "No non-uniform position labels were recorded across the completed "
-                    "rounds. This absence of recorded label variation is not proof of "
-                    "clinical unanimity or clinical validity."
-                )
-        data["unresolved_disagreements"] = [note]
-
-    if not any("proposition-level consensus" in item.casefold() for item in data["unresolved_disagreements"]):
-        data["unresolved_disagreements"] = _unique(
-            [
-                "No proposition-level consensus is established by free-text agreement notes; "
-                "position labels and repeated wording are not counted as votes.",
-                *data["unresolved_disagreements"],
-            ],
-            SECTION_LIMITS["unresolved_disagreements"],
-        )
+    data["unresolved_disagreements"] = _unique(
+        [
+            position_note,
+            *r3_challenge_disclosure,
+            proposition_consensus_note,
+            *saved_challenge_items,
+            *draft_disagreements,
+        ],
+        SECTION_LIMITS["unresolved_disagreements"],
+    )
 
     # Challenges are useful only when their case claims pass the same deterministic
     # case-integrity audit applied to role-authored uncertainty and evidence-gap text.
