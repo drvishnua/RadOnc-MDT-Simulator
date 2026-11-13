@@ -883,6 +883,43 @@ def _round_reference_tokens(value: str) -> list[str]:
     )
 
 
+_NEITHER_INDICATION_ASSERTION = re.compile(
+    r"\bneither\s+(?P<subjects>[^.!?;:\n]{1,120}?)\s+"
+    r"(?P<verb>is|are|was|were|has been|remains)\s+"
+    r"(?P<qualifier>clearly\s+)?"
+    r"(?P<status>indicated|recommended|appropriate|suitable)\b",
+    re.IGNORECASE,
+)
+
+
+def _deterministically_neutralise_neither_indication_claim(value: str) -> str | None:
+    """Narrowly neutralise 'neither X nor Y is indicated' without rewriting context.
+
+    This fallback is used only when the model's proposed repair drops source
+    reference tokens. It changes only the categorical predicate, retains both
+    option phrases and every surrounding word/token, and is re-audited before
+    it can be applied.
+    """
+    def replace(match: re.Match[str]) -> str:
+        subjects = match.group("subjects")
+        revised_subjects, connector_count = re.subn(
+            r"\s+nor\s+", " or ", subjects, count=1, flags=re.IGNORECASE
+        )
+        if connector_count != 1:
+            return match.group(0)
+        prefix = value[:match.start()]
+        sentence_start = not prefix.strip() or prefix.rstrip().endswith((".", "!", "?", "\n"))
+        lead = "The supplied information" if sentence_start else "the supplied information"
+        qualifier = match.group("qualifier") or ""
+        return (
+            f"{lead} does not establish whether either {revised_subjects} "
+            f"{match.group('verb')} {qualifier}{match.group('status')}"
+        )
+
+    repaired, replacements = _NEITHER_INDICATION_ASSERTION.subn(replace, value)
+    return repaired if replacements and repaired != value else None
+
+
 def _source_opinion_repair_preserves_anchors(
     case: SyntheticCase,
     payload: dict,
@@ -1057,9 +1094,24 @@ async def _repair_unsupported_prerequisite_wording(
         for path, replacement in proposed_text.items():
             original = original_text[path]
             if _round_reference_tokens(replacement) != _round_reference_tokens(original):
-                raise ValueError(
-                    f"Repair changed source-reference tokens in {path}; the original text was retained."
+                # Do not accept a whole-field model rewrite that drops source
+                # provenance. For the narrowly recognised "neither X nor Y is
+                # indicated" defect, make a surgical deterministic edit to the
+                # original text instead; the normal anchor and safety audits
+                # below still have to pass before this candidate is applied.
+                deterministic_replacement = (
+                    _deterministically_neutralise_neither_indication_claim(original)
                 )
+                if (
+                    deterministic_replacement is None
+                    or _round_reference_tokens(deterministic_replacement)
+                    != _round_reference_tokens(original)
+                ):
+                    raise ValueError(
+                        f"Repair changed source-reference tokens in {path}; the original text was retained."
+                    )
+                replacement = deterministic_replacement
+                proposed_text[path] = deterministic_replacement
             if not _source_opinion_repair_preserves_anchors(case, payload, path, replacement):
                 raise ValueError(
                     f"Repair did not retain the registered source option and prerequisite anchors in {path}."

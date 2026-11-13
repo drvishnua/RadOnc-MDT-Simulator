@@ -413,3 +413,54 @@ def test_source_review_basis_repair_rejects_replacement_that_drops_preserved_opt
     assert repaired["integrity_repair_applied_paths"] == []
     assert any("source option and prerequisite anchors" in item for item in repaired["integrity_repair_flags"])
     assert flags
+
+
+
+def test_repair_uses_surgical_indication_fallback_when_model_drops_peer_references(monkeypatch):
+    case = _case()
+    original = (
+        "Peer positions (R1:RO-01 and R1:SO-02) agree only on information sufficiency. "
+        "They acknowledge that neither the surgery-first nor the preoperative "
+        "multimodality pathways are indicated without the stated staging, imaging, "
+        "and fitness prerequisites. The conditional source options remain distinct."
+    )
+    model_replacement = (
+        "The supplied information does not establish whether either option is indicated "
+        "or appropriate; indication and suitability remain undetermined."
+    )
+    payload = {
+        "position": "insufficient_information",
+        "response_to_other_perspectives": original,
+    }
+
+    async def drops_references_generate(prompt, schema_type, max_tokens):
+        assert schema_type is RoundTextRepairDraft
+        return _repair_item("response_to_other_perspectives", model_replacement)
+
+    monkeypatch.setattr(mdt_generation, "_generate_structured", drops_references_generate)
+    repaired, flags = asyncio.run(
+        mdt_generation._repair_unsupported_prerequisite_wording(
+            case,
+            payload,
+            round_number=2,
+            role_id="MO-01",
+            role_name="Medical Oncology",
+            allowed_sources={("R1", "RO-01"), ("R1", "SO-02")},
+        )
+    )
+
+    repaired_text = repaired["response_to_other_perspectives"]
+    assert repaired["integrity_repair_status"] == "completed"
+    assert repaired["integrity_repair_applied_paths"] == [
+        "response_to_other_perspectives"
+    ]
+    assert "R1:RO-01" in repaired_text
+    assert "R1:SO-02" in repaired_text
+    assert "the surgery-first or the preoperative" in repaired_text
+    assert "neither the surgery-first nor" not in repaired_text
+    assert "does not establish whether either" in repaired_text
+    assert repaired["integrity_repair_proposed_text"][
+        "response_to_other_perspectives"
+    ] == repaired_text
+    assert not flags
+    assert repaired["integrity_repair_flags"] == []
