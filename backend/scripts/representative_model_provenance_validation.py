@@ -40,7 +40,7 @@ from app.services.mdt_generation import (
     generate_chair_report,
     generate_debate_contribution,
 )
-from app.services.case_integrity import extract_attributed_note_opinions
+from app.services.case_integrity import (\n    extract_attributed_note_opinions,\n    is_empty_challenge_placeholder,\n)
 from app.services import run_store
 
 ARTIFACT_DIR = BACKEND_DIR / "validation_artifacts"
@@ -692,7 +692,9 @@ async def main() -> int:
             row["agent_id"]
             for row in r3_rows
             if any(
-                isinstance(item, str) and item.strip()
+                isinstance(item, str)
+                and item.strip()
+                and not is_empty_challenge_placeholder(item)
                 for item in (row["result"].get("substantive_challenges") or [])
             )
         }
