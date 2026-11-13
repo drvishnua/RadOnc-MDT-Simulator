@@ -252,6 +252,7 @@ class FinalMDTReport(StrictModel):
     overall_educational_synthesis: str
     consensus_points: list[str]
     recorded_agreements: list[str] = Field(default_factory=list, max_length=90)
+    source_opinion_review_coverage: list[str] = Field(default_factory=list, max_length=15)
     unresolved_disagreements: list[str]
     minority_and_dissenting_views: list[str]
     major_uncertainties: list[str]
