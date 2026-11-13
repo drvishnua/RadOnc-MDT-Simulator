@@ -606,7 +606,6 @@ def reconcile_chair_report_draft(
     source_coverage, source_review_integrity = build_source_opinion_review_coverage(
         round3_views, case.case_summary
     )
-    unresolved.extend(source_coverage)
     unresolved.extend(source_review_integrity)
     unresolved.extend(_unique_strings(recorded_review_findings, limit=12))
     # Surface incorrect round-qualified citations without mutating the original model text.
@@ -758,6 +757,7 @@ def reconcile_chair_report_draft(
         overall_educational_synthesis=overall,
         consensus_points=consensus_points,
         recorded_agreements=build_recorded_agreements(round2_views, round3_views, case=case),
+        source_opinion_review_coverage=source_coverage,
         unresolved_disagreements=unresolved,
         minority_and_dissenting_views=minority_views,
         major_uncertainties=uncertainties,
