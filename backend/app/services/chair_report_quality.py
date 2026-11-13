@@ -884,8 +884,8 @@ def ensure_chair_report_completeness(
         "No Round-3 role saved a substantive_challenges entry; this is a report of the saved records, not evidence that no risks or defects exist."
     ]
     data["unresolved_disagreements"] = _unique(
-        [*draft_disagreements, *saved_challenge_items, *r3_challenge_disclosure],
-        SECTION_LIMITS["unresolved_disagreements"],
+        [*r3_challenge_disclosure, *saved_challenge_items, *draft_disagreements],
+        SECTION_LIMITS["unresolved_disagreements"] - 2,
     )
 
     if not data["unresolved_disagreements"]:
@@ -945,9 +945,9 @@ def ensure_chair_report_completeness(
     if not any("proposition-level consensus" in item.casefold() for item in data["unresolved_disagreements"]):
         data["unresolved_disagreements"] = _unique(
             [
-                *data["unresolved_disagreements"],
                 "No proposition-level consensus is established by free-text agreement notes; "
                 "position labels and repeated wording are not counted as votes.",
+                *data["unresolved_disagreements"],
             ],
             SECTION_LIMITS["unresolved_disagreements"],
         )
