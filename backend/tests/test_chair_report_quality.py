@@ -744,22 +744,25 @@ def test_final_chair_rebuilds_source_opinion_coverage_from_saved_r3_reviews():
         draft, case, round1, round2, round3
     )
     unresolved = " ".join(report.unresolved_disagreements)
+    coverage = " ".join(report.source_opinion_review_coverage)
     flags = " ".join(report.case_data_integrity_flags)
 
     assert "STALE MODEL-CONTROLLED SOURCE REVIEW COVERAGE" not in unresolved
-    assert "CASE:case_summary#1" in unresolved
-    assert source_one in unresolved
-    assert source_two in unresolved
-    assert "2/45 roles supplied an exact source-bound review" in unresolved
-    assert "reviewing role IDs: ['RO-01', 'RO-02']" in unresolved
-    assert "reviewing role IDs: ['RO-03']" in unresolved
-    assert "option status role counts {'preserved': 1}" in unresolved
-    assert "condition status role counts {'omitted': 1, 'preserved': 1}" in unresolved
-    assert "CASE:case_summary#2" in unresolved
-    assert "1/45 roles supplied an exact source-bound review" in unresolved
-    assert "option status role counts {'partly_preserved': 1}" in unresolved
-    assert "condition status role counts {'unclear': 1}" in unresolved
-    assert "majority supports surgery" not in unresolved.casefold()
+    assert "CASE:case_summary#1" in coverage
+    assert source_one in coverage
+    assert source_two in coverage
+    assert "2/45 roles supplied an exact source-bound review" in coverage
+    assert "reviewing role IDs: ['RO-01', 'RO-02']" in coverage
+    assert "reviewing role IDs: ['RO-03']" in coverage
+    assert "option status role counts {'preserved': 1}" in coverage
+    assert "condition status role counts {'omitted': 1, 'preserved': 1}" in coverage
+    assert "CASE:case_summary#2" in coverage
+    assert "1/45 roles supplied an exact source-bound review" in coverage
+    assert "option status role counts {'partly_preserved': 1}" in coverage
+    assert "condition status role counts {'unclear': 1}" in coverage
+    assert "majority supports surgery" not in coverage.casefold()
+    assert "source-opinion review coverage" not in unresolved.casefold()
+    assert any("No proposition-level consensus" in item for item in report.unresolved_disagreements)
     assert "opinion label containing a positive consensus assertion" in flags
     assert "conflicting option statuses for RO-02" in flags
     assert "lacks an exact contiguous excerpt" in flags
