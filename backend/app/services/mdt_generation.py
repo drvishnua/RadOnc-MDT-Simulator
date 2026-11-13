@@ -892,6 +892,60 @@ _NEITHER_INDICATION_ASSERTION = re.compile(
 )
 
 
+def _deterministically_neutralise_unsupported_prerequisite_status(value: str) -> str | None:
+    """Convert unsupported categorical prerequisite status into explicit uncertainty.
+
+    This deliberately edits only the exact status construction identified by the
+    deterministic audit. It does not infer that a prerequisite is fulfilled or
+    change the option, condition, role position, or surrounding source references.
+    The candidate is still subjected to the complete post-repair audit.
+    """
+    repaired = value
+
+    # "unmet prerequisites" -> "prerequisites whose fulfilment status is unknown"
+    repaired, noun_replacements = re.subn(
+        r"\b(?P<status>unmet|unfulfilled)\s+(?P<kind>(?:clinical\s+)?(?:prerequisite|condition|requirement)s?)\b",
+        lambda match: (
+            f"{match.group('kind')} whose fulfilment status is not established "
+            "by the supplied record"
+        ),
+        repaired,
+        flags=re.IGNORECASE,
+    )
+
+    # "these prerequisites remain unmet" / "prerequisites are not met".
+    repaired, predicate_replacements = re.subn(
+        r"\b(?P<subject>(?:(?:these|those|the|all|their)\s+)?"
+        r"(?:clinical\s+)?(?:prerequisite|condition|requirement)s?)\s+"
+        r"(?P<verb>remain(?:s)?|are|is|were|was|have(?:\s+been)?|has(?:\s+been)?)\s+"
+        r"(?:unmet(?:\s*/\s*unknown)?|unfulfilled|not\s+(?:been\s+)?(?:met|fulfilled))\b",
+        lambda match: (
+            f"{match.group('subject')} "
+            f"{'have' if match.group('subject').rstrip().casefold().endswith(('prerequisites', 'conditions', 'requirements')) else 'has'} "
+            "an undetermined fulfilment status in the supplied record"
+        ),
+        repaired,
+        flags=re.IGNORECASE,
+    )
+
+    # "conditionality remains unmet" is also an unsupported categorical status.
+    repaired, conditionality_replacements = re.subn(
+        r"\b(?P<subject>conditionality|conditional\s+(?:status|position|option))\s+"
+        r"(?P<verb>remain(?:s)?|is|are|was|were)\s+"
+        r"(?:unmet(?:\s*/\s*unknown)?|unfulfilled|not\s+(?:been\s+)?(?:met|fulfilled))\b",
+        lambda match: (
+            f"{match.group('subject')} {match.group('verb')} unresolved "
+            "in the supplied record"
+        ),
+        repaired,
+        flags=re.IGNORECASE,
+    )
+
+    if noun_replacements + predicate_replacements + conditionality_replacements == 0:
+        return None
+    return repaired if repaired != value else None
+
+
 def _deterministically_neutralise_neither_indication_claim(value: str) -> str | None:
     """Narrowly neutralise 'neither X nor Y is indicated' without rewriting context.
 
@@ -1100,7 +1154,8 @@ async def _repair_unsupported_prerequisite_wording(
                 # original text instead; the normal anchor and safety audits
                 # below still have to pass before this candidate is applied.
                 deterministic_replacement = (
-                    _deterministically_neutralise_neither_indication_claim(original)
+                    _deterministically_neutralise_unsupported_prerequisite_status(original)
+                    or _deterministically_neutralise_neither_indication_claim(original)
                 )
                 if (
                     deterministic_replacement is None
@@ -1116,6 +1171,30 @@ async def _repair_unsupported_prerequisite_wording(
                 raise ValueError(
                     f"Repair did not retain the registered source option and prerequisite anchors in {path}."
                 )
+
+        # A model can append a safe disclaimer while leaving the audited unsafe
+        # status wording intact. If its candidate still fails the targeted audit,
+        # fall back to a deterministic edit of the original exact field.
+        for path, replacement in list(proposed_text.items()):
+            remaining_candidate_flags = _repairable_clinical_integrity_flags(
+                audit_unverified_case_claims(case, {"candidate": replacement})
+            )
+            if not remaining_candidate_flags:
+                continue
+            original = original_text[path]
+            deterministic_replacement = (
+                _deterministically_neutralise_unsupported_prerequisite_status(original)
+                or _deterministically_neutralise_neither_indication_claim(original)
+            )
+            if (
+                deterministic_replacement is not None
+                and _round_reference_tokens(deterministic_replacement)
+                == _round_reference_tokens(original)
+                and _source_opinion_repair_preserves_anchors(
+                    case, payload, path, deterministic_replacement
+                )
+            ):
+                proposed_text[path] = deterministic_replacement
 
         trial = json.loads(json.dumps(payload))
         for path, replacement in proposed_text.items():
