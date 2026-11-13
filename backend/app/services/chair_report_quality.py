@@ -7,7 +7,7 @@ import re
 
 from app.round_schemas import FinalMDTReport
 from app.schemas import SyntheticCase
-from app.services.case_integrity import audit_unverified_case_claims, build_case_report_title
+from app.services.case_integrity import (\n    audit_unverified_case_claims,\n    build_case_report_title,\n    is_empty_challenge_placeholder,\n)
 
 
 ROUND_SOURCES = (
@@ -835,17 +835,24 @@ def ensure_chair_report_completeness(
     # This makes the final boundary independently reconcile challenges rather than
     # trusting an earlier Chair draft/reconciliation string.
     saved_challenge_items: list[str] = []
+    saved_round3_challenge_count = 0
     for round_number, rows in ((2, round2_rows), (3, round3_rows)):
         for row, item in _distinct_role_entries(rows, "result", f"Round {round_number}", quarantine_flags):
             role_id = str(row.get("agent_id") or "unknown-role")
             role_name = str(row.get("agent_name") or "Role")
-            safe_challenges = _safe_role_text_items(
-                case,
-                item,
-                "substantive_challenges",
-                quarantine_flags,
-                f"R{round_number} {role_id} substantive challenge",
-            )
+            safe_challenges = [
+                challenge
+                for challenge in _safe_role_text_items(
+                    case,
+                    item,
+                    "substantive_challenges",
+                    quarantine_flags,
+                    f"R{round_number} {role_id} substantive challenge",
+                )
+                if not is_empty_challenge_placeholder(challenge)
+            ]
+            if round_number == 3:
+                saved_round3_challenge_count += len(safe_challenges)
             for challenge in safe_challenges:
                 cleaned = " ".join(challenge.split())
                 if len(cleaned) > 260:
@@ -867,9 +874,13 @@ def ensure_chair_report_completeness(
                 "source review coverage",
             )
         )
+        and "no round-3 role saved a substantive_challenges entry" not in item.casefold()
+    ]
+    r3_challenge_disclosure = [] if saved_round3_challenge_count else [
+        "No Round-3 role saved a substantive_challenges entry; this is a report of the saved records, not evidence that no risks or defects exist."
     ]
     data["unresolved_disagreements"] = _unique(
-        [*draft_disagreements, *saved_challenge_items],
+        [*draft_disagreements, *saved_challenge_items, *r3_challenge_disclosure],
         SECTION_LIMITS["unresolved_disagreements"],
     )
 
