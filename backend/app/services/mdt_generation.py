@@ -26,7 +26,7 @@ from app.round_schemas import (
     RoundTextRepairDraft,
 )
 from app.schemas import SyntheticCase
-from app.services.case_integrity import audit_unverified_case_claims, build_case_prompt_context, build_case_report_title, case_summary_has_attributed_opinions, extract_attributed_note_opinions
+from app.services.case_integrity import (\n    audit_unverified_case_claims,\n    build_case_prompt_context,\n    build_case_report_title,\n    case_summary_has_attributed_opinions,\n    extract_attributed_note_opinions,\n    is_empty_challenge_placeholder as _is_empty_challenge_placeholder,\n)
 from app.services.chair_report_quality import (
     build_recorded_agreements,
     build_source_opinion_review_coverage,
@@ -811,6 +811,20 @@ def _prerequisite_integrity_flags(flags: list[str]) -> list[str]:
     ]
 
 
+_TREATMENT_INDICATION_INTEGRITY_FLAG_PREFIX = (
+    "Generated narrative makes a definitive treatment safety/indication assertion"
+)
+
+
+def _repairable_clinical_integrity_flags(flags: list[str]) -> list[str]:
+    """Select only narrowly repairable wording defects; all other audit flags block."""
+    return [
+        flag for flag in flags
+        if flag.startswith(_PREREQUISITE_INTEGRITY_FLAG_PREFIX)
+        or flag.startswith(_TREATMENT_INDICATION_INTEGRITY_FLAG_PREFIX)
+    ]
+
+
 def _repairable_narrative_locations(payload: dict) -> dict[str, tuple[str, int | None, str | None, str]]:
     """Map a closed set of authored narrative paths to their container locations."""
     locations: dict[str, tuple[str, int | None, str | None, str]] = {}
@@ -869,7 +883,7 @@ def _source_opinion_repair_preserves_anchors(
     replacement: str,
 ) -> bool:
     response_match = re.fullmatch(
-        r"source_opinion_responses\[(\d+)\]\.analysis", path
+        r"source_opinion_responses\[(\d+)\]\.(analysis|comparison)", path
     )
     review_match = re.fullmatch(
         r"source_opinion_reviews\[(\d+)\]\.review_basis", path
@@ -911,8 +925,19 @@ def _source_opinion_repair_preserves_anchors(
     }
     if not source_id or registered.get(source_id) != source_excerpt:
         return False
+    if response_match:
+        # The option and its prerequisites must remain represented across the
+        # complete structured source response after replacing either text field.
+        replaced_field = response_match.group(2)
+        support_text = " ".join(
+            str(record.get(field) or "")
+            for field in ("analysis", "comparison")
+            if field != replaced_field
+        ) + " " + replacement
+    else:
+        support_text = replacement
     return all(
-        _source_opinion_component_supported(source_excerpt, replacement, component)
+        _source_opinion_component_supported(source_excerpt, support_text, component)
         for component in required_components
     )
 
@@ -926,10 +951,10 @@ async def _repair_unsupported_prerequisite_wording(
     role_name: str,
     allowed_sources: set[tuple[str, str]],
 ) -> tuple[dict, list[str]]:
-    """Attempt one exact-path wording repair; any uncertain repair remains blocked."""
+    """Repair only audited prerequisite/negative-indication wording at exact text paths."""
     active_payload = _active_case_integrity_payload(payload)
     original_flags = audit_unverified_case_claims(case, active_payload)
-    target_flags = _prerequisite_integrity_flags(original_flags)
+    target_flags = _repairable_clinical_integrity_flags(original_flags)
     if not target_flags:
         payload.update({
             "integrity_repair_attempted": False,
@@ -946,7 +971,7 @@ async def _repair_unsupported_prerequisite_wording(
     repair_targets = {
         path: location
         for path, location in locations.items()
-        if _prerequisite_integrity_flags(
+        if _repairable_clinical_integrity_flags(
             audit_unverified_case_claims(case, {"candidate": location[3]})
         )
     }
@@ -980,9 +1005,14 @@ async def _repair_unsupported_prerequisite_wording(
     repair_prompt = (
         f"ROUND {round_number} CLINICAL-INTEGRITY WORDING REPAIR. This is one narrowly scoped "
         "correction to the exact text fields listed below, not a new clinical assessment or position. "
-        "The deterministic audit found an unsupported statement that a prerequisite or conditionality "
-        "is unmet. Rewrite each listed field so missing or undocumented assessments remain UNKNOWN / "
-        "NOT SUPPLIED, never unmet or not met. Preserve the existing educational position, all distinct "
+        "The deterministic audit found either an unsupported unmet-prerequisite statement or a categorical "
+        "negative treatment indication/safety statement that is not supported by the supplied case. "
+        "Rewrite each listed field so missing or undocumented assessments remain UNKNOWN / NOT SUPPLIED, "
+        "never unmet or not met. When the text claims that no option, neither option, or no pathway is "
+        "indicated/appropriate solely because information is missing, replace that assertion with an "
+        "information-sufficiency statement: 'The supplied information does not establish whether the "
+        "source option is indicated or appropriate; indication and suitability remain undetermined.' "
+        "Do not infer that the option is indicated either. Preserve the existing educational position, all distinct "
         "source options, every condition attached to each option, the level of uncertainty, and the "
         "role's original reasoning. Do not add clinical facts, findings, staging, fitness, suitability, "
         "patient preferences, recommendations, or new conclusions. Do not delete the option or its "
@@ -1034,7 +1064,7 @@ async def _repair_unsupported_prerequisite_wording(
 
         post_active = _active_case_integrity_payload(trial)
         post_flags = audit_unverified_case_claims(case, post_active)
-        remaining_target_flags = _prerequisite_integrity_flags(post_flags)
+        remaining_target_flags = _repairable_clinical_integrity_flags(post_flags)
         new_case_flags = [flag for flag in post_flags if flag not in original_flags]
         prior_reference_flags = set(_audit_source_references(payload, allowed_sources))
         repaired_reference_flags = set(_audit_source_references(trial, allowed_sources))
@@ -1343,24 +1373,6 @@ async def generate_debate_contribution(
         case_data_integrity_flags=case_integrity_flags,
         **payload,
     )
-
-
-def _is_empty_challenge_placeholder(value: object) -> bool:
-    """Recognise only exact model sentinels, optionally preceded by server-style source labels."""
-    if not isinstance(value, str):
-        return True
-    body = re.sub(r"^\s*\[Sources:[^\]]+\]\s*", "", value, flags=re.IGNORECASE)
-    normalised = re.sub(r"[\W_]+", " ", body.casefold()).strip()
-    return normalised in {
-        "none",
-        "nil",
-        "n a",
-        "na",
-        "not applicable",
-        "no challenge",
-        "no substantive challenge",
-        "no source linked challenge",
-    }
 
 
 async def generate_adversarial_contribution(
