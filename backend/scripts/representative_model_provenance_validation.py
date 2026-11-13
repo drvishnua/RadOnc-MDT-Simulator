@@ -40,7 +40,10 @@ from app.services.mdt_generation import (
     generate_chair_report,
     generate_debate_contribution,
 )
-from app.services.case_integrity import (\n    extract_attributed_note_opinions,\n    is_empty_challenge_placeholder,\n)
+from app.services.case_integrity import (
+    extract_attributed_note_opinions,
+    is_empty_challenge_placeholder,
+)
 from app.services import run_store
 
 ARTIFACT_DIR = BACKEND_DIR / "validation_artifacts"
