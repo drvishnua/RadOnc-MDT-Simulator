@@ -10,8 +10,8 @@ def is_empty_challenge_placeholder(value: object) -> bool:
     """Recognise exact empty-challenge sentinels, including source-labelled forms."""
     if not isinstance(value, str):
         return True
-    body = re.sub(r"^\\s*\\[Sources:[^\\]]+\\]\\s*", "", value, flags=re.IGNORECASE)
-    normalised = re.sub(r"[\\W_]+", " ", body.casefold()).strip()
+    body = re.sub(r"^\s*\[Sources:[^\]]+\]\s*", "", value, flags=re.IGNORECASE)
+    normalised = re.sub(r"[\W_]+", " ", body.casefold()).strip()
     return normalised in {
         "none",
         "nil",
