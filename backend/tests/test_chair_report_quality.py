@@ -60,7 +60,7 @@ def _empty_report() -> FinalMDTReport:
 def _assert_all_sections_are_explicit(report: FinalMDTReport) -> None:
     payload = report.model_dump()
     for field in SECTION_LIMITS:
-        if field in {"consensus_points", "recorded_agreements"}:
+        if field in {"consensus_points", "recorded_agreements", "source_opinion_review_coverage"}:
             assert payload[field] == [], "Do not invent consensus or recorded agreement statements"
             continue
         assert payload[field], f"{field} must contain findings or an explicit absence note"
@@ -896,5 +896,6 @@ def test_final_chair_report_keeps_high_volume_source_excerpt_audit_visible():
     ) in flags
     assert "from RO-01 lacks an exact contiguous excerpt" in flags
     assert "from RO-03 lacks an exact contiguous excerpt" in flags
+    assert report.source_opinion_review_coverage == []
     assert len(report.case_data_integrity_flags) <= SECTION_LIMITS["case_data_integrity_flags"]
 
