@@ -169,6 +169,60 @@ def ids_match(rows: list[dict], expected: set[str], label: str) -> None:
 
 
 
+
+
+def _expected_minority_role_ids(
+    expected_ids: set[str],
+    round1_positions: dict[str, str],
+    round2_positions: dict[str, str],
+    round3_positions: dict[str, str],
+    final_positions: dict[str, int],
+) -> set[str]:
+    """Identify position changes and non-modal R3 roles without inventing a mode on ties."""
+    for label, positions in (
+        ("R1", round1_positions),
+        ("R2", round2_positions),
+        ("R3", round3_positions),
+    ):
+        missing = expected_ids - set(positions)
+        if missing:
+            raise ValueError(f"{label} position map is missing roles: {sorted(missing)}")
+    if sum(final_positions.values()) != len(expected_ids):
+        raise ValueError("Final position counts do not cover the expected role set.")
+
+    position_changes = {
+        agent_id
+        for agent_id in expected_ids
+        if len({
+            round1_positions[agent_id],
+            round2_positions[agent_id],
+            round3_positions[agent_id],
+        }) > 1
+    }
+    if not final_positions:
+        return position_changes
+
+    highest_count = max(final_positions.values())
+    modal_positions = {
+        position
+        for position, count in final_positions.items()
+        if count == highest_count
+    }
+    # A tied distribution has no unique modal position. Do not arbitrarily
+    # designate one of the tied groups as a minority based on dict insertion order.
+    if len(modal_positions) != 1:
+        return position_changes
+
+    unique_modal = next(iter(modal_positions))
+    non_modal_roles = {
+        agent_id
+        for agent_id in expected_ids
+        if round3_positions[agent_id] in {"conditional", "supports", "opposes"}
+        and round3_positions[agent_id] != unique_modal
+    }
+    return position_changes | non_modal_roles
+
+
 def verify_position_transitions(previous_rows: list[dict], current_rows: list[dict], label: str) -> None:
     previous_field = "assessment" if label == "Round 2" else "result"
     current_by_id = {row["agent_id"]: row for row in current_rows}
@@ -393,16 +447,13 @@ async def main() -> int:
         r1_positions = {row["agent_id"]: row["assessment"]["position"] for row in round1}
         r2_positions = {row["agent_id"]: row["result"]["position"] for row in round2}
         r3_positions = {row["agent_id"]: row["result"]["position"] for row in round3}
-        final_modal = max(final_positions, key=final_positions.get)
-        expected_minority_ids = {
-            agent_id
-            for agent_id in expected_ids
-            if len({r1_positions[agent_id], r2_positions[agent_id], r3_positions[agent_id]}) > 1
-            or (
-                r3_positions[agent_id] in {"conditional", "supports", "opposes"}
-                and r3_positions[agent_id] != final_modal
-            )
-        }
+        expected_minority_ids = _expected_minority_role_ids(
+            expected_ids,
+            r1_positions,
+            r2_positions,
+            r3_positions,
+            final_positions,
+        )
         chair_minority_text = " ".join(report.get("minority_and_dissenting_views") or [])
         require(
             all(agent_id in chair_minority_text for agent_id in expected_minority_ids),
