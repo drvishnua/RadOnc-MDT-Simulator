@@ -44,18 +44,39 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements-dev.txt
 
+      - name: Prepare test diagnostic output
+        working-directory: backend
+        run: |
+          mkdir -p validation_artifacts/test-results
+          rm -f validation_artifacts/test-results/pytest-junit.xml
+          rm -f validation_artifacts/test-results/pytest_diagnostics.json
+          rm -f validation_artifacts/test-results/pytest_diagnostics.md
+
       - name: Run deterministic no-inference validation preflight
         working-directory: backend
         run: python scripts/deterministic_preflight.py
 
-      - name: Compile live validation scripts
+      - name: Compile live validation and diagnostic scripts
         working-directory: backend
         run: |
-          python -m py_compile scripts/live_four_round_validation.py scripts/representative_model_provenance_validation.py
+          python -m py_compile \
+            scripts/live_four_round_validation.py \
+            scripts/representative_model_provenance_validation.py \
+            scripts/pytest_junit_diagnostics.py
 
-      - name: Run backend tests
+      - name: Run backend tests and emit JUnit XML
         working-directory: backend
-        run: python -m pytest
+        run: |
+          python -m pytest \
+            --junitxml=validation_artifacts/test-results/pytest-junit.xml
+
+      - name: Normalize pytest results into per-test diagnostics
+        if: always()
+        working-directory: backend
+        run: |
+          python scripts/pytest_junit_diagnostics.py \
+            --junit-xml validation_artifacts/test-results/pytest-junit.xml \
+            --output-dir validation_artifacts/test-results
 
       - name: Upload deterministic preflight reports
         if: always()
@@ -63,5 +84,14 @@ jobs:
         with:
           name: deterministic-preflight-report
           path: backend/validation_artifacts/preflight/*
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload pytest JUnit and normalized diagnostics
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: pytest-junit-diagnostics
+          path: backend/validation_artifacts/test-results/*
           if-no-files-found: warn
           retention-days: 14
