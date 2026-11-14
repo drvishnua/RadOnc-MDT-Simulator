@@ -378,7 +378,7 @@ def _stage_group_supported(generated_key: str, source_keys: set[str]) -> bool:
 
 
 _PREREQUISITE_STATUS_WORD_PATTERN = re.compile(
-    r"\b(?:unmet|unfulfilled|not\s+(?:been\s+)?(?:met|fulfilled)|failed|negative(?!\s+(?:[\w-]+\s+){0,2}findings\b)|met)\b",
+    r"\b(?:unmet|unfulfilled|not\s+(?:been\s+)?(?:met|fulfilled)|failed|negative(?!\s+(?:[\w-]+\s+){0,2}findings\b))\b",
     re.IGNORECASE,
 )
 _PREREQUISITE_NON_ASSERTION_PREFIX_PATTERN = re.compile(
@@ -442,7 +442,20 @@ def _unqualified_prerequisite_status_matches(
         )
         status_word = _PREREQUISITE_STATUS_WORD_PATTERN.search(match.group())
         if status_word is None:
-            continue
+            # Bare "met" is not a negative status in general. The dedicated
+            # matcher accepts only the explicit "neither prerequisite is met"
+            # construction, so recover its terminal token narrowly here.
+            if (
+                match.group().casefold().startswith("neither ")
+                and re.search(
+                    r"\b(?:is|are|was|were|has\s+been|have\s+been)\s+met\b$",
+                    match.group(),
+                    re.IGNORECASE,
+                )
+            ):
+                status_word = re.search(r"\bmet\b", match.group(), re.IGNORECASE)
+            else:
+                continue
         before_status = value[left:match.start() + status_word.start()]
         if _PREREQUISITE_NON_ASSERTION_PREFIX_PATTERN.search(before_status):
             continue
