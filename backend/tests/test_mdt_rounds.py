@@ -924,7 +924,7 @@ def test_round_three_peer_selector_enforces_small_bounded_sample():
     assert [profile_categories[item["agent_id"]] for item in last_selected] == last_expected[:5]
 
 
-def test_adversarial_prompt_truncates_peer_digest_to_five_source_records(monkeypatch):
+def test_adversarial_prompt_sanitises_peer_prose_and_truncates_peer_digest(monkeypatch):
     from app.round_schemas import RoundContributionDraft
     from app.services import mdt_generation
 
@@ -966,7 +966,10 @@ def test_adversarial_prompt_truncates_peer_digest_to_five_source_records(monkeyp
             "result": {
                 "position": "conditional",
                 "provisional_conclusion": f"Peer conclusion {index} remains conditional.",
-                "response_to_other_perspectives": "The source record remains incomplete.",
+                "response_to_other_perspectives": (
+                    "Both R2:SO-02 and R2:SO-03 explicitly state that the prerequisites remain unknown; "
+                    "R2:SO-04 adds that resectability must not be inferred."
+                ) if index == 1 else "The source record remains incomplete.",
                 "agreements": [],
                 "substantive_challenges": [],
                 "risk_flags": [],
@@ -980,6 +983,11 @@ def test_adversarial_prompt_truncates_peer_digest_to_five_source_records(monkeyp
     assert '"source":"R2:SO-01"' in captured[0]
     assert '"source":"R2:SO-05"' in captured[0]
     assert '"source":"R2:SO-06"' not in captured[0]
+    assert (
+        '"response":"Both the referenced role records explicitly state that the prerequisites remain unknown; '
+        'the referenced role record adds that resectability must not be inferred."'
+    ) in captured[0]
+    assert "Both and explicitly state" not in captured[0]
     assert "CASE ATTRIBUTION CHECK: the verbatim case summary contains no clearly speaker-attributed opinion." in captured[0]
     assert "Return source_opinion_reviews as an empty list" in captured[0]
 
