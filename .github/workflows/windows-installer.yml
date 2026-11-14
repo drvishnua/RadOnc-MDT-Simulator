@@ -250,7 +250,8 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'push' &&
        github.ref == 'refs/heads/feature/four-round-mdt-and-performance' &&
-       contains(github.event.head_commit.message, '[hosted-validation]'))
+       (contains(github.event.head_commit.message, '[hosted-validation]') ||
+        contains(github.event.head_commit.message, '[context-probe]')))
     needs: installer
     runs-on: windows-latest
     timeout-minutes: 120
@@ -313,7 +314,7 @@ jobs:
             $env:LOCALAPPDATA = $localAppData
             $env:RADONC_DATA_DIR = Join-Path $localAppData "RadOncMDT\Data"
             $env:RADONC_PORT = "18765"
-            $validationMode = "${{ github.event.inputs.validation_mode || 'full' }}"
+            $validationMode = "${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[context-probe]') && 'context_probe' || github.event.inputs.validation_mode || 'full' }}"
 
             $driveRoot = [IO.Path]::GetPathRoot([IO.Path]::GetFullPath($localAppData))
             $driveName = $driveRoot.TrimEnd("\").TrimEnd(":")
