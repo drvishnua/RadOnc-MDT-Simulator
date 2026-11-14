@@ -12,7 +12,7 @@ def _minimal_repository(root: Path) -> Path:
     for directory in ("app", "scripts", "tests"):
         (backend / directory).mkdir(parents=True)
     (backend / "pyproject.toml").write_text(
-        '[project]\nrequires-python = \">=3.11\"\n'
+        '[project]\nrequires-python = ">=3.11"\n'
         '[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\n',
         encoding="utf-8",
     )
