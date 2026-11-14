@@ -72,7 +72,7 @@ def test_preflight_reports_missing_manual_bootstrap_guard_as_environment_failure
     assert failure["severity"] == "critical"
     assert failure["root_cause_category"] == "environment"
     assert failure["root_cause_status"] == "unresolved"
-    assert failure["regression_test"] == "tests/test_hosted_cpu_validation_workflow.py"
+    assert failure["regression_test"] == "tests/test_deterministic_preflight.py"
 
 
 def test_preflight_detects_python_syntax_error_and_records_file_evidence(tmp_path):
