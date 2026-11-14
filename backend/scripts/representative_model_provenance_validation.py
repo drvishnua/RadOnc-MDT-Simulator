@@ -780,6 +780,7 @@ async def main() -> int:
             "seeded_claim": positive_control_claim,
             "supplied_peer_ids": positive_control_result.get("source_peer_ids") or [],
             "challenge_detected": positive_control_detected,
+            "response_to_other_perspectives": positive_control_result.get("response_to_other_perspectives") or "",
             "substantive_challenges": positive_control_result.get("substantive_challenges") or [],
             "case_data_integrity_flags": positive_control_result.get("case_data_integrity_flags") or [],
             "source_reference_integrity_flags": positive_control_result.get("source_reference_integrity_flags") or [],
