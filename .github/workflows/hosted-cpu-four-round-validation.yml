@@ -11,7 +11,7 @@ on:
 permissions:
   contents: read
 
-# One-time explicitly marked hosted CPU validation trigger.
+# This 45-role CPU inference is resource-intensive; require an explicit commit marker.
 concurrency:
   group: hosted-cpu-four-round-mdt-validation
   # A newly marked validation replaces a stale run in this isolated CPU-only group.
