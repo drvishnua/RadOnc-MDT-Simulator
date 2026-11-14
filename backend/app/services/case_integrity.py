@@ -482,6 +482,18 @@ def _unqualified_prerequisite_status_matches(
             # a negative finding; the word "negative" is not an asserted result.
             continue
         if (
+            status_token == "negative"
+            and re.search(
+                r"\b(?:unknown|unclear|undetermined)\b"
+                r"[^.!?;:\n]{0,120}\brather\s+than\s+absent\s+or\s*$",
+                before_status,
+                re.IGNORECASE,
+            )
+        ):
+            # "Unknown ... rather than absent or negative" explicitly rejects
+            # a negative finding; the word "negative" is not an asserted result.
+            continue
+        if (
             status_token in {"unmet", "unfulfilled", "failed", "negative"}
             and re.search(r"\b(?:not|never|rather\s+than|instead\s+of)\s*$", before_status, re.IGNORECASE)
         ):
