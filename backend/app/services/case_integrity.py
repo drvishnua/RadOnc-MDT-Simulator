@@ -337,10 +337,76 @@ _TNM_EXPRESSION_PATTERN = re.compile(
 )
 
 
+_TNM_NEGATED_PREFIX_PATTERN = re.compile(
+    r"\b(?:does|do|did)\s+not\s+(?:equate\s+(?:to|with)|translate\s+(?:to|into)|infer)\s*$"
+    r"|\bcannot\s+(?:be\s+)?inferred(?:\s+(?:as|to))?\s*$"
+    r"|\bcannot\s+infer\s*$"
+    r"|\b(?:should|must)\s+not\s+be\s+inferred(?:\s+(?:as|to))?\s*$"
+    r"|\bdo\s+not\s+infer\s*$"
+    r"|\bnot\s+(?:inferable|deducible|derivable)\s*$",
+    re.IGNORECASE,
+)
+_TNM_NEGATED_SUFFIX_PATTERN = re.compile(
+    r"^\s*(?:cannot\s+(?:be\s+)?inferred|"
+    r"(?:should|must)\s+not\s+be\s+inferred|"
+    r"(?:is|are|was|were)\s+not\s+inferred|"
+    r"(?:is\s+)?not\s+(?:inferable|deducible|derivable))\b",
+    re.IGNORECASE,
+)
+
+
+def _unqualified_tnm_matches(value: str) -> list[str]:
+    """Return TNM tokens that are asserted, not explicitly rejected as inference.
+
+    The general case-claim qualifier matcher intentionally remains unchanged.
+    These additional forms are TNM-specific and are scoped to the individual
+    token, so rejecting an inferred T category cannot hide a separate asserted
+    N/M category later in the same clause.
+    """
+    analysis_text = _collapse_horizontal_whitespace(value)
+    findings: list[str] = []
+    for match in _TNM_EXPRESSION_PATTERN.finditer(analysis_text):
+        sentence_end = min(
+            (
+                position
+                for mark in ".!?;:\n"
+                if (position := analysis_text.find(mark, match.end())) >= 0
+            ),
+            default=len(analysis_text),
+        )
+        if sentence_end < len(analysis_text) and analysis_text[sentence_end] == "?":
+            continue
+
+        left = max(
+            (boundary.end() for boundary in _CLAUSE_BOUNDARY.finditer(analysis_text, 0, match.start())),
+            default=0,
+        )
+        right = min(
+            (boundary.start() for boundary in _CLAUSE_BOUNDARY.finditer(analysis_text, match.end())),
+            default=len(analysis_text),
+        )
+        clause = analysis_text[left:right]
+        if _QUALIFIER.search(clause):
+            continue
+
+        prefix = analysis_text[max(left, match.start() - 120):match.start()]
+        suffix = analysis_text[match.end():min(right, match.end() + 120)]
+        if (
+            _TNM_NEGATED_PREFIX_PATTERN.search(prefix)
+            or _TNM_NEGATED_SUFFIX_PATTERN.match(suffix)
+        ):
+            continue
+
+        token = match.group(0).strip()
+        if token and token.casefold() not in {item.casefold() for item in findings}:
+            findings.append(token)
+    return findings
+
+
 def _tnm_component_values(value: str, component: str) -> set[str]:
     """Extract explicit unqualified T/N/M component values from standalone or combined TNM."""
     values: set[str] = set()
-    for snippet in _unqualified_matches(_TNM_EXPRESSION_PATTERN, value):
+    for snippet in _unqualified_tnm_matches(value):
         if component == "T":
             match = re.search(r"(?:c|p|yc|yp)?(T(?:is|x|0|[1-4][a-d]?))", snippet, re.IGNORECASE)
         elif component == "N":

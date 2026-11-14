@@ -162,6 +162,41 @@ def test_uncertain_m_stage_reference_about_exclusion_is_not_flagged():
     assert audit_unverified_case_claims(case, payload) == []
 
 
+def test_explicitly_rejected_tnm_inferences_are_not_flagged():
+    case = _case()
+    payload = {
+        "risk_flags": [
+            "A 1x1 cm lesion does not equate to T1 disease.",
+            "T1 cannot be inferred from lesion size.",
+            "N0 cannot be inferred from missing nodal information.",
+            "Do not infer M0 from an unreported metastatic work-up.",
+        ]
+    }
+    assert audit_unverified_case_claims(case, payload) == []
+
+
+def test_rejected_tnm_inference_does_not_hide_a_separate_asserted_tnm_group():
+    case = _case()
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "risk_flags": [
+            "T1 cannot be inferred from lesion size and the case is cT2N1M0."
+        ]
+    })).casefold()
+
+    assert "t-stage value(s) t2" in flags
+    assert "n-stage value(s) n1" in flags
+    assert "m-stage value(s) m0" in flags
+
+
+def test_tnm_like_classification_remains_flagged_as_unsupported_staging():
+    case = _case()
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The model labels the lesion T1-like."
+    })).casefold()
+
+    assert "t-stage value(s) t1" in flags
+
+
 def test_unqualified_m1_assertion_is_still_flagged():
     case = _case()
     flags = audit_unverified_case_claims(case, {"provisional_conclusion": "The patient has M1 disease."})
