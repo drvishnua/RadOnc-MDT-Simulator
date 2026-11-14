@@ -113,6 +113,35 @@ def test_chair_uncertainties_exclude_unverified_role_assertions_but_keep_unknown
     assert any("unsupported T-stage" in item for item in report.case_data_integrity_flags)
 
 
+def test_completeness_rebuilds_proposition_consensus_note_without_near_duplicate_draft_text():
+    case = SyntheticCase(
+        scenario_title="Chair duplicate proposition note test",
+        case_summary="Fictional case used only for deterministic Chair report validation.",
+    )
+    draft = _empty_report().model_copy(update={
+        "unresolved_disagreements": [
+            "No proposition-level consensus is established by free-text agreement notes; position labels and repeated wording are not counted as votes.",
+            "No proposition-level consensus is established by the saved free-text agreement notes; position labels and repeated wording are not counted as votes.",
+            "A genuine source-linked disagreement remains open: R2:RO-01 and R2:SO-02 describe distinct conditional options.",
+        ],
+    })
+    round1 = _rows("assessment", ["insufficient_information"] * 45)
+    round2 = _rows("result", ["insufficient_information"] * 45)
+    round3 = _rows("result", ["insufficient_information"] * 45)
+
+    report = ensure_chair_report_completeness(draft, case, round1, round2, round3)
+
+    proposition_notes = [
+        item for item in report.unresolved_disagreements
+        if item.casefold().startswith("no proposition-level consensus is established by")
+    ]
+    assert proposition_notes == [
+        "No proposition-level consensus is established by free-text agreement notes; "
+        "position labels and repeated wording are not counted as votes."
+    ]
+    assert any("genuine source-linked disagreement" in item for item in report.unresolved_disagreements)
+
+
 def test_completeness_rebuilds_recorded_agreements_from_completed_round_records():
     case = SyntheticCase(
         scenario_title="Chair completeness agreement provenance test",

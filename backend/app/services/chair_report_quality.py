@@ -877,7 +877,7 @@ def ensure_chair_report_completeness(
         "round-3 positions have no unique modal label",
         "round-3 positions were uniform",
         "no non-uniform position labels were recorded",
-        "no proposition-level consensus is established by free-text agreement notes",
+        "no proposition-level consensus is established by",
     )
     draft_disagreements = [
         item
