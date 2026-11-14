@@ -3274,3 +3274,29 @@ def test_chair_keeps_genuine_r3_challenge_without_zero_challenge_disclosure():
         "No Round-3 role saved a substantive_challenges entry" in item
         for item in report.unresolved_disagreements
     )
+
+
+def test_deterministic_neither_indication_repair_handles_singular_and_plural_subjects():
+    from app.services.mdt_generation import (
+        _deterministically_neutralise_neither_indication_claim,
+        _round_reference_tokens,
+    )
+
+    singular = (
+        "Both R2:RO-01 and R2:SO-02 state that neither option is indicated "
+        "solely because required information is missing."
+    )
+    repaired_singular = _deterministically_neutralise_neither_indication_claim(singular)
+    assert repaired_singular is not None
+    assert "does not establish whether option is indicated" in repaired_singular
+    assert "neither option is indicated" not in repaired_singular
+    assert _round_reference_tokens(repaired_singular) == _round_reference_tokens(singular)
+
+    plural = (
+        "Neither surgery-first nor preoperative multimodality is indicated "
+        "on the incomplete record."
+    )
+    repaired_plural = _deterministically_neutralise_neither_indication_claim(plural)
+    assert repaired_plural is not None
+    assert "does not establish whether either surgery-first or preoperative multimodality is indicated" in repaired_plural
+    assert "neither surgery-first nor preoperative multimodality is indicated" not in repaired_plural
