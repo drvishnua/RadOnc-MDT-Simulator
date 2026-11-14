@@ -5,6 +5,9 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
     paths:
       - "frontend/**"
       - "scripts/**"
@@ -16,17 +19,17 @@ permissions:
   contents: read
 
 concurrency:
-  group: frontend-build
+  group: frontend-build-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   build:
     name: Validate launcher and build frontend
-    runs-on: [self-hosted, Windows, X64]
+    runs-on: windows-latest
     timeout-minutes: 15
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
 
       - name: Validate local launcher PowerShell syntax
         shell: powershell
@@ -56,7 +59,7 @@ jobs:
           Write-Host "Start/stop PowerShell scripts and command wrappers are present and valid."
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
         with:
           node-version: "22"
 
@@ -70,7 +73,14 @@ jobs:
         working-directory: frontend
         shell: powershell
         run: |
-          npm install --no-audit --no-fund
+          npm ci --no-audit --no-fund
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Test case draft persistence
+        working-directory: frontend
+        shell: powershell
+        run: |
+          npm test
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Type-check and build

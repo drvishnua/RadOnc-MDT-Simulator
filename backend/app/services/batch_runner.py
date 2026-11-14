@@ -7,16 +7,40 @@ import logging
 import time
 
 from app.agents.catalog import AGENT_PROFILES
+from app.config import RADONC_AGENT_CONCURRENCY
 from app.schemas import SyntheticCase
 from app.services import run_store
-from app.services.ollama import generate_agent_assessment
+from app.services.execution_lock import MODEL_EXECUTION_LOCK
+from app.services.ollama import AgentGenerationError, generate_agent_assessment
 
 logger = logging.getLogger("radonc.batch")
-_batch_lock = asyncio.Lock()
+_batch_lock = MODEL_EXECUTION_LOCK
+MAX_SCHEMA_ATTEMPTS = 2
 
 
 def batch_is_running() -> bool:
     return _batch_lock.locked()
+
+
+async def _generate_with_schema_retry(profile, case: SyntheticCase):
+    """Retry malformed structured output once with a larger token budget."""
+    token_budgets = (1100, 1500)
+    for attempt, max_tokens in enumerate(token_budgets, start=1):
+        try:
+            return await generate_agent_assessment(
+                profile=profile,
+                case=case,
+                round_number=1,
+                max_tokens=max_tokens,
+            )
+        except AgentGenerationError:
+            if attempt >= len(token_budgets):
+                raise
+            logger.warning(
+                "Retrying malformed structured output for %s with increased output budget (%s tokens)",
+                profile["agent_id"],
+                token_budgets[attempt],
+            )
 
 
 async def run_independent_assessments(run_id: str) -> None:
@@ -30,40 +54,39 @@ async def run_independent_assessments(run_id: str) -> None:
                 for item in run_store.list_results(run_id)
             }
 
-            for profile in AGENT_PROFILES:
-                status = existing.get(profile["agent_id"], "queued")
-                if status == "completed":
-                    continue
+            semaphore = asyncio.Semaphore(RADONC_AGENT_CONCURRENCY)
 
-                started = time.perf_counter()
-                run_store.mark_agent_running(run_id, profile["agent_id"])
-                try:
-                    # Each agent receives only the original case and its own role profile.
-                    # No other agent's assessment or debate text is passed to this call.
-                    assessment = await generate_agent_assessment(
-                        profile=profile,
-                        case=case,
-                        round_number=1,
-                    )
-                    run_store.save_agent_success(
-                        run_id=run_id,
-                        agent_id=profile["agent_id"],
-                        assessment_json=assessment.model_dump_json(),
-                        duration_seconds=time.perf_counter() - started,
-                    )
-                except Exception as exc:  # Continue to the next role if one agent fails.
-                    logger.exception(
-                        "Independent assessment failed for run %s agent %s",
-                        run_id,
-                        profile["agent_id"],
-                    )
-                    run_store.save_agent_failure(
-                        run_id=run_id,
-                        agent_id=profile["agent_id"],
-                        error_message=f"{type(exc).__name__}: {exc}",
-                        duration_seconds=time.perf_counter() - started,
-                    )
+            async def process_profile(profile: dict[str, str]) -> None:
+                agent_id = profile["agent_id"]
+                if existing.get(agent_id, "queued") == "completed":
+                    return
 
+                async with semaphore:
+                    started = time.perf_counter()
+                    run_store.mark_agent_running(run_id, agent_id)
+                    try:
+                        # Each agent receives only the original case and its own role profile.
+                        assessment = await _generate_with_schema_retry(profile, case)
+                        run_store.save_agent_success(
+                            run_id=run_id,
+                            agent_id=agent_id,
+                            assessment_json=assessment.model_dump_json(),
+                            duration_seconds=time.perf_counter() - started,
+                        )
+                    except Exception as exc:
+                        logger.exception(
+                            "Independent assessment failed for run %s agent %s",
+                            run_id,
+                            agent_id,
+                        )
+                        run_store.save_agent_failure(
+                            run_id=run_id,
+                            agent_id=agent_id,
+                            error_message=f"{type(exc).__name__}: {exc}",
+                            duration_seconds=time.perf_counter() - started,
+                        )
+
+            await asyncio.gather(*(process_profile(profile) for profile in AGENT_PROFILES))
             run_store.mark_run_finished(run_id)
         except Exception:
             logger.exception("Batch run orchestration failed for run %s", run_id)

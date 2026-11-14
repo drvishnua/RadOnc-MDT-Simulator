@@ -14,7 +14,7 @@ def test_health_endpoint_is_educational_only() -> None:
     assert response.json()["mode"] == "education_simulation_only"
 
 
-def test_synthetic_case_validation_accepts_minimal_case() -> None:
+def test_fictional_case_validation_accepts_minimal_case() -> None:
     response = client.post(
         "/api/cases/validate",
         json={
@@ -27,8 +27,37 @@ def test_synthetic_case_validation_accepts_minimal_case() -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["valid"] is True
-    assert body["mode"] == "synthetic_educational_case"
+    assert body["mode"] == "fictional_educational_case"
     assert any("Age is not supplied" in warning for warning in body["warnings"])
+
+
+def test_synthetic_case_validation_accepts_full_structured_case() -> None:
+    response = client.post(
+        "/api/cases/validate",
+        json={
+            "scenario_title": "Synthetic structured rectal case",
+            "case_summary": "Fictional case for complete structured-field validation.",
+            "age_years": 60,
+            "sex_at_birth": "Female",
+            "primary_site": "Rectum",
+            "histology": "Adenocarcinoma",
+            "clinical_t_stage": "cT2",
+            "clinical_n_stage": "cN1",
+            "clinical_m_stage": "cM1",
+            "stage_group": "IVA",
+            "performance_status": "ECOG 1",
+            "pathology_summary": "Synthetic biopsy summary.",
+            "imaging_summary": "Synthetic imaging summary.",
+            "relevant_comorbidities": ["Hypertension"],
+            "prior_treatment": ["Diagnostic biopsy"],
+            "patient_goals": ["Preserve function"],
+            "social_context": ["Lives independently"],
+            "resource_context": ["MRI available"],
+            "known_unknowns": ["Further review of imaging is pending"],
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["valid"] is True
 
 
 def test_case_schema_rejects_identifying_extra_fields() -> None:
@@ -126,6 +155,9 @@ def test_single_agent_assessment_endpoint_uses_local_generation(monkeypatch) -> 
         return AgentAssessment(
             agent_id="RO-01",
             round_number=round_number,
+            position="conditional",
+            provisional_conclusion="A provisional educational conclusion is conditional because important case details remain unknown.",
+            preferred_educational_option="No option can be preferred until the outstanding details are clarified.",
             perspective_summary="A mocked educational assessment for endpoint testing.",
             confidence=0.5,
             evidence_gaps=["No evidence retrieval is connected in this test."],
@@ -175,3 +207,17 @@ def test_single_agent_assessment_rejects_identifying_case_fields() -> None:
         },
     )
     assert response.status_code == 422
+
+
+def test_cors_allows_patient_delete_preflight_from_local_vite_origin() -> None:
+    response = client.options(
+        "/api/patients/test-patient-id",
+        headers={
+            "Origin": "http://127.0.0.1:5173",
+            "Access-Control-Request-Method": "DELETE",
+        },
+    )
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://127.0.0.1:5173"
+    allowed_methods = response.headers["access-control-allow-methods"]
+    assert "DELETE" in allowed_methods

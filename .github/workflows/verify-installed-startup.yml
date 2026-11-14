@@ -1,0 +1,19 @@
+name: "PAUSED — Installed application startup persistence"
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  notice:
+    name: "Security pause — no target-machine test executed"
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Explain temporary hosted-runner policy
+        run: |
+          echo "This workflow is intentionally paused while the repository is public."
+          echo "This workflow tested a persistent installation on the target laptop across runner jobs. It cannot be meaningfully reproduced on a fresh hosted VM."
+          echo "No laptop installation, local source sync, Ollama inference, MDT stress run, or GPU measurement was performed."
+          echo "This notice is not a functional test pass. Use the standard hosted CI workflows for code validation."

@@ -1,78 +1,19 @@
-name: Local Ollama and GPU Diagnostic
-
+name: "PAUSED — Local Ollama and GPU diagnostic"
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/local-runner-check.yml"
 
 permissions:
   contents: read
 
-concurrency:
-  group: local-runner-check
-  cancel-in-progress: false
-
 jobs:
-  verify:
-    name: Test local Ollama API and inference
-    runs-on: [self-hosted, Windows, X64]
-    timeout-minutes: 6
+  notice:
+    name: "Security pause — no target-machine test executed"
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
     steps:
-      - name: Inspect Ollama server, installed models, inference, and GPU allocation
-        shell: powershell
+      - name: Explain temporary hosted-runner policy
         run: |
-          $ErrorActionPreference = "Continue"
-          $base = "http://127.0.0.1:11434"
-          Write-Host "=== RUNNER ==="
-          whoami
-          Write-Host "=== OLLAMA SERVER ==="
-          try {
-            $version = Invoke-RestMethod -Uri "$base/api/version" -TimeoutSec 5
-            Write-Host "OLLAMA_SERVER_REACHABLE version=$($version.version)"
-          } catch {
-            Write-Host "OLLAMA_SERVER_UNREACHABLE"
-            Write-Host "DETAIL=$($_.Exception.Message)"
-            exit 0
-          }
-          Write-Host "=== INSTALLED MODELS ==="
-          try {
-            $tags = Invoke-RestMethod -Uri "$base/api/tags" -TimeoutSec 10
-            $models = @($tags.models)
-            if ($models.Count -eq 0) {
-              Write-Host "NO_MODELS_DOWNLOADED"
-              exit 0
-            }
-            $models | ForEach-Object { Write-Host ("MODEL name={0} size_bytes={1}" -f $_.name,$_.size) }
-          } catch {
-            Write-Host "MODEL_LIST_FAILED: $($_.Exception.Message)"
-            exit 0
-          }
-          $model = $models[0].name
-          Write-Host "=== INFERENCE TEST (THINKING DISABLED) ==="
-          Write-Host "Testing already-installed model: $model"
-          try {
-            $body = @{ model = $model; prompt = "Reply with exactly: RADONC_LOCAL_INFERENCE_OK"; stream = $false; think = $false; options = @{ num_predict = 48 } } | ConvertTo-Json -Depth 5
-            $result = Invoke-RestMethod -Uri "$base/api/generate" -Method Post -ContentType "application/json" -Body $body -TimeoutSec 180
-            $responseText = [string]$result.response
-            $thinkingText = [string]$result.thinking
-            Write-Host "INFERENCE_COMPLETED"
-            Write-Host "USER_RESPONSE_LENGTH=$($responseText.Length)"
-            Write-Host "THINKING_LENGTH=$($thinkingText.Length)"
-            Write-Host "MODEL_RESPONSE=$responseText"
-            Write-Host "TOTAL_DURATION_NS=$($result.total_duration)"
-            Write-Host "LOAD_DURATION_NS=$($result.load_duration)"
-            if ([string]::IsNullOrWhiteSpace($responseText)) {
-              Write-Host "INFERENCE_WARNING=Empty user-facing response; inspect API response fields."
-            }
-            Write-Host "=== OLLAMA PROCESSOR ALLOCATION ==="
-            ollama ps
-          } catch {
-            Write-Host "INFERENCE_FAILED: $($_.Exception.Message)"
-            try { ollama ps } catch {}
-          }
-          Write-Host "=== GPU SNAPSHOT ==="
-          try { nvidia-smi } catch { Write-Host "NVIDIA_SMI_UNAVAILABLE" }
-          Write-Host "=== DIAGNOSTIC COMPLETE ==="
+          echo "This workflow is intentionally paused while the repository is public."
+          echo "This workflow inspected services and devices on the target laptop. A hosted VM cannot provide those laptop diagnostics."
+          echo "No laptop installation, local source sync, Ollama inference, MDT stress run, or GPU measurement was performed."
+          echo "This notice is not a functional test pass. Use the standard hosted CI workflows for code validation."

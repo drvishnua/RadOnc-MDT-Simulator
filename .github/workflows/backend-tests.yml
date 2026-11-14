@@ -8,76 +8,90 @@ on:
     paths:
       - "backend/**"
       - ".github/workflows/backend-tests.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-tests.yml"
 
 permissions:
   contents: read
 
 concurrency:
-  group: backend-tests
+  group: backend-tests-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   test:
     name: Install backend dependencies and run tests
-    runs-on: [self-hosted, Windows, X64]
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
 
-      - name: Find installed Python 3.11 or newer
-        shell: powershell
-        run: |
-          $ErrorActionPreference = "Continue"
-          Write-Host "=== PYTHON LAUNCHERS ==="
-          $launcher = Get-Command py -ErrorAction SilentlyContinue
-          if ($launcher) {
-            py -0p
-          }
-          $selected = $null
-          if ($launcher) {
-            foreach ($version in @("3.13", "3.12", "3.11")) {
-              $candidate = & py "-$version" -c "import sys; print(sys.executable)" 2>$null
-              if ($LASTEXITCODE -eq 0 -and $candidate) {
-                $selected = [string]($candidate | Select-Object -Last 1)
-                break
-              }
-            }
-          }
-          if (-not $selected) {
-            $pythonCommand = Get-Command python -ErrorAction SilentlyContinue
-            if ($pythonCommand) {
-              $candidate = & python -c "import sys; print(sys.executable)" 2>$null
-              if ($LASTEXITCODE -eq 0 -and $candidate) {
-                $selected = [string]($candidate | Select-Object -Last 1)
-              }
-            }
-          }
-          if (-not $selected) {
-            Write-Error "No usable Python 3.11+ installation found on this laptop."
-            exit 1
-          }
-          $version = & $selected -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"
-          if ([version]$version -lt [version]"3.11") {
-            Write-Error "Python 3.11 or newer is required; found $version."
-            exit 1
-          }
-          Write-Host "Selected Python: $selected"
-          Write-Host "Python version: $version"
-          "PYTHON_EXE=$selected" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Set up Python
+        uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: backend/requirements.txt
 
       - name: Install dependencies
         working-directory: backend
-        shell: powershell
         run: |
-          & $env:PYTHON_EXE -m pip install --upgrade pip
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          & $env:PYTHON_EXE -m pip install -r requirements.txt
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
 
-      - name: Run backend tests
+      - name: Prepare test diagnostic output
         working-directory: backend
-        shell: powershell
         run: |
-          & $env:PYTHON_EXE -m pytest
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          mkdir -p validation_artifacts/test-results
+          rm -f validation_artifacts/test-results/pytest-junit.xml
+          rm -f validation_artifacts/test-results/pytest_diagnostics.json
+          rm -f validation_artifacts/test-results/pytest_diagnostics.md
+
+      - name: Run deterministic no-inference validation preflight
+        working-directory: backend
+        run: python scripts/deterministic_preflight.py
+
+      - name: Compile live validation and diagnostic scripts
+        working-directory: backend
+        run: |
+          python -m py_compile \
+            scripts/live_four_round_validation.py \
+            scripts/representative_model_provenance_validation.py \
+            scripts/pytest_junit_diagnostics.py
+
+      - name: Run backend tests and emit JUnit XML
+        working-directory: backend
+        run: |
+          python -m pytest \
+            --junitxml=validation_artifacts/test-results/pytest-junit.xml
+
+      - name: Normalize pytest results into per-test diagnostics
+        if: always()
+        working-directory: backend
+        run: |
+          python scripts/pytest_junit_diagnostics.py \
+            --junit-xml validation_artifacts/test-results/pytest-junit.xml \
+            --output-dir validation_artifacts/test-results
+
+      - name: Upload deterministic preflight reports
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: deterministic-preflight-report
+          path: backend/validation_artifacts/preflight/*
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload pytest JUnit and normalized diagnostics
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: pytest-junit-diagnostics
+          path: backend/validation_artifacts/test-results/*
+          if-no-files-found: warn
+          retention-days: 14

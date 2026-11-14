@@ -111,7 +111,7 @@ if (-not (Test-Path (Join-Path $FrontendDir "node_modules"))) {
     Write-Host "Installing frontend dependencies..."
     Push-Location $FrontendDir
     try {
-        & $NpmExecutable install --no-audit --no-fund
+        & $NpmExecutable ci --no-audit --no-fund
         if ($LASTEXITCODE -ne 0) { throw "Frontend dependency installation failed." }
     } finally {
         Pop-Location
