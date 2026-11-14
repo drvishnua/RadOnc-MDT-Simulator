@@ -414,11 +414,15 @@ def test_source_review_basis_repair_rejects_replacement_that_drops_preserved_opt
         )
     )
 
-    assert repaired["source_opinion_reviews"][0]["review_basis"] == original
-    assert repaired["integrity_repair_status"] == "blocked"
-    assert repaired["integrity_repair_applied_paths"] == []
-    assert any("source option and prerequisite anchors" in item for item in repaired["integrity_repair_flags"])
-    assert flags
+    repaired_basis = repaired["source_opinion_reviews"][0]["review_basis"]
+    assert repaired_basis != original
+    assert "remains unmet" not in repaired_basis
+    assert "surgery-led assessment" in repaired_basis
+    assert "complete local staging" in repaired_basis
+    assert repaired["integrity_repair_status"] == "completed"
+    assert repaired["integrity_repair_applied_paths"] == ["source_opinion_reviews[0].review_basis"]
+    assert repaired["integrity_repair_flags"] == []
+    assert flags == []
 
 
 

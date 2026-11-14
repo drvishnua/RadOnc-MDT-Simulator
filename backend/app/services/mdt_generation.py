@@ -1300,6 +1300,39 @@ async def _repair_unsupported_prerequisite_wording(
                     or _deterministically_neutralise_neither_indication_claim(original)
                 )
                 if (
+                    deterministic_replacement is not None
+                    and not _source_opinion_repair_preserves_anchors(
+                        case, payload, path, deterministic_replacement
+                    )
+                ):
+                    # The exact server-registered excerpt is trusted source text.
+                    # Append it only when the original field's deterministic edit
+                    # lacks enough lexical anchors; never ask the model to recreate
+                    # or paraphrase the source option/conditions.
+                    match = re.fullmatch(
+                        r"source_opinion_responses\\[(\\d+)\\]\\.(analysis|comparison)",
+                        path,
+                    )
+                    if match:
+                        source_records = payload.get("source_opinion_responses") or []
+                    else:
+                        match = re.fullmatch(
+                            r"source_opinion_reviews\\[(\\d+)\\]\\.review_basis",
+                            path,
+                        )
+                        source_records = payload.get("source_opinion_reviews") or []
+                    if match:
+                        source_index = int(match.group(1))
+                        if source_index < len(source_records) and isinstance(source_records[source_index], dict):
+                            exact_excerpt = str(source_records[source_index].get("source_excerpt") or "")
+                            anchored_candidate = (
+                                deterministic_replacement + " Attributed source wording: " + exact_excerpt
+                            )
+                            if _source_opinion_repair_preserves_anchors(
+                                case, payload, path, anchored_candidate
+                            ):
+                                deterministic_replacement = anchored_candidate
+                if (
                     deterministic_replacement is None
                     or _round_reference_tokens(deterministic_replacement)
                     != _round_reference_tokens(original)
