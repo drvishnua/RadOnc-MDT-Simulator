@@ -1001,7 +1001,7 @@ def build_case_validation_warnings(case: SyntheticCase) -> list[str]:
     ):
         if getattr(case, field) in (None, ""):
             warnings.append(message)
-    empty_fields = [field for field in ("relevant_comorbidities", "prior_treatment", "patient_goals", "social_context", "resource_context") if not getattr(case, field)]
+    empty_fields = [field for field in ("current_medications", "known_allergies", "relevant_investigations", "relevant_comorbidities", "prior_treatment", "patient_goals", "social_context", "resource_context", "known_unknowns") if not getattr(case, field)]
     if empty_fields:
         warnings.append("Empty structured lists are not confirmed negatives; these fields are not reported: " + ", ".join(empty_fields) + ". Review the raw case summary before interpreting them.")
     summary = case.case_summary.casefold()
