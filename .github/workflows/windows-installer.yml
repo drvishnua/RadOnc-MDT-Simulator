@@ -2,6 +2,15 @@ name: Windows Installer Build
 
 on:
   workflow_dispatch:
+    inputs:
+      validation_mode:
+        description: "Run the full bounded acceptance or only probe Ollama context allocation."
+        type: choice
+        required: true
+        default: full
+        options:
+          - full
+          - context_probe
   push:
     branches:
       - feature/four-round-mdt-and-performance
@@ -304,6 +313,7 @@ jobs:
             $env:LOCALAPPDATA = $localAppData
             $env:RADONC_DATA_DIR = Join-Path $localAppData "RadOncMDT\Data"
             $env:RADONC_PORT = "18765"
+            $validationMode = "${{ github.event.inputs.validation_mode || 'full' }}"
 
             $driveRoot = [IO.Path]::GetPathRoot([IO.Path]::GetFullPath($localAppData))
             $driveName = $driveRoot.TrimEnd("\").TrimEnd(":")
@@ -368,20 +378,26 @@ jobs:
 
             $env:OLLAMA_BASE_URL = $ollamaUrl
             $env:OLLAMA_MODEL = $RadOncModelName
-            $inferenceBody = @{
-              model = $RadOncModelName
-              prompt = "Reply with exactly this token: RADONC_HOSTED_CPU_INFERENCE_OK"
-              stream = $false
-              think = $false
-              options = @{ num_predict = 32; temperature = 0 }
-            } | ConvertTo-Json -Depth 6
-            $inference = Invoke-RestMethod -Uri "$ollamaUrl/api/generate" -Method Post -ContentType "application/json" -Body $inferenceBody -TimeoutSec 900
-            $inferenceText = [string]$inference.response
-            if ($inferenceText -notmatch "RADONC_HOSTED_CPU_INFERENCE_OK") {
-              throw "The downloaded model did not return the expected hosted CPU inference marker."
+            if ($validationMode -ne "context_probe") {
+              # Match the application's first R1/R2 generation context; do not preload
+              # the runner at Ollama's smaller default context before the live test.
+              $inferenceBody = @{
+                model = $RadOncModelName
+                prompt = "Reply with exactly this token: RADONC_HOSTED_CPU_INFERENCE_OK"
+                stream = $false
+                think = $false
+                options = @{ num_predict = 32; temperature = 0; num_ctx = 6144 }
+              } | ConvertTo-Json -Depth 6
+              $inference = Invoke-RestMethod -Uri "$ollamaUrl/api/generate" -Method Post -ContentType "application/json" -Body $inferenceBody -TimeoutSec 900
+              $inferenceText = [string]$inference.response
+              if ($inferenceText -notmatch "RADONC_HOSTED_CPU_INFERENCE_OK") {
+                throw "The downloaded model did not return the expected hosted CPU inference marker."
+              }
+              Write-Host ("HOSTED_CPU_INFERENCE_OK response_chars={0} total_duration_ns={1}" -f $inferenceText.Length,$inference.total_duration)
+              Write-Host "HOSTED_CPU_ONLY=TRUE; no target-laptop or NVIDIA GPU claim is made."
+            } else {
+              Write-Host "HOSTED_CPU_WARMUP_SKIPPED_FOR_COLD_CONTEXT_PROBE"
             }
-            Write-Host ("HOSTED_CPU_INFERENCE_OK response_chars={0} total_duration_ns={1}" -f $inferenceText.Length,$inference.total_duration)
-            Write-Host "HOSTED_CPU_ONLY=TRUE; no target-laptop or NVIDIA GPU claim is made."
 
             $appStdout = Join-Path $env:RUNNER_TEMP "radonc-first-run-app.stdout.log"
             $appStderr = Join-Path $env:RUNNER_TEMP "radonc-first-run-app.stderr.log"
@@ -418,24 +434,32 @@ jobs:
             Write-Host "HOSTED_INSTALLED_APP_MODEL_RUNTIME_OK"
             Write-Host "HOSTED_INSTALLED_APP_45_ROLES_OK"
 
-            # Run six actual R2/R3 round calls, one isolated R3 adversarial positive-control
-            # call, and a bounded three-role Chair R4 synthesis against this exact clean-hosted
-            # Ollama/model instance. R1 uses deterministic fixtures; only actual round outputs
-            # are saved/reloaded in disposable SQLite. This is CPU-only and does not invoke the
-            # production 45-role round runner.
             $env:OLLAMA_BASE_URL = $ollamaUrl
             $env:OLLAMA_MODEL = $RadOncModelName
             Push-Location (Join-Path $env:GITHUB_WORKSPACE "backend")
             try {
-              python scripts/representative_model_provenance_validation.py
-              if ($LASTEXITCODE -ne 0) {
-                throw "Representative live R2/R3 provenance validation failed its quality gates."
+              if ($validationMode -eq "context_probe") {
+                python scripts/ollama_context_allocation_probe.py
+                if ($LASTEXITCODE -ne 0) {
+                  throw "Ollama did not demonstrate the requested 6144-to-8192 context allocation sequence."
+                }
+                Write-Host "HOSTED_OLLAMA_CONTEXT_ALLOCATION_PROBE_OK"
+              } else {
+                # Run six actual R2/R3 round calls, one isolated R3 adversarial positive-control
+                # call, and a bounded three-role Chair R4 synthesis against this exact clean-hosted
+                # Ollama/model instance. R1 uses deterministic fixtures; only actual round outputs
+                # are saved/reloaded in disposable SQLite. This is CPU-only and does not invoke the
+                # production 45-role round runner.
+                python scripts/representative_model_provenance_validation.py
+                if ($LASTEXITCODE -ne 0) {
+                  throw "Representative live R2/R3 provenance validation failed its quality gates."
+                }
+                Write-Host "HOSTED_REPRESENTATIVE_R2_R3_R4_VALIDATION_OK"
+                Write-Host "No patient record or durable MDT run was created; bounded rows were isolated in temporary SQLite."
               }
             } finally {
               Pop-Location
             }
-            Write-Host "HOSTED_REPRESENTATIVE_R2_R3_R4_VALIDATION_OK"
-            Write-Host "No patient record or durable MDT run was created; bounded rows were isolated in temporary SQLite."
           }
           finally {
             if ($appProcess) {
@@ -478,6 +502,15 @@ jobs:
               }
             }
           }
+
+      - name: Upload Ollama context allocation probe report
+        if: always() && github.event_name == 'workflow_dispatch' && github.event.inputs.validation_mode == 'context_probe'
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: ollama-context-allocation-probe
+          path: backend/validation_artifacts/ollama_context_allocation_probe.json
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Upload representative live R2/R3/R4 Chair provenance report
         if: always()
