@@ -288,6 +288,27 @@ async def ensure_round(run_id: str, round_number: int, metrics: dict) -> dict:
     )
 
 
+def _collect_integrity_quality_gate_failures(
+    round_payloads: list[tuple[str, list[dict], str]],
+) -> list[dict]:
+    """Treat every deterministic case/source integrity finding as a failed quality gate."""
+    failures: list[dict] = []
+    for round_label, rows, field in round_payloads:
+        for row in rows:
+            payload = row.get(field)
+            if not isinstance(payload, dict):
+                continue
+            for name in ("case_data_integrity_flags", "source_reference_integrity_flags"):
+                for flag in payload.get(name) or []:
+                    failures.append({
+                        "round": round_label,
+                        "agent_id": row.get("agent_id", "SG-07"),
+                        "type": name,
+                        "detail": str(flag),
+                    })
+    return failures
+
+
 async def main() -> int:
     started_all = time.perf_counter()
     started_at = datetime.now(timezone.utc).isoformat()
@@ -557,8 +578,19 @@ async def main() -> int:
             if row.get("duration_seconds") is not None
         ]
 
+        quality_gate_failures = _collect_integrity_quality_gate_failures([
+            ("R1", round1, "assessment"),
+            ("R2", round2, "result"),
+            ("R3", round3, "result"),
+            ("R4", [{"agent_id": "SG-07", "report": report}], "report"),
+        ])
         result_payload.update({
-            "status": "passed_structural_live_validation",
+            "status": (
+                "completed_with_quality_gate_failures"
+                if quality_gate_failures
+                else "passed_structural_live_validation"
+            ),
+            "quality_gate_failures": quality_gate_failures,
             "round_summaries": {
                 "round_1": round1_summary,
                 "round_2": round2_summary,
@@ -579,8 +611,12 @@ async def main() -> int:
                 "chair_position_counts_by_round": position_counts_by_round,
                 "chair_consensus_status_reconciled": expected_chair_status,
                 "consensus_points_empty_is_expected": not bool(report.get("consensus_points")),
+                "quality_gate_passed": not bool(quality_gate_failures),
+                "integrity_flag_count": len(quality_gate_failures),
             },
         })
+        # Preserve the report but do not label saved integrity findings as a clean pass.
+        return 1 if quality_gate_failures else 0
     except Exception as exc:
         result_payload["status"] = "failed_live_validation"
         result_payload["error"] = f"{type(exc).__name__}: {exc}"
