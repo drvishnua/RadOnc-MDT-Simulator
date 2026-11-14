@@ -284,10 +284,22 @@ def _compact_r1_text(value: str, limit: int) -> str:
 
 
 def _compact_r2_text(value: str, limit: int) -> str:
-    """Keep the peer's R2 attribution but neutralize round IDs quoted inside that R2 text."""
-    # Remove embedded citations from peer prose; placeholders can be copied and
-    # then misrepresented by the model as verbatim evidence excerpts.
-    neutralized = _EMBEDDED_ROUND_REFERENCE_PATTERN.sub("", value)
+    """Neutralise embedded round IDs without damaging the peer sentence structure."""
+    reference = r"R[123]:[A-Z]{2}-[0-9]{2}"
+    reference_list = re.compile(
+        rf"\b{reference}(?:(?:\s*,\s*(?:and\s+)?|\s+(?:and|&)\s+){reference})+\b",
+        re.IGNORECASE,
+    )
+    # Replace a cited list as one grammatical unit before handling single IDs.
+    # These generic phrases are not attributable citations; R3 must cite the
+    # explicit outer source label attached to the supplied peer record instead.
+    neutralized = _ROUND_REFERENCE_RANGE_PATTERN.sub(
+        "the referenced role records", value
+    )
+    neutralized = reference_list.sub("the referenced role records", neutralized)
+    neutralized = _EMBEDDED_ROUND_REFERENCE_PATTERN.sub(
+        "the referenced role record", neutralized
+    )
     return _compact(neutralized, limit)
 
 def _bind_exact_peer_evidence_excerpt(
@@ -1763,7 +1775,7 @@ async def generate_adversarial_contribution(
         "representation is not endorsement. Treat the verbatim case summary as attributed "
         "source text, not verified fact or consensus. Identify each distinct attributed opinion, "
         "its option, and every prerequisite. Compare each separately with your own saved R1/R2 "
-        f"positions and the supplied R2 peer sample. Cite peer roles only with their exact R2:AGENT_ID labels from that sample; never relabel an R2 peer as R1. An R1 citation is permitted only for your own role's independent assessment. When discussing your own R2 record, cite it as R2:{profile['agent_id']}; do not reuse an R1 source ID merely because that ID appears inside your quoted R2 text. The only R1 source you may cite in this round is R1:{profile['agent_id']}. Never cite role ranges, a complete role directory, or an unsupplied role as evidence. Cite only individual source IDs listed under ALLOWED ROUND SOURCE IDS; if an earlier source is mentioned inside an R2 contribution and its original record was not supplied, attribute the statement to that R2 contribution instead. Do not invent or cite an unprovided role. Do not conflate different conditional options "
+        f"positions and the supplied R2 peer sample. Cite peer roles only with their exact R2:AGENT_ID labels from that sample; never relabel an R2 peer as R1. An R1 citation is permitted only for your own role's independent assessment. When discussing your own R2 record, cite it as R2:{profile['agent_id']}; do not reuse an R1 source ID merely because that ID appears inside your quoted R2 text. The only R1 source you may cite in this round is R1:{profile['agent_id']}. Never cite role ranges, a complete role directory, or an unsupplied role as evidence. Cite only individual source IDs listed under ALLOWED ROUND SOURCE IDS; if an earlier source is mentioned inside an R2 contribution and its original record was not supplied, attribute the statement to that R2 contribution instead. Do not invent or cite an unprovided role. Embedded reference lists inside supplied R2 prose are neutralised to grammatical generic phrases such as 'the referenced role records'; these phrases are not attributable citations. When describing that prose, cite only the outer R2:AGENT_ID label attached to the supplied peer object. Do not copy a neutralised fragment as though it were a direct quotation. Do not conflate different conditional options "
         "or treat shared missing investigations as agreement on a pathway. For each opinion, "
         "assess REPRESENTATION FIDELITY ONLY: whether its option and conditions are faithfully "
         "represented in the actual R2 contribution text supplied to you. Before marking an option or "

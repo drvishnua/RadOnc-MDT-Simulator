@@ -460,6 +460,8 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
     assert "CASE:case_summary — do not collapse the two conditional options" in prompts[1]
     assert "bounded sample of at most 5 of 44 other roles" in prompts[1]
     assert "never relabel an R2 peer as R1" in prompts[1]
+    assert "the referenced role records" in prompts[1]
+    assert "cite only the outer R2:AGENT_ID label" in prompts[1]
     assert "When discussing your own R2 record, cite it as R2:RO-01" in prompts[1]
     assert "The only R1 source you may cite in this round is R1:RO-01" in prompts[1]
     assert "REPRESENTATION FIDELITY ONLY" in prompts[1]
@@ -1036,6 +1038,25 @@ def test_r2_records_exact_peer_sources_and_flags_broad_or_unsupplied_references(
                for flag in result.source_reference_integrity_flags)
     assert any("Reference R1:ZZ-99 was not supplied" in flag
                for flag in result.source_reference_integrity_flags)
+
+
+def test_compact_r2_text_neutralises_embedded_reference_lists_without_fragmenting_sentences():
+    from app.services.mdt_generation import _compact_r2_text
+
+    value = (
+        "Both R2:RO-01 and R2:MO-01 explicitly state that the prerequisites remain unknown; "
+        "R2:DS-02 adds that resectability must not be inferred; "
+        "R1:RO-02 through R1:SV-02 are unsupplied as attributable sources."
+    )
+
+    neutralised = _compact_r2_text(value, 1200)
+
+    assert neutralised == (
+        "Both the referenced role records explicitly state that the prerequisites remain unknown; "
+        "the referenced role record adds that resectability must not be inferred; "
+        "the referenced role records are unsupplied as attributable sources."
+    )
+    assert not any(token in neutralised for token in ("R1:", "R2:", "R3:"))
 
 
 def test_r3_records_exact_peer_sources_and_flags_wrong_round_references(monkeypatch):
