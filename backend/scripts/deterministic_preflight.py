@@ -121,7 +121,7 @@ def run_preflight(backend_dir: Path) -> dict:
     except (OSError, tomllib.TOMLDecodeError) as exc:
         config_error = f"{type(exc).__name__}: {exc}"
     python_requirement = config.get("project", {}).get("requires-python")
-    test_paths = config.get("tool", {}).get("pytest", {}).get("testpaths")
+    test_paths = config.get("tool", {}).get("pytest", {}).get("ini_options", {}).get("testpaths")
     config_ok = (
         config_error is None
         and isinstance(python_requirement, str)
