@@ -896,6 +896,24 @@ def _repairable_narrative_locations(payload: dict) -> dict[str, tuple[str, int |
     return locations
 
 
+def _repairable_text_max_length(path: str) -> int | None:
+    """Return the actual schema limit for a narrowly repairable narrative path."""
+    response_match = re.fullmatch(
+        r"source_opinion_responses\\[\\d+\\]\\.(analysis|comparison)", path
+    )
+    if response_match:
+        return {"analysis": 700, "comparison": 400}[response_match.group(1)]
+    review_match = re.fullmatch(
+        r"source_opinion_reviews\\[\\d+\\]\\.(review_basis|challenge)", path
+    )
+    if review_match:
+        return {"review_basis": 600, "challenge": 700}[review_match.group(1)]
+    return {
+        "provisional_conclusion": 900,
+        "response_to_other_perspectives": 1600,
+    }.get(path)
+
+
 def _set_repairable_narrative_text(
     payload: dict,
     location: tuple[str, int | None, str | None, str],
@@ -1223,12 +1241,18 @@ async def _repair_unsupported_prerequisite_wording(
             )
         for path, replacement in proposed_text.items():
             original = original_text[path]
-            if _round_reference_tokens(replacement) != _round_reference_tokens(original):
-                # Do not accept a whole-field model rewrite that drops source
-                # provenance. For the narrowly recognised "neither X nor Y is
-                # indicated" defect, make a surgical deterministic edit to the
-                # original text instead; the normal anchor and safety audits
-                # below still have to pass before this candidate is applied.
+            field_limit = _repairable_text_max_length(path)
+            references_changed = (
+                _round_reference_tokens(replacement) != _round_reference_tokens(original)
+            )
+            exceeds_field_limit = field_limit is not None and len(replacement) > field_limit
+            if references_changed or exceeds_field_limit:
+                # A generic repair response permits up to 1,600 characters, but
+                # nested persisted fields have narrower schema limits. Prefer a
+                # surgical deterministic rewrite of the original when it can
+                # preserve the existing source/condition anchors and fit the
+                # destination field. Otherwise reject the repair and retain the
+                # original text rather than allowing final model validation to crash.
                 deterministic_replacement = (
                     _deterministically_neutralise_unsupported_prerequisite_status(original)
                     or _deterministically_neutralise_neither_indication_claim(original)
@@ -1237,12 +1261,22 @@ async def _repair_unsupported_prerequisite_wording(
                     deterministic_replacement is None
                     or _round_reference_tokens(deterministic_replacement)
                     != _round_reference_tokens(original)
+                    or (field_limit is not None and len(deterministic_replacement) > field_limit)
                 ):
+                    if references_changed:
+                        raise ValueError(
+                            f"Repair changed source-reference tokens in {path}; the original text was retained."
+                        )
                     raise ValueError(
-                        f"Repair changed source-reference tokens in {path}; the original text was retained."
+                        f"Repair exceeded the {field_limit}-character schema limit for {path}, "
+                        "and no safe in-limit deterministic rewrite was available; the original text was retained."
                     )
                 replacement = deterministic_replacement
                 proposed_text[path] = deterministic_replacement
+            if field_limit is not None and len(replacement) > field_limit:
+                raise ValueError(
+                    f"Repair exceeded the {field_limit}-character schema limit for {path}; the original text was retained."
+                )
             if not _source_opinion_repair_preserves_anchors(case, payload, path, replacement):
                 raise ValueError(
                     f"Repair did not retain the registered source option and prerequisite anchors in {path}."

@@ -193,21 +193,22 @@ def run_preflight(backend_dir: Path) -> dict:
             "github.event_name == 'push' && "
             "github.ref == 'refs/heads/feature/four-round-mdt-and-performance'"
         ) in workflow_text
+        and "contains(github.event.head_commit.message, '[hosted-validation]')" in workflow_text
     )
     results.append(_result(
         "WORKFLOW_BOOTSTRAP_001",
         "workflow_cost_guard",
         bootstrap_guard_ok,
-        "Clean-hosted Ollama/model bootstrap is limited to explicit dispatch or the named development-branch push.",
+        "Clean-hosted Ollama/model bootstrap is limited to explicit dispatch or a marker-qualified development-branch push.",
         workflow_error or (
-            "Explicit-dispatch and development-branch-only push guards present."
+            "Explicit-dispatch and marker-qualified development-branch push guards present."
             if bootstrap_guard_ok
-            else "Expected explicit-dispatch/development-branch-only bootstrap guards were not found."
+            else "Expected explicit-dispatch/marker-qualified development-branch bootstrap guards were not found."
         ),
         [str(installer_workflow.relative_to(repository_root))],
         severity="critical",
         category="environment",
-        correction="Permit only explicit dispatch or the exact development-branch push; never enable bootstrap for general pull requests or other branches.",
+        correction="Permit explicit dispatch or the exact development-branch push with a [hosted-validation] commit-message marker; never run full model bootstrap on ordinary pushes or pull requests.",
         regression_test="tests/test_deterministic_preflight.py",
     ))
 

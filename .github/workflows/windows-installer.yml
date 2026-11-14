@@ -237,7 +237,9 @@ jobs:
     # Real model provisioning/inference is an explicit acceptance run, not a per-PR rerun.
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/feature/four-round-mdt-and-performance')
+      (github.event_name == 'push' &&
+       github.ref == 'refs/heads/feature/four-round-mdt-and-performance' &&
+       contains(github.event.head_commit.message, '[hosted-validation]'))
     needs: installer
     runs-on: windows-latest
     timeout-minutes: 120

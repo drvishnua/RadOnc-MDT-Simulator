@@ -35,7 +35,7 @@ def _minimal_repository(root: Path) -> Path:
         "hosted-first-run-bootstrap:\\n"
         "    if: >-\\n"
         "      github.event_name == 'workflow_dispatch' ||\\n"
-        "      (github.event_name == 'push' && github.ref == 'refs/heads/feature/four-round-mdt-and-performance')\\n",
+        "      (github.event_name == 'push' && github.ref == 'refs/heads/feature/four-round-mdt-and-performance' && contains(github.event.head_commit.message, '[hosted-validation]'))\\n",
         encoding="utf-8",
     )
     (workflows / "hosted-cpu-four-round-validation.yml").write_text(
@@ -127,13 +127,21 @@ def test_preflight_detects_missing_diagnostic_regression_suite_in_inventory(tmp_
 
 
 
-def test_preflight_accepts_only_dispatch_or_exact_development_branch_push(tmp_path):
+def test_preflight_accepts_only_dispatch_or_marker_qualified_development_branch_push(tmp_path):
     backend = _minimal_repository(tmp_path)
     workflow = tmp_path / ".github" / "workflows" / "windows-installer.yml"
 
     valid = preflight.run_preflight(backend)
     valid_guard = next(item for item in valid["results"] if item["check_id"] == "WORKFLOW_BOOTSTRAP_001")
     assert valid_guard["status"] == "passed"
+
+    unmarked_workflow = workflow.read_text(encoding="utf-8").replace(
+        " && contains(github.event.head_commit.message, '[hosted-validation]')", ""
+    )
+    workflow.write_text(unmarked_workflow, encoding="utf-8")
+    unmarked = preflight.run_preflight(backend)
+    unmarked_guard = next(item for item in unmarked["results"] if item["check_id"] == "WORKFLOW_BOOTSTRAP_001")
+    assert unmarked_guard["status"] == "failed"
 
     workflow.write_text(
         "on:\\n"
