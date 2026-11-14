@@ -184,23 +184,31 @@ def run_preflight(backend_dir: Path) -> dict:
     bootstrap_guard_ok = (
         workflow_error is None
         and "hosted-first-run-bootstrap:" in workflow_text
-        and "if: github.event_name == 'workflow_dispatch'" in workflow_text
+        and "  workflow_dispatch:" in workflow_text
+        and "  push:" in workflow_text
+        and "      - feature/four-round-mdt-and-performance" in workflow_text
+        and "if: >-" in workflow_text
+        and "github.event_name == 'workflow_dispatch'" in workflow_text
+        and (
+            "github.event_name == 'push' && "
+            "github.ref == 'refs/heads/feature/four-round-mdt-and-performance'"
+        ) in workflow_text
     )
     results.append(_result(
         "WORKFLOW_BOOTSTRAP_001",
         "workflow_cost_guard",
         bootstrap_guard_ok,
-        "Expensive clean-hosted Ollama/model bootstrap is manual-dispatch only.",
+        "Clean-hosted Ollama/model bootstrap is limited to explicit dispatch or the named development-branch push.",
         workflow_error or (
-            "Manual-dispatch guard present."
+            "Explicit-dispatch and development-branch-only push guards present."
             if bootstrap_guard_ok
-            else "Expected manual-dispatch-only guard was not found."
+            else "Expected explicit-dispatch/development-branch-only bootstrap guards were not found."
         ),
         [str(installer_workflow.relative_to(repository_root))],
         severity="critical",
         category="environment",
-        correction="Restore an explicit workflow_dispatch-only condition; do not run model provisioning on every PR.",
-        regression_test="tests/test_hosted_cpu_validation_workflow.py",
+        correction="Permit only explicit dispatch or the exact development-branch push; never enable bootstrap for general pull requests or other branches.",
+        regression_test="tests/test_deterministic_preflight.py",
     ))
 
     cpu_workflow = repository_root / ".github/workflows/hosted-cpu-four-round-validation.yml"
