@@ -33,12 +33,16 @@ class CheckResult:
 
 
 REQUIRED_VALIDATION_SCRIPTS = (
+    "scripts/deterministic_preflight.py",
+    "scripts/pytest_junit_diagnostics.py",
     "scripts/live_four_round_validation.py",
     "scripts/representative_model_provenance_validation.py",
     "scripts/run_mdt_stress_suite.py",
     "scripts/run_mdt_stress_with_telemetry.py",
 )
 REQUIRED_REGRESSION_TESTS = (
+    "tests/test_deterministic_preflight.py",
+    "tests/test_pytest_junit_diagnostics.py",
     "tests/test_case_integrity.py",
     "tests/test_chair_report_quality.py",
     "tests/test_mdt_rounds.py",
