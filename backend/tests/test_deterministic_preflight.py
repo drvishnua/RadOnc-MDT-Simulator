@@ -27,8 +27,15 @@ def _minimal_repository(root: Path) -> Path:
     workflows = root / ".github" / "workflows"
     workflows.mkdir(parents=True)
     (workflows / "windows-installer.yml").write_text(
-        "hosted-first-run-bootstrap:\n"
-        "    if: github.event_name == 'workflow_dispatch'\n",
+        "on:\\n"
+        "  workflow_dispatch:\\n"
+        "  push:\\n"
+        "    branches:\\n"
+        "      - feature/four-round-mdt-and-performance\\n"
+        "hosted-first-run-bootstrap:\\n"
+        "    if: >-\\n"
+        "      github.event_name == 'workflow_dispatch' ||\\n"
+        "      (github.event_name == 'push' && github.ref == 'refs/heads/feature/four-round-mdt-and-performance')\\n",
         encoding="utf-8",
     )
     (workflows / "hosted-cpu-four-round-validation.yml").write_text(
@@ -118,3 +125,26 @@ def test_preflight_detects_missing_diagnostic_regression_suite_in_inventory(tmp_
     assert failure["status"] == "failed"
     assert "tests/test_pytest_junit_diagnostics.py" in failure["actual"]
 
+
+
+def test_preflight_accepts_only_dispatch_or_exact_development_branch_push(tmp_path):
+    backend = _minimal_repository(tmp_path)
+    workflow = tmp_path / ".github" / "workflows" / "windows-installer.yml"
+
+    valid = preflight.run_preflight(backend)
+    valid_guard = next(item for item in valid["results"] if item["check_id"] == "WORKFLOW_BOOTSTRAP_001")
+    assert valid_guard["status"] == "passed"
+
+    workflow.write_text(
+        "on:\\n"
+        "  workflow_dispatch:\\n"
+        "  push:\\n"
+        "    branches:\\n"
+        "      - '**'\\n"
+        "hosted-first-run-bootstrap:\\n"
+        "    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'\\n",
+        encoding="utf-8",
+    )
+    broad = preflight.run_preflight(backend)
+    broad_guard = next(item for item in broad["results"] if item["check_id"] == "WORKFLOW_BOOTSTRAP_001")
+    assert broad_guard["status"] == "failed"
