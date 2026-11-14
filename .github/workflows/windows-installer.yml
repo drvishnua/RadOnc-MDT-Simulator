@@ -2,14 +2,6 @@ name: Windows Installer Build
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - feature/four-round-mdt-and-performance
-    paths:
-      - "backend/**"
-      - "frontend/**"
-      - "packaging/windows/**"
-      - ".github/workflows/windows-installer.yml"
   pull_request:
     branches:
       - main
@@ -235,7 +227,7 @@ jobs:
   hosted-first-run-bootstrap:
     name: Clean-hosted Windows first-run Ollama/model bootstrap
     # Real model provisioning/inference is an explicit acceptance run, not a per-PR rerun.
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
+    if: github.event_name == 'workflow_dispatch'
     needs: installer
     runs-on: windows-latest
     timeout-minutes: 120
