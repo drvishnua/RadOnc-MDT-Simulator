@@ -904,6 +904,30 @@ def test_unknown_rather_than_met_or_unmet_does_not_hide_a_separate_unmet_asserti
     })
     assert not any("prerequisite(s) as unmet/not met" in item for item in safe_only)
 
+    # This is the safe contrast emitted by the live hosted model: "negative"
+    # is explicitly rejected as a finding, not asserted as the status.
+    live_model_wording = audit_unverified_case_claims(case, {
+        "response_to_other_perspectives": (
+            "The prerequisite status is unknown because results are not supplied, "
+            "rather than absent or negative."
+        )
+    })
+    assert not any(
+        "prerequisite(s) as unmet/not met" in item for item in live_model_wording
+    )
+
+    # The exception must not suppress a separate categorical assertion.
+    mixed_negative = audit_unverified_case_claims(case, {
+        "response_to_other_perspectives": (
+            "The prerequisite status is unknown because results are not supplied, "
+            "rather than absent or negative; the fitness prerequisite remains unmet."
+        )
+    })
+    assert any(
+        "prerequisite(s) as unmet/not met" in item for item in mixed_negative
+    )
+    assert "fitness prerequisite remains unmet" in " ".join(mixed_negative).casefold()
+
     mixed = audit_unverified_case_claims(case, {
         "response_to_other_perspectives": (
             "The prerequisite status is unknown rather than met or unmet; "
