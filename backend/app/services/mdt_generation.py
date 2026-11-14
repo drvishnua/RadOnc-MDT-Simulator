@@ -1310,14 +1310,14 @@ async def _repair_unsupported_prerequisite_wording(
                     # lacks enough lexical anchors; never ask the model to recreate
                     # or paraphrase the source option/conditions.
                     match = re.fullmatch(
-                        r"source_opinion_responses\\[(\\d+)\\]\\.(analysis|comparison)",
+                        r"source_opinion_responses\[(\d+)\]\.(analysis|comparison)",
                         path,
                     )
                     if match:
                         source_records = payload.get("source_opinion_responses") or []
                     else:
                         match = re.fullmatch(
-                            r"source_opinion_reviews\\[(\\d+)\\]\\.review_basis",
+                            r"source_opinion_reviews\[(\d+)\]\.review_basis",
                             path,
                         )
                         source_records = payload.get("source_opinion_reviews") or []
