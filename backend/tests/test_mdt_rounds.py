@@ -2483,7 +2483,7 @@ def test_r2_and_r3_use_larger_context_without_changing_chair_default():
 
     assert _context_window_for_schema(RoundContributionDraft) == 6144
     assert _context_window_for_schema(Round2ContributionDraft) == 6144
-    assert _context_window_for_schema(AdversarialContributionDraft) == 6144
+    assert _context_window_for_schema(AdversarialContributionDraft) == 8192
     assert _context_window_for_schema(FinalReportDraft) == 4096
 
 def test_r3_does_not_promote_challenges_using_an_unsupplied_peer_id(monkeypatch):
@@ -3330,6 +3330,86 @@ def test_r2_oversized_integrity_repair_uses_in_limit_deterministic_rewrite(monke
     assert "complete local staging and resectability review" in repaired
     assert "neither option is indicated" not in repaired
     assert "does not establish whether" in repaired
+    assert len(repair_calls) == 1
+
+
+
+def test_r2_anchor_failure_uses_deterministic_prerequisite_neutralisation(monkeypatch):
+    from app.round_schemas import Round2ContributionDraft, RoundTextRepairDraft
+    from app.services import mdt_generation
+
+    source_id = "CASE:case_summary#1"
+    unsafe_analysis = (
+        "The source proposes a surgery-led assessment first, conditional on complete local "
+        "staging and resectability review. The prerequisite 'complete local staging' is not "
+        "supplied. Consequently, the condition for this option is unmet/unknown, rendering "
+        "the proposed pathway unsuitable for decision-making from this data alone."
+    )
+    repair_calls = []
+
+    async def fake_generate(prompt, schema_type, max_tokens):
+        if schema_type is Round2ContributionDraft:
+            return Round2ContributionDraft(
+                position="insufficient_information",
+                provisional_conclusion="The supplied fictional information does not establish a definitive pathway.",
+                response_to_other_perspectives="The source option remains conditional pending the missing assessments.",
+                agreements=[],
+                substantive_challenges=[],
+                remaining_unknowns=["Complete local staging and resectability review are not supplied."],
+                risk_flags=[],
+                confidence=0.4,
+                source_opinion_responses=[{
+                    "source_id": source_id,
+                    "analysis": unsafe_analysis,
+                    "comparison": "The source option remains conditional on the stated prerequisites.",
+                }],
+            )
+        assert schema_type is RoundTextRepairDraft
+        repair_calls.append(prompt)
+        # Safe generic wording, but it drops the source-specific option and conditions.
+        return RoundTextRepairDraft(replacements=[{
+            "field_path": "source_opinion_responses[0].analysis",
+            "replacement_text": (
+                "The supplied information does not establish whether this option is indicated "
+                "or appropriate; indication and suitability remain undetermined."
+            ),
+        }])
+
+    monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate)
+    case = SyntheticCase(
+        scenario_title="Synthetic anchor-preserving prerequisite repair",
+        case_summary=(
+            "Fictional case. ENT service note favours a surgery-led assessment first, "
+            "conditional on complete local staging and resectability review."
+        ),
+        known_unknowns=["Clinical stage is not supplied."],
+    )
+    result = asyncio.run(
+        mdt_generation.generate_debate_contribution(
+            {"agent_id": "RO-01", "name": "Radiation Oncology", "mandate": "Review the educational record."},
+            case,
+            {
+                "position": "insufficient_information",
+                "provisional_conclusion": "The fictional record does not establish a definitive pathway.",
+                "preferred_educational_option": "No definitive pathway is established.",
+            },
+            [{"agent_id": "SO-02", "agent_name": "Surgical Oncology", "assessment": {
+                "position": "conditional",
+                "provisional_conclusion": "The surgery-led option remains conditional on complete staging.",
+                "preferred_educational_option": "Surgery-led assessment first, conditional on complete local staging and resectability review.",
+            }}],
+        )
+    )
+
+    repaired = result.source_opinion_responses[0].analysis
+    assert result.integrity_repair_attempted is True
+    assert result.integrity_repair_status == "completed"
+    assert result.integrity_repair_applied_paths == ["source_opinion_responses[0].analysis"]
+    assert result.case_data_integrity_flags == []
+    assert "surgery-led assessment first" in repaired
+    assert "complete local staging and resectability review" in repaired
+    assert "undetermined fulfilment status" in repaired
+    assert "unmet/unknown" not in repaired
     assert len(repair_calls) == 1
 
 

@@ -48,13 +48,14 @@ GENERATION_REQUEST_TIMEOUT_SECONDS = 600.0
 
 
 def _context_window_for_schema(schema_type: type[BaseModel]) -> int:
-    """Give R2 and R3 enough room for bounded peer context and structured output."""
+    """Give R3 extra context for its source-linked peer review and JSON output."""
+    if schema_type is AdversarialContributionDraft:
+        return 8192
     return (
         6144
         if schema_type in (
             RoundContributionDraft,
             Round2ContributionDraft,
-            AdversarialContributionDraft,
             Round2SourceOpinionResponsesRepairDraft,
             AdversarialSourceOpinionReviewsRepairDraft,
             RoundTextRepairDraft,
@@ -1290,9 +1291,29 @@ async def _repair_unsupported_prerequisite_wording(
                     f"Repair exceeded the {field_limit}-character schema limit for {path}; the original text was retained."
                 )
             if not _source_opinion_repair_preserves_anchors(case, payload, path, replacement):
-                raise ValueError(
-                    f"Repair did not retain the registered source option and prerequisite anchors in {path}."
+                # A semantically safe generic rewrite can still erase the exact
+                # attributed option/condition. In that case, prefer a surgical
+                # rewrite of the original unsafe sentence, then re-check every
+                # source anchor and the complete integrity audit below.
+                deterministic_replacement = (
+                    _deterministically_neutralise_unsupported_prerequisite_status(original)
+                    or _deterministically_neutralise_neither_indication_claim(original)
                 )
+                if (
+                    deterministic_replacement is None
+                    or _round_reference_tokens(deterministic_replacement)
+                    != _round_reference_tokens(original)
+                    or (field_limit is not None and len(deterministic_replacement) > field_limit)
+                    or not _source_opinion_repair_preserves_anchors(
+                        case, payload, path, deterministic_replacement
+                    )
+                ):
+                    raise ValueError(
+                        f"Repair did not retain the registered source option and prerequisite anchors in {path}; "
+                        "no safe deterministic rewrite of the original text was available."
+                    )
+                replacement = deterministic_replacement
+                proposed_text[path] = deterministic_replacement
 
         # A model can append a safe disclaimer while leaving the audited unsafe
         # status wording intact. If its candidate still fails the targeted audit,
@@ -1651,7 +1672,7 @@ async def generate_adversarial_contribution(
             "role": peer["agent_name"],
             "position": peer["result"].get("position", "unknown"),
             "conclusion": _compact_r2_text(peer["result"].get("provisional_conclusion", ""), 260),
-            "response": _compact_r2_text(peer["result"].get("response_to_other_perspectives", ""), 1200),
+            "response": _compact_r2_text(peer["result"].get("response_to_other_perspectives", ""), 700),
             "agreements": [
                 _compact_r2_text(item, 180)
                 for item in (peer["result"].get("agreements") or [])[:1]
@@ -1671,8 +1692,8 @@ async def generate_adversarial_contribution(
             "source_opinion_responses": [
                 {
                     "source_id": item.get("source_id", ""),
-                    "analysis": _compact_r2_text(item.get("analysis", ""), 600),
-                    "comparison": _compact_r2_text(item.get("comparison", ""), 300),
+                    "analysis": _compact_r2_text(item.get("analysis", ""), 300),
+                    "comparison": _compact_r2_text(item.get("comparison", ""), 120),
                 }
                 for item in (peer["result"].get("source_opinion_responses") or [])[:4]
                 if isinstance(item, dict)
@@ -1698,7 +1719,7 @@ async def generate_adversarial_contribution(
         "round2_source": f"R2:{profile['agent_id']}",
         "round2_position": own_debate_contribution.get("position"),
         "round2_conclusion": _compact_r2_text(own_debate_contribution.get("provisional_conclusion", ""), 260),
-        "round2_response": _compact_r2_text(own_debate_contribution.get("response_to_other_perspectives", ""), 900),
+        "round2_response": _compact_r2_text(own_debate_contribution.get("response_to_other_perspectives", ""), 600),
         "round2_agreements": [_compact_r2_text(item, 180) for item in (own_debate_contribution.get("agreements") or [])[:2]],
         "round2_challenges": [_compact_r2_text(item, 220) for item in (own_debate_contribution.get("substantive_challenges") or [])[:2]],
         "round2_position_changes": [_compact_r2_text(item, 180) for item in (own_debate_contribution.get("position_changes") or [])[:1]],
@@ -1707,8 +1728,8 @@ async def generate_adversarial_contribution(
         "round2_source_opinion_responses": [
             {
                 "source_id": item.get("source_id", ""),
-                "analysis": _compact_r2_text(item.get("analysis", ""), 600),
-                "comparison": _compact_r2_text(item.get("comparison", ""), 300),
+                "analysis": _compact_r2_text(item.get("analysis", ""), 300),
+                "comparison": _compact_r2_text(item.get("comparison", ""), 120),
             }
             for item in (own_debate_contribution.get("source_opinion_responses") or [])[:4]
             if isinstance(item, dict)
