@@ -96,3 +96,25 @@ def test_preflight_writes_machine_and_human_readable_reports(tmp_path):
     assert payload["validation_type"] == "deterministic_static_preflight"
     assert "# RadOnc MDT deterministic preflight" in markdown
     assert "Model inference: not performed" in markdown
+
+def test_preflight_detects_missing_junit_diagnostics_script_in_validation_inventory(tmp_path):
+    backend = _minimal_repository(tmp_path)
+    (backend / "scripts" / "pytest_junit_diagnostics.py").unlink()
+
+    report = preflight.run_preflight(backend)
+    failure = next(item for item in report["results"] if item["check_id"] == "VALIDATION_ASSETS_001")
+
+    assert failure["status"] == "failed"
+    assert "scripts/pytest_junit_diagnostics.py" in failure["actual"]
+
+
+def test_preflight_detects_missing_diagnostic_regression_suite_in_inventory(tmp_path):
+    backend = _minimal_repository(tmp_path)
+    (backend / "tests" / "test_pytest_junit_diagnostics.py").unlink()
+
+    report = preflight.run_preflight(backend)
+    failure = next(item for item in report["results"] if item["check_id"] == "REGRESSION_ASSETS_001")
+
+    assert failure["status"] == "failed"
+    assert "tests/test_pytest_junit_diagnostics.py" in failure["actual"]
+
