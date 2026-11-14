@@ -33,6 +33,38 @@ def test_source_reference_audit_flags_whole_mdt_scope_in_bounded_peer_response()
     assert any("Peer-scope overclaim" in item for item in findings)
 
 
+def test_source_reference_audit_accepts_explicit_source_bound_rebuttal_of_seeded_claim():
+    payload = {
+        "response_to_other_perspectives": (
+            "R2:SO-02 claims 'The entire 45-role MDT agrees with this conclusion' and "
+            "asserts 'There is full agreement across all 45 roles.' This contradicts "
+            "the supplied record: the bounded sample cannot establish whole-MDT agreement."
+        )
+    }
+
+    findings = _audit_source_references(
+        payload,
+        {("R2", "SO-02"), ("R2", "MO-01")},
+    )
+
+    assert findings == []
+
+
+def test_source_reference_audit_still_flags_attributed_scope_claim_without_rebuttal():
+    payload = {
+        "response_to_other_perspectives": (
+            "R2:SO-02 claims 'There is full agreement across all 45 roles.'"
+        )
+    }
+
+    findings = _audit_source_references(
+        payload,
+        {("R2", "SO-02"), ("R2", "MO-01")},
+    )
+
+    assert any("Peer-scope overclaim" in item for item in findings)
+
+
 def test_source_reference_audit_accepts_only_supplied_individual_ids():
     payload = {
         "response_to_other_perspectives": (
