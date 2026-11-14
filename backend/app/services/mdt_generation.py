@@ -1000,7 +1000,8 @@ def _deterministically_neutralise_unsupported_prerequisite_status(value: str) ->
     # "these prerequisites remain unmet" / "prerequisites are not met".
     repaired, predicate_replacements = re.subn(
         r"\b(?P<subject>(?:(?:these|those|the|all|their)\s+)?"
-        r"(?:clinical\s+)?(?:prerequisite|condition|requirement)s?)\s+"
+        r"(?:clinical\s+)?(?:prerequisite|condition|requirement)s?"
+        r"(?:\s+for\s+(?:this|that|the)\s+option)?)\s+"
         r"(?P<verb>remain(?:s)?|are|is|were|was|have(?:\s+been)?|has(?:\s+been)?)\s+"
         r"(?:unmet(?:\s*/\s*unknown)?|unfulfilled|not\s+(?:been\s+)?(?:met|fulfilled))\b",
         lambda match: (
