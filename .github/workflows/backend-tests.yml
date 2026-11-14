@@ -44,6 +44,10 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements-dev.txt
 
+      - name: Run deterministic no-inference validation preflight
+        working-directory: backend
+        run: python scripts/deterministic_preflight.py
+
       - name: Compile live validation scripts
         working-directory: backend
         run: |
@@ -52,3 +56,12 @@ jobs:
       - name: Run backend tests
         working-directory: backend
         run: python -m pytest
+
+      - name: Upload deterministic preflight reports
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: deterministic-preflight-report
+          path: backend/validation_artifacts/preflight/*
+          if-no-files-found: warn
+          retention-days: 14
