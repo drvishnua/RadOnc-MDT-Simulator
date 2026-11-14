@@ -205,7 +205,41 @@ def _audit_source_references(payload: dict, allowed: set[tuple[str, str]]) -> li
         "the entire mdt supports",
         "the entire mdt opposes",
     )
-    if any(phrase in response for phrase in unsupported_scope_phrases):
+    def paragraph_explicitly_rejects_scope_claim(paragraph: str) -> bool:
+        # R3 must be able to quote a deliberately planted whole-MDT assertion in
+        # order to challenge it. A literal phrase match alone confuses that rebuttal
+        # with endorsement. Require an explicit rejection in the same paragraph;
+        # attribution or quotation without rejection remains auditable as a claim.
+        rejection_markers = (
+            "unsupported",
+            "not supported",
+            "not established",
+            "cannot establish",
+            "cannot be established",
+            "does not establish",
+            "no evidence",
+            "not evidenced",
+            "not substantiated",
+            "unverified",
+            "cannot verify",
+            "cannot be verified",
+            "cannot be inferred",
+            "bounded sample cannot",
+            "not supplied",
+            "not available",
+            "contradicts the case",
+            "contradicts the supplied",
+            "false claim",
+        )
+        return any(marker in paragraph for marker in rejection_markers)
+
+    paragraphs = [part.strip() for part in response.splitlines() if part.strip()]
+    has_unrebutted_scope_claim = any(
+        any(phrase in paragraph for phrase in unsupported_scope_phrases)
+        and not paragraph_explicitly_rejects_scope_claim(paragraph)
+        for paragraph in paragraphs
+    )
+    if has_unrebutted_scope_claim:
         findings.append(
             "Peer-scope overclaim: the response generalises agreement or conclusions beyond "
             "the individually supplied peer records; only those supplied records may be described."
