@@ -236,6 +236,7 @@ jobs:
     name: Clean-hosted Windows first-run Ollama/model bootstrap
     # Real model provisioning/inference is an explicit acceptance run, not a per-PR rerun.
     # Trigger one bounded acceptance on a push by adding [hosted-validation] to its commit message.
+    # This acceptance rerun includes the R2 anchor-preserving repair and R3 context fix.
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'push' &&
