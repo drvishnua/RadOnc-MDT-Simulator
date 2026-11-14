@@ -10,7 +10,7 @@ def test_positive_control_requires_exact_supplied_peer_and_quoted_claim():
         "source_peer_ids": ["SO-02", "MO-01"],
         "substantive_challenges": [
             'R2:SO-02 states "The entire 45-role MDT agrees with this conclusion" '
-            "without a complete role-level record."
+            "this is unsupported because no complete role-level record was supplied."
         ],
     }
 
@@ -76,6 +76,63 @@ def test_positive_control_rejects_source_identifier_prefix_collision():
 
     assert not _has_expected_source_bound_challenge(
         result,
+        source_agent_id="SO-02",
+        quoted_claim="The entire 45-role MDT agrees with this conclusion",
+    )
+
+
+
+def test_positive_control_rejects_repeated_claim_without_explicit_rebuttal():
+    result = {
+        "source_peer_ids": ["SO-02", "MO-01"],
+        "substantive_challenges": [
+            'R2:SO-02 states "The entire 45-role MDT agrees with this conclusion".'
+        ],
+    }
+
+    assert not _has_expected_source_bound_challenge(
+        result,
+        source_agent_id="SO-02",
+        quoted_claim="The entire 45-role MDT agrees with this conclusion",
+    )
+
+
+def test_positive_control_rejects_rebuttal_marker_that_occurs_only_inside_the_quote():
+    quoted_claim = "The entire 45-role MDT agrees; unsupported evidence is absent"
+    result = {
+        "source_peer_ids": ["SO-02", "MO-01"],
+        "substantive_challenges": [
+            f'R2:SO-02 states "{quoted_claim}".'
+        ],
+    }
+
+    assert not _has_expected_source_bound_challenge(
+        result,
+        source_agent_id="SO-02",
+        quoted_claim=quoted_claim,
+    )
+
+
+def test_positive_control_rejects_empty_claim_and_non_list_peer_ids():
+    challenge = {
+        "source_peer_ids": ["SO-02", "MO-01"],
+        "substantive_challenges": [
+            'R2:SO-02 states "The entire 45-role MDT agrees with this conclusion"; '
+            "this is unsupported because no complete role-level record was supplied."
+        ],
+    }
+    assert not _has_expected_source_bound_challenge(
+        challenge,
+        source_agent_id="SO-02",
+        quoted_claim="",
+    )
+
+    malformed = {
+        "source_peer_ids": "SO-02",
+        "substantive_challenges": challenge["substantive_challenges"],
+    }
+    assert not _has_expected_source_bound_challenge(
+        malformed,
         source_agent_id="SO-02",
         quoted_claim="The entire 45-role MDT agrees with this conclusion",
     )
