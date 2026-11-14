@@ -604,3 +604,14 @@ def test_deterministic_fallback_neutralises_neither_prerequisite_is_met():
         "The fulfilment status of the referenced prerequisite is undetermined in the record "
         "(R2:RO-01)."
     )
+
+
+
+def test_deterministic_fallback_repairs_not_met_or_documented_as_one_predicate():
+    original = "The prerequisites are not met or documented."
+    repaired = mdt_generation._deterministically_neutralise_unsupported_prerequisite_status(
+        original
+    )
+    assert repaired == (
+        "The prerequisites have no documented fulfilment assessment in the supplied record."
+    )

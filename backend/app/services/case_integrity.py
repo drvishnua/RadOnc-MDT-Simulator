@@ -401,7 +401,15 @@ _PREREQUISITE_NON_ASSERTION_PREFIX_PATTERN = re.compile(
     r"|\bnot\s+(?:yet\s+)?(?:confirmed|documented|provided|reported|established|specified|verified)"
     r"\s+as\s*$"
     r"|\b(?:not|never)\s+(?:a|an)\s+(?:conclusion|claim|assertion|finding|determination)\s+that\b"
-    r"[^.!?;:\n]{0,100}\s*$",
+    r"[^.!?;:\n]{0,100}\s*$"
+    # A negated attribution ("neither peer asserts that prerequisites are met")
+    # reports what peers did not claim; it is not an assertion that they are met.
+    # The enclosing matcher has already clipped the text to a single clause,
+    # so a separate assertion after a clause boundary remains independently audited.
+    r"|\bneither\s+(?:(?:of\s+)?(?:the\s+)?(?:selected\s+)?"
+    r"(?:source|peer|note|role|agent|specialist|contribution|assessment|record|report)s?)\b"
+    r"[^.!?;:\n]{0,100}\b(?:asserts?|claims?|states?|says?|reports?|indicates?|"
+    r"suggests?|recommends?|endorses?|confirms?)\b[^.!?;:\n]{0,140}\s*$",
     re.IGNORECASE,
 )
 

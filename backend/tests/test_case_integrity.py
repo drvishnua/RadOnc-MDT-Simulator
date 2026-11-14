@@ -1156,3 +1156,39 @@ def test_source_labelled_none_prefix_with_explanation_is_still_an_empty_challeng
         "[Sources: CASE:case_summary#2; R2:RO-01] None of the supplied records "
         "establishes a whole-MDT consensus."
     )
+
+
+
+def test_negated_peer_report_of_met_or_failed_status_is_not_flagged():
+    case = _case(
+        case_summary="Fictional record; prerequisite assessments are not supplied.",
+        known_unknowns=["The relevant prerequisite assessments are not supplied."],
+    )
+    statement = (
+        "Since neither source asserts that prerequisites are met or failed "
+        "(only that they are not supplied)."
+    )
+    flags = audit_unverified_case_claims(case, {
+        "response_to_other_perspectives": statement
+    })
+    assert not any("prerequisite(s) as unmet/not met" in item for item in flags)
+
+    direct_assertion = audit_unverified_case_claims(case, {
+        "response_to_other_perspectives": "The prerequisites are met or failed."
+    })
+    assert any("prerequisite(s) as unmet/not met" in item for item in direct_assertion)
+
+
+def test_negated_peer_report_exception_does_not_hide_a_separate_clause_assertion():
+    case = _case(
+        case_summary="Fictional record; prerequisite assessments are not supplied.",
+        known_unknowns=["The relevant prerequisite assessments are not supplied."],
+    )
+    statement = (
+        "Neither source asserts that prerequisites are met or failed; "
+        "the fitness prerequisite remains unmet."
+    )
+    flags = audit_unverified_case_claims(case, {
+        "response_to_other_perspectives": statement
+    })
+    assert any("prerequisite(s) as unmet/not met" in item for item in flags)
