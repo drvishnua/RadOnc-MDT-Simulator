@@ -1192,3 +1192,69 @@ def test_negated_peer_report_exception_does_not_hide_a_separate_clause_assertion
         "response_to_other_perspectives": statement
     })
     assert any("prerequisite(s) as unmet/not met" in item for item in flags)
+
+def _case_field_label(field: str) -> str:
+    return {
+        "current_medications": "Current medications",
+        "known_allergies": "Known allergies",
+        "relevant_investigations": "Relevant investigations",
+        "relevant_comorbidities": "Relevant comorbidities",
+        "prior_treatment": "Prior treatment",
+        "patient_goals": "Patient goals",
+        "social_context": "Social context",
+        "resource_context": "Resource context",
+        "known_unknowns": "Known unknowns",
+    }[field]
+
+
+def test_every_structured_list_field_has_explicit_status_and_source_fact_provenance():
+    fields = {
+        "current_medications": ["Medication A"],
+        "known_allergies": ["Allergy B"],
+        "relevant_investigations": ["Investigation C"],
+        "relevant_comorbidities": ["Comorbidity D"],
+        "prior_treatment": ["Treatment E"],
+        "patient_goals": ["Goal F"],
+        "social_context": ["Context G"],
+        "resource_context": ["Resource H"],
+        "known_unknowns": ["Unknown I"],
+    }
+    case = _case(**fields)
+
+    context = build_case_prompt_context(case)
+    facts = build_source_case_facts(case)
+    joined_facts = " ".join(facts)
+
+    for field, values in fields.items():
+        assert context["field_status"][field]["status"] == "reported"
+        assert context["field_status"][field]["value"] == values
+        assert f"{_case_field_label(field)}: {values[0]}" in joined_facts
+
+
+def test_every_empty_structured_list_field_is_explicitly_not_reported():
+    case = _case(
+        current_medications=[],
+        known_allergies=[],
+        relevant_investigations=[],
+        relevant_comorbidities=[],
+        prior_treatment=[],
+        patient_goals=[],
+        social_context=[],
+        resource_context=[],
+        known_unknowns=[],
+    )
+    context = build_case_prompt_context(case)
+    for field in (
+        "current_medications",
+        "known_allergies",
+        "relevant_investigations",
+        "relevant_comorbidities",
+        "prior_treatment",
+        "patient_goals",
+        "social_context",
+        "resource_context",
+        "known_unknowns",
+    ):
+        assert context["field_status"][field]["status"] == "not_reported"
+        assert context["field_status"][field]["value"] is None
+

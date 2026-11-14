@@ -44,9 +44,15 @@ _SINGLE_FIELDS = {
     "imaging_summary": "Imaging summary",
 }
 _LIST_FIELDS = {
-    "relevant_comorbidities": "Relevant comorbidities", "prior_treatment": "Prior treatment",
-    "patient_goals": "Patient goals", "social_context": "Social context",
-    "resource_context": "Resource context", "known_unknowns": "Known unknowns",
+    "current_medications": "Current medications",
+    "known_allergies": "Known allergies",
+    "relevant_investigations": "Relevant investigations",
+    "relevant_comorbidities": "Relevant comorbidities",
+    "prior_treatment": "Prior treatment",
+    "patient_goals": "Patient goals",
+    "social_context": "Social context",
+    "resource_context": "Resource context",
+    "known_unknowns": "Known unknowns",
 }
 
 
