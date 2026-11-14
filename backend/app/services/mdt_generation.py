@@ -1030,14 +1030,19 @@ def _deterministically_neutralise_neither_indication_claim(value: str) -> str | 
         revised_subjects, connector_count = re.subn(
             r"\s+nor\s+", " or ", subjects, count=1, flags=re.IGNORECASE
         )
-        if connector_count != 1:
+        if connector_count > 1:
             return match.group(0)
         prefix = value[:match.start()]
         sentence_start = not prefix.strip() or prefix.rstrip().endswith((".", "!", "?", "\n"))
         lead = "The supplied information" if sentence_start else "the supplied information"
         qualifier = match.group("qualifier") or ""
+        subject_phrase = (
+            f"whether either {revised_subjects}"
+            if connector_count == 1
+            else f"whether {subjects}"
+        )
         return (
-            f"{lead} does not establish whether either {revised_subjects} "
+            f"{lead} does not establish {subject_phrase} "
             f"{match.group('verb')} {qualifier}{match.group('status')}"
         )
 
