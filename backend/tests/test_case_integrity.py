@@ -1307,3 +1307,32 @@ def test_every_missing_scalar_case_field_is_explicitly_not_reported():
     for field in fields:
         assert context["field_status"][field]["status"] == "not_reported"
         assert context["field_status"][field]["value"] is None
+
+def test_all_empty_structured_list_fields_are_reported_as_not_reported_in_validation_warnings():
+    case = _case(
+        current_medications=[],
+        known_allergies=[],
+        relevant_investigations=[],
+        relevant_comorbidities=[],
+        prior_treatment=[],
+        patient_goals=[],
+        social_context=[],
+        resource_context=[],
+        known_unknowns=[],
+    )
+
+    warnings = " ".join(build_case_validation_warnings(case)).casefold()
+
+    for field in (
+        "current_medications",
+        "known_allergies",
+        "relevant_investigations",
+        "relevant_comorbidities",
+        "prior_treatment",
+        "patient_goals",
+        "social_context",
+        "resource_context",
+        "known_unknowns",
+    ):
+        assert field in warnings
+    assert "not confirmed negatives" in warnings
