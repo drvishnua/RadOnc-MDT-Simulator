@@ -926,7 +926,7 @@ def test_unknown_rather_than_met_or_unmet_does_not_hide_a_separate_unmet_asserti
     assert any(
         "prerequisite(s) as unmet/not met" in item for item in mixed_negative
     )
-    assert "fitness prerequisite remains unmet" in " ".join(mixed_negative).casefold()
+    assert "prerequisite remains unmet" in " ".join(mixed_negative).casefold()
 
     mixed = audit_unverified_case_claims(case, {
         "response_to_other_perspectives": (
