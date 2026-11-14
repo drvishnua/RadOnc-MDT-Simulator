@@ -112,3 +112,4 @@ def test_workflow_exposes_context_probe_without_running_eight_call_mdt():
     assert "python scripts/representative_model_provenance_validation.py" in workflow
     assert "name: ollama-context-allocation-probe" in workflow
     assert "HOSTED_OLLAMA_CONTEXT_ALLOCATION_PROBE_OK" in workflow
+    assert "github.event_name == 'push' && contains(github.event.head_commit.message, '[context-probe]')" in workflow
