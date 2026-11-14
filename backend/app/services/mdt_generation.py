@@ -899,12 +899,12 @@ def _repairable_narrative_locations(payload: dict) -> dict[str, tuple[str, int |
 def _repairable_text_max_length(path: str) -> int | None:
     """Return the actual schema limit for a narrowly repairable narrative path."""
     response_match = re.fullmatch(
-        r"source_opinion_responses\\[\\d+\\]\\.(analysis|comparison)", path
+        r"source_opinion_responses\[\d+\]\.(analysis|comparison)", path
     )
     if response_match:
         return {"analysis": 700, "comparison": 400}[response_match.group(1)]
     review_match = re.fullmatch(
-        r"source_opinion_reviews\\[\\d+\\]\\.(review_basis|challenge)", path
+        r"source_opinion_reviews\[\d+\]\.(review_basis|challenge)", path
     )
     if review_match:
         return {"review_basis": 600, "challenge": 700}[review_match.group(1)]

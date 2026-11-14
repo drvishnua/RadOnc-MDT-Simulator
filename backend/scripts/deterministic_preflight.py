@@ -181,6 +181,7 @@ def run_preflight(backend_dir: Path) -> dict:
         workflow_text = installer_workflow.read_text(encoding="utf-8")
     except (OSError, UnicodeError) as exc:
         workflow_error = f"{type(exc).__name__}: {exc}"
+    normalized_workflow_text = " ".join(workflow_text.split())
     bootstrap_guard_ok = (
         workflow_error is None
         and "hosted-first-run-bootstrap:" in workflow_text
@@ -188,12 +189,12 @@ def run_preflight(backend_dir: Path) -> dict:
         and "  push:" in workflow_text
         and "      - feature/four-round-mdt-and-performance" in workflow_text
         and "if: >-" in workflow_text
-        and "github.event_name == 'workflow_dispatch'" in workflow_text
+        and "github.event_name == 'workflow_dispatch'" in normalized_workflow_text
         and (
             "github.event_name == 'push' && "
             "github.ref == 'refs/heads/feature/four-round-mdt-and-performance'"
-        ) in workflow_text
-        and "contains(github.event.head_commit.message, '[hosted-validation]')" in workflow_text
+        ) in normalized_workflow_text
+        and "contains(github.event.head_commit.message, '[hosted-validation]')" in normalized_workflow_text
     )
     results.append(_result(
         "WORKFLOW_BOOTSTRAP_001",
