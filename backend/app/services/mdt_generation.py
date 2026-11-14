@@ -983,7 +983,8 @@ def _deterministically_neutralise_unsupported_prerequisite_status(value: str) ->
     # ungrammatical "undetermined fulfilment status ... or documented".
     repaired, coordinated_replacements = re.subn(
         r"\b(?P<subject>(?:(?:these|those|the|all|their)\s+)?"
-        r"(?:clinical\s+)?(?:prerequisite|condition|requirement)s?)\s+"
+        r"(?:clinical\s+)?(?:prerequisite|condition|requirement)s?"
+        r"(?:\s+for\s+(?:this|that|the)\s+option)?)\s+"
         r"(?P<verb>remain(?:s)?|are|is|were|was|have(?:\s+been)?|has(?:\s+been)?)\s+"
         r"not\s+(?:been\s+)?met\s+or\s+(?:been\s+)?"
         r"(?:documented|assessed|verified|established)\b",
