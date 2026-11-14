@@ -1258,3 +1258,52 @@ def test_every_empty_structured_list_field_is_explicitly_not_reported():
         assert context["field_status"][field]["status"] == "not_reported"
         assert context["field_status"][field]["value"] is None
 
+
+def test_every_scalar_case_field_has_explicit_provided_status_and_verbatim_value():
+    fields = {
+        "age_years": 62,
+        "sex_at_birth": "female",
+        "primary_site": "left breast",
+        "histology": "invasive ductal carcinoma",
+        "clinical_t_stage": "cT2",
+        "clinical_n_stage": "cN1",
+        "clinical_m_stage": "cM0",
+        "stage_group": "IIB",
+        "performance_status": "ECOG 1",
+        "pathology_summary": "Synthetic pathology text, verbatim.",
+        "imaging_summary": "Synthetic imaging text, verbatim.",
+    }
+    case = _case(**fields)
+    context = build_case_prompt_context(case)
+
+    for field, value in fields.items():
+        assert context["field_status"][field]["status"] == "provided"
+        assert context["field_status"][field]["value"] == value
+
+    assert context["field_status"]["case_summary"] == {
+        "label": "User-provided free-text case summary",
+        "status": "provided_verbatim_unparsed",
+        "value": case.case_summary,
+    }
+    assert context["case_snapshot"]["case_summary"] == case.case_summary
+
+
+def test_every_missing_scalar_case_field_is_explicitly_not_reported():
+    fields = {
+        "age_years": None,
+        "sex_at_birth": None,
+        "primary_site": None,
+        "histology": None,
+        "clinical_t_stage": None,
+        "clinical_n_stage": None,
+        "clinical_m_stage": None,
+        "stage_group": None,
+        "performance_status": None,
+        "pathology_summary": None,
+        "imaging_summary": None,
+    }
+    context = build_case_prompt_context(_case(**fields))
+
+    for field in fields:
+        assert context["field_status"][field]["status"] == "not_reported"
+        assert context["field_status"][field]["value"] is None
