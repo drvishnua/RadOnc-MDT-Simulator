@@ -53,27 +53,85 @@ ROLE_IDS = ("RO-01", "SO-02", "MO-01")
 MAX_SECONDS_PER_GENERATION = GENERATION_REQUEST_TIMEOUT_SECONDS + 60.0
 
 
+EXPLICIT_REBUTTAL_MARKERS = (
+    "unsupported",
+    "not supported",
+    "does not establish",
+    "doesn't establish",
+    "cannot establish",
+    "cannot be established",
+    "not established",
+    "no complete",
+    "no full",
+    "only the supplied",
+    "only selected",
+    "no evidence",
+    "not substantiated",
+    "unsubstantiated",
+    "not demonstrated",
+    "not justified",
+    "does not justify",
+    "cannot conclude",
+    "cannot be concluded",
+    "should not be claimed",
+    "cannot be claimed",
+    "overstates",
+    "overbroad",
+)
+
+
+def _has_explicit_rebuttal(text: str, quoted_claim: str) -> bool:
+    """Require a rejection/qualification phrase outside the verbatim quoted claim."""
+    remainder = re.sub(re.escape(quoted_claim), " ", text, flags=re.IGNORECASE)
+    return any(
+        re.search(
+            rf"(?<![A-Za-z]){re.escape(marker)}(?![A-Za-z])",
+            remainder,
+            flags=re.IGNORECASE,
+        )
+        for marker in EXPLICIT_REBUTTAL_MARKERS
+    )
+
+
 def _has_expected_source_bound_challenge(
     result: dict,
     *,
     source_agent_id: str,
     quoted_claim: str,
 ) -> bool:
-    """Require a substantive challenge to cite the supplied peer and quote its claim."""
-    supplied_peer_ids = result.get("source_peer_ids") or []
-    if source_agent_id not in supplied_peer_ids:
+    """Require a supplied-peer citation, verbatim claim, and explicit rebuttal."""
+    if (
+        not isinstance(result, dict)
+        or not isinstance(source_agent_id, str)
+        or not source_agent_id.strip()
+        or not isinstance(quoted_claim, str)
+        or not quoted_claim.strip()
+    ):
         return False
+
+    supplied_peer_ids = result.get("source_peer_ids")
+    if (
+        not isinstance(supplied_peer_ids, (list, tuple))
+        or source_agent_id not in supplied_peer_ids
+    ):
+        return False
+
     expected_source = f"R2:{source_agent_id}"
     # A substring check would incorrectly accept identifiers such as
     # R2:SO-02-extra. Require a complete source token on both sides.
     source_token = re.compile(
         rf"(?<![A-Za-z0-9_-]){re.escape(expected_source)}(?![A-Za-z0-9_-])"
     )
+    challenges = result.get("substantive_challenges")
+    if not isinstance(challenges, (list, tuple)):
+        return False
+
     return any(
         isinstance(item, str)
         and source_token.search(item)
         and quoted_claim.casefold() in item.casefold()
-        for item in (result.get("substantive_challenges") or [])
+        and _has_explicit_rebuttal(item, quoted_claim)
+        for item in challenges
     )
 
 
