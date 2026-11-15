@@ -232,6 +232,25 @@ Before inference:
 
 **No GPU or model-pull result is implied by this protocol.** Do not infer that the Ollama package is loaded on the RTX 4060 because the public registry lists its size or architecture.
 
+## 10B. Frozen 12-case model inference screening harness
+
+Script: `backend/scripts/run_medgemma_screening.py`.
+
+- Requires an explicit exact `--model` and a new `--output` JSONL path. It does not default to or change the application's configured model.
+- Before generation, it reads `/api/version`, `/api/tags` and `/api/show`; it requires exactly one installed model record with a full SHA-256 digest. It never pulls a model.
+- Runs the same 12 corpus inputs sequentially at concurrency 1, with fixed seed/options and no expected-behaviour/failure labels in the model prompt.
+- Stores the full model record, digest, model metadata, prompt hashes, request bodies, raw and parsed responses, per-call Ollama metrics, errors and a summary. JSONL output is created exclusively and is not overwritten.
+- The harness does not assign quality scores or pass/fail clinical labels. A complete run is marked `completed_pending_human_review`, never as accepted or hallucination-free. GPU measurement is explicitly `NOT_PERFORMED`.
+
+Example PowerShell sequence, using two different new artifact names (only after each exact model is separately installed and its terms approved):
+
+```powershell
+python backend/scripts/run_medgemma_screening.py --model "qwen3.5:4b" --output "validation_artifacts/model_screen_qwen.jsonl"
+python backend/scripts/run_medgemma_screening.py --model "medgemma1.5:4b-it-q4_K_M" --output "validation_artifacts/model_screen_medgemma15.jsonl"
+```
+
+Both screens must use the same code commit, corpus hash, request settings and Ollama runtime. This first phase is a bounded software-integrity screen only; independent blinded review is required before any representative-role or 136-contribution run.
+
 ## 9. Current state
 
 No model has been installed, changed, selected or benchmarked by this plan. The MedGemma candidate tag is now identified from the Ollama Library, but its full local digest, real runtime compatibility, GPU inference and MDT quality remain unverified. No fresh live 136-contribution run or current GPU verification is claimed. The existing Qwen model remains the control and production configuration until a separate, verified selection decision.
