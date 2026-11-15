@@ -385,6 +385,45 @@ def test_attributed_peer_absence_of_indication_claim_is_not_a_negative_clinical_
     assert not any("treatment safety/indication" in item for item in safe_flags)
 
 
+def test_negated_peer_statement_about_contraindication_is_not_a_clinical_assertion():
+    case = _case(
+        case_summary="Fictional incomplete case; staging and fitness are not supplied.",
+        clinical_t_stage=None,
+        clinical_n_stage=None,
+        clinical_m_stage=None,
+        stage_group=None,
+        performance_status=None,
+    )
+    saved_mo07_wording = (
+        "No peer proposes a definitive treatment pathway as indicated, "
+        "nor do any claim that an option is contraindicated based on missing data alone."
+    )
+    flags = audit_unverified_case_claims(case, {
+        "response_to_other_perspectives": saved_mo07_wording
+    })
+    assert not any("treatment safety/indication" in item for item in flags)
+
+
+def test_negated_peer_statement_does_not_hide_a_separate_positive_contraindication_claim():
+    case = _case(
+        case_summary="Fictional incomplete case; staging and fitness are not supplied.",
+        clinical_t_stage=None,
+        clinical_n_stage=None,
+        clinical_m_stage=None,
+        stage_group=None,
+        performance_status=None,
+    )
+    text = (
+        "No peer proposes a definitive treatment pathway as indicated, "
+        "nor do any claim that an option is contraindicated based on missing data alone; "
+        "however, surgery is contraindicated."
+    )
+    flags = audit_unverified_case_claims(case, {
+        "response_to_other_perspectives": text
+    })
+    assert any("treatment safety/indication" in item for item in flags)
+
+
 def test_unreported_histology_and_pathology_markers_are_flagged():
     case = _case(histology=None, pathology_summary=None)
     flags = " ".join(audit_unverified_case_claims(case, {

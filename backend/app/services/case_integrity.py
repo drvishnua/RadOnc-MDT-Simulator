@@ -1007,7 +1007,8 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         r"\b(?:neither|no)\s+(?:(?:selected|supplied|participating|other)\s+)?"
         r"(?:peer|source|note|role|agent|specialist|clinician|contribution|assessment|record|report)s?\b"
         r"[^.!?;:\n]{0,100}\b(?:claims?|states?|says?|said|reports?|reported|asserts?|asserted|"
-        r"suggests?|suggested|recommends?|recommended|argues?|argued|believes?|believed)\b",
+        r"suggests?|suggested|recommends?|recommended|argues?|argued|believes?|believed)\b"
+        r"|\b(?:nor|and\s+nor)\s+(?:do|does|did)\s+any\s+(?:claim|state|say|report|assert|suggest|recommend|argue|believe)\b",
         re.IGNORECASE,
     )
     treatment_status_matches = _unsupported_matches(

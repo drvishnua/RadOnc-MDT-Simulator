@@ -1093,56 +1093,6 @@ def _deterministically_neutralise_neither_indication_claim(value: str) -> str | 
     return repaired if replacements and repaired != value else None
 
 
-_DIRECT_TREATMENT_STATUS_ASSERTION = re.compile(
-    r"(?P<prefix>(?:(?:however|but|yet),\s+|[.!?;]\s+)?)"
-    r"(?P<subject>[^.!?;:\n]{1,100}?)\s+"
-    r"(?P<verb>is|are|was|were|has been|remains)\s+"
-    r"(?P<qualifier>clearly\s+)?"
-    r"(?P<status>contraindicated|unsafe|not\s+indicated)\b",
-    re.IGNORECASE,
-)
-
-
-def _deterministically_neutralise_categorical_treatment_status(value: str) -> str | None:
-    """Turn an unsupported absolute safety/indication claim into explicit uncertainty.
-
-    The option and its status term are retained as the subject of an uncertainty
-    statement. This does not assert that treatment is safe, indicated, or suitable.
-    The complete case-integrity audit is run again before any repair is accepted.
-    """
-    replacements = 0
-
-    def replace(match: re.Match[str]) -> str:
-        nonlocal replacements
-        subject = match.group("subject").strip()
-        # Do not rewrite an already-qualified report, question, or explicit
-        # rejection of an assertion merely because it contains the same words.
-        if re.search(
-            r"\b(?:does|do|did)\s+not\s+(?:imply|mean|confirm|establish|show|"
-            r"demonstrate|support|indicate|prove)|\b(?:cannot|can\s+not)\s+"
-            r"(?:confirm|establish|show|demonstrate|indicate)|\bwhether\b",
-            subject,
-            re.IGNORECASE,
-        ):
-            return match.group(0)
-        if not subject:
-            return match.group(0)
-        subject = subject[0].lower() + subject[1:]
-        status = match.group("status")
-        if status.casefold() == "not indicated":
-            status = "indicated"
-        prefix = match.group("prefix")
-        lead = "The supplied information" if not prefix.strip() else "the supplied information"
-        replacements += 1
-        return (
-            f"{prefix}{lead} does not establish whether {subject} "
-            f"{match.group('verb')} {match.group('qualifier') or ''}{status}"
-        )
-
-    repaired = _DIRECT_TREATMENT_STATUS_ASSERTION.sub(replace, value)
-    return repaired if replacements and repaired != value else None
-
-
 def _source_opinion_repair_preserves_anchors(
     case: SyntheticCase,
     payload: dict,
@@ -1330,7 +1280,6 @@ async def _repair_unsupported_prerequisite_wording(
                 # original text rather than allowing final model validation to crash.
                 deterministic_replacement = (
                     _deterministically_neutralise_unsupported_prerequisite_status(original)
-                    or _deterministically_neutralise_categorical_treatment_status(original)
                     or _deterministically_neutralise_neither_indication_claim(original)
                 )
                 if (
@@ -1360,7 +1309,6 @@ async def _repair_unsupported_prerequisite_wording(
                 # source anchor and the complete integrity audit below.
                 deterministic_replacement = (
                     _deterministically_neutralise_unsupported_prerequisite_status(original)
-                    or _deterministically_neutralise_categorical_treatment_status(original)
                     or _deterministically_neutralise_neither_indication_claim(original)
                 )
                 if (
@@ -1424,7 +1372,6 @@ async def _repair_unsupported_prerequisite_wording(
             original = original_text[path]
             deterministic_replacement = (
                 _deterministically_neutralise_unsupported_prerequisite_status(original)
-                or _deterministically_neutralise_categorical_treatment_status(original)
                 or _deterministically_neutralise_neither_indication_claim(original)
             )
             if (
