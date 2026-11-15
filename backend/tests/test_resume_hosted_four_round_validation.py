@@ -190,3 +190,19 @@ def test_resume_workflow_is_bound_to_run_16_checkpoint_lineage():
     assert expected_sha in workflow
     assert "[resume-hosted-cpu-r3]" in workflow
     assert "backend/tests/test_resume_hosted_four_round_validation.py" in workflow
+
+def test_resume_workflow_normalizes_ollama_digest_before_exact_checkpoint_match():
+    workflow_path = (
+        ROOT
+        / ".github"
+        / "workflows"
+        / "resume-hosted-cpu-four-round-validation.yml"
+    )
+    workflow = workflow_path.read_text(encoding="utf-8")
+    assert '$hexDigest = $reportedDigest' in workflow
+    assert '$hexDigest.StartsWith("sha256:"' in workflow
+    assert '$hexDigest.Substring(7)' in workflow
+    assert 'if ($hexDigest.Length -ne 64)' in workflow
+    assert '[Uri]::IsHexDigit($hexChar)' in workflow
+    assert '$modelDigest = "sha256:" + $hexDigest.ToLowerInvariant()' in workflow
+    assert 'if ($modelDigest -ne [string]$manifest.model.digest)' in workflow
