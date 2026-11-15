@@ -800,7 +800,7 @@ def test_final_chair_rebuilds_source_opinion_coverage_from_saved_r3_reviews():
     assert "Round 3 source-reference audit: 1/45" in flags
     assert "R2 duplicate-only source-reference flag" in flags
     assert "Malformed paired-source wording" in flags
-    assert "Round 3 source-reference detail (1 distinct role(s): RO-01)" in flags
+    assert "Round 3 source-reference detail (1 distinct role(s): RO-03)" in flags
     assert "Round 2 source-reference detail (1 distinct role(s): RO-01)" in flags
     assert "unanimously" not in unresolved.casefold()
 
