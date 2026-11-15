@@ -1008,6 +1008,8 @@ def test_r2_records_exact_peer_sources_and_flags_broad_or_unsupplied_references(
             position="insufficient_information",
             provisional_conclusion="The available synthetic information remains insufficient for a definitive conclusion.",
             response_to_other_perspectives=(
+                "All selected peer positions align with the current position. "
+                "No substantive disagreement exists among peers. "
                 "R1:RO-01 through R1:SV-02 is an invalid broad range; "
                 "R1:MO-01 is supplied; R1:ZZ-99 was not supplied."
             ),
@@ -1050,6 +1052,8 @@ def test_r2_records_exact_peer_sources_and_flags_broad_or_unsupplied_references(
     assert any("Reference range R1:RO-01 through R1:SV-02" in flag
                for flag in result.source_reference_integrity_flags)
     assert any("Reference R1:ZZ-99 was not supplied" in flag
+               for flag in result.source_reference_integrity_flags)
+    assert any("Unsupported peer-agreement claim" in flag
                for flag in result.source_reference_integrity_flags)
 
 
@@ -3513,3 +3517,37 @@ def test_deterministic_neither_indication_repair_handles_singular_and_plural_sub
     assert repaired_plural is not None
     assert "does not establish whether either surgery-first or preoperative multimodality is indicated" in repaired_plural
     assert "neither surgery-first nor preoperative multimodality is indicated" not in repaired_plural
+
+
+
+def test_r2_peer_agreement_scope_audit_does_not_flag_explicit_rebuttal():
+    from app.services.mdt_generation import _audit_source_references
+
+    allowed = {("R1", "RO-01"), ("R1", "MO-01")}
+    rebuttal = {
+        "response_to_other_perspectives": (
+            "A claim that all peers agree is unsupported; matching position labels "
+            "do not establish agreement on an educational option."
+        ),
+        "agreements": [],
+    }
+    assert not any(
+        "Unsupported peer-agreement claim" in item
+        for item in _audit_source_references(rebuttal, allowed)
+    )
+
+
+def test_r2_peer_agreement_scope_audit_flags_unstructured_unanimity_claim():
+    from app.services.mdt_generation import _audit_source_references
+
+    allowed = {("R1", "RO-01"), ("R1", "MO-01")}
+    unstructured_claim = {
+        "response_to_other_perspectives": (
+            "All selected peer positions align with this position. "
+            "No substantive disagreement exists among peers."
+        ),
+        "agreements": [],
+    }
+    flags = _audit_source_references(unstructured_claim, allowed)
+    assert sum("Unsupported peer-agreement claim" in item for item in flags) == 1
+
