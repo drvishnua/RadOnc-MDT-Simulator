@@ -11,7 +11,9 @@ on:
 permissions:
   contents: read
 
-# One-time explicitly marked hosted CPU validation trigger.
+# One-time explicitly marked 45-role R1-R4/Chair integration run.
+# CPU-only, concurrency 1, and expected to save 136 contributions plus JSON/SQLite/manifest audit artefacts.
+# This workflow cannot provide RTX 4060 or GPU-inference verification.
 concurrency:
   group: hosted-cpu-four-round-mdt-validation
   # A newly marked validation replaces a stale run in this isolated CPU-only group.

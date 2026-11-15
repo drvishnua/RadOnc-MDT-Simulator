@@ -3,7 +3,7 @@
 **Repository:** `drvishnua/RadOnc-MDT-Simulator`  
 **Branch:** `feature/four-round-mdt-and-performance`  
 **PR:** [#1](https://github.com/drvishnua/RadOnc-MDT-Simulator/pull/1) — open, draft, unmerged; base `main`.  
-**Latest fully verified code/test commit:** `263d13a258bbcfffa9ce241042c77f30b4e501d5` (all six exact-head workflows passed; production-code detector fix is `92dbb559ed1a0f781ec838f6e30acb42cf405f98`).
+**Latest fully verified code/test commit:** `80abe9e22b957ee93071064c1b99614689be3bf8` (all six exact-head workflows passed; production-code detector fix is `92dbb559ed1a0f781ec838f6e30acb42cf405f98`).
 
 Statuses: **NOT STARTED**, **IN PROGRESS**, **BLOCKED**, **VERIFIED**, **FAILED**, **NOT APPLICABLE**. VERIFIED applies only to the stated scope and evidence.
 
@@ -25,31 +25,31 @@ Statuses: **NOT STARTED**, **IN PROGRESS**, **BLOCKED**, **VERIFIED**, **FAILED*
 | Case hashes, run IDs, timestamps and audit history | IN PROGRESS | Mechanisms exist; complete current-head reproducibility audit outstanding. |
 | Provenance and source attribution | IN PROGRESS | Round/source validation exists; malformed paired-reference R3 prose is flagged without rewriting raw output. Evidence retrieval and independent source verification are not implemented. |
 | Missing/failed agent handling | IN PROGRESS | Validation mechanisms exist; current-head incomplete-case/failure-injection acceptance outstanding. |
-| Live-validation source-integrity quality gate | IN PROGRESS | The validator maps both case-data and source-reference flags to failed quality-gate items. A no-inference regression for the exact malformed R3 paired-source flag is added in this commit; exact-head CI pending. |
-| Backend tests | VERIFIED | `263d13a`, [run 43697279414](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43697279414): 305 passed, 0 failed/errors/skipped; preflight 6 passed, 0 failed/inconclusive. Includes malformed-prose detector, grammatical negative control, R3 generation-path flag assertion and Chair handoff regression. Failure history retained: `685761a` failed due an over-escaped regex, fixed in `92dbb55`; `39140b4` had a wrong fixture role expectation, corrected in `970c899`. |
-| Frontend build | VERIFIED | [Run 43697279484](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43697279484): success on `263d13a`. |
-| Browser registry/dashboard E2E | VERIFIED | [Run 43697279409](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43697279409): success on `263d13a`. |
-| Packaging prerequisites | VERIFIED | [Run 43697279457](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43697279457): success on `263d13a`. |
-| Windows installer build/smoke test | VERIFIED | [Run 43697279410](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43697279410): build, install/smoke test, checksum and artifact upload passed on `263d13a`; optional clean-host first-run Ollama/model bootstrap skipped. |
-| Dependency/security workflows | VERIFIED (analysis execution); alert closure pending | [Run 43697279588](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43697279588): dependency audit, secret scan and Python/JS CodeQL jobs passed on `263d13a`. No unresolved PR review threads; direct code-scanning alert record was inaccessible, so formal TNM alert closure is not claimed. |
+| Live-validation source-integrity quality gate | IN PROGRESS | The validator maps both case-data and source-reference flags to failed quality-gate items. The no-inference regression for the exact malformed R3 paired-source flag passed in the 307-test backend suite on `80abe9e`; the test confirms the saved flag becomes an R3 failed quality-gate item without rewriting source text. |
+| Backend tests | VERIFIED | `80abe9e`, [run 43698410262](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43698410262): 307 passed, 0 failed/errors/skipped; preflight 6 passed, 0 failed/inconclusive. Includes malformed-prose detection, R3 generation, Chair handoff, live quality-gate and actual R3 `num_ctx=8192` request-payload regressions. Failure history retained: `685761a` failed due an over-escaped regex, fixed in `92dbb55`; `39140b4` had a wrong fixture role expectation, corrected in `970c899`. |
+| Frontend build | VERIFIED | [Run 43698410277](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43698410277): success on `80abe9e`. |
+| Browser registry/dashboard E2E | VERIFIED | [Run 43698410259](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43698410259): success on `80abe9e`. |
+| Packaging prerequisites | VERIFIED | [Run 43698410249](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43698410249): success on `80abe9e`. |
+| Windows installer build/smoke test | VERIFIED | [Run 43698410319](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43698410319): build, install/smoke test, checksum and artifact upload passed on `80abe9e`; optional clean-host first-run Ollama/model bootstrap skipped. |
+| Dependency/security workflows | VERIFIED (analysis execution); alert closure pending | [Run 43698410290](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43698410290): dependency audit, secret scan and Python/JS CodeQL jobs passed on `80abe9e`. No unresolved PR review threads; direct code-scanning alert record was inaccessible, so formal TNM alert closure is not claimed. |
 | Frontend flicker/blank screens/stale state | IN PROGRESS | Browser E2E passes; dedicated reproduction and console/network/lifecycle investigation outstanding. |
 | Dashboard/API integration | IN PROGRESS | Baseline browser E2E passed; current-head acceptance outstanding. |
 | Ollama context allocation | VERIFIED (isolated probe only) | Hosted Windows probe observed requested/actual 6,144 and 8,192. Not proof of effective context in a full MDT run. |
-| R3 Ollama request-context propagation | IN PROGRESS | `_context_window_for_schema` maps the main adversarial draft to 8,192; a no-inference test now captures the actual `/api/generate` request and asserts `options.num_ctx=8192`. Exact-head CI pending; live per-stage context/runtime verification remains outstanding. |
-| Effective R3 context/truncation | IN PROGRESS | A historical pre-R2 and post-R4 process snapshot showed `context_length=4096`; those snapshots do not identify the context used inside the R3 call. The schema mapping requests 8,192 for `AdversarialContributionDraft` and 6,144 for R2/R3 repair schemas. The new request-payload regression is pending exact-head CI; stage-specific live runtime verification remains outstanding. |
+| R3 Ollama request-context propagation | IN PROGRESS | `_context_window_for_schema` maps the main adversarial draft to 8,192; the `80abe9e` no-inference test captures the actual `/api/generate` request and confirms `options.num_ctx=8192`. Live per-stage runtime allocation/truncation evidence remains outstanding. |
+| Effective R3 context/truncation | IN PROGRESS | A historical pre-R2 and post-R4 process snapshot showed `context_length=4096`; those snapshots do not identify the context used inside the R3 call. Schema mapping and request-payload regression verify R3 asks for 8,192, while R2/R3 repair schemas ask for 6,144. Stage-specific live runtime allocation and truncation verification remain outstanding. |
 | RTX 4060 active inference | IN PROGRESS | Historical laptop GPU measurements exist; current-head request-time GPU/offload verification outstanding. |
-| Full live 45-role MDT | NOT STARTED (current HEAD) | No complete current-head 136-contribution run with audited saved outputs. Historical runs are not current proof. |
+| Full live 45-role MDT | IN PROGRESS | A single explicitly marked hosted CPU-only R1-R4/Chair validation is triggered by this commit. Expected 45 roles, 136 saved contributions, concurrency 1, synthetic case, JSON/SQLite/manifest artefacts. Run ID/status will be recorded after Actions creates it. No GPU evidence is claimed. |
 | Live artefacts/reproducibility | IN PROGRESS | Bounded synthetic artefacts exist; full current-head artefact inspection outstanding. |
 | Evidence retrieval/guideline verification | NOT STARTED | Retrieval is not connected; no guideline concordance is claimed. |
 | Independent clinical review | NOT STARTED | Qualified clinical review/acceptance not performed. |
-| Windows release/security acceptance | IN PROGRESS | Installer and security workflows passed on `263d13a`; direct TNM alert-state confirmation, full live validation and release gates remain. |
+| Windows release/security acceptance | IN PROGRESS | Installer and security workflows passed on `80abe9e`; direct TNM alert-state confirmation, hosted full live validation and release gates remain. |
 | Authoritative repository checklist | VERIFIED | This file is the single master checklist; `IMPLEMENTATION_STATUS.md` points here for current status. |
 
 ## Immediate priorities
 
 1. Obtain direct confirmation that CodeQL alert 4 is formally closed; review all subsequent security findings.
 2. Verify the live-validator quality-gate regression for the malformed R3 flag on exact-head CI.
-3. Verify the R3 request-payload context test on exact-head CI; use per-stage runtime evidence rather than pre-R2/post-R4 process snapshots.
+3. Monitor the single hosted CPU 45-role run; inspect its saved 136-contribution database, Chair report, integrity flags, missing/failed roles, and R3 per-stage context. Do not launch a second run concurrently.
 4. On the next justified live run, verify a saved R3 malformed-prose flag appears in the persisted R3 contribution and final Chair report; synthetic generation and Chair boundary regressions pass.
 5. Run one consolidated bounded live validation only after code and CI are stable; avoid repeated isolated long model runs.
 6. Separately validate full 45-role execution, incomplete/failed agents, saved artefacts, effective R3 context and RTX 4060 activity.
