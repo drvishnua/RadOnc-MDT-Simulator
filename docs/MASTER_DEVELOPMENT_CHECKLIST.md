@@ -355,6 +355,11 @@ Artifact `14169603817` (`radonc-hosted-cpu-four-round-validation`) archive SHA-2
 | AI-018 | Establish model retirement, rollback, emergency disablement and fallback policy; never silently change model digest | NOT STARTED | Tested model rollback and customer notification policy |
 | AI-019 | Validate inference capacity, per-tenant quotas, concurrency, cost ceilings and denial-of-wallet resistance | NOT STARTED | Load/soak tests and measured unit economics at target load |
 | AI-020 | Verify RTX 4060 active inference separately from hosted CPU tests; record request-time utilisation, VRAM, offload layers, latency and logs | IN PROGRESS | Captured nvidia-smi/Ollama telemetry during actual request; no VRAM-allocation-only proof |
+| AI-021 | Evaluate Google MedGemma as a candidate specialist reasoning model against the current Qwen baseline; verify exact official model artefact/tag, digest, quantisation, Ollama compatibility and licence before use | NOT STARTED | Reproducible model identity/licence record and paired evaluation report; do not assume an Ollama tag or commercial redistribution right |
+| AI-022 | Benchmark MedGemma on the frozen RadOnc MDT failure corpus, including unsupported TNM/staging, R2 false agreement, citation fabrication/ranges, R3 provenance, conditionality, missing data and failed-agent cases | NOT STARTED | Paired Qwen-versus-MedGemma results using identical cases/prompts/schemas/settings, blind clinical review and regression analysis |
+| AI-023 | Measure MedGemma feasibility on RTX 4060 8GB with actual request-time GPU offload, VRAM, context/KV-cache, latency and CPU fallback; retain concurrency 1 | NOT STARTED | Captured nvidia-smi/Ollama request telemetry and repeatable resource/latency report |
+| AI-024 | Define MedGemma promotion/rollback gate; retain Qwen as baseline until MedGemma demonstrates a meaningful, reproducible safety/quality improvement without unacceptable performance or licensing risk | NOT STARTED | Approved acceptance thresholds, model digest pinning, rollback test and documented go/no-go decision |
+
 
 ## H. Clinical safety, evidence, guideline and reference governance
 
@@ -598,3 +603,26 @@ Artifact `14169603817` (`radonc-hosted-cpu-four-round-validation`) archive SHA-2
 8. Do not claim the project is commercially distributable until all applicable BLOCKED, FAILED and NOT STARTED release gates are closed with evidence and independent sign-offs.
 
 **Commercial readiness at this checkpoint:** NOT READY. The existing local application has useful engineering/packaging and test foundations, but the current project evidence does not establish SaaS identity, multi-tenancy, cloud security, DPDP/privacy readiness, regulatory classification, clinical validity, evidence licensing, contractual readiness, operational resilience, penetration-test acceptance or production service reliability.
+
+
+## R. Priority workstream — MedGemma model evaluation
+
+**Priority: P1 — high priority candidate-model evaluation. Status: NOT STARTED.** This is the next planned model-evaluation workstream; it is not an approved model replacement and does not supersede the failed live-validation gate or deterministic safety controls.
+
+### Required sequence
+
+1. **Verify the exact model first.** Identify the current official Google MedGemma release, exact artefact and digest, supported quantisations, model card, intended-use limitations, licence and commercial/redistribution terms. Separately verify whether a maintained Ollama package/tag exists and whether its conversion/packaging is faithful. Do not invent or assume a tag such as `medgemma:4b` or `medgemma1.5:4b`.
+2. **Freeze the evaluation corpus.** Include the historical RadOnc MDT failure patterns: unsupported T/N/M and comorbidity claims; R2 claims of agreement without shared propositions; invented/range citations; R3 fabricated or unbound source references; loss of conditional prerequisites; missing/failed agents; and incomplete staging. Preserve positive controls so fixes do not suppress genuine findings.
+3. **Run paired inference.** Compare the pinned current Qwen model with the pinned MedGemma candidate using identical case inputs, role prompts, schemas, context budgets, decoding settings and sequential concurrency. Record exact model digests, prompt/schema versions, runtime and run IDs. No real-patient data.
+4. **Evaluate clinical and data integrity separately.** Measure unsupported assertions, staging accuracy against supplied facts, proposition-level agreement fidelity, citation/source binding, conditionality, missing-data handling, output completeness and specialist-role performance. Obtain independent radiation-oncology/MDT review; automated scores alone are insufficient.
+5. **Test hardware feasibility.** On the RTX 4060 8GB, measure actual request-time GPU utilisation, offloaded layers, VRAM, context/KV-cache, latency and CPU fallback. Model loading or allocated VRAM alone is not proof of GPU inference. Keep concurrency at 1 unless measured results justify a change.
+6. **Make a documented go/no-go decision.** Promote MedGemma only if it provides a meaningful and repeatable quality/safety improvement, fits the target runtime, and passes licence/security review. Otherwise retain Qwen. Keep a tested rollback path and never silently change the model digest.
+
+### Priority order and dependencies
+
+- **P0 — ongoing safety gate:** continue remediation and revalidation of the historical R1/R2/R3/R4 failures. A better model cannot repair deterministic source binding, consensus calculation or audit integrity.
+- **P1 — MedGemma evaluation:** begin exact artefact/licence verification and frozen-corpus preparation; proceed to paired inference only after those prerequisites are recorded.
+- **P2 — model promotion:** only after paired evaluation, independent clinical review, GPU/performance verification and licence approval.
+- **P3 — broader evidence retrieval/RAG:** develop separately with approved, current, versioned sources; do not treat model selection as a substitute for evidence retrieval.
+
+**Current decision:** Qwen remains the baseline. MedGemma is a high-priority candidate for controlled evaluation, not yet selected, installed, benchmarked, GPU-verified or clinically validated.
