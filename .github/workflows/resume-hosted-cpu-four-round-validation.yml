@@ -6,7 +6,7 @@ on:
       checkpoint_run_id:
         description: "Workflow run ID containing the latest SQLite checkpoint"
         required: true
-        default: "43617355539"
+        default: "43714529807"
       checkpoint_artifact_name:
         description: "Artifact name containing that checkpoint"
         required: true
@@ -17,6 +17,7 @@ on:
     paths:
       - ".github/workflows/resume-hosted-cpu-four-round-validation.yml"
       - "backend/scripts/resume_hosted_four_round_validation.py"
+      - "backend/tests/test_resume_hosted_four_round_validation.py"
 
 permissions:
   actions: read
@@ -36,7 +37,7 @@ jobs:
       OLLAMA_MODEL: qwen3.5:4b
       RADONC_AGENT_CONCURRENCY: "1"
       RADONC_VALIDATION_CPU_ONLY: "1"
-      RADONC_CHECKPOINT_RUN_ID: ${{ github.event.inputs.checkpoint_run_id || '43617355539' }}
+      RADONC_CHECKPOINT_RUN_ID: ${{ github.event.inputs.checkpoint_run_id || '43714529807' }}
     steps:
       - name: Check out continuation source
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
@@ -91,7 +92,7 @@ jobs:
           if ($latestRun -ne [string]$env:RADONC_CHECKPOINT_RUN_ID) {
             throw "Checkpoint manifest run ID does not match the requested artifact run."
           }
-          if ([string]$manifest.source.commit_sha -ne "6cf444c5e2c574838b51b0ebaa0e0cd3562e3716") {
+          if ([string]$manifest.source.commit_sha -ne "4683b0767bf5cade408e85ec31ef248b34e5321e") {
             throw "Checkpoint source SHA is not the original timed-out validation revision."
           }
           Copy-Item -LiteralPath $checkpointDatabase -Destination (Join-Path $artifactDirectory $databaseName) -Force
