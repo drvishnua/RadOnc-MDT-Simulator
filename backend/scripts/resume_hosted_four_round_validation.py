@@ -20,8 +20,8 @@ DB_PATH = ARTIFACT_DIR / "live_four_round_hosted_cpu_validation.sqlite3"
 MANIFEST_PATH = Path(os.environ.get("RADONC_CHECKPOINT_MANIFEST", ""))
 RESUME_MANIFEST_PATH = ARTIFACT_DIR / "live_four_round_hosted_cpu_resume_manifest.json"
 REPORT_PATH = ARTIFACT_DIR / "live_four_round_hosted_cpu_resume_validation.json"
-EXPECTED_SOURCE_SHA = "6cf444c5e2c574838b51b0ebaa0e0cd3562e3716"
-EXPECTED_SOURCE_RUN = "43617355539"
+EXPECTED_SOURCE_SHA = "4683b0767bf5cade408e85ec31ef248b34e5321e"
+EXPECTED_SOURCE_RUN = "43714529807"
 
 sys.path.insert(0, str(BACKEND_DIR))
 sys.path.insert(0, str(BACKEND_DIR / "scripts"))
