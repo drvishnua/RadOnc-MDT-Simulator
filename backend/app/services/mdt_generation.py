@@ -283,10 +283,16 @@ def _audit_source_references(payload: dict, allowed: set[tuple[str, str]]) -> li
             "not a substantive agreement",
             "not a consensus",
         )
-        has_unrebutted_peer_agreement_claim = any(
-            any(phrase in paragraph for phrase in peer_agreement_phrases)
-            and not any(marker in paragraph for marker in peer_agreement_rejection_markers)
+        peer_agreement_sentences = [
+            sentence.strip()
             for paragraph in paragraphs
+            for sentence in re.split(r"(?<=[.!?])\\s+", paragraph)
+            if sentence.strip()
+        ]
+        has_unrebutted_peer_agreement_claim = any(
+            any(phrase in sentence for phrase in peer_agreement_phrases)
+            and not any(marker in sentence for marker in peer_agreement_rejection_markers)
+            for sentence in peer_agreement_sentences
         )
         if has_unrebutted_peer_agreement_claim:
             findings.append(
