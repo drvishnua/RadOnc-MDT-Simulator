@@ -35,7 +35,8 @@ Statuses: **NOT STARTED**, **IN PROGRESS**, **BLOCKED**, **VERIFIED**, **FAILED*
 | Frontend flicker/blank screens/stale state | IN PROGRESS | Browser E2E passes; dedicated reproduction and console/network/lifecycle investigation outstanding. |
 | Dashboard/API integration | IN PROGRESS | Baseline browser E2E passed; current-head acceptance outstanding. |
 | Ollama context allocation | VERIFIED (isolated probe only) | Hosted Windows probe observed requested/actual 6,144 and 8,192. Not proof of effective context in a full MDT run. |
-| Effective R3 context/truncation | IN PROGRESS | Earlier run snapshots reported 4,096 despite an 8,192 request; end-to-end verification outstanding. |
+| R3 Ollama request-context propagation | IN PROGRESS | `_context_window_for_schema` maps the main adversarial draft to 8,192; a no-inference test now captures the actual `/api/generate` request and asserts `options.num_ctx=8192`. Exact-head CI pending; live per-stage context/runtime verification remains outstanding. |
+| Effective R3 context/truncation | IN PROGRESS | A historical pre-R2 and post-R4 process snapshot showed `context_length=4096`; those snapshots do not identify the context used inside the R3 call. The schema mapping requests 8,192 for `AdversarialContributionDraft` and 6,144 for R2/R3 repair schemas. The new request-payload regression is pending exact-head CI; stage-specific live runtime verification remains outstanding. |
 | RTX 4060 active inference | IN PROGRESS | Historical laptop GPU measurements exist; current-head request-time GPU/offload verification outstanding. |
 | Full live 45-role MDT | NOT STARTED (current HEAD) | No complete current-head 136-contribution run with audited saved outputs. Historical runs are not current proof. |
 | Live artefacts/reproducibility | IN PROGRESS | Bounded synthetic artefacts exist; full current-head artefact inspection outstanding. |
@@ -48,10 +49,11 @@ Statuses: **NOT STARTED**, **IN PROGRESS**, **BLOCKED**, **VERIFIED**, **FAILED*
 
 1. Obtain direct confirmation that CodeQL alert 4 is formally closed; review all subsequent security findings.
 2. Verify the live-validator quality-gate regression for the malformed R3 flag on exact-head CI.
-3. On the next justified live run, verify a saved R3 malformed-prose flag appears in the persisted R3 contribution and final Chair report; synthetic generation and Chair boundary regressions pass.
-4. Run one consolidated bounded live validation only after code and CI are stable; avoid repeated isolated long model runs.
-5. Separately validate full 45-role execution, incomplete/failed agents, saved artefacts, effective R3 context and RTX 4060 activity.
-6. Keep evidence retrieval, qualified clinical review and release approval as separate gates.
+3. Verify the R3 request-payload context test on exact-head CI; use per-stage runtime evidence rather than pre-R2/post-R4 process snapshots.
+4. On the next justified live run, verify a saved R3 malformed-prose flag appears in the persisted R3 contribution and final Chair report; synthetic generation and Chair boundary regressions pass.
+5. Run one consolidated bounded live validation only after code and CI are stable; avoid repeated isolated long model runs.
+6. Separately validate full 45-role execution, incomplete/failed agents, saved artefacts, effective R3 context and RTX 4060 activity.
+7. Keep evidence retrieval, qualified clinical review and release approval as separate gates.
 
 ## Verification boundaries
 
