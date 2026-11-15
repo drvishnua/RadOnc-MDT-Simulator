@@ -4,7 +4,6 @@
 **Branch:** `feature/four-round-mdt-and-performance`  
 **PR:** [#1](https://github.com/drvishnua/RadOnc-MDT-Simulator/pull/1) — open, draft, unmerged; base `main`.  
 **Latest fully verified code/test commit:** `80abe9e22b957ee93071064c1b99614689be3bf8` (all six exact-head workflows passed; production-code detector fix is `92dbb559ed1a0f781ec838f6e30acb42cf405f98`).
-**Latest branch head:** `2af68fc8d4ef53ac3cb094337fed8007f83b23d4` (checklist-only commit; all six standard CI workflows passed: runs 43699036280, 43699036296, 43699036337, 43699036336, 43699036274, 43699036288).
 
 Statuses: **NOT STARTED**, **IN PROGRESS**, **BLOCKED**, **VERIFIED**, **FAILED**, **NOT APPLICABLE**. VERIFIED applies only to the stated scope and evidence.
 
