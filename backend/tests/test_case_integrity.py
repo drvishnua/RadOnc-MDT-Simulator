@@ -973,6 +973,7 @@ def test_negated_prerequisite_classification_is_not_a_categorical_unmet_claim():
         "The staging prerequisites must not be converted into unmet conditions.",
         "The peer conclusions identify the missing prerequisites (complete local staging, MRI staging, metastatic work-up, fitness assessment) without providing negative findings.",
         "The prerequisites are unknown due to missing case data, rather than treating them as unmet or absent.",
+        "The peer records preserve uncertainty rather than converting them into categorical claims of unmet or absent conditions.",
     ]
     for statement in safe_statements:
         flags = audit_unverified_case_claims(case, {
