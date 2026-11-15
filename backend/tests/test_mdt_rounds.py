@@ -2058,8 +2058,13 @@ def test_r3_case_source_reviews_require_exact_case_summary_excerpt(monkeypatch):
         mdt_generation.generate_adversarial_contribution(profile, case, own_r1, own_r2, peers)
     )
     flags = " ".join(result.source_reference_integrity_flags)
-    assert "no exact contiguous source_excerpt" in flags
-    assert "not bound to one unique exact case-summary excerpt" in flags
+    assert result.source_opinion_reviews == []
+    assert len(result.model_reported_source_opinion_reviews) == 1
+    raw_review = result.model_reported_source_opinion_reviews[0]
+    assert raw_review["source_id"] == "CASE:case_summary#1"
+    assert raw_review["source_excerpt"] == "This fabricated excerpt is not present in the case summary."
+    assert "server-owned attributed-opinion register is empty" in flags
+    assert "not backed by a unique exact case-summary source excerpt" in flags
     assert not any("Unverified service note" in item for item in result.substantive_challenges)
     assert result.agent_id == "RO-01"
 
