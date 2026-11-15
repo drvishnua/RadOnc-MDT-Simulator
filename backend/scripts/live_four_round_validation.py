@@ -171,6 +171,54 @@ def ids_match(rows: list[dict], expected: set[str], label: str) -> None:
 
 
 
+def _unique_modal_position(position_counts: dict[str, int]) -> str | None:
+    """Return the sole modal position, or None for empty/tied distributions."""
+    if not position_counts:
+        return None
+    highest_count = max(position_counts.values())
+    if highest_count <= 0:
+        return None
+    modal_positions = {
+        position
+        for position, count in position_counts.items()
+        if count == highest_count
+    }
+    if len(modal_positions) != 1:
+        return None
+    return next(iter(modal_positions))
+
+
+def _stable_modal_insufficient_role_ids(
+    expected_ids: set[str],
+    round1_positions: dict[str, str],
+    round2_positions: dict[str, str],
+    round3_positions: dict[str, str],
+    final_positions: dict[str, int],
+) -> set[str]:
+    """Find roles stably labelled insufficient-information under a unique R3 mode."""
+    if _unique_modal_position(final_positions) != "insufficient_information":
+        return set()
+
+    role_positions = (
+        ("R1", round1_positions),
+        ("R2", round2_positions),
+        ("R3", round3_positions),
+    )
+    for label, positions in role_positions:
+        missing = expected_ids - set(positions)
+        if missing:
+            raise ValueError(f"{label} position map is missing roles: {sorted(missing)}")
+
+    return {
+        agent_id
+        for agent_id in expected_ids
+        if round1_positions[agent_id]
+        == round2_positions[agent_id]
+        == round3_positions[agent_id]
+        == "insufficient_information"
+    }
+
+
 def _expected_minority_role_ids(
     expected_ids: set[str],
     round1_positions: dict[str, str],
@@ -199,21 +247,9 @@ def _expected_minority_role_ids(
             round3_positions[agent_id],
         }) > 1
     }
-    if not final_positions:
+    unique_modal = _unique_modal_position(final_positions)
+    if unique_modal is None:
         return position_changes
-
-    highest_count = max(final_positions.values())
-    modal_positions = {
-        position
-        for position, count in final_positions.items()
-        if count == highest_count
-    }
-    # A tied distribution has no unique modal position. Do not arbitrarily
-    # designate one of the tied groups as a minority based on dict insertion order.
-    if len(modal_positions) != 1:
-        return position_changes
-
-    unique_modal = next(iter(modal_positions))
     non_modal_roles = {
         agent_id
         for agent_id in expected_ids
@@ -480,11 +516,13 @@ async def main() -> int:
             all(agent_id in chair_minority_text for agent_id in expected_minority_ids),
             "Chair minority history omits at least one genuine position change or final non-modal view.",
         )
-        stable_modal_insufficient = {
-            agent_id for agent_id in expected_ids
-            if r1_positions[agent_id] == r2_positions[agent_id] == r3_positions[agent_id] == final_modal
-            and final_modal == "insufficient_information"
-        }
+        stable_modal_insufficient = _stable_modal_insufficient_role_ids(
+            expected_ids,
+            r1_positions,
+            r2_positions,
+            r3_positions,
+            final_positions,
+        )
         require(
             not any(agent_id in chair_minority_text for agent_id in stable_modal_insufficient),
             "Chair minority history incorrectly labels stable modal insufficient-information roles as dissent.",
