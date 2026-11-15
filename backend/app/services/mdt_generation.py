@@ -246,6 +246,39 @@ def _audit_source_references(payload: dict, allowed: set[tuple[str, str]]) -> li
             "the individually supplied peer records; only those supplied records may be described."
         )
 
+    # In R2, identical position labels or shared missing-information observations do not
+    # demonstrate agreement on a substantive educational option. Flag explicit claims
+    # that every selected peer aligns, agrees, or has no disagreement, while retaining
+    # the model-authored text for Chair review. R3 may quote/rebut these claims.
+    if {round_label for round_label, _ in allowed} == {"R1"}:
+        peer_agreement_phrases = (
+            "all selected peer positions",
+            "all selected peers agree",
+            "all peers agree",
+            "all peers explicitly",
+            "no substantive disagreement exists among peers",
+            "no substantive disagreement was identified",
+            "no substantive disagreement or challenge was identified",
+            "there is complete agreement among peers",
+            "complete agreement among peers",
+            "consensus confirms",
+            "consensus among peers",
+            "unanimous agreement among peers",
+        )
+        has_unrebutted_peer_agreement_claim = any(
+            any(phrase in paragraph for phrase in peer_agreement_phrases)
+            and not paragraph_explicitly_rejects_scope_claim(paragraph)
+            for paragraph in paragraphs
+        )
+        if has_unrebutted_peer_agreement_claim:
+            findings.append(
+                "Unsupported peer-agreement claim: the R2 narrative asserts alignment, "
+                "absence of substantive disagreement, or consensus across selected peers "
+                "without establishing a shared source-linked proposition. Identical position "
+                "labels or shared missing-information observations do not establish agreement "
+                "on an educational option; the original narrative is retained for review."
+            )
+
     # A model may drop the neutralised subject phrase from a paired-reference
     # construction (observed output: "Both and explicitly state ..."). This is
     # not safe to silently accept as traceable peer prose. Flag the malformed
