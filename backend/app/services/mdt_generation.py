@@ -1743,12 +1743,18 @@ async def generate_adversarial_contribution(
                 for item in (peer["result"].get("source_opinion_responses") or [])[:4]
                 if isinstance(item, dict)
             ],
-            "provenance_audit_flags": _prioritized_provenance_flags(
-                peer["result"].get("source_reference_integrity_flags") or []
-            ),
+            "provenance_audit_flags": [
+                _compact_r2_text(item, 220)
+                for item in _prioritized_provenance_flags(
+                    peer["result"].get("source_reference_integrity_flags") or []
+                )
+            ],
             "provenance_excerpt": (
-                _bounded_exact_excerpt(
-                    peer["result"].get("response_to_other_perspectives", ""), 1600
+                _compact_r2_text(
+                    _bounded_exact_excerpt(
+                        peer["result"].get("response_to_other_perspectives", ""), 1600
+                    ),
+                    1600,
                 )
                 if peer["result"].get("source_reference_integrity_flags")
                 else ""
@@ -1779,12 +1785,18 @@ async def generate_adversarial_contribution(
             for item in (own_debate_contribution.get("source_opinion_responses") or [])[:4]
             if isinstance(item, dict)
         ],
-        "round2_provenance_audit_flags": _prioritized_provenance_flags(
-            own_debate_contribution.get("source_reference_integrity_flags") or []
-        ),
+        "round2_provenance_audit_flags": [
+            _compact_r2_text(item, 220)
+            for item in _prioritized_provenance_flags(
+                own_debate_contribution.get("source_reference_integrity_flags") or []
+            )
+        ],
         "round2_provenance_excerpt": (
-            _bounded_exact_excerpt(
-                own_debate_contribution.get("response_to_other_perspectives", ""), 1600
+            _compact_r2_text(
+                _bounded_exact_excerpt(
+                    own_debate_contribution.get("response_to_other_perspectives", ""), 1600
+                ),
+                1600,
             )
             if own_debate_contribution.get("source_reference_integrity_flags")
             else ""
@@ -1995,6 +2007,18 @@ async def generate_adversarial_contribution(
         for item in source_opinion_register
     }
     initial_reviews = payload.get("source_opinion_reviews") or []
+    payload["model_reported_source_opinion_reviews"] = [
+        json.loads(json.dumps(item))
+        for item in initial_reviews
+        if isinstance(item, dict)
+    ][:4]
+    if not expected_source_opinions_by_id and initial_reviews:
+        review_reference_flags.append(
+            f"Model returned {len(initial_reviews)} source-opinion review(s) although the "
+            "server-owned attributed-opinion register is empty; raw entries were preserved "
+            "in model_reported_source_opinion_reviews and excluded from canonical source_opinion_reviews."
+        )
+        payload["source_opinion_reviews"] = []
     initial_review_counts = Counter(
         str(item.get("source_id") or "")
         for item in initial_reviews

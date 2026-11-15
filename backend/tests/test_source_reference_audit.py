@@ -114,20 +114,30 @@ def test_r3_receives_server_computed_peer_provenance_flags_and_exact_excerpt(mon
 
     peer_response = (
         "Introductory review of the supplied record. " + ("Additional contextual wording. " * 12)
+        + "The source text cites R1:RO-01 through R1:SV-02. "
         + "There is consensus across all roles for a single pathway."
     )
-    provenance_flag = _audit_source_references(
-        {"response_to_other_perspectives": peer_response},
-        {("R1", "RO-01"), ("R2", "MO-01")},
-    )[0]
+    provenance_flag = next(
+        item
+        for item in _audit_source_references(
+            {"response_to_other_perspectives": peer_response},
+            {("R1", "RO-01"), ("R2", "MO-01")},
+        )
+        if "Peer-scope overclaim" in item
+    )
     own_r2_response = (
         "Introductory review of the supplied record. " + ("Additional contextual wording. " * 12)
+        + "The earlier response cites R1:RO-01 through R1:SV-03. "
         + "All 45 roles agree on this pathway."
     )
-    own_r2_flag = _audit_source_references(
-        {"response_to_other_perspectives": own_r2_response},
-        {("R1", "RO-01"), ("R2", "RO-01")},
-    )[0]
+    own_r2_flag = next(
+        item
+        for item in _audit_source_references(
+            {"response_to_other_perspectives": own_r2_response},
+            {("R1", "RO-01"), ("R2", "RO-01")},
+        )
+        if "Peer-scope overclaim" in item
+    )
     captured = {}
 
     async def fake_generate(prompt, schema_type, max_tokens):
@@ -203,9 +213,14 @@ def test_r3_receives_server_computed_peer_provenance_flags_and_exact_excerpt(mon
     assert "provenance_audit_flags" in prompt
     assert "round2_provenance_audit_flags" in prompt
     assert own_r2_flag in prompt
-    assert own_r2_response in prompt
     assert provenance_flag in prompt
-    assert peer_response in prompt
+    assert "the referenced role records" in prompt
+    assert "There is consensus across all roles for a single pathway." in prompt
+    assert "All 45 roles agree on this pathway." in prompt
+    assert "R1:RO-01 through R1:SV-02" not in prompt
+    assert "R1:RO-01 through R1:SV-03" not in prompt
+    assert "R1:SV-02" not in prompt
+    assert "R1:SV-03" not in prompt
     assert "For each flagged R2 source (your own or a" in prompt
     assert "not a clinical disagreement" in prompt
     assert "short exact contiguous excerpt" in prompt
@@ -315,24 +330,23 @@ def test_r3_rejects_model_authored_case_opinion_without_server_bound_register(mo
         )
     )
 
-    review = result.source_opinion_reviews[0]
     assert "speak" in captured["prompt"].casefold()
-    assert review.option_status == "unclear"
-    assert review.conditions_status == "unclear"
-    assert review.source_reference_ids == []
-    assert review.evidence_validation_status == "invalid"
-    assert review.model_reported_option_status == "preserved"
-    assert review.model_reported_conditions_status == "preserved"
-    assert review.model_reported_source_reference_ids == [
+    assert result.source_opinion_reviews == []
+    assert len(result.model_reported_source_opinion_reviews) == 1
+    raw_review = result.model_reported_source_opinion_reviews[0]
+    assert raw_review["source_id"] == "CASE:case_summary#1"
+    assert raw_review["option_status"] == "preserved"
+    assert raw_review["source_reference_ids"] == [
         "CASE:case_summary#1",
         "R2:MO-01",
     ]
     assert any(
-        "server could not bind a case-summary source-opinion register" in flag
+        "server-owned attributed-opinion register is empty" in flag
+        and "excluded from canonical source_opinion_reviews" in flag
         for flag in result.source_reference_integrity_flags
     )
 
-    coverage, integrity = build_source_opinion_review_coverage(
+    coverage, _integrity = build_source_opinion_review_coverage(
         [{
             "agent_id": "RO-01",
             "agent_name": "Radiation Oncology",
@@ -342,7 +356,6 @@ def test_r3_rejects_model_authored_case_opinion_without_server_bound_register(mo
         case_summary,
     )
     assert coverage == []
-    assert any("omits its exact CASE source ID" in flag for flag in integrity)
 
 
 def test_r3_receives_full_peer_response_and_server_binds_preserved_and_omitted_reviews(monkeypatch):

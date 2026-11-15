@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import Field
 
@@ -191,6 +191,11 @@ class RoundContribution(StrictModel):
     substantive_challenges: list[str] = Field(default_factory=list, max_length=8)
     source_opinion_responses: list[Round2SourceOpinionResponse] = Field(default_factory=list, max_length=4)
     source_opinion_reviews: list[SourceOpinionReview] = Field(default_factory=list, max_length=4)
+    model_reported_source_opinion_reviews: list[dict[str, Any]] = Field(
+        default_factory=list,
+        max_length=4,
+        description="Server-preserved raw model reviews excluded from canonical reviews when no server-owned case-opinion register exists; unverified and not for Chair consensus.",
+    )
     model_reported_substantive_challenges: list[str] = Field(
         default_factory=list,
         max_length=8,
