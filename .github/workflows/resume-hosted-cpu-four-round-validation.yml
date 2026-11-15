@@ -1,4 +1,5 @@
 name: Resume Hosted CPU Four-Round MDT Validation
+# Run-16 checkpoint continuation: resume unsaved R3 roles and Chair R4 from artifact 14169603817.
 
 on:
   workflow_dispatch:
