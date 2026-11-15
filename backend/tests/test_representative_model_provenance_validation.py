@@ -2,6 +2,7 @@
 
 from scripts.representative_model_provenance_validation import (
     _has_expected_source_bound_challenge,
+    _require_installed_model_record,
 )
 
 
@@ -136,3 +137,48 @@ def test_positive_control_rejects_empty_claim_and_non_list_peer_ids():
         source_agent_id="SO-02",
         quoted_claim="The entire 45-role MDT agrees with this conclusion",
     )
+
+
+def test_model_registry_requires_exact_installed_model_and_full_digest():
+    model_name = "medgemma1.5:4b-it-q4_K_M"
+    digest = "sha256:" + ("a" * 64)
+    snapshot = {
+        "tags": {"models": [{"name": model_name, "model": model_name, "digest": digest, "size": 3300000000}]}
+    }
+
+    record = _require_installed_model_record(snapshot, model_name)
+
+    assert record["name"] == model_name
+    assert record["digest"] == digest
+
+
+def test_model_registry_rejects_public_short_identifier_as_digest():
+    model_name = "medgemma1.5:4b-it-q4_K_M"
+    snapshot = {
+        "tags": {"models": [{"name": model_name, "model": model_name, "digest": "433252621ab1"}]}
+    }
+
+    try:
+        _require_installed_model_record(snapshot, model_name)
+    except RuntimeError as exc:
+        assert "full SHA-256 digest" in str(exc)
+    else:
+        raise AssertionError("A short public identifier must never pass as a model digest.")
+
+
+def test_model_registry_rejects_missing_or_ambiguous_model_record():
+    model_name = "medgemma1.5:4b-it-q4_K_M"
+    valid_digest = "sha256:" + ("b" * 64)
+    for models in (
+        [],
+        [
+            {"name": model_name, "model": model_name, "digest": valid_digest},
+            {"name": model_name, "model": model_name, "digest": "sha256:" + ("c" * 64)},
+        ],
+    ):
+        try:
+            _require_installed_model_record({"tags": {"models": models}}, model_name)
+        except RuntimeError as exc:
+            assert "exactly one" in str(exc)
+        else:
+            raise AssertionError("Missing or ambiguous model records must fail closed.")

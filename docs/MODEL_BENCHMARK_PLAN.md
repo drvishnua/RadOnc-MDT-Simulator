@@ -179,6 +179,29 @@ Never merge results from different code SHAs, prompt revisions, case versions or
 7. **Controlled integration:** only after approval, change configuration behind a reversible model setting, retain the Qwen baseline and rerun regression, persistence, live workflow and hardware tests.
 
 
+## 10A. Safe execution of the bounded model-provenance screen
+
+The existing bounded R2/R3/R4 script now:
+- reads the exact installed Ollama model record from `/api/tags`;
+- requires one exact model match and a full `sha256:` plus 64-hex-character digest **before the first inference call**;
+- records the full model registry record, digest, Ollama version, `ollama ps`, and Modelfile output when available;
+- never pulls or installs a model automatically; and
+- accepts `RADONC_MODEL_VALIDATION_ARTIFACT_PATH` so Qwen and MedGemma outputs are saved to separate files rather than overwriting one another.
+
+Example PowerShell invocation on a prepared, approved Ollama host (each model must already be installed):
+
+```powershell
+$env:OLLAMA_MODEL = "qwen3.5:4b"
+$env:RADONC_MODEL_VALIDATION_ARTIFACT_PATH = "validation_artifacts/qwen_representative_validation.json"
+python backend/scripts/representative_model_provenance_validation.py
+
+$env:OLLAMA_MODEL = "medgemma1.5:4b-it-q4_K_M"
+$env:RADONC_MODEL_VALIDATION_ARTIFACT_PATH = "validation_artifacts/medgemma15_representative_validation.json"
+python backend/scripts/representative_model_provenance_validation.py
+```
+
+These are two separate, sequential, bounded runs, not one full 45-role MDT. Before either run, preserve the exact model digests and environment; do not run if the exact model is absent or the full digest is unavailable. The script still marks GPU as unmeasured and is not a hardware benchmark or clinical validation. Its R1 role inputs are deterministic fixtures; only bounded R2/R3 generation and Chair synthesis run model calls.
+
 ## 10. MedGemma 1.5 screening protocol and frozen synthetic corpus
 
 The initial synthetic screening corpus is committed at:

@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import os
 import platform
 import re
 import subprocess
@@ -48,7 +49,7 @@ from app.services.case_integrity import (
 from app.services import run_store
 
 ARTIFACT_DIR = BACKEND_DIR / "validation_artifacts"
-ARTIFACT_PATH = ARTIFACT_DIR / "representative_model_provenance_validation.json"
+ARTIFACT_PATH = Path(os.environ.get("RADONC_MODEL_VALIDATION_ARTIFACT_PATH", str(ARTIFACT_DIR / "representative_model_provenance_validation.json"))).expanduser()
 ROLE_IDS = ("RO-01", "SO-02", "MO-01")
 MAX_SECONDS_PER_GENERATION = GENERATION_REQUEST_TIMEOUT_SECONDS + 60.0
 
@@ -136,10 +137,12 @@ def _has_expected_source_bound_challenge(
 
 
 def _ollama_snapshot() -> dict:
+    """Capture Ollama runtime, installed model registry and process information."""
     result: dict = {}
     for suffix, url in (
         ("version", f"{OLLAMA_BASE_URL}/api/version"),
         ("processes", f"{OLLAMA_BASE_URL}/api/ps"),
+        ("tags", f"{OLLAMA_BASE_URL}/api/tags"),
     ):
         try:
             with urllib.request.urlopen(url, timeout=8) as response:
@@ -152,7 +155,43 @@ def _ollama_snapshot() -> dict:
         ).strip()
     except Exception as exc:
         result["cli_ps_error"] = f"{type(exc).__name__}: {exc}"
+    try:
+        result["configured_model_modelfile"] = subprocess.check_output(
+            ["ollama", "show", "--modelfile", OLLAMA_MODEL],
+            text=True,
+            timeout=15,
+        ).strip()
+    except Exception as exc:
+        result["configured_model_modelfile_error"] = f"{type(exc).__name__}: {exc}"
     return result
+
+
+def _require_installed_model_record(snapshot: dict, model_name: str) -> dict:
+    """Require one exact installed Ollama record with a full SHA-256 digest."""
+    tags = snapshot.get("tags")
+    if not isinstance(tags, dict) or not isinstance(tags.get("models"), list):
+        raise RuntimeError("Ollama /api/tags did not return a valid installed-model list.")
+
+    matches = [
+        item
+        for item in tags["models"]
+        if isinstance(item, dict)
+        and model_name in (item.get("name"), item.get("model"))
+    ]
+    if len(matches) != 1:
+        raise RuntimeError(
+            f"Expected exactly one installed Ollama model record for {model_name!r}; "
+            f"found {len(matches)}. No model pull or inference was attempted."
+        )
+
+    record = matches[0]
+    digest = record.get("digest")
+    if not isinstance(digest, str) or re.fullmatch(r"sha256:[0-9a-fA-F]{64}", digest) is None:
+        raise RuntimeError(
+            f"Installed Ollama model {model_name!r} has no full SHA-256 digest; "
+            "short tag identifiers are not accepted. No inference was attempted."
+        )
+    return dict(record)
 
 
 def _build_case() -> SyntheticCase:
@@ -472,7 +511,7 @@ def _persist_bounded_round_records(
 
 
 async def main() -> int:
-    ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
+    ARTIFACT_PATH.parent.mkdir(parents=True, exist_ok=True)
     case = _build_case()
     case_json = case.model_dump_json(exclude_none=True)
     roles = _role_rows()
@@ -522,6 +561,14 @@ async def main() -> int:
     try:
         if not payload["ollama_before"].get("version"):
             raise RuntimeError("Ollama version endpoint is not reachable.")
+        payload["model_registry_record"] = _require_installed_model_record(
+            payload["ollama_before"], OLLAMA_MODEL
+        )
+        payload["model_digest"] = payload["model_registry_record"]["digest"]
+        payload["model_tag"] = OLLAMA_MODEL
+        payload["configured_model_modelfile"] = payload["ollama_before"].get(
+            "configured_model_modelfile"
+        )
         # Round 2: each of the three roles sees the other two R1 fixture records.
         payload["rounds_attempted"].append("R2")
         r2_by_id = {}
