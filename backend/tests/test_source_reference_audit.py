@@ -136,7 +136,8 @@ def test_r3_receives_server_computed_peer_provenance_flags_and_exact_excerpt(mon
             position="insufficient_information",
             provisional_conclusion="The available record does not establish an educational option.",
             response_to_other_perspectives=(
-                "The bounded peer material contains a provenance issue, not a clinical conclusion."
+                "The bounded peer material contains a provenance issue, not a clinical conclusion. "
+                "Both and explicitly state that the missing prerequisites remain unknown."
             ),
             agreements=[],
             substantive_challenges=[
@@ -210,6 +211,7 @@ def test_r3_receives_server_computed_peer_provenance_flags_and_exact_excerpt(mon
     assert "short exact contiguous excerpt" in prompt
     assert "Do not use a provenance flag as clinical evidence" in prompt
     assert any("R2:MO-01" in item for item in result.substantive_challenges)
+    assert any("Malformed paired-source wording" in item for item in result.source_reference_integrity_flags)
     assert result.source_peer_ids == ["MO-01"]
     assert not any(
         "was not supplied as an attributable source" in item
