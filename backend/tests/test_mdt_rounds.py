@@ -1168,10 +1168,10 @@ def test_chair_report_surfaces_round_source_reference_integrity_flags():
         for item in report.unresolved_disagreements
     )
     assert any(
-        "Round 2 source-reference detail" in item
+        "Round 2 source-reference audit" in item
         and "Unsupported peer-agreement claim" in item
-        for item in report.case_data_integrity_flags
-    ), report.case_data_integrity_flags
+        for item in report.unresolved_disagreements
+    ), report.unresolved_disagreements
 
 
 def test_source_opinion_review_keeps_semantically_incomplete_content_available_for_audit():
