@@ -182,3 +182,21 @@ def test_model_registry_rejects_missing_or_ambiguous_model_record():
             assert "exactly one" in str(exc)
         else:
             raise AssertionError("Missing or ambiguous model records must fail closed.")
+
+
+def test_validation_artifact_path_guard_accepts_a_new_path(tmp_path):
+    from scripts.representative_model_provenance_validation import _assert_artifact_path_is_new
+
+    path = tmp_path / "new" / "run.json"
+    _assert_artifact_path_is_new(path)
+
+
+def test_validation_artifact_path_guard_rejects_existing_path(tmp_path):
+    from scripts.representative_model_provenance_validation import _assert_artifact_path_is_new
+    import pytest
+
+    path = tmp_path / "existing.json"
+    path.write_text("{\"original\": true}", encoding="utf-8")
+    with pytest.raises(FileExistsError, match="Refusing to overwrite"):
+        _assert_artifact_path_is_new(path)
+    assert path.read_text(encoding="utf-8") == "{\"original\": true}"

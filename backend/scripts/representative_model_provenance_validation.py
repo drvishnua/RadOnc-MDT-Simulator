@@ -166,6 +166,12 @@ def _ollama_snapshot() -> dict:
     return result
 
 
+def _assert_artifact_path_is_new(path: Path) -> None:
+    """Refuse to overwrite an earlier raw validation artifact."""
+    if path.exists():
+        raise FileExistsError(f"Refusing to overwrite existing validation artifact: {path}")
+
+
 def _require_installed_model_record(snapshot: dict, model_name: str) -> dict:
     """Require one exact installed Ollama record with a full SHA-256 digest."""
     tags = snapshot.get("tags")
@@ -512,6 +518,7 @@ def _persist_bounded_round_records(
 
 async def main() -> int:
     ARTIFACT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    _assert_artifact_path_is_new(ARTIFACT_PATH)
     case = _build_case()
     case_json = case.model_dump_json(exclude_none=True)
     roles = _role_rows()
@@ -523,7 +530,7 @@ async def main() -> int:
 
     payload = {
         "validation_type": "representative_live_r2_r3_provenance",
-        "execution_mode": "github_hosted_windows_cpu_only",
+        "execution_mode": "local_ollama_bounded_validation",
         "gpu_measured": False,
         "clinical_accuracy_evaluated": False,
         "evidence_retrieval_connected": False,
@@ -1088,10 +1095,9 @@ async def main() -> int:
         payload["total_generation_wall_seconds"] = round(
             sum(item["wall_seconds"] for item in payload["generation_metrics"]), 3
         )
-        ARTIFACT_PATH.write_text(
-            json.dumps(payload, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
+        with ARTIFACT_PATH.open("x", encoding="utf-8") as artifact_file:
+            json.dump(payload, artifact_file, ensure_ascii=False, indent=2)
+            artifact_file.write("\n")
         print(f"REPRESENTATIVE_MODEL_VALIDATION_ARTIFACT={ARTIFACT_PATH}")
         print(f"REPRESENTATIVE_MODEL_VALIDATION_STATUS={payload['status']}")
         print(f"REPRESENTATIVE_MODEL_VALIDATION_CALLS={len(payload['generation_metrics'])}")

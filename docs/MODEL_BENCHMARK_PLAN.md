@@ -187,6 +187,7 @@ The existing bounded R2/R3/R4 script now:
 - records the full model registry record, digest, Ollama version, `ollama ps`, and Modelfile output when available;
 - never pulls or installs a model automatically; and
 - accepts `RADONC_MODEL_VALIDATION_ARTIFACT_PATH` so Qwen and MedGemma outputs are saved to separate files rather than overwriting one another.
+- The runner refuses to overwrite an existing artifact path and uses exclusive file creation at final write. Use a new unique path for every repetition; never rerun a model into an existing evidence file.
 
 Example PowerShell invocation on a prepared, approved Ollama host (each model must already be installed):
 
