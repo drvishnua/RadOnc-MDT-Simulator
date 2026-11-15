@@ -399,9 +399,12 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
     ]
     assert all(item.source_excerpt for item in r2_result.source_opinion_responses)
     assert not r2_result.source_reference_integrity_flags
-    assert "R1:SO-01" in prompts[0]
-    assert "ALLOWED ROUND SOURCE IDS: R1:RO-01, R1:SO-01" in prompts[0]
-    assert "Never cite a role range, role band" in prompts[0]
+    assert "R1:SO-01" not in prompts[0]
+    assert '"source":"R1:SO-01"' not in prompts[0]
+    assert "ALLOWED ROUND SOURCE IDS" not in prompts[0]
+    assert "Peer provenance is recorded separately by the server" in prompts[0]
+    assert "exact role name shown in the supplied peer record" in prompts[0]
+    assert "Surgical Oncology" in prompts[0]
     assert "[embedded reference omitted]" in prompts[0]
     assert "R1:ZZ-99" not in prompts[0]
     assert "Surgery-led assessment" in prompts[0]
@@ -998,7 +1001,9 @@ def test_r2_records_exact_peer_sources_and_flags_broad_or_unsupplied_references(
     from app.services import mdt_generation
 
     async def fake_generate(prompt, schema_type, max_tokens):
-        assert "ALLOWED ROUND SOURCE IDS: R1:RO-01, R1:MO-01" in prompt
+        assert "Medical Oncology" in prompt
+        assert "R1:MO-01" not in prompt
+        assert "ALLOWED ROUND SOURCE IDS" not in prompt
         return Round2ContributionDraft(
             position="insufficient_information",
             provisional_conclusion="The available synthetic information remains insufficient for a definitive conclusion.",
