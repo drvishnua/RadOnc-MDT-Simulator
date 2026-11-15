@@ -509,6 +509,78 @@ def test_deterministic_prerequisite_status_fallback_converts_only_unsupported_st
         )
 
 
+def test_deterministic_fallback_neutralises_unsupported_categorical_treatment_status():
+    examples = [
+        (
+            "Initiating chemotherapy is contraindicated.",
+            "does not establish whether initiating chemotherapy is contraindicated",
+        ),
+        (
+            "Neoadjuvant therapy is not indicated.",
+            "does not establish whether neoadjuvant therapy is indicated",
+        ),
+        (
+            "However, surgery is contraindicated.",
+            "however, the supplied information does not establish whether surgery is contraindicated",
+        ),
+    ]
+    for original, expected_fragment in examples:
+        repaired = mdt_generation._deterministically_neutralise_categorical_treatment_status(
+            original
+        )
+        assert repaired is not None
+        assert expected_fragment in repaired.casefold()
+        flags = mdt_generation.audit_unverified_case_claims(
+            _case(), {"response_to_other_perspectives": repaired}
+        )
+        assert not any(
+            "treatment safety/indication" in flag for flag in flags
+        ), (original, repaired, flags)
+
+
+def test_repair_deterministically_neutralises_unsupported_contraindication_when_model_does_not(
+    monkeypatch,
+):
+    case = _case()
+    original = (
+        "The supplied educational record is incomplete. "
+        "Initiating chemotherapy is contraindicated."
+    )
+    payload = {
+        "position": "insufficient_information",
+        "response_to_other_perspectives": original,
+    }
+
+    async def unchanged_repair_generate(prompt, schema_type, max_tokens):
+        assert schema_type is RoundTextRepairDraft
+        return _repair_item("response_to_other_perspectives", original)
+
+    monkeypatch.setattr(mdt_generation, "_generate_structured", unchanged_repair_generate)
+    repaired, flags = asyncio.run(
+        mdt_generation._repair_unsupported_prerequisite_wording(
+            case,
+            payload,
+            round_number=2,
+            role_id="MO-07",
+            role_name="Medical Oncology",
+            allowed_sources=set(),
+        )
+    )
+
+    repaired_text = repaired["response_to_other_perspectives"]
+    assert repaired["integrity_repair_status"] == "completed"
+    assert repaired["integrity_repair_original_text"] == {
+        "response_to_other_perspectives": original
+    }
+    assert repaired["integrity_repair_applied_paths"] == [
+        "response_to_other_perspectives"
+    ]
+    assert "the supplied information does not establish whether initiating chemotherapy is contraindicated" in repaired_text.casefold()
+    assert not flags
+    assert repaired["integrity_repair_flags"] == []
+    assert "Initiating chemotherapy is contraindicated." in repaired["integrity_repair_original_text"]["response_to_other_perspectives"]
+
+
 def test_r2_deterministic_prerequisite_fallback_preserves_peer_references_when_model_drops_them(
     monkeypatch,
 ):
