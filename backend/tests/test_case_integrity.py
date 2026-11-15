@@ -175,6 +175,21 @@ def test_explicitly_rejected_tnm_inferences_are_not_flagged():
     assert audit_unverified_case_claims(case, payload) == []
 
 
+def test_broader_explicit_tnm_negation_and_hypothetical_forms_remain_unflagged():
+    case = _case()
+    payload = {
+        "risk_flags": [
+            "A 1x1 cm lesion does not automatically define T1 or N0/M0 status.",
+            "A 1x1 cm mass does not constitute confirmed T1 staging.",
+            "Lesion size is not equivalent to T1.",
+            "Assess whether lesion size and subsite suggest T1a or T1b.",
+            "The lesion may be T1a or T1b depending on subsite involvement, but this is not confirmed.",
+            "Review guidelines for T1/T2 glottic SCC with missing nodal/metastatic status.",
+        ]
+    }
+    assert audit_unverified_case_claims(case, payload) == []
+
+
 def test_rejected_tnm_inference_does_not_hide_a_separate_asserted_tnm_group():
     case = _case()
     flags = " ".join(audit_unverified_case_claims(case, {

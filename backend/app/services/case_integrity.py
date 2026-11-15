@@ -338,19 +338,37 @@ _TNM_EXPRESSION_PATTERN = re.compile(
 
 
 _TNM_NEGATED_PREFIX_PATTERN = re.compile(
-    r"\b(?:does|do|did)\s+not\s+(?:equate\s+(?:to|with)|translate\s+(?:to|into)|infer)\s*$"
-    r"|\bcannot\s+(?:be\s+)?inferred(?:\s+(?:as|to))?\s*$"
+    r"\b(?:does|do|did)\s+not\s+(?:(?:automatically|by\s+itself|alone)\s+)?"
+    r"(?:equate\s+(?:to|with)|translate\s+(?:to|into)|infer|define|constitute|"
+    r"establish|confirm|represent|indicate|classify)"
+    r"(?:\s+(?:a|an|the|confirmed|as|to|into)){0,2}\s*$"
+    r"|\b(?:cannot|can\s+not)\s+(?:be\s+)?(?:inferred|determined|classified|"
+    r"established|confirmed|assigned|defined|excluded)(?:\s+(?:as|to))?\s*$"
     r"|\bcannot\s+infer\s*$"
-    r"|\b(?:should|must)\s+not\s+be\s+inferred(?:\s+(?:as|to))?\s*$"
-    r"|\bdo\s+not\s+infer\s*$"
-    r"|\bnot\s+(?:inferable|deducible|derivable)\s*$",
+    r"|\b(?:should|must)\s+not\s+be\s+(?:inferred|assumed|classified|assigned)\s*$"
+    r"|\bdo\s+not\s+(?:infer|assume|classify|assign)\s*$"
+    r"|\b(?:not\s+equivalent|not\s+identical)\s+to\s*$"
+    r"|\b(?:insufficient|inadequate)\s+to\s+(?:confirm|establish|classify|define|call)\s*$"
+    r"|\b(?:may|might|could)\s+(?:be|suggest|represent|indicate)\s*$"
+    r"|\b(?:suggests?|suggested|suspected|whether|potential|potentially|"
+    r"possible|possibly|hypothetical|provisional|unconfirmed|unverified)\s*$"
+    r"|\b(?:review\s+)?(?:guidelines?|guidance|criteria)\s+for\s*$"
+    r"|\b(?:risk\s+of|cannot\s+exclude|does\s+not\s+permit\s+exclusion\s+of|"
+    r"not\s+evidence\s+of)\s*$",
     re.IGNORECASE,
 )
 _TNM_NEGATED_SUFFIX_PATTERN = re.compile(
-    r"^\s*(?:cannot\s+(?:be\s+)?inferred|"
-    r"(?:should|must)\s+not\s+be\s+inferred|"
-    r"(?:is|are|was|were)\s+not\s+inferred|"
-    r"(?:is\s+)?not\s+(?:inferable|deducible|derivable))\b",
+    r"^\s*(?:cannot\s+(?:be\s+)?(?:inferred|assumed|determined|confirmed|excluded|established)|"
+    r"(?:should|must)\s+not\s+be\s+(?:inferred|assumed|classified|assigned)|"
+    r"(?:is|are|was|were|remains?)\s+(?:not\s+)?(?:confirmed|established|documented|"
+    r"reported|verified|known|determined|inferable|unknown|unclear|undetermined)|"
+    r"(?:status|stage|category)\s+(?:is\s+|remains\s+)?(?:unknown|unclear|undetermined|"
+    r"not\s+confirmed|not\s+established|not\s+documented))\b",
+    re.IGNORECASE,
+)
+_TNM_ANAPHORIC_REJECTION_PATTERN = re.compile(
+    r"\b(?:but|however|yet)\s+(?:this|that|these|those)\s+"
+    r"(?:is|are|was|were)\s+not\s+(?:confirmed|established|documented|verified)\b",
     re.IGNORECASE,
 )
 
@@ -365,6 +383,8 @@ def _unqualified_tnm_matches(value: str) -> list[str]:
     """
     analysis_text = _collapse_horizontal_whitespace(value)
     findings: list[str] = []
+    previous_qualified_end: int | None = None
+    previous_qualified_clause: tuple[int, int] | None = None
     for match in _TNM_EXPRESSION_PATTERN.finditer(analysis_text):
         sentence_end = min(
             (
@@ -385,16 +405,31 @@ def _unqualified_tnm_matches(value: str) -> list[str]:
             (boundary.start() for boundary in _CLAUSE_BOUNDARY.finditer(analysis_text, match.end())),
             default=len(analysis_text),
         )
-        clause = analysis_text[left:right]
-        if _QUALIFIER.search(clause):
-            continue
 
+        # A rejected or hypothetical TNM list may contain several components
+        # joined by "or" or "/". Carry that qualification only across the exact
+        # list connector; do not let it hide a later, independent TNM assertion.
+        if previous_qualified_end is not None and previous_qualified_clause == (left, right):
+            connector = analysis_text[previous_qualified_end:match.start()]
+            if re.fullmatch(r"\s*(?:/|or)\s*", connector, re.IGNORECASE):
+                previous_qualified_end = match.end()
+                continue
+        previous_qualified_end = None
+        previous_qualified_clause = None
+
+        clause = analysis_text[left:right]
         prefix = analysis_text[max(left, match.start() - 120):match.start()]
         suffix = analysis_text[match.end():min(right, match.end() + 120)]
-        if (
-            _TNM_NEGATED_PREFIX_PATTERN.search(prefix)
-            or _TNM_NEGATED_SUFFIX_PATTERN.match(suffix)
-        ):
+        following_sentence_text = analysis_text[match.end():sentence_end]
+        is_qualified = (
+            _QUALIFIER.search(clause) is not None
+            or _TNM_NEGATED_PREFIX_PATTERN.search(prefix) is not None
+            or _TNM_NEGATED_SUFFIX_PATTERN.match(suffix) is not None
+            or _TNM_ANAPHORIC_REJECTION_PATTERN.search(following_sentence_text) is not None
+        )
+        if is_qualified:
+            previous_qualified_end = match.end()
+            previous_qualified_clause = (left, right)
             continue
 
         token = match.group(0).strip()
