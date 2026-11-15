@@ -1443,7 +1443,6 @@ async def generate_debate_contribution(
 ) -> RoundContribution:
     peers = [
         {
-            "source": f"R1:{peer['agent_id']}",
             "role": peer["agent_name"],
             "position": peer["assessment"].get("position", "unknown"),
             "conclusion": _compact_r1_text(peer["assessment"].get("provisional_conclusion", ""), 180),
@@ -1465,10 +1464,6 @@ async def generate_debate_contribution(
         "option": _compact(own_independent_assessment.get("preferred_educational_option", ""), 160),
     }
     source_opinion_register = extract_attributed_note_opinions(case.case_summary)
-    allowed_source_ids = [
-        f"R1:{profile['agent_id']}",
-        *(f"R1:{peer['agent_id']}" for peer in peer_views),
-    ]
     allowed_sources = {("R1", profile["agent_id"])} | {
         ("R1", peer["agent_id"]) for peer in peer_views
     }
@@ -1510,16 +1505,13 @@ async def generate_debate_contribution(
         "that repeating a source opinion means you endorse it. If a peer omits or weakens the option, "
         "explain that separately without inventing evidence. If no attributed opinions are registered, "
         "return an empty source_opinion_responses array. The server binds each exact source_excerpt after generation. "
-        f"ALLOWED ROUND SOURCE IDS: {', '.join(allowed_source_ids)}. "
-        "Use only these exact individual source IDs when citing case or peer statements. "
-        "Never cite a role range, role band, sequence of roles, or complete role directory; "
-        "never use 'through', 'to', hyphens, en dashes, or em dashes to join role IDs. "
-        "Never invent, infer, extrapolate, or cite an unsupplied ID. Round references embedded "
-        "inside peer narrative have been neutralised and are not citable; use only the explicit "
-        "source label attached to each supplied peer record. If a claim cannot be tied to one "
-        "listed source, state the limitation without inventing a citation. "
-        "Engage only with the peers "
-        "actually supplied below, citing their exact R1:AGENT_ID source IDs. The digest is a "
+        "Peer provenance is recorded separately by the server in the exact source_peer_ids field; "
+        "do not emit round-qualified source identifiers in generated prose. Refer to an individual "
+        "peer only by the exact role name shown in the supplied peer record. Do not abbreviate or "
+        "group peer identifiers in prose. If a specific role cannot be attributed from the supplied "
+        "material, state that limitation. The server-owned peer list is the authoritative source "
+        "boundary for this contribution. Engage only with the peers actually supplied below. "
+        "The digest is a "
         "bounded sample of at most 15 of 44 other roles, not the complete MDT; never say all "
         "roles or all peers agree, and never generalise sampled views to unshown roles. Record "
         "an agreement only when the same substantive proposition or educational option is "
