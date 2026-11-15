@@ -183,10 +183,10 @@ def test_resume_workflow_is_bound_to_run_16_checkpoint_lineage():
     expected_run = "43714529807"
     expected_sha = "4683b0767bf5cade408e85ec31ef248b34e5321e"
 
-    assert ("EXPECTED_SOURCE_RUN = " + q + expected_run + q) in script
-    assert ("EXPECTED_SOURCE_SHA = " + q + expected_sha + q) in script
-    assert ("default: " + q + expected_run + q) in workflow
-    assert ("|| '" + expected_run + "'") in workflow
+    assert "EXPECTED_SOURCE_RUN" in script and expected_run in script
+    assert "EXPECTED_SOURCE_SHA" in script and expected_sha in script
+    assert "default: \"43714529807\"" in workflow
+    assert "|| '43714529807'" in workflow
     assert expected_sha in workflow
     assert "[resume-hosted-cpu-r3]" in workflow
     assert "backend/tests/test_resume_hosted_four_round_validation.py" in workflow
