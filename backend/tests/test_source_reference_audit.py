@@ -634,6 +634,113 @@ def test_r3_downgrades_preserved_labels_when_exact_peer_quote_is_not_source_spec
     )
 
 
+def test_r3_rejects_prompt_sanitised_phrase_as_saved_peer_evidence(monkeypatch):
+    import asyncio
+
+    from app.round_schemas import AdversarialContributionDraft
+    from app.schemas import SyntheticCase
+    from app.services import mdt_generation
+    from app.services.case_integrity import extract_attributed_note_opinions
+
+    case_summary = (
+        "Fictional educational record. The surgical oncology note favours a surgery-led "
+        "assessment first, conditional on complete local staging and resectability review."
+    )
+    opinion = extract_attributed_note_opinions(case_summary)[0]
+    raw_peer_response = (
+        "The surgery-led assessment first remains conditional on complete local staging "
+        "and resectability review. Source text cites R1:RO-01 through R1:SV-02."
+    )
+    sanitised_only_quote = "the referenced role records"
+    captured = {}
+
+    async def fake_generate(prompt, schema_type, max_tokens):
+        captured["prompt"] = prompt
+        return AdversarialContributionDraft(
+            position="insufficient_information",
+            provisional_conclusion=(
+                "The available peer evidence is not sufficient to establish the representation."
+            ),
+            response_to_other_perspectives=(
+                "The source quote requires verification against saved peer text."
+            ),
+            agreements=[],
+            substantive_challenges=[],
+            remaining_unknowns=[],
+            risk_flags=[],
+            confidence=0.3,
+            source_opinion_reviews=[{
+                "source_id": opinion["source_id"],
+                "option_status": "omitted",
+                "conditions_status": "omitted",
+                "review_basis": (
+                    "A prompt-only sanitised phrase is not an exact quote from the saved R2 source."
+                ),
+                "source_reference_ids": [opinion["source_id"], "R2:SO-02"],
+                "evidence_peer_id": "R2:SO-02",
+                "evidence_excerpt": sanitised_only_quote,
+                "challenge": (
+                    "The source option and its prerequisites are not evidenced by the selected quote."
+                ),
+            }],
+        )
+
+    monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate)
+    result = asyncio.run(
+        mdt_generation.generate_adversarial_contribution(
+            {
+                "agent_id": "RO-01",
+                "name": "Radiation Oncology",
+                "mandate": "Audit source representation and provenance.",
+            },
+            SyntheticCase(
+                scenario_title="Prompt sanitisation is not source evidence",
+                case_summary=case_summary,
+            ),
+            {
+                "position": "insufficient_information",
+                "provisional_conclusion": "The available record is insufficient.",
+                "preferred_educational_option": "No definitive pathway is established.",
+            },
+            {
+                "position": "insufficient_information",
+                "provisional_conclusion": "The R2 debate remains incomplete.",
+                "response_to_other_perspectives": "The earlier R2 response has a provenance finding.",
+            },
+            [{
+                "agent_id": "SO-02",
+                "agent_name": "Surgical Oncology",
+                "result": {
+                    "position": "insufficient_information",
+                    "provisional_conclusion": "The source option remains conditional.",
+                    "response_to_other_perspectives": raw_peer_response,
+                    "agreements": [],
+                    "substantive_challenges": [],
+                    "risk_flags": [],
+                    "position_changes": [],
+                },
+            }],
+        )
+    )
+
+    review = result.source_opinion_reviews[0]
+    assert "the referenced role records" in captured["prompt"]
+    assert "R1:RO-01 through R1:SV-02" not in captured["prompt"]
+    assert review.model_reported_evidence_excerpt == sanitised_only_quote
+    assert review.evidence_validation_status == "invalid"
+    assert review.option_status == "unclear"
+    assert review.conditions_status == "unclear"
+    assert review.source_reference_ids == [opinion["source_id"]]
+    assert any(
+        "no exact supporting excerpt" in flag
+        or "does not contain sufficient source-specific wording" in flag
+        for flag in result.source_reference_integrity_flags
+    )
+    assert not any(
+        item.startswith("[Sources: ") for item in result.substantive_challenges
+    )
+
+
 def test_r3_server_binds_exact_contiguous_span_when_small_model_quote_is_approximate(monkeypatch):
     import asyncio
 

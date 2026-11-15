@@ -2267,21 +2267,35 @@ async def generate_adversarial_contribution(
                 elif basis_peer_ids:
                     evidence_peer_selection_method = "invalid"
         review["evidence_peer_selection_method"] = evidence_peer_selection_method
+        # Evidence validation uses the original saved R2 contribution, never the
+        # prompt-sanitised peer copy. Sanitised prompt phrases (for example,
+        # "the referenced role records") must not become quotable source evidence.
         evidence_peer = next(
-            (item for item in peers if item.get("source") == evidence_peer_id),
+            (
+                item for item in peer_debate_views[:5]
+                if f"R2:{item.get('agent_id', '')}" == evidence_peer_id
+            ),
             None,
         )
+        evidence_peer_result = (
+            evidence_peer.get("result")
+            if isinstance(evidence_peer, dict) and isinstance(evidence_peer.get("result"), dict)
+            else None
+        )
         evidence_texts: list[str] = []
-        if evidence_peer:
-            for key in ("conclusion", "response"):
-                if isinstance(evidence_peer.get(key), str):
-                    evidence_texts.append(evidence_peer[key])
-            for key in ("agreements", "challenges", "risks", "position_changes"):
+        if evidence_peer_result is not None:
+            conclusion = evidence_peer_result.get("provisional_conclusion")
+            response = evidence_peer_result.get("response_to_other_perspectives")
+            if isinstance(conclusion, str):
+                evidence_texts.append(conclusion)
+            if isinstance(response, str):
+                evidence_texts.append(response)
+            for key in ("agreements", "substantive_challenges", "risk_flags", "position_changes"):
                 evidence_texts.extend(
-                    item for item in (evidence_peer.get(key) or [])
+                    item for item in (evidence_peer_result.get(key) or [])
                     if isinstance(item, str)
                 )
-            for opinion_response in evidence_peer.get("source_opinion_responses") or []:
+            for opinion_response in evidence_peer_result.get("source_opinion_responses") or []:
                 if isinstance(opinion_response, dict):
                     for key in ("analysis", "comparison"):
                         if isinstance(opinion_response.get(key), str):
@@ -2294,9 +2308,9 @@ async def generate_adversarial_contribution(
         source_excerpt_for_review = expected_source_opinions_by_id.get(source_id, "")
         matching_source_opinion_responses = [
             item
-            for item in (evidence_peer.get("source_opinion_responses") or [])
+            for item in (evidence_peer_result.get("source_opinion_responses") or [])
             if isinstance(item, dict) and item.get("source_id") == source_id
-        ] if evidence_peer is not None else []
+        ] if evidence_peer_result is not None else []
         source_specific_evidence_texts: list[str] = []
         if len(matching_source_opinion_responses) == 1:
             for key in ("analysis", "comparison"):
