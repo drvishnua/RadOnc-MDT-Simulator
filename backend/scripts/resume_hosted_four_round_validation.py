@@ -6,6 +6,7 @@ import asyncio
 import hashlib
 import json
 import os
+import re
 import sqlite3
 import sys
 import time
@@ -76,6 +77,59 @@ def _position_counts(rows: list[dict], field: str) -> dict[str, int]:
         for row in rows
         if isinstance(row.get(field), dict) and row[field].get("position")
     ))
+
+
+def _validate_chair_position_counts(
+    synthesis: str,
+    positions_by_round: dict[str, dict[str, int]],
+) -> None:
+    """Validate each deterministic position distribution in its own Chair round section.
+
+    The Chair report uses human-readable labels such as "Round 1:", not necessarily
+    the abbreviated keys ("R1:") used by the validator. Counts must appear under
+    their corresponding round label; a count elsewhere in the prose is insufficient.
+    """
+    marker = re.search(
+        r"\\bRecorded\\s+position\\s+distribution\\s*[—–-]\\s*",
+        synthesis,
+        flags=re.IGNORECASE,
+    )
+    if marker is None:
+        raise RuntimeError("Chair synthesis omits deterministic round position counts.")
+
+    distribution = synthesis[marker.end():]
+    sections: dict[str, str] = {}
+    section_pattern = re.compile(
+        r"(?:^|;)\\s*(?:Round\\s+(?P<word>[123])|R(?P<short>[123]))\\s*:\\s*(?P<counts>[^;.\\n]+)",
+        flags=re.IGNORECASE,
+    )
+    for match in section_pattern.finditer(distribution):
+        round_number = match.group("word") or match.group("short")
+        label = f"R{round_number}"
+        if label in sections:
+            raise RuntimeError(f"Chair synthesis repeats {label} position counts.")
+        sections[label] = match.group("counts").strip()
+
+    for label, counts in positions_by_round.items():
+        if label not in sections:
+            raise RuntimeError(f"Chair synthesis omits {label} position counts.")
+        denominator = sum(counts.values())
+        if denominator != len(ROLE_IDS):
+            raise RuntimeError(
+                f"Saved {label} positions cover {denominator}/{len(ROLE_IDS)} roles."
+            )
+        section = sections[label]
+        for position, count in counts.items():
+            position_label = position.replace("_", "-")
+            expected = re.compile(
+                rf"(?<!\\d){count}/{denominator}\\s+{re.escape(position_label)}(?![A-Za-z0-9_-])",
+                flags=re.IGNORECASE,
+            )
+            if expected.search(section) is None:
+                raise RuntimeError(
+                    f"Chair synthesis omits {label} count "
+                    f"{count}/{denominator} {position_label}."
+                )
 
 
 def _validate_checkpoint(manifest: dict, checkpoint_run_id: str, model_digest: str) -> None:
@@ -272,14 +326,7 @@ async def main() -> int:
         if chair.get("consensus_status") != expected_consensus:
             raise RuntimeError("Chair consensus status disagrees with deterministic R3 position safeguards.")
         synthesis = str(chair.get("overall_educational_synthesis") or "")
-        for label, counts in positions.items():
-            if f"{label}:" not in synthesis:
-                raise RuntimeError(f"Chair synthesis omits {label} position counts.")
-            denominator = sum(counts.values())
-            for position, count in counts.items():
-                text = f"{count}/{denominator} {position.replace('_', '-')}"
-                if text not in synthesis:
-                    raise RuntimeError(f"Chair synthesis omits {label} count {text}.")
+        _validate_chair_position_counts(synthesis, positions)
 
         failures = _collect_integrity_quality_gate_failures([
             ("R1", round1, "assessment"),
