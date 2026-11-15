@@ -90,7 +90,7 @@ def _validate_chair_position_counts(
     their corresponding round label; a count elsewhere in the prose is insufficient.
     """
     marker = re.search(
-        r"\\bRecorded\\s+position\\s+distribution\\s*[—–-]\\s*",
+        r"\bRecorded\s+position\s+distribution\s*[—–-]\s*",
         synthesis,
         flags=re.IGNORECASE,
     )
@@ -100,7 +100,7 @@ def _validate_chair_position_counts(
     distribution = synthesis[marker.end():]
     sections: dict[str, str] = {}
     section_pattern = re.compile(
-        r"(?:^|;)\\s*(?:Round\\s+(?P<word>[123])|R(?P<short>[123]))\\s*:\\s*(?P<counts>[^;.\\n]+)",
+        r"(?:^|;)\s*(?:Round\s+(?P<word>[123])|R(?P<short>[123]))\s*:\s*(?P<counts>[^;.\n]+)",
         flags=re.IGNORECASE,
     )
     for match in section_pattern.finditer(distribution):
@@ -122,7 +122,7 @@ def _validate_chair_position_counts(
         for position, count in counts.items():
             position_label = position.replace("_", "-")
             expected = re.compile(
-                rf"(?<!\\d){count}/{denominator}\\s+{re.escape(position_label)}(?![A-Za-z0-9_-])",
+                rf"(?<!\d){count}/{denominator}\s+{re.escape(position_label)}(?![A-Za-z0-9_-])",
                 flags=re.IGNORECASE,
             )
             if expected.search(section) is None:
