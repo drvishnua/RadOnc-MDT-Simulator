@@ -265,9 +265,27 @@ def _audit_source_references(payload: dict, allowed: set[tuple[str, str]]) -> li
             "consensus among peers",
             "unanimous agreement among peers",
         )
+        peer_agreement_rejection_markers = (
+            "unsupported",
+            "not supported",
+            "not established",
+            "cannot establish",
+            "cannot be established",
+            "does not establish",
+            "no evidence",
+            "not evidenced",
+            "not substantiated",
+            "unverified",
+            "cannot verify",
+            "cannot be verified",
+            "cannot be inferred",
+            "false claim",
+            "not a substantive agreement",
+            "not a consensus",
+        )
         has_unrebutted_peer_agreement_claim = any(
             any(phrase in paragraph for phrase in peer_agreement_phrases)
-            and not paragraph_explicitly_rejects_scope_claim(paragraph)
+            and not any(marker in paragraph for marker in peer_agreement_rejection_markers)
             for paragraph in paragraphs
         )
         if has_unrebutted_peer_agreement_claim:
