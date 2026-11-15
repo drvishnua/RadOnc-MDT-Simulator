@@ -140,10 +140,22 @@ jobs:
             if ($modelRecord.Count -ne 1) {
               throw "Could not identify exactly one qwen3.5:4b model record."
             }
-            $modelDigest = [string]$modelRecord[0].digest
-            if ($modelDigest -notmatch '^sha256:[0-9a-fA-F]{64}$') {
-              throw "Installed model returned an invalid digest."
+            # Ollama /api/tags may return the SHA-256 as bare hex or with a sha256: prefix.
+            # Normalize representation only; always compare the exact 64-hex model identity.
+            $reportedDigest = [string]$modelRecord[0].digest
+            $hexDigest = $reportedDigest
+            if ($hexDigest.StartsWith("sha256:",[StringComparison]::OrdinalIgnoreCase)) {
+              $hexDigest = $hexDigest.Substring(7)
             }
+            if ($hexDigest.Length -ne 64) {
+              throw "Installed model did not return a 64-character SHA-256 digest."
+            }
+            foreach ($hexChar in $hexDigest.ToCharArray()) {
+              if (-not [Uri]::IsHexDigit($hexChar)) {
+                throw "Installed model returned a non-hexadecimal SHA-256 digest."
+              }
+            }
+            $modelDigest = "sha256:" + $hexDigest.ToLowerInvariant()
             if ($modelDigest -ne [string]$manifest.model.digest) {
               throw "Installed qwen3.5:4b digest differs from checkpoint; refusing mixed-model continuation."
             }
