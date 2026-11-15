@@ -79,3 +79,38 @@ def test_position_validation_rejects_missing_role_entries():
         assert "R1 position map is missing roles" in str(exc)
     else:
         raise AssertionError("Missing role positions must not be accepted.")
+
+
+
+def _quality_gate_helper():
+    backend_dir = Path(__file__).resolve().parents[1]
+    script_path = backend_dir / "scripts" / "live_four_round_validation.py"
+    namespace = runpy.run_path(
+        str(script_path),
+        run_name="live_four_round_validation_quality_gate_test",
+    )
+    return namespace["_collect_integrity_quality_gate_failures"]
+
+
+def test_malformed_r3_peer_prose_flag_fails_live_quality_gate_without_rewriting():
+    malformed_flag = (
+        "Malformed paired-source wording: response contains 'both and' without "
+        "the intervening source/subject phrase."
+    )
+    saved_result = {
+        "source_reference_integrity_flags": [malformed_flag],
+        "case_data_integrity_flags": [],
+    }
+    payloads = [
+        ("R3", [{"agent_id": "RO-03", "result": saved_result}], "result"),
+    ]
+
+    failures = _quality_gate_helper()(payloads)
+
+    assert failures == [{
+        "round": "R3",
+        "agent_id": "RO-03",
+        "type": "source_reference_integrity_flags",
+        "detail": malformed_flag,
+    }]
+    assert saved_result["source_reference_integrity_flags"] == [malformed_flag]

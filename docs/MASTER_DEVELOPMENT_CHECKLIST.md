@@ -25,6 +25,7 @@ Statuses: **NOT STARTED**, **IN PROGRESS**, **BLOCKED**, **VERIFIED**, **FAILED*
 | Case hashes, run IDs, timestamps and audit history | IN PROGRESS | Mechanisms exist; complete current-head reproducibility audit outstanding. |
 | Provenance and source attribution | IN PROGRESS | Round/source validation exists; malformed paired-reference R3 prose is flagged without rewriting raw output. Evidence retrieval and independent source verification are not implemented. |
 | Missing/failed agent handling | IN PROGRESS | Validation mechanisms exist; current-head incomplete-case/failure-injection acceptance outstanding. |
+| Live-validation source-integrity quality gate | IN PROGRESS | The validator maps both case-data and source-reference flags to failed quality-gate items. A no-inference regression for the exact malformed R3 paired-source flag is added in this commit; exact-head CI pending. |
 | Backend tests | VERIFIED | `263d13a`, [run 43697279414](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43697279414): 305 passed, 0 failed/errors/skipped; preflight 6 passed, 0 failed/inconclusive. Includes malformed-prose detector, grammatical negative control, R3 generation-path flag assertion and Chair handoff regression. Failure history retained: `685761a` failed due an over-escaped regex, fixed in `92dbb55`; `39140b4` had a wrong fixture role expectation, corrected in `970c899`. |
 | Frontend build | VERIFIED | [Run 43697279484](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43697279484): success on `263d13a`. |
 | Browser registry/dashboard E2E | VERIFIED | [Run 43697279409](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43697279409): success on `263d13a`. |
@@ -46,10 +47,11 @@ Statuses: **NOT STARTED**, **IN PROGRESS**, **BLOCKED**, **VERIFIED**, **FAILED*
 ## Immediate priorities
 
 1. Obtain direct confirmation that CodeQL alert 4 is formally closed; review all subsequent security findings.
-2. On the next justified live run, verify a saved R3 malformed-prose flag appears in the persisted R3 contribution and final Chair report; the synthetic Chair boundary regression now passes.
-3. Run one consolidated bounded live validation only after code and CI are stable; avoid repeated isolated long model runs.
-4. Separately validate full 45-role execution, incomplete/failed agents, saved artefacts, effective R3 context and RTX 4060 activity.
-5. Keep evidence retrieval, qualified clinical review and release approval as separate gates.
+2. Verify the live-validator quality-gate regression for the malformed R3 flag on exact-head CI.
+3. On the next justified live run, verify a saved R3 malformed-prose flag appears in the persisted R3 contribution and final Chair report; synthetic generation and Chair boundary regressions pass.
+4. Run one consolidated bounded live validation only after code and CI are stable; avoid repeated isolated long model runs.
+5. Separately validate full 45-role execution, incomplete/failed agents, saved artefacts, effective R3 context and RTX 4060 activity.
+6. Keep evidence retrieval, qualified clinical review and release approval as separate gates.
 
 ## Verification boundaries
 
