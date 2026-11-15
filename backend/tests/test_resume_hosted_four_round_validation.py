@@ -206,3 +206,85 @@ def test_resume_workflow_normalizes_ollama_digest_before_exact_checkpoint_match(
     assert '[Uri]::IsHexDigit($hexChar)' in workflow
     assert '$modelDigest = "sha256:" + $hexDigest.ToLowerInvariant()' in workflow
     assert 'if ($modelDigest -ne [string]$manifest.model.digest)' in workflow
+
+
+
+def test_chair_position_count_validator_accepts_human_readable_round_labels_and_exact_counts():
+    namespace = _namespace()
+    validate = namespace["_validate_chair_position_counts"]
+    total = len(namespace["ROLE_IDS"])
+    counts = {
+        "R1": {"insufficient_information": total - 1, "conditional": 1},
+        "R2": {"insufficient_information": total - 2, "supports": 2},
+        "R3": {"insufficient_information": total - 3, "opposes": 3},
+    }
+    synthesis = (
+        "Recorded position distribution — "
+        f"Round 1: {total - 1}/{total} insufficient-information, 1/{total} conditional; "
+        f"Round 2: {total - 2}/{total} insufficient-information, 2/{total} supports; "
+        f"Round 3: {total - 3}/{total} insufficient-information, 3/{total} opposes. "
+        "These are role-level labels, not votes."
+    )
+    validate(synthesis, counts)
+
+
+def test_chair_position_count_validator_accepts_short_labels_but_rejects_misplaced_counts():
+    namespace = _namespace()
+    validate = namespace["_validate_chair_position_counts"]
+    total = len(namespace["ROLE_IDS"])
+    counts = {
+        "R1": {"insufficient_information": total},
+        "R2": {"supports": total},
+        "R3": {"conditional": total},
+    }
+    valid = (
+        "Recorded position distribution — "
+        f"R1: {total}/{total} insufficient-information; "
+        f"R2: {total}/{total} supports; "
+        f"R3: {total}/{total} conditional."
+    )
+    validate(valid, counts)
+
+    invalid = (
+        "Recorded position distribution — "
+        f"R1: {total}/{total} insufficient-information; "
+        f"R2: {total}/{total} conditional; "
+        f"R3: {total}/{total} supports."
+    )
+    try:
+        validate(invalid, counts)
+    except RuntimeError as exc:
+        assert "R2 count" in str(exc)
+    else:
+        raise AssertionError("A position count placed under the wrong round was accepted.")
+
+
+def test_chair_position_count_validator_rejects_missing_round_and_incomplete_distribution():
+    namespace = _namespace()
+    validate = namespace["_validate_chair_position_counts"]
+    total = len(namespace["ROLE_IDS"])
+    counts = {
+        "R1": {"insufficient_information": total},
+        "R2": {"insufficient_information": total},
+        "R3": {"insufficient_information": total},
+    }
+    missing_round = (
+        "Recorded position distribution — "
+        f"Round 1: {total}/{total} insufficient-information; "
+        f"Round 3: {total}/{total} insufficient-information."
+    )
+    for synthesis in (
+        missing_round,
+        "The report describes all positions but omits the deterministic distribution.",
+        (
+            "Recorded position distribution — "
+            f"Round 1: {total - 1}/{total} insufficient-information; "
+            f"Round 2: {total}/{total} insufficient-information; "
+            f"Round 3: {total}/{total} insufficient-information."
+        ),
+    ):
+        try:
+            validate(synthesis, counts)
+        except RuntimeError:
+            continue
+        raise AssertionError("An incomplete Chair position distribution was accepted.")
