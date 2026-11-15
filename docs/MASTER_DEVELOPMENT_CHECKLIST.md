@@ -335,14 +335,14 @@ Artifact `14169603817` (`radonc-hosted-cpu-four-round-validation`) archive SHA-2
 
 | ID | Deliverable / acceptance gate | Status | Required evidence |
 |---|---|---|---|
-| AI-001 | Maintain model registry: provider, name, exact digest, quantisation, licence, version, runtime, hardware, parameters, prompt versions and supported purpose | IN PROGRESS | Immutable registry record for each run and deployable model |
-| AI-002 | Verify model licensing, commercial SaaS rights, acceptable-use terms, attribution, redistribution and hosting conditions for Qwen/Ollama and every alternative | BLOCKED | Legal/licence review for exact model/runtime release and any derivative/adapter |
+| AI-001 | Maintain model registry: provider, name, exact digest, quantisation, licence, version, runtime, hardware, parameters, prompt versions and supported purpose | IN PROGRESS | MedGemma Google ID/version and Ollama Q4_K_M package metadata identified; the local full digest, exact Ollama runtime, hardware measurements and per-run record remain outstanding. |
+| AI-002 | Verify model licensing, commercial SaaS rights, acceptable-use terms, attribution, redistribution and hosting conditions for Qwen/Ollama and every alternative | BLOCKED | MedGemma is governed by HAI-DEF Terms of Use (open-weight, not open-source); redistribution/hosted-service conditions and regulatory provisions require documented legal review before packaging, hosting or commercial release. |
 | AI-003 | Define provider privacy and security contracts: region, retention, training use, subprocessors, access, audit, incident notice and deletion | BLOCKED | Vendor due diligence, DPA/BAA where required and verified technical settings |
 | AI-004 | Keep model calls local to approved infrastructure or use a contractually approved inference provider; block unapproved outbound transfer | IN PROGRESS | Network egress tests, endpoint allowlist and prompt-data flow audit |
 | AI-005 | Keep R1 independent; enforce exact R2/R3 peer allowlists, source-bound quotes and R4 use of actual saved R1–R3 contributions | IN PROGRESS | Existing regression suite plus full-run audit and no cross-round leakage tests |
 | AI-006 | Deterministically enforce counts, schema, state transitions, missing/failed agents, consensus, dissent, prerequisites and provenance outside the LLM | IN PROGRESS | Code-level validation and adversarial regression tests |
 | AI-007 | Treat model output, retrieved documents, uploaded files, peer text and tool results as untrusted; prevent prompt injection and indirect instruction takeover | NOT STARTED | Threat model, hostile-source test corpus and fail-closed test results |
-| AI-008 | Test hallucinated staging, fabricated investigations, unsupported negative findings, invented comorbidities, false consensus and loss of conditionality | IN PROGRESS | Source-grounded challenge suite, human-reviewed gold labels and zero tolerated critical errors |
+| AI-008 | Test hallucinated staging, fabricated investigations, unsupported negative findings, invented comorbidities, false consensus and loss of conditionality | IN PROGRESS | Synthetic integrity screening corpus added; still requires paired model runs and independent review. Zero tolerance for detected critical fabrication; no finite test can prove zero hallucinations for all future inputs. |
 | AI-009 | Test truncated/invalid JSON, schema drift, token exhaustion, context under-allocation, timeouts, retries, duplicate calls and partial persistence | IN PROGRESS | Fault-injection suite, raw request/response capture with privacy-safe controls and idempotency proof |
 | AI-010 | Evaluate R3 with clean-record negative controls and seeded-defect positive controls; never equate zero challenges with successful adversarial review | IN PROGRESS | Role-level sensitivity/specificity and source attribution report |
 | AI-011 | Evaluate full 45-role R1–R4 orchestration at concurrency 1 before performance tuning | IN PROGRESS | Complete saved 136-contribution run, deterministic audits and exact report reconciliation |
@@ -355,8 +355,8 @@ Artifact `14169603817` (`radonc-hosted-cpu-four-round-validation`) archive SHA-2
 | AI-018 | Establish model retirement, rollback, emergency disablement and fallback policy; never silently change model digest | NOT STARTED | Tested model rollback and customer notification policy |
 | AI-019 | Validate inference capacity, per-tenant quotas, concurrency, cost ceilings and denial-of-wallet resistance | NOT STARTED | Load/soak tests and measured unit economics at target load |
 | AI-020 | Verify RTX 4060 active inference separately from hosted CPU tests; record request-time utilisation, VRAM, offload layers, latency and logs | IN PROGRESS | Captured nvidia-smi/Ollama telemetry during actual request; no VRAM-allocation-only proof |
-| AI-021 | Evaluate Google MedGemma as a candidate specialist reasoning model against the current Qwen baseline; verify exact official model artefact/tag, digest, quantisation, Ollama compatibility and licence before use | NOT STARTED | Reproducible model identity/licence record and paired evaluation report; do not assume an Ollama tag or commercial redistribution right |
-| AI-022 | Benchmark MedGemma on the frozen RadOnc MDT failure corpus, including unsupported TNM/staging, R2 false agreement, citation fabrication/ranges, R3 provenance, conditionality, missing data and failed-agent cases | NOT STARTED | Paired Qwen-versus-MedGemma results using identical cases/prompts/schemas/settings, blind clinical review and regression analysis |
+| AI-021 | Evaluate Google MedGemma as a candidate specialist reasoning model against the current Qwen baseline; verify exact official model artefact/tag, digest, quantisation, Ollama compatibility and licence before use | IN PROGRESS | Verified Google model ID `google/medgemma-1.5-4b-it` (version 1.5.0) and Ollama tag `medgemma1.5:4b-it-q4_K_M` (4.3B, Q4_K_M, ~3.3 GB; public short ID `433252621ab1`). Full local digest/runtime check and legal clearance remain outstanding. |
+| AI-022 | Benchmark MedGemma on the frozen RadOnc MDT failure corpus, including unsupported TNM/staging, R2 false agreement, citation fabrication/ranges, R3 provenance, conditionality, missing data and failed-agent cases | IN PROGRESS | Versioned synthetic screening corpus and structural tests added. No model outputs, paired comparison or independent clinical review yet. |
 | AI-023 | Measure MedGemma feasibility on RTX 4060 8GB with actual request-time GPU offload, VRAM, context/KV-cache, latency and CPU fallback; retain concurrency 1 | NOT STARTED | Captured nvidia-smi/Ollama request telemetry and repeatable resource/latency report |
 | AI-024 | Define MedGemma promotion/rollback gate; retain Qwen as baseline until MedGemma demonstrates a meaningful, reproducible safety/quality improvement without unacceptable performance or licensing risk | NOT STARTED | Approved acceptance thresholds, model digest pinning, rollback test and documented go/no-go decision |
 
@@ -626,3 +626,32 @@ Artifact `14169603817` (`radonc-hosted-cpu-four-round-validation`) archive SHA-2
 - **P3 — broader evidence retrieval/RAG:** develop separately with approved, current, versioned sources; do not treat model selection as a substitute for evidence retrieval.
 
 **Current decision:** Qwen remains the baseline. MedGemma is a high-priority candidate for controlled evaluation, not yet selected, installed, benchmarked, GPU-verified or clinically validated.
+
+## S. MedGemma candidate verification — 16 November 2026
+
+**Priority:** P1 — high-priority candidate model screening. **Decision:** Qwen remains unchanged; MedGemma is not selected or production-approved.
+
+### Verified candidate identity
+- Google model ID: `google/medgemma-1.5-4b-it`; Google model version `1.5.0`; Google describes it as a 4B multimodal instruction-tuned model.
+- Ollama Library tag: `medgemma1.5:4b-it-q4_K_M`. Ollama's public registry lists Gemma 3, 4.3B parameters, Q4_K_M, about 3.3 GB, text/image input and a 128K context listing.
+- Ollama's public tag page displays short identifier `433252621ab1`. This is not recorded as a full immutable digest. Capture the full local `/api/tags` digest after model pull, plus `ollama show --modelfile`, Ollama version and full package record, before any benchmark.
+- Google identifies the canonical upstream model as `google/medgemma-1.5-4b-it`. The Ollama registry listing does not, by itself, prove byte-for-byte identity of the converted package against the upstream weights; record and review packaging/conversion provenance.
+
+### High-impact documented limitation
+Google's MedGemma model card states that the model has not been evaluated or optimised for multi-turn applications. It also says outputs are preliminary, require independent verification/clinical correlation, and are not intended to directly inform clinical diagnosis, patient management or treatment recommendations. This is a direct evaluation risk for this simulator's R1–R4 multi-round workflow.
+
+### Licence and hardware boundaries
+- MedGemma is under the Health AI Developer Foundations Terms of Use. Google's FAQ states HAI-DEF models are open-weight, not open-source. Redistribution/hosted-service obligations and regulatory provisions require legal review. **No legal clearance is claimed.**
+- Public Q4 package size/static weight footprint is approximately 3.3–3.4 GB, but runtime fit on the RTX 4060 8 GB is unverified; KV cache, context and runtime overhead are additional. Actual GPU activity requires request-time telemetry and Ollama offload evidence.
+
+### Next controlled sequence
+1. Freeze the Qwen baseline full digest and MedGemma full local digest in the same Ollama environment.
+2. Review the 12-case synthetic software-integrity corpus and its structural test; this is not a clinical gold-standard dataset.
+3. Conduct sequential, bounded candidate screening at concurrency 1, preserving immutable outputs and error records.
+4. Apply deterministic source, schema, missing-data, conditionality, consensus and Chair integrity checks.
+5. Obtain blinded independent clinical review before any wider live workflow.
+6. Proceed to representative-role and full 136-contribution runs only if the critical gate is clean and runtime/legal prerequisites are met.
+
+**Zero-hallucination requirement:** Zero tolerance for any detected critical fabrication during evaluation. No finite test corpus can prove that a generative model will never hallucinate. Do not claim absolute zero hallucinations; design the application so unverified model claims cannot become accepted facts or untraceable Chair conclusions, and fail closed on detected integrity failures.
+
+**Current status:** model identity/tag and documented limitations verified; corpus added; full local digest NOT STARTED; legal clearance BLOCKED; model pull NOT STARTED; paired inference NOT STARTED; GPU verification NOT STARTED; clinical validation NOT STARTED.
