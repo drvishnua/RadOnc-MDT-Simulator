@@ -250,7 +250,7 @@ def _audit_source_references(payload: dict, allowed: set[tuple[str, str]]) -> li
     # construction (observed output: "Both and explicitly state ..."). This is
     # not safe to silently accept as traceable peer prose. Flag the malformed
     # construction, preserve the original narrative, and expose it to R4.
-    if re.search(r"\\bboth\\s+and\\b", response, re.IGNORECASE):
+    if re.search(r"\bboth\s+and\b", response, re.IGNORECASE):
         findings.append(
             "Malformed paired-source wording: response contains 'both and' without "
             "the intervening source/subject phrase; review against the actual supplied peer records."
