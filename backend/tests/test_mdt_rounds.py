@@ -1146,6 +1146,9 @@ def test_chair_report_surfaces_round_source_reference_integrity_flags():
     round1 = _chair_rows("assessment", ["insufficient_information"] * 45)
     round2 = _chair_rows("result", ["insufficient_information"] * 45)
     round3 = _chair_rows("result", ["insufficient_information"] * 45)
+    round2[0]["result"]["source_reference_integrity_flags"] = [
+        "Unsupported peer-agreement claim: the R2 narrative asserts consensus without a shared source-linked proposition."
+    ]
     round3[0]["result"]["source_peer_ids"] = ["MO-01", "SO-02"]
     round3[0]["result"]["source_reference_integrity_flags"] = [
         "Reference R1:SO-01 was not supplied as an attributable source to this contribution."
@@ -1163,6 +1166,11 @@ def test_chair_report_surfaces_round_source_reference_integrity_flags():
     assert any(
         "Round 3 source-reference audit" in item and "R1:SO-01" in item
         for item in report.unresolved_disagreements
+    )
+    assert any(
+        "Round 2 source-reference detail" in item
+        and "Unsupported peer-agreement claim" in item
+        for item in report.case_data_integrity_flags
     )
 
 
