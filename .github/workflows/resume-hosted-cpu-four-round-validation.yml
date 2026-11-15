@@ -1,5 +1,5 @@
 name: Resume Hosted CPU Four-Round MDT Validation
-# Run-16 checkpoint continuation: resume unsaved R3 roles and Chair R4 from artifact 14169603817.
+# Run-16 checkpoint continuation: resume unfinished R3 and Chair R4 from artifact 14169603817; normalize Ollama digest before exact identity comparison.
 
 on:
   workflow_dispatch:
