@@ -286,7 +286,7 @@ def _audit_source_references(payload: dict, allowed: set[tuple[str, str]]) -> li
         peer_agreement_sentences = [
             sentence.strip()
             for paragraph in paragraphs
-            for sentence in re.split(r"(?<=[.!?])\\s+", paragraph)
+            for sentence in re.split("[.!?] +", paragraph)
             if sentence.strip()
         ]
         has_unrebutted_peer_agreement_claim = any(
