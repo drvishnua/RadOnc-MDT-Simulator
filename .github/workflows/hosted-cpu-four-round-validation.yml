@@ -11,8 +11,9 @@ on:
 permissions:
   contents: read
 
-# One-time explicitly marked 45-role R1-R4/Chair integration run.
+# Explicitly marked 45-role R1-R4/Chair integration run; retry after fixing the final_modal validator NameError from run 43698959463.
 # CPU-only, concurrency 1, and expected to save 136 contributions plus JSON/SQLite/manifest audit artefacts.
+# The previous run saved all 136 contributions and a Chair report but failed its final validator; this rerun must pass the quality gate.
 # This workflow cannot provide RTX 4060 or GPU-inference verification.
 concurrency:
   group: hosted-cpu-four-round-mdt-validation
