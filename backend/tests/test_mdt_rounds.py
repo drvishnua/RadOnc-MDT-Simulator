@@ -2034,7 +2034,10 @@ def test_r3_case_source_reviews_require_exact_case_summary_excerpt(monkeypatch):
                     source_excerpt="This fabricated excerpt is not present in the case summary.",
                     option_status="omitted",
                     conditions_status="omitted",
-                    review_basis="A source review was drafted without a matching case-summary excerpt.",
+                    review_basis=(
+                        "A source review was drafted without a matching case-summary excerpt. "
+                        "Peer records confirm that no option is indicated until these prerequisites are supplied."
+                    ),
                     source_reference_ids=["CASE:case_summary#1", "R2:MO-01"],
                     challenge="The source option is allegedly omitted from the supplied peer record.",
                 )
@@ -2083,6 +2086,10 @@ def test_r3_case_source_reviews_require_exact_case_summary_excerpt(monkeypatch):
     assert "server-owned attributed-opinion register is empty" in flags
     assert "not backed by a unique exact case-summary source excerpt" in flags
     assert not any("Unverified service note" in item for item in result.substantive_challenges)
+    assert not any(
+        "treatment safety/indication" in item.casefold()
+        for item in result.case_data_integrity_flags
+    )
     assert result.agent_id == "RO-01"
 
 
