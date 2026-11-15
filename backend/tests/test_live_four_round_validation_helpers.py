@@ -114,3 +114,79 @@ def test_malformed_r3_peer_prose_flag_fails_live_quality_gate_without_rewriting(
         "detail": malformed_flag,
     }]
     assert saved_result["source_reference_integrity_flags"] == [malformed_flag]
+
+def _modal_helpers():
+    backend_dir = Path(__file__).resolve().parents[1]
+    script_path = backend_dir / "scripts" / "live_four_round_validation.py"
+    namespace = runpy.run_path(
+        str(script_path),
+        run_name="live_four_round_validation_modal_test",
+    )
+    return (
+        namespace["_unique_modal_position"],
+        namespace["_stable_modal_insufficient_role_ids"],
+    )
+
+
+def test_unique_modal_position_returns_none_for_ties_and_empty_counts():
+    unique_modal, _ = _modal_helpers()
+
+    assert unique_modal({"insufficient_information": 45}) == "insufficient_information"
+    assert unique_modal({"supports": 2, "opposes": 2}) is None
+    assert unique_modal({}) is None
+
+
+def test_all_stable_insufficient_information_roles_are_not_labelled_as_dissent():
+    _, stable_insufficient_roles = _modal_helpers()
+    expected_ids = {"A", "B", "C"}
+    positions = {
+        "A": "insufficient_information",
+        "B": "insufficient_information",
+        "C": "supports",
+    }
+
+    assert stable_insufficient_roles(
+        expected_ids,
+        positions,
+        positions,
+        positions,
+        {"insufficient_information": 2, "supports": 1},
+    ) == {"A", "B"}
+
+
+def test_tied_insufficient_and_support_positions_have_no_unique_insufficient_mode():
+    _, stable_insufficient_roles = _modal_helpers()
+    expected_ids = {"A", "B", "C", "D"}
+    positions = {
+        "A": "insufficient_information",
+        "B": "insufficient_information",
+        "C": "supports",
+        "D": "supports",
+    }
+
+    assert stable_insufficient_roles(
+        expected_ids,
+        positions,
+        positions,
+        positions,
+        {"insufficient_information": 2, "supports": 2},
+    ) == set()
+
+
+def test_unique_support_mode_does_not_mark_stable_insufficient_roles_as_modal():
+    _, stable_insufficient_roles = _modal_helpers()
+    expected_ids = {"A", "B", "C"}
+    positions = {
+        "A": "insufficient_information",
+        "B": "supports",
+        "C": "supports",
+    }
+
+    assert stable_insufficient_roles(
+        expected_ids,
+        positions,
+        positions,
+        positions,
+        {"insufficient_information": 1, "supports": 2},
+    ) == set()
+
