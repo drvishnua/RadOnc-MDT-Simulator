@@ -339,11 +339,11 @@ _TNM_EXPRESSION_PATTERN = re.compile(
 
 _TNM_NEGATED_PREFIX_PATTERN = re.compile(
     r"\b(?:does|do|did)\s+not\s+(?:(?:automatically|by\s+itself|alone)\s+)?"
-    r"(?:equate\s+(?:to|with)|translate\s+(?:to|into)|infer|define|constitute|"
+    r"(?:equate\s+(?:to|with)|equal|translate\s+(?:to|into)|infer|define|constitute|"
     r"establish|confirm|represent|indicate|classify)"
     r"(?:\s+(?:a|an|the|confirmed|as|to|into)){0,2}\s*$"
     r"|\b(?:cannot|can\s+not)\s+(?:be\s+)?(?:inferred|determined|classified|"
-    r"established|confirmed|assigned|defined|excluded)(?:\s+(?:as|to))?\s*$"
+    r"established|confirmed|assigned|defined|excluded|converted)(?:\s+(?:as|to|into))?\s*$"
     r"|\bcannot\s+infer\s*$"
     r"|\b(?:should|must)\s+not\s+be\s+(?:inferred|assumed|classified|assigned)\s*$"
     r"|\bdo\s+not\s+(?:infer|assume|classify|assign)\s*$"
@@ -366,6 +366,16 @@ _TNM_NEGATED_SUFFIX_PATTERN = re.compile(
     r"not\s+confirmed|not\s+established|not\s+documented))\b",
     re.IGNORECASE,
 )
+_TNM_CONDITIONAL_SUFFIX_PATTERN = re.compile(
+    r"\b(?:once\s+(?:the\s+)?(?:full\s+)?staging(?:\s+data)?\s+"
+    r"(?:is|are|has\s+been|have\s+been)\s+(?:confirmed|provided|completed|available)|"
+    r"pending\s+(?:the\s+)?(?:full\s+)?work[- ]?up|"
+    r"pending\s+complete\s+staging|"
+    r"after\s+staging\s+(?:is|has\s+been)\s+confirmed)\b",
+    re.IGNORECASE,
+)
+
+
 _TNM_ANAPHORIC_REJECTION_PATTERN = re.compile(
     r"\b(?:but|however|yet)\s+(?:this|that|these|those)\s+"
     r"(?:is|are|was|were)\s+not\s+(?:confirmed|established|documented|verified)\b",
@@ -425,6 +435,7 @@ def _unqualified_tnm_matches(value: str) -> list[str]:
             _QUALIFIER.search(clause) is not None
             or _TNM_NEGATED_PREFIX_PATTERN.search(prefix) is not None
             or _TNM_NEGATED_SUFFIX_PATTERN.match(suffix) is not None
+            or _TNM_CONDITIONAL_SUFFIX_PATTERN.search(suffix) is not None
             or _TNM_ANAPHORIC_REJECTION_PATTERN.search(following_sentence_text) is not None
         )
         if is_qualified:

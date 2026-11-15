@@ -242,6 +242,33 @@ def test_unreported_performance_status_is_flagged_but_question_or_source_record_
     ))
 
 
+def test_tnm_references_are_qualified_when_guidelines_are_explicitly_conditional():
+    case = _case()
+    qualified_references = [
+        "Review NCCN guidelines for T1/T2 glottic SCC once staging is confirmed.",
+        "Review standard-of-care guidelines for cT1 glottic SCC once staging data is provided.",
+        "Refer to standard of care for T1 glottic cancer pending full workup.",
+        "A 1x1 cm lesion involving vocal cord does not automatically equal T1.",
+        "The 1x1 cm growth cannot be converted to T1 without formal staging confirmation.",
+    ]
+    for wording in qualified_references:
+        flags = audit_unverified_case_claims(case, {
+            "discussion_options": [wording],
+            "uncertainty_notes": [wording],
+        })
+        assert not any("t-stage" in item for item in flags), (wording, flags)
+
+    # Positive control: the same unreported stage asserted as the patient's
+    # actual staging remains a quality-gate failure.
+    positive = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has cT1N0M0 glottic SCC."
+    })
+    joined = " ".join(positive).casefold()
+    assert "t-stage value" in joined
+    assert "n-stage value" in joined
+    assert "m-stage value" in joined
+
+
 def test_unreported_node_and_metastatic_negative_assertions_are_flagged():
     flags = " ".join(audit_unverified_case_claims(_case(), {
         "provisional_conclusion": "The patient is node-negative with no distant metastases."
