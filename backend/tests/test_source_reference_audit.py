@@ -80,6 +80,31 @@ def test_source_reference_audit_accepts_only_supplied_individual_ids():
 
     assert findings == []
 
+def test_source_reference_audit_flags_malformed_both_and_peer_prose_without_rewriting():
+    payload = {
+        "response_to_other_perspectives": (
+            "Both and explicitly state that no educational pathway can be established due to missing data."
+        )
+    }
+    original = payload["response_to_other_perspectives"]
+
+    findings = _audit_source_references(payload, set())
+
+    assert any("Malformed paired-source wording" in item for item in findings)
+    assert payload["response_to_other_perspectives"] == original
+
+
+def test_source_reference_audit_accepts_grammatical_both_and_constructions():
+    payload = {
+        "response_to_other_perspectives": (
+            "Both the supplied peer records explicitly state that prerequisites remain unknown. "
+            "Both surgery-first assessment and multimodality discussion remain conditional."
+        )
+    }
+
+    assert _audit_source_references(payload, set()) == []
+
+
 def test_r3_receives_server_computed_peer_provenance_flags_and_exact_excerpt(monkeypatch):
     import asyncio
 

@@ -245,6 +245,16 @@ def _audit_source_references(payload: dict, allowed: set[tuple[str, str]]) -> li
             "Peer-scope overclaim: the response generalises agreement or conclusions beyond "
             "the individually supplied peer records; only those supplied records may be described."
         )
+
+    # A model may drop the neutralised subject phrase from a paired-reference
+    # construction (observed output: "Both and explicitly state ..."). This is
+    # not safe to silently accept as traceable peer prose. Flag the malformed
+    # construction, preserve the original narrative, and expose it to R4.
+    if re.search(r"\\bboth\\s+and\\b", response, re.IGNORECASE):
+        findings.append(
+            "Malformed paired-source wording: response contains 'both and' without "
+            "the intervening source/subject phrase; review against the actual supplied peer records."
+        )
     return findings
 
 def _bounded_exact_excerpt(value: object, limit: int) -> str:

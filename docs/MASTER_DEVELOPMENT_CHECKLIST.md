@@ -14,7 +14,7 @@ Statuses: **NOT STARTED**, **IN PROGRESS**, **BLOCKED**, **VERIFIED**, **FAILED*
 | Four-round R1–R4 architecture/data flow | IN PROGRESS | Implemented with regression coverage; full current-head 45-role live acceptance outstanding. |
 | R1 independent assessment | IN PROGRESS | Implemented; complete current-head production-scale output audit outstanding. |
 | R2 debate and peer sourcing | IN PROGRESS | Source allowlists/provenance checks exist; current full-run provenance review outstanding. |
-| R3 adversarial review | IN PROGRESS | Source-bound checks and positive/negative control tooling exist; full 45-role test and peer-prose quality follow-up outstanding. |
+| R3 adversarial review | IN PROGRESS | Source-bound checks and positive/negative control tooling exist; full 45-role test outstanding; bounded artifact from run 43559331144 showed malformed model output ('Both and explicitly state...'). Input neutralisation was grammatical. This commit adds a non-rewriting output audit flag and regression; exact-head CI pending. |
 | R4 Chair synthesis | IN PROGRESS | Saved-contribution reconciliation and deterministic reporting have regression coverage; full current-head Chair audit outstanding. |
 | Clinical safety/unsupported claims | IN PROGRESS | Deterministic audits and TNM regression coverage exist; not exhaustive clinical validation. |
 | TNM connector CodeQL remediation | IN PROGRESS | `case_integrity.py` now uses direct string comparison; the new whitespace/case regression passed in the 303-test suite. Python and JavaScript CodeQL jobs passed on `965d6ba`; the PR thread is no longer unresolved. The separate alert record could not be queried, so formal alert closure is not claimed. |
@@ -23,7 +23,7 @@ Statuses: **NOT STARTED**, **IN PROGRESS**, **BLOCKED**, **VERIFIED**, **FAILED*
 | Distinct-role Chair counting | VERIFIED | Regression coverage and exact-baseline backend CI passed; complete live consensus validation still outstanding. |
 | Proposition consensus, dissent and position history | IN PROGRESS | Deterministic reconciliation/tests exist; full current-head report audit outstanding. |
 | Case hashes, run IDs, timestamps and audit history | IN PROGRESS | Mechanisms exist; complete current-head reproducibility audit outstanding. |
-| Provenance and source attribution | IN PROGRESS | Round/source validation exists; evidence retrieval and independent source verification are not implemented. |
+| Provenance and source attribution | IN PROGRESS | Round/source validation exists; malformed paired-reference R3 prose is flagged without rewriting output. Evidence retrieval and independent source verification are not implemented. |
 | Missing/failed agent handling | IN PROGRESS | Validation mechanisms exist; current-head incomplete-case/failure-injection acceptance outstanding. |
 | Backend tests | VERIFIED | `965d6ba`, [run 43695041727](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43695041727): 303 passed, 0 failed/errors/skipped; preflight 6 passed, 0 failed/inconclusive. The TNM connector regression is included. |
 | Frontend build | VERIFIED | [Run 43695041710](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43695041710): success on `965d6ba`. |
@@ -46,7 +46,7 @@ Statuses: **NOT STARTED**, **IN PROGRESS**, **BLOCKED**, **VERIFIED**, **FAILED*
 ## Immediate priorities
 
 1. Obtain direct confirmation that CodeQL alert 4 is formally closed; review all subsequent security findings.
-2. Address the R3 peer-prose citation/attribution quality defect with regression coverage.
+2. Verify the malformed paired-source prose audit on exact-head CI and confirm flags reach saved R3/Chair audit records.
 3. Run one consolidated bounded live validation only after code and CI are stable; avoid repeated isolated long model runs.
 4. Separately validate full 45-role execution, incomplete/failed agents, saved artefacts, effective R3 context and RTX 4060 activity.
 5. Keep evidence retrieval, qualified clinical review and release approval as separate gates.
