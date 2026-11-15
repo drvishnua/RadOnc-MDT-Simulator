@@ -239,7 +239,7 @@ Script: `backend/scripts/run_medgemma_screening.py`.
 - Requires an explicit exact `--model` and a new `--output` JSONL path. It does not default to or change the application's configured model.
 - Before generation, it reads `/api/version`, `/api/tags` and `/api/show`; it requires exactly one installed model record with a full SHA-256 digest. It never pulls a model.
 - Runs the same 12 corpus inputs sequentially at concurrency 1, with fixed seed/options and no expected-behaviour/failure labels in the model prompt.
-- Stores the full model record, digest, model metadata, prompt hashes, request bodies, raw and parsed responses, per-call Ollama metrics, errors and a summary. JSONL output is created exclusively and is not overwritten.
+- Stores the full model record and full `/api/show` metadata in the preflight record, along with digest, prompt hashes, request bodies, raw and parsed responses, per-call Ollama metrics, errors and a summary. Rechecks the installed digest before and after each generation. JSONL output is created exclusively and is not overwritten; malformed JSON objects or missing/non-string response fields are marked invalid.
 - The harness does not assign quality scores or pass/fail clinical labels. A complete run is marked `completed_pending_human_review`, never as accepted or hallucination-free. GPU measurement is explicitly `NOT_PERFORMED`.
 
 Example PowerShell sequence, using two different new artifact names (only after each exact model is separately installed and its terms approved):

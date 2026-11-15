@@ -169,6 +169,22 @@ def build_generate_payload(model_name: str, case: dict[str, Any]) -> dict[str, A
     }
 
 
+
+
+def validate_model_response(raw_response: Any) -> tuple[dict[str, str] | None, str | None]:
+    """Validate the exact output envelope; parsing arbitrary JSON is not sufficient."""
+    if not isinstance(raw_response, str) or not raw_response.strip():
+        return None, "Model response field was missing, empty or not a string."
+    try:
+        parsed = json.loads(raw_response)
+    except json.JSONDecodeError as exc:
+        return None, f"{type(exc).__name__}: {exc}"
+    if not isinstance(parsed, dict) or set(parsed) != {"response"}:
+        return None, "Response must be one object with exactly the response string field."
+    if not isinstance(parsed["response"], str) or not parsed["response"].strip():
+        return None, "Response field must contain a non-empty string."
+    return parsed, None
+
 def load_corpus(path: Path = CORPUS_PATH) -> tuple[dict, str]:
     raw = path.read_text(encoding="utf-8")
     digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()
@@ -245,6 +261,8 @@ def run_screen(model_name: str, output_path: Path, base_url: str = DEFAULT_BASE_
                 "completed_at_utc": utc_now(),
                 "model_digest": model_record["digest"],
                 "ollama_version": version.get("version"),
+                "ollama_model_record": model_record,
+                "model_show_metadata": show,
                 "model_metadata_captured": True,
             })
 
@@ -256,24 +274,28 @@ def run_screen(model_name: str, output_path: Path, base_url: str = DEFAULT_BASE_
                 case_started = time.perf_counter()
                 timestamp = utc_now()
                 try:
+                    current_record = require_installed_model_record(
+                        _read_json(base_url + "/api/tags"),
+                        model_name,
+                    )
+                    if current_record["digest"] != model_record["digest"]:
+                        raise RuntimeError("Installed model digest changed before this generation.")
                     response = _read_json(
                         base_url + "/api/generate",
                         body=request_body,
                         timeout=240,
                     )
+                    post_generation_record = require_installed_model_record(
+                        _read_json(base_url + "/api/tags"),
+                        model_name,
+                    )
+                    if post_generation_record["digest"] != model_record["digest"]:
+                        raise RuntimeError("Installed model digest changed during this generation.")
                     raw_response = response.get("response")
-                    parsed_response = None
-                    parse_error = None
-                    if isinstance(raw_response, str):
-                        try:
-                            parsed_response = json.loads(raw_response)
-                        except json.JSONDecodeError as exc:
-                            parse_error = f"{type(exc).__name__}: {exc}"
-                    else:
-                        parse_error = "Model response field was missing or not a string."
+                    parsed_response, parse_error = validate_model_response(raw_response)
                     row_status = (
                         "response_recorded"
-                        if isinstance(raw_response, str) and parsed_response is not None
+                        if parsed_response is not None
                         else "malformed_or_empty_response"
                     )
                     completed += 1
@@ -307,7 +329,7 @@ def run_screen(model_name: str, output_path: Path, base_url: str = DEFAULT_BASE_
                             )
                         },
                     })
-                except (urllib.error.URLError, TimeoutError, ValueError, OSError) as exc:
+                except (urllib.error.URLError, TimeoutError, ValueError, OSError, RuntimeError) as exc:
                     failed += 1
                     write_record(handle, {
                         "record_type": "case_result",

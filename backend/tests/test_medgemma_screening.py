@@ -9,6 +9,7 @@ from scripts.run_medgemma_screening import (
     build_generate_payload,
     load_corpus,
     require_installed_model_record,
+    validate_model_response,
 )
 
 
@@ -82,3 +83,26 @@ def test_model_registry_requires_one_exact_model_and_full_digest():
 def test_model_registry_rejects_missing_short_or_ambiguous_records(models):
     with pytest.raises(RuntimeError):
         require_installed_model_record({"models": models}, "medgemma1.5:4b-it-q4_K_M")
+
+
+
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        ('{"response":"Recorded uncertainty."}', {"response": "Recorded uncertainty."}),
+        ("[]", None),
+        ('{"other":"value"}', None),
+        ('{"response":42}', None),
+        ('{"response":" "}', None),
+        ("not json", None),
+        (None, None),
+    ],
+)
+def test_screen_response_requires_exact_nonempty_response_string(raw, expected):
+    parsed, error = validate_model_response(raw)
+    if expected is None:
+        assert parsed is None
+        assert error
+    else:
+        assert parsed == expected
+        assert error is None
