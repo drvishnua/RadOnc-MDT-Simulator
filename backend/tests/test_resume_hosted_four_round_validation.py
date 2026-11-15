@@ -17,15 +17,15 @@ def _namespace():
 def test_resume_script_imports_without_starting_inference():
     namespace = _namespace()
     assert callable(namespace["main"])
-    assert namespace["EXPECTED_SOURCE_RUN"] == "43617355539"
+    assert namespace["EXPECTED_SOURCE_RUN"] == "43714529807"
 
 
 def test_checkpoint_manifest_requires_original_lineage_and_exact_model_digest():
     validate = _namespace()["_validate_checkpoint"]
     manifest = {
         "source": {
-            "workflow_run_id": "43617355539",
-            "commit_sha": "6cf444c5e2c574838b51b0ebaa0e0cd3562e3716",
+            "workflow_run_id": "43714529807",
+            "commit_sha": "4683b0767bf5cade408e85ec31ef248b34e5321e",
         },
         "execution": {
             "mode": "github_hosted_cpu_only",
@@ -35,17 +35,28 @@ def test_checkpoint_manifest_requires_original_lineage_and_exact_model_digest():
         },
         "model": {"digest": "sha256:abc"},
     }
-    validate(manifest, "43617355539", "sha256:abc")
+    validate(manifest, "43714529807", "sha256:abc")
 
     invalid_cases = (
         (manifest, "999", "sha256:abc"),
-        (manifest, "43617355539", "sha256:different"),
+        (manifest, "43714529807", "sha256:different"),
+        (
+            {
+                **manifest,
+                "source": {
+                    **manifest["source"],
+                    "commit_sha": "0" * 40,
+                },
+            },
+            "43714529807",
+            "sha256:abc",
+        ),
         (
             {
                 **manifest,
                 "execution": {**manifest["execution"], "agent_concurrency": 2},
             },
-            "43617355539",
+            "43714529807",
             "sha256:abc",
         ),
         (
@@ -53,7 +64,7 @@ def test_checkpoint_manifest_requires_original_lineage_and_exact_model_digest():
                 **manifest,
                 "execution": {**manifest["execution"], "gpu_measured": True},
             },
-            "43617355539",
+            "43714529807",
             "sha256:abc",
         ),
     )
@@ -158,3 +169,24 @@ def test_resume_workflow_downloads_prior_run_and_reuploads_database_checkpoint()
     assert "if: always()" in workflow
     assert "live_four_round_hosted_cpu_validation.sqlite3" in workflow
     assert "live_four_round_hosted_cpu_resume_manifest.json" in workflow
+
+def test_resume_workflow_is_bound_to_run_16_checkpoint_lineage():
+    workflow_path = (
+        ROOT
+        / ".github"
+        / "workflows"
+        / "resume-hosted-cpu-four-round-validation.yml"
+    )
+    script_path = ROOT / "backend" / "scripts" / "resume_hosted_four_round_validation.py"
+    workflow = workflow_path.read_text(encoding="utf-8")
+    script = script_path.read_text(encoding="utf-8")
+    expected_run = "43714529807"
+    expected_sha = "4683b0767bf5cade408e85ec31ef248b34e5321e"
+
+    assert ("EXPECTED_SOURCE_RUN = " + q + expected_run + q) in script
+    assert ("EXPECTED_SOURCE_SHA = " + q + expected_sha + q) in script
+    assert ("default: " + q + expected_run + q) in workflow
+    assert ("|| '" + expected_run + "'") in workflow
+    assert expected_sha in workflow
+    assert "[resume-hosted-cpu-r3]" in workflow
+    assert "backend/tests/test_resume_hosted_four_round_validation.py" in workflow
