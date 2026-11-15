@@ -4,6 +4,7 @@
 **Branch:** `feature/four-round-mdt-and-performance`  
 **PR:** [#1](https://github.com/drvishnua/RadOnc-MDT-Simulator/pull/1) — open, draft, unmerged; base `main`.  
 **Latest fully verified code/test commit:** `80abe9e22b957ee93071064c1b99614689be3bf8` (all six exact-head workflows passed; production-code detector fix is `92dbb559ed1a0f781ec838f6e30acb42cf405f98`).
+**Latest branch head:** `2af68fc8d4ef53ac3cb094337fed8007f83b23d4` (checklist-only commit; all six standard CI workflows passed: runs 43699036280, 43699036296, 43699036337, 43699036336, 43699036274, 43699036288).
 
 Statuses: **NOT STARTED**, **IN PROGRESS**, **BLOCKED**, **VERIFIED**, **FAILED**, **NOT APPLICABLE**. VERIFIED applies only to the stated scope and evidence.
 
@@ -38,8 +39,8 @@ Statuses: **NOT STARTED**, **IN PROGRESS**, **BLOCKED**, **VERIFIED**, **FAILED*
 | R3 Ollama request-context propagation | IN PROGRESS | `_context_window_for_schema` maps the main adversarial draft to 8,192; the `80abe9e` no-inference test captures the actual `/api/generate` request and confirms `options.num_ctx=8192`. Live per-stage runtime allocation/truncation evidence remains outstanding. |
 | Effective R3 context/truncation | IN PROGRESS | A historical pre-R2 and post-R4 process snapshot showed `context_length=4096`; those snapshots do not identify the context used inside the R3 call. Schema mapping and request-payload regression verify R3 asks for 8,192, while R2/R3 repair schemas ask for 6,144. Stage-specific live runtime allocation and truncation verification remain outstanding. |
 | RTX 4060 active inference | IN PROGRESS | Historical laptop GPU measurements exist; current-head request-time GPU/offload verification outstanding. |
-| Full live 45-role MDT | IN PROGRESS | Workflow run [43698959463](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43698959463) is running on commit `2807b0c3d50b68722017fea987b9cdab8bfa283d`: 45 roles, R1-R4/Chair, isolated hosted Windows CPU, concurrency 1, synthetic case, expected 136 saved contributions and JSON/SQLite/manifest artefacts. Current stage: portable Ollama/model provisioning. No GPU evidence is claimed. |
-| Live artefacts/reproducibility | IN PROGRESS | Workflow run 43698959463 is active; saved JSON/SQLite/manifest artefacts are not yet available. Inspect all three and compare saved contributions against 45 roles/136 expected rows after completion. |
+| Full live 45-role MDT | BLOCKED | Workflow run [43698959463](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43698959463) remains API-status `in_progress` on commit `2807b0c3d50b68722017fea987b9cdab8bfa283d`: 45 roles, R1-R4/Chair, isolated hosted Windows CPU, concurrency 1, synthetic case, expected 136 saved contributions and JSON/SQLite/manifest artefacts. Last observed active step: portable Ollama/model provisioning; GitHub run metadata has not updated since `2026-11-15T09:22:42Z` (checked `12:10Z`), job-log download returned `BlobNotFound`, and no artifacts are present. Mark as BLOCKED pending observable progress/completion; not a confirmed failure. Workflow provisioning step cap is 240 minutes, job cap 250 minutes. No GPU evidence is claimed. |
+| Live artefacts/reproducibility | IN PROGRESS | Workflow 43698959463 has no published artifacts while its provisioning step remains active; job metadata is stale and log archive is unavailable. Artefact inspection and 45-role/136-row reconciliation cannot begin until run completion. |
 | Evidence retrieval/guideline verification | NOT STARTED | Retrieval is not connected; no guideline concordance is claimed. |
 | Independent clinical review | NOT STARTED | Qualified clinical review/acceptance not performed. |
 | Windows release/security acceptance | IN PROGRESS | Installer and security workflows passed on `80abe9e`; direct TNM alert-state confirmation, hosted full live validation and release gates remain. |
@@ -49,7 +50,7 @@ Statuses: **NOT STARTED**, **IN PROGRESS**, **BLOCKED**, **VERIFIED**, **FAILED*
 
 1. Obtain direct confirmation that CodeQL alert 4 is formally closed; review all subsequent security findings.
 2. Verify the live-validator quality-gate regression for the malformed R3 flag on exact-head CI.
-3. Monitor the single hosted CPU 45-role run; inspect its saved 136-contribution database, Chair report, integrity flags, missing/failed roles, and R3 per-stage context. Do not launch a second run concurrently.
+3. Resolve/observe the stale provisioning state of run 43698959463 within its existing timeout; do not launch a duplicate live run. If it completes, inspect JSON/SQLite/manifest, saved role coverage, Chair report, integrity flags and R3 per-stage context.
 4. On the next justified live run, verify a saved R3 malformed-prose flag appears in the persisted R3 contribution and final Chair report; synthetic generation and Chair boundary regressions pass.
 5. Run one consolidated bounded live validation only after code and CI are stable; avoid repeated isolated long model runs.
 6. Separately validate full 45-role execution, incomplete/failed agents, saved artefacts, effective R3 context and RTX 4060 activity.
