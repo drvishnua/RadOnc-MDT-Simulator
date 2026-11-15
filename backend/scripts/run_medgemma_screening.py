@@ -95,21 +95,20 @@ def require_installed_model_record(tags_payload: dict, model_name: str) -> dict:
 def round_instruction(round_label: str) -> str:
     instructions = {
         "R1": (
-            "Independently distinguish supplied facts, interpretations and unknowns. "
-            "Do not infer an absent stage, negative finding, fitness, resectability or preference."
+            "Prepare an independent role-level reading of the supplied record; label the provenance "
+            "and certainty of each assertion."
         ),
         "R2": (
-            "Compare only the supplied saved specialist contributions. State agreement only "
-            "when the same substantive proposition is supported; preserve different options "
-            "and every attached prerequisite."
+            "Analyse the saved peer material and explain which positions relate to one another "
+            "and where the supplied views remain distinct."
         ),
         "R3": (
-            "Adversarially check claims and quotations against the exact supplied source text. "
-            "Do not accept invented IDs, ranges, quotations or model-authored evidence."
+            "Perform a critical audit of source-linked statements and assess whether each can "
+            "be substantiated by the excerpt provided in this scenario."
         ),
         "R4": (
-            "Synthesize only the supplied saved contributions. Do not invent missing agents, "
-            "facts, consensus, treatment conclusions or source references."
+            "Prepare a closing board record from the historical material included in this scenario, "
+            "respecting its source and round boundaries."
         ),
     }
     if round_label not in instructions:

@@ -254,3 +254,10 @@ Both screens must use the same code commit, corpus hash, request settings and Ol
 ## 9. Current state
 
 No model has been installed, changed, selected or benchmarked by this plan. The MedGemma candidate tag is now identified from the Ollama Library, but its full local digest, real runtime compatibility, GPU inference and MDT quality remain unverified. No fresh live 136-contribution run or current GPU verification is claimed. The existing Qwen model remains the control and production configuration until a separate, verified selection decision.
+
+### Screening harness CI correction — 16 November 2026
+
+- Commit `5b7f7e6` first ran the new harness tests. Backend CI had **345 passed and 2 failed** (347 total); deterministic preflight 6/6 passed.
+- Failure 1: R4 round instruction repeated the expected-behaviour fixture wording verbatim, so the no-oracle-leak regression correctly rejected it. The instruction was rewritten to state the round task without reproducing the case oracle.
+- Failure 2: the R1 round-task test used a case-sensitive substring despite the prompt correctly capitalising the sentence. The assertion now compares case-folded text.
+- This is a test/prompt-fixture correction, not evidence of any MedGemma or Qwen behaviour. The failed run remains visible; the corrected exact-head CI must pass before this harness is marked verified.
