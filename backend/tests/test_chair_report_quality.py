@@ -731,7 +731,8 @@ def test_final_chair_rebuilds_source_opinion_coverage_from_saved_r3_reviews():
         },
     })
     round3[2]["result"]["source_reference_integrity_flags"] = [
-        "R3 test flag retained from saved role record."
+        "R3 test flag retained from saved role record.",
+        "Malformed paired-source wording: response contains 'both and' without the intervening source/subject phrase."
     ]
 
     round3[0]["result"]["source_peer_ids"] = ["RO-02"]
@@ -798,6 +799,8 @@ def test_final_chair_rebuilds_source_opinion_coverage_from_saved_r3_reviews():
     assert "Round 2 source-reference audit: 1/45" in flags
     assert "Round 3 source-reference audit: 1/45" in flags
     assert "R2 duplicate-only source-reference flag" in flags
+    assert "Malformed paired-source wording" in flags
+    assert "Round 3 source-reference detail (1 distinct role(s): RO-01)" in flags
     assert "Round 2 source-reference detail (1 distinct role(s): RO-01)" in flags
     assert "unanimously" not in unresolved.casefold()
 

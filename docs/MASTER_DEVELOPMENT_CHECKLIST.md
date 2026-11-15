@@ -14,7 +14,7 @@ Statuses: **NOT STARTED**, **IN PROGRESS**, **BLOCKED**, **VERIFIED**, **FAILED*
 | Four-round R1–R4 architecture/data flow | IN PROGRESS | Implemented with regression coverage; full current-head 45-role live acceptance outstanding. |
 | R1 independent assessment | IN PROGRESS | Implemented; complete current-head production-scale output audit outstanding. |
 | R2 debate and peer sourcing | IN PROGRESS | Source allowlists/provenance checks exist; current full-run provenance review outstanding. |
-| R3 adversarial review | IN PROGRESS | Source-bound checks and positive/negative control tooling exist; full 45-role test outstanding; bounded artifact from run 43559331144 showed malformed model output ('Both and explicitly state...'). Input neutralisation was grammatical. Commit `92dbb55` adds a non-rewriting output audit flag plus failure and grammatical negative-control tests; backend and all six CI workflows passed. Full 45-role validation remains outstanding. |
+| R3 adversarial review | IN PROGRESS | Source-bound checks and positive/negative control tooling exist; full 45-role test outstanding; bounded artifact from run 43559331144 showed malformed model output ('Both and explicitly state...'). Input neutralisation was grammatical. Commit `92dbb55` adds a non-rewriting output audit flag plus failure and grammatical negative-control tests; backend and all six CI workflows passed. A Chair completeness regression now checks the finding is retained in `case_data_integrity_flags`; new-head CI pending. Full 45-role validation remains outstanding. |
 | R4 Chair synthesis | IN PROGRESS | Saved-contribution reconciliation and deterministic reporting have regression coverage; full current-head Chair audit outstanding. |
 | Clinical safety/unsupported claims | IN PROGRESS | Deterministic audits and TNM regression coverage exist; not exhaustive clinical validation. |
 | TNM connector CodeQL remediation | IN PROGRESS | `case_integrity.py` now uses direct string comparison; the new whitespace/case regression passed in the 303-test suite. Python and JavaScript CodeQL jobs passed on `965d6ba`; the PR thread is no longer unresolved. The separate alert record could not be queried, so formal alert closure is not claimed. |
@@ -46,7 +46,7 @@ Statuses: **NOT STARTED**, **IN PROGRESS**, **BLOCKED**, **VERIFIED**, **FAILED*
 ## Immediate priorities
 
 1. Obtain direct confirmation that CodeQL alert 4 is formally closed; review all subsequent security findings.
-2. Verify malformed paired-source flags are preserved in saved R3 and surfaced in Chair audit records.
+2. Verify the new Chair handoff regression for the malformed paired-source flag on exact-head CI; inspect a saved R3/R4 artefact when the next live run is justified.
 3. Run one consolidated bounded live validation only after code and CI are stable; avoid repeated isolated long model runs.
 4. Separately validate full 45-role execution, incomplete/failed agents, saved artefacts, effective R3 context and RTX 4060 activity.
 5. Keep evidence retrieval, qualified clinical review and release approval as separate gates.
