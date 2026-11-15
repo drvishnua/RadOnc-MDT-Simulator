@@ -3,7 +3,7 @@
 **Repository:** `drvishnua/RadOnc-MDT-Simulator`  
 **Branch:** `feature/four-round-mdt-and-performance`  
 **PR:** [#1](https://github.com/drvishnua/RadOnc-MDT-Simulator/pull/1) — open, draft, unmerged; base `main`.  
-**Latest verified development HEAD:** `970c89952c4414d79b0aea767f10e91d482602ad` (all six workflows passed; application-code fix is `92dbb559ed1a0f781ec838f6e30acb42cf405f98`).
+**Latest fully verified code/test commit:** `970c89952c4414d79b0aea767f10e91d482602ad` (all six workflows passed; application-code fix is `92dbb559ed1a0f781ec838f6e30acb42cf405f98`).
 
 Statuses: **NOT STARTED**, **IN PROGRESS**, **BLOCKED**, **VERIFIED**, **FAILED**, **NOT APPLICABLE**. VERIFIED applies only to the stated scope and evidence.
 
