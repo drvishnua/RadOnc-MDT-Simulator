@@ -3539,6 +3539,23 @@ def test_r2_peer_agreement_scope_audit_does_not_flag_explicit_rebuttal():
 
 
 
+
+def test_r2_peer_agreement_scope_audit_not_suppressed_by_later_unrelated_uncertainty():
+    from app.services.mdt_generation import _audit_source_references
+
+    allowed = {("R1", "RO-01"), ("R1", "MO-01")}
+    payload = {
+        "response_to_other_perspectives": (
+            "All selected peer positions align with this position. "
+            "No substantive disagreement exists among peers. "
+            "The available information does not establish whether any treatment option is indicated."
+        ),
+        "agreements": [],
+    }
+    flags = _audit_source_references(payload, allowed)
+    assert any("Unsupported peer-agreement claim" in item for item in flags)
+
+
 def test_r2_peer_agreement_scope_audit_ignores_unrelated_not_supplied_reference():
     from app.services.mdt_generation import _audit_source_references
 
