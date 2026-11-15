@@ -190,6 +190,16 @@ def test_broader_explicit_tnm_negation_and_hypothetical_forms_remain_unflagged()
     assert audit_unverified_case_claims(case, payload) == []
 
 
+def test_qualified_tnm_list_connectors_accept_normalised_whitespace():
+    case = _case()
+    flags = audit_unverified_case_claims(case, {
+        "risk_flags": [
+            "Do not infer T1   OR   N0   /   M0 from lesion size or missing staging investigations."
+        ]
+    })
+    assert flags == []
+
+
 def test_rejected_tnm_inference_does_not_hide_a_separate_asserted_tnm_group():
     case = _case()
     flags = " ".join(audit_unverified_case_claims(case, {

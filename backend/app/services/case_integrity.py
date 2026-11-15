@@ -411,7 +411,7 @@ def _unqualified_tnm_matches(value: str) -> list[str]:
         # list connector; do not let it hide a later, independent TNM assertion.
         if previous_qualified_end is not None and previous_qualified_clause == (left, right):
             connector = analysis_text[previous_qualified_end:match.start()]
-            if re.fullmatch(r"\s*(?:/|or)\s*", connector, re.IGNORECASE):
+            if connector.strip().casefold() in {"/", "or"}:
                 previous_qualified_end = match.end()
                 continue
         previous_qualified_end = None

@@ -1,5 +1,7 @@
 # Implementation Status
 
+> **Current status source:** see [MASTER_DEVELOPMENT_CHECKLIST.md](./MASTER_DEVELOPMENT_CHECKLIST.md). This document retains detailed checkpoint and historical validation notes; dated snapshots below are not the authoritative live checklist.
+
 **Current engineering checkpoint:** 11 November 2026  
 **Development branch HEAD:** `35f32d1264143cd072d7589a53c5845154c7cae1`  
 **Latest R3 runtime-integrity change:** `c6499e72de9abc4d068324aa6c839206b867d091`  
