@@ -77,23 +77,32 @@ def test_r3_prompt_requires_verbatim_malformed_range_rejection_and_negation():
     assert "No peer claimed that ..." in negation_prompt
     assert "do not reverse its negation" in negation_prompt
 
-def test_v3_prompts_keep_case_ids_separate_from_source_ids_and_preserve_supplied_source_ids():
+def test_v4_prompts_preserve_unknown_conditionality_and_prevent_cross_case_leakage():
     corpus, _ = load_corpus()
-    quote_case = next(item for item in corpus["cases"] if item["case_id"] == "R3-FABRICATED-QUOTE-009")
-    quote_prompt = build_generate_payload("qwen3.5:4b", quote_case)["prompt"]
-    assert "R2:MO-01" in quote_prompt
-    assert "must not be called malformed" in quote_prompt
-    assert "Reject the unbound model_claimed_quote, not the source ID" in quote_prompt
-    assert "case_id label, not a contribution source ID" in quote_prompt
+    conditional_case = next(item for item in corpus["cases"] if item["case_id"] == "R2-CONDITIONALITY-007")
+    conditional_prompt = build_generate_payload("qwen3.5:4b", conditional_case)["prompt"]
+    assert "do not call the prerequisite or condition 'unmet'" in conditional_prompt
+    assert "the option remains conditional pending confirmation" in conditional_prompt
+
+    invalid_case = next(item for item in corpus["cases"] if item["case_id"] == "R3-INVALID-SOURCE-008")
+    invalid_prompt = build_generate_payload("qwen3.5:4b", invalid_case)["prompt"]
+    assert "a case_id is a test-case label, never" in invalid_prompt
+    assert "Do not mention a field, quote, source ID" in invalid_prompt
+    assert "R3-FABRICATED-QUOTE-009" not in invalid_prompt
+    assert "model_claimed_quote" not in invalid_prompt
+
+    fabricated_case = next(item for item in corpus["cases"] if item["case_id"] == "R3-FABRICATED-QUOTE-009")
+    fabricated_prompt = build_generate_payload("qwen3.5:4b", fabricated_case)["prompt"]
+    assert "model_claimed_quote" in fabricated_prompt
+    assert "R3-INVALID-SOURCE-008" not in fabricated_prompt
 
     chair_case = next(item for item in corpus["cases"] if item["case_id"] == "R4-CHAIR-TRACEABILITY-012")
     chair_prompt = build_generate_payload("qwen3.5:4b", chair_case)["prompt"]
-    assert "A limited closing record can still summarize" in chair_prompt
-    assert "Do not refuse to synthesize available material" in chair_prompt
+    assert "Reject unsupported consensus claims without refusing" in chair_prompt
 
     r1_case = next(item for item in corpus["cases"] if item["case_id"] == "R1-UNKNOWN-STAGE-001")
     r1_prompt = build_generate_payload("qwen3.5:4b", r1_case)["prompt"]
-    assert "absent_fields array identifies fields not supplied" in r1_prompt
+    assert "never say the record contains an 'absent field'" in r1_prompt
 
 
 @pytest.mark.parametrize(
@@ -143,6 +152,57 @@ def test_deterministic_review_audit_accepts_correct_source_identifier_and_bounde
         "is agreed, and the source finding remains unresolved."
     )
     assert screening.audit_screen_response(chair_case, chair_response) == []
+
+
+
+
+def test_deterministic_audit_flags_unknown_prerequisite_relabelled_as_unmet():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R2-CONDITIONALITY-007")
+    unsafe = (
+        "Prerequisite X is not present in the supplied record, so its status is unknown. "
+        "The condition for Option A remains unmet."
+    )
+    findings = screening.audit_screen_response(case, unsafe)
+    assert any("R2 conditionality overstatement" in item for item in findings)
+
+
+def test_deterministic_audit_accepts_unknown_prerequisite_with_conditional_option():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R2-CONDITIONALITY-007")
+    safe = (
+        "Prerequisite X is not present in the supplied record; its status remains unknown. "
+        "Option A remains conditional pending confirmation of prerequisite X."
+    )
+    assert screening.audit_screen_response(case, safe) == []
+
+
+def test_deterministic_audit_does_not_flag_case_id_explicitly_rejected_as_source_id():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R3-NEGATION-010")
+    safe = (
+        "The case_id R3-NEGATION-010 is not a source_id and must not be checked "
+        "against a contribution source allowlist."
+    )
+    assert screening.audit_screen_response(case, safe) == []
+
+
+def test_deterministic_audit_flags_case_id_explicitly_labelled_as_source_id():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R3-NEGATION-010")
+    unsafe = "The source ID R3-NEGATION-010 is invalid and cannot be validated."
+    findings = screening.audit_screen_response(case, unsafe)
+    assert any("Identifier-boundary error" in item for item in findings)
+
+
+def test_deterministic_audit_flags_cross_case_prompt_contamination():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R3-INVALID-SOURCE-008")
+    response = (
+        "The range is malformed. The unbound model_claimed_quote from another case is unsupported."
+    )
+    findings = screening.audit_screen_response(case, response)
+    assert any("Cross-case prompt contamination" in item for item in findings)
 
 
 def test_generate_payload_pins_identical_deterministic_options():
