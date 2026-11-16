@@ -46,6 +46,37 @@ def test_round_specific_prompt_instructions_are_present():
     assert "critical audit of source-linked statements" in prompts["R3"]
     assert "closing board record" in prompts["R4"]
 
+def test_r2_prompt_preserves_unknown_vs_absent_and_conditionality():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R2-CONDITIONALITY-007")
+    prompt = build_generate_payload("qwen3.5:4b", case)["prompt"]
+    for phrase in (
+        "not present in the supplied record",
+        "confirmed negative/absent prerequisite",
+        "explicitly unknown",
+        "do not paraphrase missing documentation",
+        "Conditional support remains conditional",
+    ):
+        assert phrase in prompt
+
+
+def test_r3_prompt_requires_verbatim_malformed_range_rejection_and_negation():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R3-INVALID-SOURCE-008")
+    prompt = build_generate_payload("qwen3.5:4b", case)["prompt"]
+    for phrase in (
+        "R2:RO-01-RO-09",
+        "quote and preserve",
+        "do not rewrite it as a valid 'to' range",
+        "Distinguish malformed syntax",
+    ):
+        assert phrase in prompt
+
+    negation_case = next(item for item in corpus["cases"] if item["case_id"] == "R3-NEGATION-010")
+    negation_prompt = build_generate_payload("qwen3.5:4b", negation_case)["prompt"]
+    assert "No peer claimed that ..." in negation_prompt
+    assert "do not reverse its negation" in negation_prompt
+
 
 def test_generate_payload_pins_identical_deterministic_options():
     corpus, _ = load_corpus()
