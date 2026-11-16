@@ -37,6 +37,7 @@ REQUIRED_VALIDATION_SCRIPTS = (
     "scripts/pytest_junit_diagnostics.py",
     "scripts/live_four_round_validation.py",
     "scripts/representative_model_provenance_validation.py",
+    "scripts/run_medgemma_screening.py",
     "scripts/run_mdt_stress_suite.py",
     "scripts/run_mdt_stress_with_telemetry.py",
 )
@@ -48,6 +49,9 @@ REQUIRED_REGRESSION_TESTS = (
     "tests/test_mdt_rounds.py",
     "tests/test_representative_model_provenance_validation.py",
     "tests/test_source_reference_audit.py",
+    "tests/test_medgemma_screening.py",
+    "tests/test_medgemma_screening_corpus.py",
+    "tests/test_medgemma_screening_workflow.py",
 )
 PYTHON_SCAN_DIRECTORIES = ("app", "scripts", "tests")
 
@@ -167,7 +171,7 @@ def run_preflight(backend_dir: Path) -> dict:
         "REGRESSION_ASSETS_001",
         "regression_coverage",
         not missing_tests,
-        "Core clinical-integrity, Chair, round and provenance regression suites are present.",
+        "Core clinical-integrity, Chair, round, provenance and model-screening regression suites are present.",
         "All required regression suites present." if not missing_tests else f"Missing: {missing_tests}",
         [str((backend_dir / item).relative_to(repository_root)) for item in REQUIRED_REGRESSION_TESTS],
         category="implementation",
@@ -241,6 +245,52 @@ def run_preflight(backend_dir: Path) -> dict:
         category="environment",
         correction="Restore CPU-only mode, concurrency 1 and an explicit job timeout before dispatch.",
         regression_test="tests/test_hosted_cpu_validation_workflow.py",
+    ))
+
+
+    screening_workflow = repository_root / ".github/workflows/model-integrity-screening.yml"
+    screening_text = ""
+    screening_error = None
+    try:
+        screening_text = screening_workflow.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as exc:
+        screening_error = f"{type(exc).__name__}: {exc}"
+    normalized_screening_text = " ".join(screening_text.split())
+    model_screen_guard_ok = (
+        screening_error is None
+        and "runs-on: windows-latest" in screening_text
+        and "self-hosted" not in screening_text
+        and "refs/heads/feature/four-round-mdt-and-performance" in screening_text
+        and "[model-integrity-screen]" in screening_text
+        and "workflow_dispatch:" in screening_text
+        and "pull_request:" not in screening_text
+        and "cancel-in-progress: false" in screening_text
+        and 'RADONC_AGENT_CONCURRENCY: "1"' in screening_text
+        and 'RADONC_VALIDATION_CPU_ONLY: "1"' in screening_text
+        and "timeout-minutes: 180" in screening_text
+        and "inputs.include_medgemma == true" in normalized_screening_text
+        and "inputs.hai_def_terms_accepted" in normalized_screening_text
+        and "HAI_DEF_TERMS_ACCEPTED" in screening_text
+        and "MODEL_SCREEN_MEDGEMMA_PULL_STARTED" in screening_text
+        and "if ($includeMed)" in screening_text
+        and "run_medgemma_screening.py" in screening_text
+        and 'if: always()' in screening_text
+    )
+    results.append(_result(
+        "WORKFLOW_MODEL_SCREEN_001",
+        "model_screening_workflow_guard",
+        model_screen_guard_ok,
+        "Synthetic model screening runs only on an ephemeral hosted Windows runner, development branch, explicit marker/dispatch, concurrency 1 and CPU-only; MedGemma download requires explicit manual terms acceptance; evidence uploads on failure.",
+        screening_error or (
+            "Hosted runner, branch/trigger, concurrency, CPU-only, consent and evidence-upload guards present."
+            if model_screen_guard_ok
+            else "One or more model-screening workflow safety guards are missing or broadened."
+        ),
+        [str(screening_workflow.relative_to(repository_root))],
+        severity="critical",
+        category="environment",
+        correction="Restore the development-branch-only hosted CPU workflow; require explicit HAI-DEF terms acceptance before MedGemma pull; preserve concurrency 1 and always-upload evidence.",
+        regression_test="tests/test_medgemma_screening_workflow.py",
     ))
 
     failures = [item for item in results if item.status == "failed"]
