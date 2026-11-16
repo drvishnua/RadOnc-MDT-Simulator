@@ -267,7 +267,8 @@ def audit_screen_response(case: dict[str, Any], response: str) -> list[str]:
         invalid_near_id = re.search(
             rf"(?:{escaped_id}).{{0,100}}\b(?:malformed|invalid|unsupplied|unrecognised|unrecognized)\b"
             rf"|\b(?:malformed|invalid|unsupplied|unrecognised|unrecognized)\b.{{0,100}}(?:{escaped_id})",
-            folded,
+            text,
+            flags=re.IGNORECASE,
         )
         if source_id and invalid_near_id:
             findings.append(
