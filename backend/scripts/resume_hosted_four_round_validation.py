@@ -361,7 +361,10 @@ async def main() -> int:
             ("R4", [{"agent_id": "SG-07", "report": chair}], "report"),
         ])
         report.update({
-            "status": (\n                "completed_with_quality_gate_failures" if failures\n                else ("passed_structural_checkpoint_audit" if audit_only else "passed_structural_live_validation")\n            ),
+            "status": (
+                "completed_with_quality_gate_failures" if failures
+                else ("passed_structural_checkpoint_audit" if audit_only else "passed_structural_live_validation")
+            ),
             "round_summaries_after": {
                 "R1": run_summary,
                 "R2": round2_summary,
