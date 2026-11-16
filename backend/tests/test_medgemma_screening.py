@@ -468,3 +468,38 @@ def test_run_screen_preserves_raw_response_when_digest_changes_after_generation(
     assert summary["responses_recorded"] == 1
     assert summary["failed_or_malformed"] == 1
     assert summary["status"] == "incomplete_or_malformed"
+
+
+def test_deterministic_audit_flags_bare_unknown_that_drops_conditional_support():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R2-CONDITIONALITY-007")
+
+    findings = screening.audit_screen_response(case, "unknown")
+
+    assert any("R2 conditionality omission" in item for item in findings)
+
+
+def test_deterministic_audit_flags_chair_summary_without_no_agreement_conclusion():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R4-CHAIR-TRACEABILITY-012")
+    incomplete = (
+        "R1: insufficient_information. "
+        "R2: the saved role did not state a treatment proposition. "
+        "R3: the missing-source finding remains unresolved."
+    )
+
+    findings = screening.audit_screen_response(case, incomplete)
+
+    assert any("no treatment proposition was agreed" in item for item in findings)
+    assert not any("Chair traceability omission" in item for item in findings)
+
+
+def test_deterministic_audit_accepts_explicit_bounded_chair_synthesis():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R4-CHAIR-TRACEABILITY-012")
+    complete = (
+        "The supplied contributions do not establish agreement on a treatment option. "
+        "No treatment proposition was agreed, and the source finding remains unresolved."
+    )
+
+    assert screening.audit_screen_response(case, complete) == []

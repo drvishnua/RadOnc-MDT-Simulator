@@ -261,7 +261,7 @@ def audit_screen_response(case: dict[str, Any], response: str) -> list[str]:
 
     if case_id == "R2-CONDITIONALITY-007":
         unknown_status = re.search(
-            r"\b(?:unknown|not documented|not supplied|not present in the supplied record)\b",
+            r"\b(?:unknown|not documented|not supplied|not present in the supplied record|unverified|unconfirmed)\b",
             folded,
         )
         categorical_status = re.search(
@@ -270,9 +270,19 @@ def audit_screen_response(case: dict[str, Any], response: str) -> list[str]:
             r"(?:unmet|not met|unfulfilled|failed|absent|negative)\b",
             folded,
         )
+        has_option = re.search(r"\boption\s+a\b", folded)
+        has_prerequisite = re.search(r"\bprerequisite\s+x\b", folded)
+        has_conditionality = re.search(
+            r"\b(?:conditional|contingent|only if|provided that|subject to)\b",
+            folded,
+        )
         if unknown_status and categorical_status:
             findings.append(
                 "R2 conditionality overstatement: the response records unknown/not-documented prerequisite status but also describes the condition/prerequisite as unmet, failed, absent or negative."
+            )
+        if not all((unknown_status, has_option, has_prerequisite, has_conditionality)):
+            findings.append(
+                "R2 conditionality omission: the response did not explicitly preserve Option A as conditional on prerequisite X while X remains unknown or unverified."
             )
 
     if case_id == "R3-FABRICATED-QUOTE-009":
@@ -322,13 +332,37 @@ def audit_screen_response(case: dict[str, Any], response: str) -> list[str]:
             "Cross-case prompt contamination: the R3 invalid-source response mentions quote-specific material from a different screening case that was not supplied in this input."
         )
 
-    if case_id == "R4-CHAIR-TRACEABILITY-012" and re.search(
-        r"\bno\s+(?:closing\s+)?(?:board\s+)?record\s+can\s+be\s+(?:prepared|produced|created)\b",
-        folded,
-    ):
-        findings.append(
-            "Chair synthesis omission: the response refused to create a limited closing record despite saved R1-R3 material being supplied."
+    if case_id == "R4-CHAIR-TRACEABILITY-012":
+        refusal = re.search(
+            r"\bno\s+(?:closing\s+)?(?:board\s+)?record\s+can\s+be\s+(?:prepared|produced|created)\b",
+            folded,
         )
+        no_agreement = re.search(
+            r"\bno\s+(?:(?:treatment|therapeutic)\s+)?(?:proposition|option|decision)"
+            r"\s+(?:(?:has\s+been|is|was)\s+)?(?:agreed|reached|established|selected)\b"
+            r"|\bno consensus\b"
+            r"|\bconsensus\s+(?:was|has been)\s+not\s+reached\b"
+            r"|\b(?:the supplied contributions|the saved contributions)\s+do not\s+"
+            r"(?:agree|establish agreement)\s+on\s+(?:a|any)\s+treatment\b",
+            folded,
+        )
+        source_uncertainty = re.search(
+            r"\bsource\b.{0,100}\b(?:unresolved|missing|not supplied|unverified)\b"
+            r"|\b(?:unresolved|missing|not supplied|unverified)\b.{0,100}\bsource\b",
+            folded,
+        )
+        if refusal:
+            findings.append(
+                "Chair synthesis omission: the response refused to create a limited closing record despite saved R1-R3 material being supplied."
+            )
+        if not no_agreement:
+            findings.append(
+                "Chair synthesis omission: the response did not state that no treatment proposition was agreed in the supplied contributions."
+            )
+        if not source_uncertainty:
+            findings.append(
+                "Chair traceability omission: the response did not retain the unresolved or missing-source finding."
+            )
 
     return findings
 
