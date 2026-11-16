@@ -1,7 +1,7 @@
 
 # Current authoritative checkpoint — 16 November 2026
 
-**Repository state:** `feature/four-round-mdt-and-performance` HEAD `51cdbea2c0f42d758b8b7ab1fd2190d5c094bbb2`. PR #1 remains open, draft and unmerged; it targets `main`. `main` remains `39a356b8eb09399aa2da1b9b9085965999f5105a`, unchanged.
+**Repository state:** `feature/four-round-mdt-and-performance` HEAD is the latest documentation-only checklist checkpoint; the latest application/test commit is `51cdbea2c0f42d758b8b7ab1fd2190d5c094bbb2`. The checklist refresh changes documentation only. All six standard PR workflows passed on application/test SHA `51cdbea`; the documentation-only refresh triggers a new standard CI set, whose outcome is tracked separately and is not substituted for the application/test evidence. PR #1 remains open, draft and unmerged; it targets `main`. `main` remains `39a356b8eb09399aa2da1b9b9085965999f5105a`, unchanged.
 
 ## Mission Control phase 1 and phase 2 — VERIFIED (bounded scope)
 
@@ -15,7 +15,7 @@
 - The UI provides per-round expand/collapse and manual role-status refresh. The endpoint excludes patient/case text, generated contributions and raw error messages.
 - No agent starts/retries, automatic decisions, DB schema migration, model inference, agent-to-agent messaging or concurrency changes were introduced.
 
-## Exact-current-commit CI — `51cdbea`
+## Latest application/test commit CI — `51cdbea` (documentation-only follow-on)
 
 All six standard PR workflows passed on this exact SHA:
 - Backend Tests [43917157450](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43917157450): **400 passed, 0 failed, 0 errors, 0 skipped; 1 warning**. Deterministic preflight: **7/7 passed**.
