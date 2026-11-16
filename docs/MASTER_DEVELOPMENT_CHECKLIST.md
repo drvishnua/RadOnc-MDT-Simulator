@@ -1,4 +1,9 @@
 
+## Mission Control phase-2 E2E correction history
+
+The first targeted browser run [43916746386](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43916746386) failed in the newly added assertion after successfully retrieving all 45 R2 roles. The log showed RO-01 status rendered as uppercase `COMPLETED`; the test compared it case-sensitively with lowercase `completed`. This is a browser-test assertion defect, not an endpoint/data failure. The assertions are now case-insensitive. The original failed run remains recorded; the corrected E2E must pass before phase 2 can be marked VERIFIED.
+
+
 ## Mission Control phase 2 — per-role drill-down implementation
 
 Added a read-only endpoint `GET /api/mission-control/{run_id}/rounds/{round_number}/roles` and frontend expansion controls on each R1–R4 round card. The response is restricted to role ID, role name, category, persisted status, start/completion timestamps and duration. It deliberately excludes all assessment/contribution content, raw error messages, case details and patient identifiers. Expected roles come from the server-side 45-role catalogue; R4 is restricted to Chair role `SG-07`. An uncreated R2/R3/R4 round is shown as `not_started`; an absent row after a round exists is shown as `missing_record`. Regression tests cover these states, failures, timing, R4 cardinality, invalid rounds and unknown runs. Targeted browser E2E assertions are being added for R2's 45 role rows and R4's single Chair row. CI pending; do not mark phase 2 verified until exact-commit backend, frontend and browser workflows succeed.

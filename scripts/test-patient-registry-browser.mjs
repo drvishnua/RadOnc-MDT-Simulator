@@ -399,7 +399,7 @@ async function verifyFourRoundDashboard() {
       "return { count: rows.length, first: rows[0]?.innerText || '', leaksProse: (document.querySelector('.mission-role-detail')?.innerText || '').includes('provisional conclusion') };" +
     "})()"
   );
-  if (r2Detail.count !== 45 || !r2Detail.first.includes("RO-01") || !r2Detail.first.includes("completed") || r2Detail.leaksProse) {
+  if (r2Detail.count !== 45 || !r2Detail.first.includes("RO-01") || !r2Detail.first.toLowerCase().includes("completed") || r2Detail.leaksProse) {
     throw new Error("R2 role detail did not show 45 completed metadata-only rows: " + JSON.stringify(r2Detail));
   }
 
@@ -421,7 +421,7 @@ async function verifyFourRoundDashboard() {
   const r4Detail = await evaluate(
     "(() => document.querySelector('.mission-role-row')?.innerText || '')()"
   );
-  if (!r4Detail.includes("SG-07") || !r4Detail.includes("completed")) {
+  if (!r4Detail.includes("SG-07") || !r4Detail.toLowerCase().includes("completed")) {
     throw new Error("R4 drill-down did not show the completed Chair role only: " + r4Detail);
   }
   console.log("MISSION_CONTROL_ROLE_DRILLDOWN_E2E_OK");
