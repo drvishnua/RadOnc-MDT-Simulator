@@ -29,7 +29,7 @@ def test_qwen_baseline_is_first_and_medgemma_requires_explicit_terms_attestation
         'python backend/scripts/run_medgemma_screening.py --model "qwen3.5:4b"'
     )
     medgemma_gate = workflow.index(
-        '$includeMed = ($env:GITHUB_EVENT_NAME -eq "workflow_dispatch"'
+        '$includeMed = ($env:MEDGEMMA_REQUESTED -eq "true")'
     )
     medgemma_pull = workflow.index('MODEL_SCREEN_MEDGEMMA_PULL_STARTED')
     medgemma_call = workflow.index(
@@ -39,7 +39,9 @@ def test_qwen_baseline_is_first_and_medgemma_requires_explicit_terms_attestation
     assert qwen_call < medgemma_gate < medgemma_pull < medgemma_call
     assert "inputs.include_medgemma == true" in workflow
     assert "inputs.hai_def_terms_accepted" in workflow
-    assert "HAI_DEF_TERMS_ACCEPTED: ${{ inputs.hai_def_terms_accepted }}" in workflow
+    assert "[hai-def-terms-accepted]" in workflow
+    assert "[medgemma]" in workflow
+    assert "github.event_name == 'push'" in workflow
     assert 'if ($env:HAI_DEF_TERMS_ACCEPTED -ne "true")' in workflow
     assert '$env:MEDGEMMA_REQUESTED -eq "true"' in workflow
     assert '$env:HAI_DEF_TERMS_ACCEPTED -eq "true"' in workflow
@@ -69,3 +71,13 @@ def test_screening_finalizer_records_utc_time_and_attempts_safe_process_cleanup(
     assert "StartsWith($managedRootPrefix,[StringComparison]::OrdinalIgnoreCase)" in workflow
     assert "Stop-Process -Id $ollamaPid -Force -ErrorAction Stop" in workflow
     assert "Could not stop the verified isolated Ollama process" in workflow
+
+
+def test_medgemma_commit_trigger_markers_are_explicit():
+    workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
+    assert "push:" in workflow
+    assert "[model-integrity-screen]" in workflow
+    assert "[medgemma]" in workflow
+    assert "[hai-def-terms-accepted]" in workflow
+    assert "workflow_dispatch" in workflow
+    assert "pull_request:" not in workflow
