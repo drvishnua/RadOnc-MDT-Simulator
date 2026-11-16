@@ -146,9 +146,9 @@ jobs:
             function Get-ExactModelRecord {
               param([string]$ModelName)
               $tags = Invoke-RestMethod -Uri "$ollamaUrl/api/tags" -TimeoutSec 20
-              $matches = @($tags.models | Where-Object { ([string]$_.name -eq $ModelName) -or ([string]$_.model -eq $ModelName) })
-              if ($matches.Count -ne 1) { throw "Expected exactly one installed record for $ModelName; found $($matches.Count)." }
-              $record = $matches[0]
+              $exactMatches = @($tags.models | Where-Object { ([string]$_.name -eq $ModelName) -or ([string]$_.model -eq $ModelName) })
+              if ($exactMatches.Count -ne 1) { throw "Expected exactly one installed record for $ModelName; found $($exactMatches.Count)." }
+              $record = $exactMatches[0]
               $digest = [string]$record.digest
               if ($digest.StartsWith("sha256:",[StringComparison]::OrdinalIgnoreCase)) { $digest = $digest.Substring(7) }
               if ($digest -notmatch '^[0-9a-fA-F]{64}$') { throw "$ModelName does not have a full SHA-256 digest." }
