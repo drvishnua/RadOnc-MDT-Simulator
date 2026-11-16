@@ -1,8 +1,8 @@
 # Current authoritative checkpoint — 16 November 2026 (supersedes stale branch/CI summaries below)
 
-**Repository recheck:** `feature/four-round-mdt-and-performance` HEAD is `fc332c8f6e8e03c794fb87adf016d95d716fb182`. PR #1 is open, draft and unmerged, targeting `main`. `main` remains `39a356b8eb09399aa2da1b9b9085965999f5105a` and is untouched. This checkpoint is documentation-only; latest application/test commit remains `358bc1a2575318cb6c8509b090a34e9fae2a3c98`.
+**Repository recheck:** `feature/four-round-mdt-and-performance` HEAD is `2061236c2177c142f53cda64f5729808392122fd`. PR #1 is open, draft and unmerged, targeting `main`. `main` remains `39a356b8eb09399aa2da1b9b9085965999f5105a` and is untouched. This checkpoint is documentation-only; latest application/test commit remains `358bc1a2575318cb6c8509b090a34e9fae2a3c98`.
 
-**Exact current-HEAD standard CI:** all six workflows completed successfully on `fc332c8`:
+**Latest completed standard CI:** all six standard workflows completed successfully on the immediately preceding documentation-only head `fc332c8`. Current documentation-only HEAD `2061236c2177c142f53cda64f5729808392122fd` has no associated GitHub Actions runs listed at the time of this check. Do not claim CI on `2061236c` until runs appear and finish. No application code changed in the `2061236c` checklist-only commit:
 - Backend Tests: [43888295808](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43888295808) — success.
 - Browser E2E: [43888295726](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43888295726) — success.
 - Windows Packaging Prerequisites: [43888296075](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43888296075) — success.
@@ -29,9 +29,9 @@ These verify standard software/build/security workflows only; they do not establ
 | Provenance and evidence retrieval | IN PROGRESS | Provenance findings and guideline retrieval remain open |
 | Chair consensus, dissent and traceability | IN PROGRESS | Historical run has no proposition consensus; audit gate failed |
 | Missing/failed-agent handling | IN PROGRESS | Must be revalidated in current live pipeline |
-| Backend tests | VERIFIED | Current-head backend workflow 43888295808 succeeded |
-| Frontend and dashboard build | VERIFIED | Current-head frontend workflow 43888295679 succeeded |
-| Browser E2E | VERIFIED | Current-head workflow 43888295726 succeeded |
+| Backend tests | VERIFIED | Latest completed backend workflow on prior documentation-only head `fc332c8`: 43888295808 succeeded |
+| Frontend and dashboard build | VERIFIED | Latest completed frontend workflow on prior documentation-only head `fc332c8`: 43888295679 succeeded |
+| Browser E2E | VERIFIED | Latest completed E2E workflow on prior documentation-only head `fc332c8`: 43888295726 succeeded |
 | API validation | IN PROGRESS | Not all API/live cases verified |
 | Ollama context handling | VERIFIED | 6,144/8,192 allocation probe only; does not prove no truncation |
 | Ollama performance and concurrency | IN PROGRESS | Concurrency 1 retained; comparative performance evidence incomplete |
@@ -45,7 +45,7 @@ These verify standard software/build/security workflows only; they do not establ
 | MedGemma raw-output review | NOT STARTED | No MedGemma outputs |
 | Independent qualified clinical review | NOT STARTED | No review evidence |
 | Guideline retrieval and verification | NOT STARTED | No checked source corpus in current evidence |
-| Packaging and security CI | VERIFIED | Current-head workflows 43888295671, 43888296075, 43888295752 succeeded |
+| Packaging and security CI | VERIFIED | Latest completed workflows on prior documentation-only head `fc332c8`: 43888295671, 43888296075, 43888295752 succeeded |
 | Mission-Control concept assessment | VERIFIED | Reel-level concept inspected; not a product or technical verification |
 | Mission-Control architecture/design | NOT STARTED | Proposed only; no implementation authorised or committed |
 | Release acceptance | BLOCKED | Clinical, live-model, GPU and evidence gates remain open |
