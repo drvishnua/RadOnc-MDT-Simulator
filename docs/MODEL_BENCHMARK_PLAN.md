@@ -263,3 +263,7 @@ No model has been installed, changed, selected or benchmarked by this plan. The 
 - This is a test/prompt-fixture correction, not evidence of any MedGemma or Qwen behaviour. The failed run remains visible; the corrected exact-head CI must pass before this harness is marked verified.
 
 - Follow-up CI on `9280e52` left **one failure** (346 passed, 1 failed): the round-instruction test still asserted the deliberately removed old R1 task phrase. The test now asserts the new neutral R1/R2/R3/R4 instructions; this does not affect model output or clinical scoring.
+
+### Post-generation provenance failure handling
+
+The screening runner increments its completed-response counter immediately after an Ollama response is received. It retains the raw response and Ollama generation metrics in the error record if the post-generation digest lookup fails or detects a digest change. The run remains incomplete and is not eligible for review as a clean comparison. This prevents a successful generation followed by a provenance failure from silently losing its raw output.

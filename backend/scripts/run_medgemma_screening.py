@@ -170,6 +170,14 @@ def build_generate_payload(model_name: str, case: dict[str, Any]) -> dict[str, A
 
 
 
+def extract_raw_model_response(payload: Any) -> str | None:
+    """Preserve a returned raw response even if later provenance checks fail."""
+    if not isinstance(payload, dict):
+        return None
+    raw = payload.get("response")
+    return raw if isinstance(raw, str) else None
+
+
 def validate_model_response(raw_response: Any) -> tuple[dict[str, str] | None, str | None]:
     """Validate the exact output envelope; parsing arbitrary JSON is not sufficient."""
     if not isinstance(raw_response, str) or not raw_response.strip():
@@ -272,6 +280,8 @@ def run_screen(model_name: str, output_path: Path, base_url: str = DEFAULT_BASE_
                 )
                 case_started = time.perf_counter()
                 timestamp = utc_now()
+                response = None
+                post_generation_record = None
                 try:
                     current_record = require_installed_model_record(
                         _read_json(base_url + "/api/tags"),
@@ -284,6 +294,7 @@ def run_screen(model_name: str, output_path: Path, base_url: str = DEFAULT_BASE_
                         body=request_body,
                         timeout=240,
                     )
+                    completed += 1
                     post_generation_record = require_installed_model_record(
                         _read_json(base_url + "/api/tags"),
                         model_name,
@@ -297,7 +308,6 @@ def run_screen(model_name: str, output_path: Path, base_url: str = DEFAULT_BASE_
                         if parsed_response is not None
                         else "malformed_or_empty_response"
                     )
-                    completed += 1
                     if row_status != "response_recorded":
                         failed += 1
                     write_record(handle, {
@@ -309,6 +319,8 @@ def run_screen(model_name: str, output_path: Path, base_url: str = DEFAULT_BASE_
                         "timestamp_utc": timestamp,
                         "wall_seconds": round(time.perf_counter() - case_started, 3),
                         "prompt_sha256": prompt_hash,
+                        "model_digest": model_record["digest"],
+                        "post_generation_model_digest": post_generation_record["digest"],
                         "request_body": request_body,
                         "response_raw": raw_response,
                         "response_parsed": parsed_response,
@@ -339,6 +351,20 @@ def run_screen(model_name: str, output_path: Path, base_url: str = DEFAULT_BASE_
                         "timestamp_utc": timestamp,
                         "wall_seconds": round(time.perf_counter() - case_started, 3),
                         "prompt_sha256": prompt_hash,
+                        "model_digest": model_record["digest"],
+                        "post_generation_model_digest": (
+                            post_generation_record.get("digest")
+                            if isinstance(post_generation_record, dict)
+                            else None
+                        ),
+                        "response_raw": extract_raw_model_response(response),
+                        "ollama_metrics": ({
+                            key: response.get(key)
+                            for key in (
+                                "done", "done_reason", "total_duration", "load_duration",
+                                "prompt_eval_count", "prompt_eval_duration", "eval_count", "eval_duration"
+                            )
+                        } if isinstance(response, dict) else {}),
                         "status": "inference_error",
                         "error_type": type(exc).__name__,
                         "error": str(exc),

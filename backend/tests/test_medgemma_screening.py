@@ -7,6 +7,7 @@ import pytest
 from scripts.run_medgemma_screening import (
     build_case_prompt,
     build_generate_payload,
+    extract_raw_model_response,
     load_corpus,
     require_installed_model_record,
     validate_model_response,
@@ -106,3 +107,11 @@ def test_screen_response_requires_exact_nonempty_response_string(raw, expected):
     else:
         assert parsed == expected
         assert error is None
+
+
+
+def test_raw_model_response_is_preserved_when_post_generation_checks_fail():
+    raw = '{"response":"The supplied record does not establish this fact."}'
+    assert extract_raw_model_response({"response": raw}) == raw
+    assert extract_raw_model_response({"error": "late digest mismatch"}) is None
+    assert extract_raw_model_response(None) is None
