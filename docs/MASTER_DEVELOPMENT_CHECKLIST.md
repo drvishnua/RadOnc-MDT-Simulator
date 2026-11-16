@@ -1,6 +1,22 @@
 
 # Current authoritative checkpoint — 16 November 2026
 
+## Live repository recheck — 16 November 2026
+
+**Branch:** `feature/four-round-mdt-and-performance` at `09cacaa89d5f02aec74d4dc02e1aa284dff86a1a` (documentation-only head; latest application/test source SHA remains `51cdbea2c0f42d758b8b7ab1fd2190d5c094bbb2`). **PR #1:** open, draft, unmerged, targeting `main`. **Main:** `39a356b8eb09399aa2da1b9b9085965999f5105a`, unchanged.
+
+All six standard PR workflows completed successfully on exact branch HEAD `09cacaa`: Backend `43918288615`; Frontend `43918288638`; Browser E2E `43918289366`; Packaging prerequisites `43918288713`; Windows Installer `43918288774`; Security/Dependency/CodeQL `43918288591`. These are software/build/security results, not model or clinical validation.
+
+**Latest bounded hosted Qwen diagnostic:** workflow `43866946205`, source `358bc1a2575318cb6c8509b090a34e9fae2a3c98`, terminal `failed_quality_gates`. Eight of eight model calls completed on hosted Windows CPU; Ollama `0.40.14`, Qwen digest `sha256:d8b0f5e9760cd1682034f292d7ef72ec46f432149be0df7574bf2d6e92e38c04`. Two integrity gates failed: R2 SO-02 converted unknown prerequisite status to “unmet/not met” without a documented assessment; the isolated R3 positive control repeated a seeded unsupported whole-MDT agreement claim outside the qualifying challenge. The bounded Chair output remained `insufficient_information`, with no consensus points and no treatment recommendation. Artifact `14226829681` was retrieved and inspected. Preserve the failed status.
+
+## Mission Control development oversight — IN PROGRESS
+
+Add a separate, read-only development-process panel alongside the existing clinical-run Mission Control. Initial scope: current PR/branch/head SHA, latest GitHub Actions runs grouped by workflow, each run's exact source SHA and whether it matches the current branch head, timestamps and direct run links, plus explicit stale/unavailable indicators. Use only public repository metadata; no GitHub token in browser code, no write controls, no agent execution, and no clinical/patient/run contribution content. Poll no more frequently than every five minutes and treat GitHub API/rate-limit failure as unavailable or stale data, never as success.
+
+**Paperclip assessment:** current public documentation reviewed. Paperclip is an autonomous-agent organisation/control plane with task execution, governance and GitHub access—not merely a passive CI dashboard. It is not selected for this monitoring requirement. Prefer the native read-only panel first; keep Paperclip as a separately isolated future option only if agent-workforce orchestration becomes an actual requirement.
+
+**MedGemma boundary:** the dedicated workflow requires `workflow_dispatch` with both `include_medgemma=true` and `hai_def_terms_accepted=true`. Its push-marker path is deliberately Qwen-only. The connected GitHub tools in this session expose no workflow-dispatch action; do not substitute a Qwen push run or weaken the manual consent gate. No MedGemma pull/inference is claimed.
+
 **Repository state:** `feature/four-round-mdt-and-performance` HEAD is the latest documentation-only checklist checkpoint; the latest application/test commit is `51cdbea2c0f42d758b8b7ab1fd2190d5c094bbb2`. The checklist refresh changes documentation only. All six standard PR workflows passed on application/test SHA `51cdbea`; the documentation-only refresh triggers a new standard CI set, whose outcome is tracked separately and is not substituted for the application/test evidence. PR #1 remains open, draft and unmerged; it targets `main`. `main` remains `39a356b8eb09399aa2da1b9b9085965999f5105a`, unchanged.
 
 ## Mission Control phase 1 and phase 2 — VERIFIED (bounded scope)
@@ -110,6 +126,8 @@ Mission Control phase 1 is **VERIFIED** for the bounded read-only summary and se
 | Packaging and security CI | VERIFIED | Installer, prerequisites, secret scan, dependencies and both CodeQL jobs passed on 51cdbea; model bootstrap skipped |
 | Mission Control phase 1 | VERIFIED | Read-only persisted summaries; six exact-commit CI workflows succeeded; direct E2E marker passed |
 | Mission Control phase 2 role drill-down | VERIFIED | Role endpoint and per-round UI drill-down; exact-commit backend/frontend/browser/security/installer CI passed on 51cdbea |
+| Mission Control development monitor | IN PROGRESS | Separate GitHub PR/Actions read-only development view being added; no patient/model prose exposure |
+| Paperclip third-party integration | NOT APPLICABLE | Reviewed as agent-operations control plane; native read-only GitHub telemetry selected for current scope |
 | Release acceptance | BLOCKED | Clinical, live-model, GPU and evidence gates remain outstanding |
 
 ---
