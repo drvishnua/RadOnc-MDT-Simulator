@@ -271,8 +271,10 @@ def run_preflight(backend_dir: Path) -> dict:
         and "inputs.include_medgemma == true" in normalized_screening_text
         and "inputs.hai_def_terms_accepted" in normalized_screening_text
         and "HAI_DEF_TERMS_ACCEPTED" in screening_text
+        and "if: ${{ github.event_name == 'workflow_dispatch' && inputs.include_medgemma == true }}" in normalized_screening_text
         and "MODEL_SCREEN_MEDGEMMA_PULL_STARTED" in screening_text
         and "if ($includeMed)" in screening_text
+        and screening_text.find("if ($includeMed)") < screening_text.find('if ($env:HAI_DEF_TERMS_ACCEPTED -ne "true")', screening_text.find("if ($includeMed)")) < screening_text.find("MODEL_SCREEN_MEDGEMMA_PULL_STARTED")
         and "run_medgemma_screening.py" in screening_text
         and 'if: always()' in screening_text
     )
