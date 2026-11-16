@@ -255,6 +255,8 @@ Both screens must use the same code commit, corpus hash, request settings and Ol
 
 No model has been installed, changed, selected or benchmarked by this plan. The MedGemma candidate tag is now identified from the Ollama Library, but its full local digest, real runtime compatibility, GPU inference and MDT quality remain unverified. No fresh live 136-contribution run or current GPU verification is claimed. The existing Qwen model remains the control and production configuration until a separate, verified selection decision.
 
+The 12-case screening harness and its safeguards are now CI-verified on commit `a9415b579108b26867ebf9a9670e48527b03ffb1`: 348 backend tests passed, deterministic preflight 6/6, and all six standard workflows succeeded. The optional hosted Ollama/model bootstrap was skipped. This is not a live model evaluation; no local model digest, Qwen/MedGemma output, GPU telemetry or clinical review exists yet.
+
 ### Screening harness CI correction — 16 November 2026
 
 - Commit `5b7f7e6` first ran the new harness tests. Backend CI had **345 passed and 2 failed** (347 total); deterministic preflight 6/6 passed.
@@ -267,3 +269,11 @@ No model has been installed, changed, selected or benchmarked by this plan. The 
 ### Post-generation provenance failure handling
 
 The screening runner increments its completed-response counter immediately after an Ollama response is received. It retains the raw response and Ollama generation metrics in the error record if the post-generation digest lookup fails or detects a digest change. The run remains incomplete and is not eligible for review as a clean comparison. This prevents a successful generation followed by a provenance failure from silently losing its raw output.
+
+### Screening harness exact-head CI — 16 November 2026
+
+- Commit: `a9415b579108b26867ebf9a9670e48527b03ffb1`.
+- Backend run `43778122628`: 348 passed, zero failed/errors/skipped, one warning; deterministic preflight 6/6 passed.
+- Frontend `43778122666`; Browser E2E `43778122654`; packaging prerequisites `43778122655`; Windows installer `43778122683`; security/dependency/CodeQL `43778122625`: all succeeded.
+- Windows installer artifact `14187730022`; installer SHA-256 `821f45d0806e9f6df9114433a4e93535ff28534a8386fb551b5bf0b6035166ae`.
+- The optional Ollama/model bootstrap was skipped. No model download, inference, GPU test, paired comparison or clinical validation was performed.

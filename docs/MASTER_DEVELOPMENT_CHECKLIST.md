@@ -3,7 +3,7 @@
 **Repository:** `drvishnua/RadOnc-MDT-Simulator`  
 **Branch:** `feature/four-round-mdt-and-performance`  
 **PR:** [#1](https://github.com/drvishnua/RadOnc-MDT-Simulator/pull/1) — open, draft, unmerged; base `main`.  
-**Latest application code/test HEAD:** `3ccbe1cbc8da6cd1507a9f40bda6eca4493294c3` (backend **324 passed, 0 failed, 0 errors, 0 skipped**, 1 warning; deterministic preflight **6/6 passed**). All six exact-head workflows succeeded: Backend `43771761243`, Frontend `43771761213`, Browser E2E `43771761183`, Windows Installer `43771761203`, Packaging Prerequisites `43771761189`, Security/Dependency/CodeQL `43771761244`. Backend artifacts: pytest/JUnit `14184590956`, preflight `14184750565`; E2E diagnostic artifact `14184234682`; Windows installer artifact `14184930231` (SHA-256 `c29836cbc90ee2e4df0aba5b9553ea648e89786471aee8cd584ad012de8a2355`). Optional clean-hosted Ollama/model bootstrap was skipped. Commit `3ccbe1c` adds the exact historical SO-06 negated-prerequisite wording to the no-inference regression suite; no new live inference was run.
+**Latest application code/test HEAD:** `a9415b579108b26867ebf9a9670e48527b03ffb1` (backend **348 passed, 0 failed, 0 errors, 0 skipped**, 1 warning; deterministic preflight **6/6 passed**). All six exact-head workflows succeeded: Backend `43778122628`, Frontend `43778122666`, Browser E2E `43778122654`, Windows Installer `43778122683`, Packaging Prerequisites `43778122655`, Security/Dependency/CodeQL `43778122625`. Backend artifacts: pytest/JUnit diagnostics `14187575741`, deterministic preflight `14186744806`; Windows installer artifact `14187730022` (installer SHA-256 `821f45d0806e9f6df9114433a4e93535ff28534a8386fb551b5bf0b6035166ae`; uploaded ZIP SHA-256 `c5ea05f0f3046376cec9cb4999476540e93538a923d1d734f958517a280d03bf`). Optional clean-hosted Ollama/model bootstrap was skipped. These are code/build/test results only; no candidate-model inference or current RTX 4060 verification was performed.
 
 Statuses: **NOT STARTED**, **IN PROGRESS**, **BLOCKED**, **VERIFIED**, **FAILED**, **NOT APPLICABLE**. VERIFIED applies only to the stated scope and evidence.
 
@@ -355,8 +355,8 @@ Artifact `14169603817` (`radonc-hosted-cpu-four-round-validation`) archive SHA-2
 | AI-018 | Establish model retirement, rollback, emergency disablement and fallback policy; never silently change model digest | NOT STARTED | Tested model rollback and customer notification policy |
 | AI-019 | Validate inference capacity, per-tenant quotas, concurrency, cost ceilings and denial-of-wallet resistance | NOT STARTED | Load/soak tests and measured unit economics at target load |
 | AI-020 | Verify RTX 4060 active inference separately from hosted CPU tests; record request-time utilisation, VRAM, offload layers, latency and logs | IN PROGRESS | Captured nvidia-smi/Ollama telemetry during actual request; no VRAM-allocation-only proof |
-| AI-021 | Evaluate Google MedGemma as a candidate specialist reasoning model against the current Qwen baseline; verify exact official model artefact/tag, digest, quantisation, Ollama compatibility and licence before use | IN PROGRESS | Google/Ollama public model identity verified. Bounded runners require exact local installed-model record and full SHA-256 digest before generation, capture model metadata, and preserve output artifacts. Safeguard tests passed CI on `1caf76b`; no local digest or model inference yet. Legal clearance remains BLOCKED. |
-| AI-022 | Benchmark MedGemma on the frozen RadOnc MDT failure corpus, including unsupported TNM/staging, R2 false agreement, citation fabrication/ranges, R3 provenance, conditionality, missing data and failed-agent cases | IN PROGRESS | Neutral-prompt screening harness, strict response schema, full model metadata/digest checks, immutable JSONL and raw-response preservation after post-call provenance failures implemented. CI verified on `3768d57` (347 backend tests; six workflows pass); latest raw-response edge-case patch awaits CI. No model outputs or independent review. |
+| AI-021 | Evaluate Google MedGemma as a candidate specialist reasoning model against the current Qwen baseline; verify exact official model artefact/tag, digest, quantisation, Ollama compatibility and licence before use | IN PROGRESS | Google model ID/version and Ollama candidate tag verified. Runner requires an exact local `/api/tags` record and full SHA-256 digest, captures `/api/show` metadata, checks digest stability, and preserves raw output. Exact-head CI on `a9415b5` passed; no local model digest or inference yet. Legal clearance remains BLOCKED. |
+| AI-022 | Benchmark MedGemma on the frozen RadOnc MDT failure corpus, including unsupported TNM/staging, R2 false agreement, citation fabrication/ranges, R3 provenance, conditionality, missing data and failed-agent cases | IN PROGRESS | 12-case synthetic corpus and no-oracle-leak prompts; exact Qwen/MedGemma requests/options are matched and sequential. Full digest is required and checked before/after each call; raw JSONL, full model metadata and outputs are preserved without overwrite, including post-call provenance failures. Harness CI VERIFIED on `a9415b5` (348 backend tests; all six workflows pass). No model outputs, paired run or independent clinical review yet. |
 | AI-023 | Measure MedGemma feasibility on RTX 4060 8GB with actual request-time GPU offload, VRAM, context/KV-cache, latency and CPU fallback; retain concurrency 1 | NOT STARTED | Captured nvidia-smi/Ollama request telemetry and repeatable resource/latency report |
 | AI-024 | Define MedGemma promotion/rollback gate; retain Qwen as baseline until MedGemma demonstrates a meaningful, reproducible safety/quality improvement without unacceptable performance or licensing risk | NOT STARTED | Approved acceptance thresholds, model digest pinning, rollback test and documented go/no-go decision |
 
@@ -654,18 +654,32 @@ Google's MedGemma model card states that the model has not been evaluated or opt
 
 **Zero-hallucination requirement:** Zero tolerance for any detected critical fabrication during evaluation. No finite test corpus can prove that a generative model will never hallucinate. Do not claim absolute zero hallucinations; design the application so unverified model claims cannot become accepted facts or untraceable Chair conclusions, and fail closed on detected integrity failures.
 
-**Current status:** model identity/tag and documented limitations verified; 12-case corpus structural tests VERIFIED; exact-digest gates, no-overwrite evidence handling and bounded screen runner implemented; previous safeguard code verified on `1caf76b` (332 backend tests; six CI workflows pass). New 12-case runner awaits its own CI; full local digest NOT STARTED; legal clearance BLOCKED; model pull NOT STARTED; live paired inference NOT STARTED; GPU verification NOT STARTED; clinical validation NOT STARTED.
+**Current status:** model identity/tag and documented limitations verified; 12-case synthetic corpus, digest-gated paired-screening harness, strict output envelope, immutable artefact handling and raw-response preservation VERIFIED by exact-head CI on `a9415b5` (348 backend tests; six workflows pass). Full local digest NOT STARTED; legal clearance BLOCKED; model pull NOT STARTED; live Qwen/MedGemma screening NOT STARTED; RTX 4060 inference verification NOT STARTED; independent clinical validation NOT STARTED.
 
 ### MedGemma screening harness first CI attempt — corrective record
 
 | Evidence | Status | Detail |
 |---|---|---|
 | Commit `5b7f7e653478ef276b83f7d4970782b3309b4b04` backend workflow `43777495870` | FAILED | 345 passed, 2 failed, 0 errors, 0 skipped; deterministic preflight 6/6 passed. The two failed tests are described in `docs/MODEL_BENCHMARK_PLAN.md`. No live model calls occurred. |
-| Corrective commit | IN PROGRESS | Remove case-oracle phrase from the R4 task instruction and case-fold the R1 prompt assertion; exact-head CI re-run required. |
+| Corrective change in `9280e52` | VERIFIED | Removed verbatim R4 oracle wording and case-folded the R1 assertion. A stale round-task expectation remained and was corrected in the next commit. The original failed CI record is retained. |
 
 ### MedGemma screening harness second CI attempt — corrective record
 
 | Evidence | Status | Detail |
 |---|---|---|
 | Commit `9280e52687db054c15f634b27ea35eb2919577f7` backend workflow `43777711230` | FAILED | 346 passed, 1 failed, 0 errors, 0 skipped; deterministic preflight 6/6 passed. The remaining test asserted the old R1 instruction after the prompt had been changed to remove answer-key leakage. |
-| Corrective commit | IN PROGRESS | Update the round-instruction regression assertions to match the new neutral R1–R4 task descriptions; exact-head CI re-run required. |
+| Corrective change in `3768d57` and final hardening in `a9415b5` | VERIFIED | Updated tests for neutral round tasks; added raw-response retention on post-generation provenance failure. Final exact-head backend and all six workflows passed on `a9415b5`. |
+
+### MedGemma screening harness exact-head verification — 16 November 2026
+
+| Evidence | Status | Result |
+|---|---|---|
+| Commit `a9415b579108b26867ebf9a9670e48527b03ffb1` — Backend `43778122628` | VERIFIED | 348 passed, 0 failed, 0 errors, 0 skipped; 1 warning. Deterministic preflight 6/6 passed. Includes 12-case corpus validation, oracle non-disclosure, full SHA-256 gating, exact response envelope, and raw-response preservation test. |
+| Frontend `43778122666` | VERIFIED | Success on the exact commit. |
+| Browser E2E `43778122654` | VERIFIED | Real-browser patient registry and saved dashboard workflow passed. |
+| Windows packaging prerequisites `43778122655` | VERIFIED | Success on the exact commit. |
+| Windows installer `43778122683` | VERIFIED | Build/install/smoke/checksum/upload passed; artifact `14187730022`; installer SHA-256 `821f45d0806e9f6df9114433a4e93535ff28534a8386fb551b5bf0b6035166ae`. |
+| Security/dependency/CodeQL `43778122625` | VERIFIED | Success on the exact commit. |
+| Optional hosted Ollama/model bootstrap | NOT STARTED | Explicitly skipped by the Windows installer workflow. No Qwen or MedGemma model was pulled or run. No GPU proof is available from this CI. |
+
+**Scope limitation:** This verification establishes the screening harness code, schema guards and CI build/test behavior only. It does not establish model accuracy, clinical reliability, zero hallucinations, MedGemma superiority, a local model digest, model pull success, GPU activity or full 45-role MDT acceptance.
