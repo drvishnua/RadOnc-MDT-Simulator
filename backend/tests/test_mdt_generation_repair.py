@@ -619,3 +619,58 @@ def test_deterministic_fallback_repairs_not_met_or_documented_as_one_predicate()
     assert repaired == (
         "The prerequisites have no documented fulfilment assessment in the supplied record."
     )
+
+
+def test_r2_prompt_distinguishes_not_documented_from_clinically_absent(monkeypatch):
+    case = _case()
+    captured = {}
+
+    async def fake_generate(prompt, schema_type, max_tokens):
+        assert schema_type is Round2ContributionDraft
+        captured["prompt"] = prompt
+        return Round2ContributionDraft(
+            position="insufficient_information",
+            provisional_conclusion=(
+                "The supplied synthetic record does not establish the prerequisite status."
+            ),
+            response_to_other_perspectives=(
+                "The prerequisite remains unknown because the assessment is not supplied."
+            ),
+            source_opinion_responses=[],
+            confidence=0.5,
+        )
+
+    monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate)
+    profile = {
+        "agent_id": "RO-01",
+        "name": "Radiation Oncology",
+        "mandate": "Preserve exact source attribution and uncertainty.",
+    }
+    own = {
+        "position": "insufficient_information",
+        "provisional_conclusion": "The prerequisite status remains unknown.",
+        "preferred_educational_option": "Option A remains conditional on prerequisite X.",
+    }
+    peers = [{
+        "agent_id": "MO-01",
+        "agent_name": "Medical Oncology",
+        "assessment": {
+            "position": "insufficient_information",
+            "provisional_conclusion": "Prerequisite X is not present in the supplied record.",
+            "preferred_educational_option": "Option A remains conditional on confirmation of prerequisite X.",
+            "disagreement_notes": [],
+            "unknowns": ["Prerequisite X status is unknown."],
+        },
+    }]
+
+    result = asyncio.run(
+        mdt_generation.generate_debate_contribution(profile, case, own, peers)
+    )
+
+    prompt = captured["prompt"]
+    assert "SOURCE-WORDING FIDELITY" in prompt
+    assert "not present in the supplied record" in prompt
+    assert "do not paraphrase it as the peer claiming" in prompt
+    assert "clinically absent, negative, failed, or unmet" in prompt
+    assert result.position == "insufficient_information"
+    assert result.integrity_repair_status in {"not_needed", "completed"}
