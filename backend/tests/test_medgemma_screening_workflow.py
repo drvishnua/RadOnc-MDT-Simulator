@@ -57,3 +57,15 @@ def test_screening_workflow_uploads_raw_evidence_even_after_failure():
     assert "retention-days: 30" in upload_step
     assert "manifest_" in workflow
     assert "gpu_measurement = \"NOT_PERFORMED\"" in workflow
+
+def test_screening_finalizer_records_utc_time_and_attempts_safe_process_cleanup():
+    workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    assert '$manifest.execution.finished_at_utc = (Get-Date).ToUniversalTime().ToString("o")' in workflow
+    assert "[DateTime]::UtcNow" not in workflow
+    assert "Could not write final screening manifest state" in workflow
+    assert "if ($ollamaStarted)" in workflow
+    assert "$managedRootPrefix = $managedRoot + [IO.Path]::DirectorySeparatorChar" in workflow
+    assert "StartsWith($managedRootPrefix,[StringComparison]::OrdinalIgnoreCase)" in workflow
+    assert "Stop-Process -Id $ollamaPid -Force -ErrorAction Stop" in workflow
+    assert "Could not stop the verified isolated Ollama process" in workflow
