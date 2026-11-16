@@ -99,3 +99,11 @@ def test_unaccepted_medgemma_push_is_rejected_before_ollama_provisioning():
     ) in terms_step
     assert 'if ($env:HAI_DEF_TERMS_ACCEPTED -ne "true")' in terms_step
     assert "No model was provisioned." in terms_step
+
+
+def test_combined_manifest_pins_prompt_audit_and_screening_script_digest():
+    workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    assert 'prompt_version = "radonc-mdt-integrity-screen-v4"' in workflow
+    assert 'audit_version = "radonc-mdt-integrity-audit-v3"' in workflow
+    assert 'script_sha256 = (Get-FileHash -LiteralPath "backend/scripts/run_medgemma_screening.py" -Algorithm SHA256).Hash.ToLowerInvariant()' in workflow

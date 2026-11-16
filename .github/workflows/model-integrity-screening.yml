@@ -104,6 +104,11 @@ jobs:
               workflow_run_attempt = $env:GITHUB_RUN_ATTEMPT
               workflow_url = "https://github.com/$($env:GITHUB_REPOSITORY)/actions/runs/$runId"
             }
+            screening = [ordered]@{
+              prompt_version = "radonc-mdt-integrity-screen-v4"
+              audit_version = "radonc-mdt-integrity-audit-v3"
+              script_sha256 = (Get-FileHash -LiteralPath "backend/scripts/run_medgemma_screening.py" -Algorithm SHA256).Hash.ToLowerInvariant()
+            }
             execution = [ordered]@{
               mode = "github_hosted_windows_cpu_only"
               gpu_measurement = "NOT_PERFORMED"
