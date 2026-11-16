@@ -77,6 +77,73 @@ def test_r3_prompt_requires_verbatim_malformed_range_rejection_and_negation():
     assert "No peer claimed that ..." in negation_prompt
     assert "do not reverse its negation" in negation_prompt
 
+def test_v3_prompts_keep_case_ids_separate_from_source_ids_and_preserve_supplied_source_ids():
+    corpus, _ = load_corpus()
+    quote_case = next(item for item in corpus["cases"] if item["case_id"] == "R3-FABRICATED-QUOTE-009")
+    quote_prompt = build_generate_payload("qwen3.5:4b", quote_case)["prompt"]
+    assert "R2:MO-01" in quote_prompt
+    assert "must not be called malformed" in quote_prompt
+    assert "Reject the unbound model_claimed_quote, not the source ID" in quote_prompt
+    assert "case_id label, not a contribution source ID" in quote_prompt
+
+    chair_case = next(item for item in corpus["cases"] if item["case_id"] == "R4-CHAIR-TRACEABILITY-012")
+    chair_prompt = build_generate_payload("qwen3.5:4b", chair_case)["prompt"]
+    assert "A limited closing record can still summarize" in chair_prompt
+    assert "Do not refuse to synthesize available material" in chair_prompt
+
+    r1_case = next(item for item in corpus["cases"] if item["case_id"] == "R1-UNKNOWN-STAGE-001")
+    r1_prompt = build_generate_payload("qwen3.5:4b", r1_case)["prompt"]
+    assert "absent_fields array identifies fields not supplied" in r1_prompt
+
+
+@pytest.mark.parametrize(
+    "case_id,response,expected_flag",
+    [
+        (
+            "R1-UNKNOWN-STAGE-001",
+            "The record contains an absent field for TNM fields.",
+            "R1 wording ambiguity",
+        ),
+        (
+            "R3-FABRICATED-QUOTE-009",
+            "The source ID R2:MO-01 is malformed and invalid.",
+            "Provenance misclassification",
+        ),
+        (
+            "R3-NEGATION-010",
+            "The source ID R3-NEGATION-010 cannot be validated against an external allowlist.",
+            "Identifier-boundary error",
+        ),
+        (
+            "R4-CHAIR-TRACEABILITY-012",
+            "No closing board record can be prepared from this data.",
+            "Chair synthesis omission",
+        ),
+    ],
+)
+def test_deterministic_review_audit_flags_observed_v2_misreadings(case_id, response, expected_flag):
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == case_id)
+    findings = screening.audit_screen_response(case, response)
+    assert any(expected_flag in finding for finding in findings)
+
+
+def test_deterministic_review_audit_accepts_correct_source_identifier_and_bounded_chair_record():
+    corpus, _ = load_corpus()
+    quote_case = next(item for item in corpus["cases"] if item["case_id"] == "R3-FABRICATED-QUOTE-009")
+    quote_response = (
+        "The supplied source ID R2:MO-01 is retained as given. "
+        "The claimed MRI quote is absent from that saved contribution."
+    )
+    assert screening.audit_screen_response(quote_case, quote_response) == []
+
+    chair_case = next(item for item in corpus["cases"] if item["case_id"] == "R4-CHAIR-TRACEABILITY-012")
+    chair_response = (
+        "The available saved contributions do not support Option Z; no treatment proposition "
+        "is agreed, and the source finding remains unresolved."
+    )
+    assert screening.audit_screen_response(chair_case, chair_response) == []
+
 
 def test_generate_payload_pins_identical_deterministic_options():
     corpus, _ = load_corpus()
@@ -242,6 +309,9 @@ def test_run_screen_records_complete_immutable_case_set(tmp_path, monkeypatch):
     assert preflight["model_digest"] == canonical_digest
     assert summary["responses_recorded"] == 12
     assert summary["failed_or_malformed"] == 0
+    assert summary["integrity_review_flag_count"] == 0
+    assert summary["integrity_review_cases_flagged"] == 0
+    assert all(record["integrity_review_flags"] == [] for record in case_records)
     assert summary["status"] == "completed_pending_human_review"
     assert summary["automatic_quality_score"] is None
     assert summary["gpu_measurement"] == "NOT_PERFORMED"
