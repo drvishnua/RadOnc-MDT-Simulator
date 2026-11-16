@@ -53,7 +53,7 @@ SHA-256 of each exact UTF-8 `response_raw` JSON envelope:
 | R2-FALSE-CONSENSUS-005 | `37fe6915e3938f65a1464cb0be1d9b04c25a359951ae977053f5147b636cfab1` |
 | R2-PARTIAL-AGREEMENT-006 | `5212875370fc6f970cd9945b58bc6488560ad21a665cbd29d0dd12b9d99a9acf` |
 | R2-CONDITIONALITY-007 | `25b5cb238ea86f2b05c4c181602824577e4780f88c2662aa12e9724092f79593` |
-| R3-INVALID-SOURCE-008 | `e228d6820f90e8c1893bf95a79eb097137b0aeed2c4f8c92260d3848a87dd7f7` |
+| R3-INVALID-SOURCE-008 | `e228d6820f90e8c97b1522ba376aa6466f8959f9d695899fef3e66bef6640b85` |
 | R3-FABRICATED-QUOTE-009 | `f9bec3496fea169fda669c0925105174e88e7e5956a68b1310ac8181956ae834` |
 | R3-NEGATION-010 | `16ebd92e1a3e32f0207374f3e680021b4a5e9df2cc18db0804f0f8c8265cf131` |
 | R4-MISSING-AGENT-011 | `a9a0a0c044b9a9b70fa641d6cbbadf85282f48f409b5903953e3cfe5ab909076` |
@@ -66,3 +66,8 @@ SHA-256 of each exact UTF-8 `response_raw` JSON envelope:
 **Promotion:** not authorised. Qwen remains baseline.  
 **GPU:** not measured; hosted CPU-only.  
 **MedGemma:** not run; HAI-DEF terms acceptance not supplied.
+
+
+## Fingerprint correction and current repository CI checkpoint
+
+The R3-INVALID-SOURCE-008 raw-response fingerprint in the original v3 review table was corrected after recomputation directly from the downloaded immutable JSONL. Correct SHA-256: `e228d6820f90e8c97b1522ba376aa6466f8959f9d695899fef3e66bef6640b85`. The source JSONL and original artifact were not altered.
