@@ -679,8 +679,10 @@ def test_r2_prompt_distinguishes_not_documented_from_clinically_absent(monkeypat
     assert "Do not paraphrase it as the peer claiming" in prompt
     assert "clinically absent, negative, failed, or unmet" in prompt
     assert "case_integrity_audit_flags" in prompt
-    assert "R1_OWN_SENTINEL: unsupported T1" in prompt
-    assert "R1_PEER_SENTINEL: unsupported N0" in prompt
+    assert "R1_OWN_SENTINEL: unsupported [flagged unsupported staging assertion]" in prompt
+    assert "R1_PEER_SENTINEL: unsupported [flagged unsupported staging assertion]" in prompt
+    assert "T1" not in prompt
+    assert "N0" not in prompt
     assert "do not infer the opposite" in prompt
     assert result.position == "insufficient_information"
     assert result.integrity_repair_status in {"not_needed", "completed"}
