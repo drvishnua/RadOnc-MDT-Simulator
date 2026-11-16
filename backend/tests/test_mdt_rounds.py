@@ -430,8 +430,11 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
     assert "Missing prerequisites mean suitability is unknown" in prompts[0]
     assert "return exactly one item in the required source_opinion_responses array" in prompts[0]
     assert "source_opinion_responses" in prompts[0]
-    # Prompt section boundaries must be actual newlines, not literal backslash-n text.
-    assert "conditionality; do not convert conditional positions into support.\nROLE:" in prompts[0]
+    # Prompt section boundaries must remain actual newlines, and audit instructions
+    # may precede the ROLE section without collapsing the boundary.
+    assert "SERVER CASE-INTEGRITY AUDIT:" in prompts[0]
+    assert "\nROLE:" in prompts[0]
+    assert "\\nROLE:" not in prompts[0]
 
     own_r2 = {
         "position": "conditional",
