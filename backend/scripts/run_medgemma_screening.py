@@ -362,7 +362,7 @@ def audit_screen_response(case: dict[str, Any], response: str) -> list[str]:
         # cross-round synthesis. Remove explicit R1-R3 contribution lines
         # before checking that the Chair states the overall treatment position.
         synthesis_text = re.sub(
-            r"(?im)^\s*(?:[-*]\s*)?R[123]\s*:\s*[A-Z0-9-]+\s*:\s*[^\n]*$",
+            r"\bR[123]\s*:\s*[A-Z0-9-]+\s*:\s*[^.]*?(?:\.|$)",
             " ",
             folded,
         )
