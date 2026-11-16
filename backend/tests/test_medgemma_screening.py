@@ -88,10 +88,10 @@ def test_v4_prompts_preserve_unknown_conditionality_and_prevent_cross_case_leaka
     assert "the option remains conditional pending confirmation" in conditional_prompt
 
     invalid_case = next(item for item in corpus["cases"] if item["case_id"] == "R3-INVALID-SOURCE-008")
-    invalid_prompt = build_generate_payload("qwen3.5:4b", invalid_case)["prompt"]
+    invalid_prompt = build_generate_payload("qwen3.5:4b", invalid_case)["prompt"].casefold()
     assert "a case_id is a test-case label, never" in invalid_prompt
-    assert "Do not mention a field, quote, source ID" in invalid_prompt
-    assert "R3-FABRICATED-QUOTE-009" not in invalid_prompt
+    assert "do not mention a field, quote, source id" in invalid_prompt
+    assert "r3-fabricated-quote-009" not in invalid_prompt
     assert "model_claimed_quote" not in invalid_prompt
 
     fabricated_case = next(item for item in corpus["cases"] if item["case_id"] == "R3-FABRICATED-QUOTE-009")
