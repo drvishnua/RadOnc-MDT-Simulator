@@ -224,6 +224,9 @@ def test_r3_receives_server_computed_peer_provenance_flags_and_exact_excerpt(mon
     assert "For each flagged R2 source (your own or a" in prompt
     assert "not a clinical disagreement" in prompt
     assert "short exact contiguous excerpt" in prompt
+    assert "never normalise it into a valid 'to' range" in prompt
+    assert "infer intermediate roles" in prompt
+    assert "raw reference string remain saved separately by the server" in prompt
     assert "Do not use a provenance flag as clinical evidence" in prompt
     assert any("R2:MO-01" in item for item in result.substantive_challenges)
     assert any("Malformed paired-source wording" in item for item in result.source_reference_integrity_flags)
@@ -846,3 +849,19 @@ def test_r3_server_binds_exact_contiguous_span_when_small_model_quote_is_approxi
         opinion["source_id"] in challenge and "R2:SO-02" in challenge
         for challenge in result.substantive_challenges
     )
+
+
+def test_source_reference_audit_flags_hyphenated_malformed_range_without_rewriting():
+    raw = "Malformed source reference: R2:RO-01-RO-09."
+    payload = {"response_to_other_perspectives": raw}
+
+    findings = _audit_source_references(
+        payload,
+        {("R2", "RO-01"), ("R2", "RO-09")},
+    )
+
+    assert any(
+        "Reference range R2:RO-01 through R2:RO-09" in finding
+        for finding in findings
+    )
+    assert payload["response_to_other_perspectives"] == raw
