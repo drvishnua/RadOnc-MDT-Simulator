@@ -81,3 +81,21 @@ def test_medgemma_commit_trigger_markers_are_explicit():
     assert "[hai-def-terms-accepted]" in workflow
     assert "workflow_dispatch" in workflow
     assert "pull_request:" not in workflow
+
+
+def test_unaccepted_medgemma_push_is_rejected_before_ollama_provisioning():
+    workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
+    terms_start = workflow.index("- name: Reject unaccepted MedGemma terms before provisioning")
+    provision_start = workflow.index("- name: Provision isolated Ollama and run sequential model screens")
+    terms_step = workflow[terms_start:provision_start]
+
+    assert (
+        "if: ${{ (github.event_name == 'workflow_dispatch' && inputs.include_medgemma == true) || "
+        "(github.event_name == 'push' && contains(github.event.head_commit.message, '[medgemma]')) }}"
+    ) in terms_step
+    assert (
+        "HAI_DEF_TERMS_ACCEPTED: ${{ (github.event_name == 'workflow_dispatch' && inputs.hai_def_terms_accepted == true) || "
+        "(github.event_name == 'push' && contains(github.event.head_commit.message, '[hai-def-terms-accepted]')) }}"
+    ) in terms_step
+    assert 'if ($env:HAI_DEF_TERMS_ACCEPTED -ne "true")' in terms_step
+    assert "No model was provisioned." in terms_step

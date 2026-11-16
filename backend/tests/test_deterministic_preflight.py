@@ -50,10 +50,14 @@ def _minimal_repository(root: Path) -> Path:
         'RADONC_AGENT_CONCURRENCY: "1"\\n'
         'RADONC_VALIDATION_CPU_ONLY: "1"\\n'
         "timeout-minutes: 180\\n"
-        "if: ${{ github.event_name == 'workflow_dispatch' && inputs.include_medgemma == true }}\\n"
+        "Reject unaccepted MedGemma terms before provisioning\\n"
+        "if: ${{ (github.event_name == 'workflow_dispatch' && inputs.include_medgemma == true) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[medgemma]')) }}\\n"
+        "HAI_DEF_TERMS_ACCEPTED: ${{ (github.event_name == 'workflow_dispatch' && inputs.hai_def_terms_accepted == true) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[hai-def-terms-accepted]')) }}\\n"
         "inputs.include_medgemma == true\\n"
         "inputs.hai_def_terms_accepted\\n"
         "HAI_DEF_TERMS_ACCEPTED\\n"
+        'if ($env:HAI_DEF_TERMS_ACCEPTED -ne "true")\\n'
+        "Provision isolated Ollama and run sequential model screens\\n"
         "if ($includeMed)\\n"
         'if ($env:HAI_DEF_TERMS_ACCEPTED -ne "true")\\n'
         "MODEL_SCREEN_MEDGEMMA_PULL_STARTED\\n"
@@ -193,3 +197,20 @@ def test_preflight_detects_missing_model_screening_workflow_guard(tmp_path):
     assert failure["severity"] == "critical"
     assert failure["root_cause_category"] == "environment"
     assert failure["regression_test"] == "tests/test_medgemma_screening_workflow.py"
+
+
+def test_preflight_rejects_medgemma_push_without_explicit_terms_attestation_before_provisioning(tmp_path):
+    backend = _minimal_repository(tmp_path)
+    workflow = tmp_path / ".github" / "workflows" / "model-integrity-screening.yml"
+    source = workflow.read_text(encoding="utf-8")
+    source = source.replace(
+        "contains(github.event.head_commit.message, '[hai-def-terms-accepted]')",
+        "false",
+    )
+    workflow.write_text(source, encoding="utf-8")
+
+    report = preflight.run_preflight(backend)
+    failure = next(item for item in report["results"] if item["check_id"] == "WORKFLOW_MODEL_SCREEN_001")
+
+    assert failure["status"] == "failed"
+    assert failure["severity"] == "critical"
