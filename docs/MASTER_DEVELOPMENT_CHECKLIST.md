@@ -701,3 +701,21 @@ The screening runner previously had helper-level tests but lacked no-inference c
 **Exact-head CI:** all six PR workflows succeeded on `e4a0f381e22ee01712377302f75eefb2591e4709`: Backend `43779329766`, Frontend `43779329760`, Browser E2E `43779329708`, Packaging Prerequisites `43779329705`, Windows Installer `43779329711`, Security/Dependency/CodeQL `43779329877`. The backend workflow individually records all three new tests as passed; deterministic preflight was 6/6. Backend artifacts: JUnit diagnostics `14187731917` and preflight report `14187438637`.
 
 **Scope limitation:** This is mocked-API software regression evidence, not a model inference run or quality evaluation. The installer workflow's optional hosted Ollama/model bootstrap was skipped. Qwen/MedGemma local digests, downloads, outputs and comparative results remain unavailable; GPU and independent clinical review remain outstanding.
+
+## Model-screening workflow guard CI correction and first execution — 16 November 2026
+
+**Retained failed CI attempt**
+- Application/preflight commit: `61ec66de9c1866e2dca162f930d15d817e42d3dc`.
+- Backend PR workflow: [43782131320](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43782131320) — **FAILED**: 353 passed, 2 failed. The repository-level deterministic preflight itself passed 7/7; the failures were tests using a minimal synthetic repository fixture that omitted the exact manual-dispatch MedGemma terms condition and the second terms re-check inside the optional MedGemma branch.
+- No model provisioning or inference occurred in this CI run. The underlying hosted workflow guard passed against the real repository.
+- Correction: commit `b69f1243708aa34853fefd5162f2d34ba8a12d56` updated the minimal test fixture to represent the exact workflow gates; the safety guard was not weakened.
+
+**Corrected exact-head verification**
+- Backend run [43782354539](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43782354539): **355 passed, 0 failed, 0 errors, 0 skipped**, 1 warning; deterministic preflight **7/7 passed**. New workflow guard tests and all three screening-runner orchestration tests passed.
+- Frontend [43782354458](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43782354458), Browser E2E [43782354464](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43782354464), Packaging [43782354434](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43782354434), Installer [43782354454](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43782354454), Security/CodeQL [43782354467](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43782354467): all succeeded on the same application/test commit.
+- Backend artifacts: JUnit diagnostics `14188454566`, preflight `14188384627`; installer artifact `14188579519`.
+
+**Live Qwen baseline trigger**
+- Workflow [43782748488](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43782748488), source SHA `38c65e2bf07b931c71497ef4a38bd655901ff0eb`, is a marker-qualified push on the development branch.
+- At the latest check the hosted Windows job remained in its isolated Ollama provisioning/screening step. The terms-attestation step was skipped, so this is Qwen-only. No full model digest or JSONL evidence was yet available to inspect.
+- Do not mark screening successful until the completed workflow manifest, full digest, 12 case records, raw outputs, per-call metrics, and summary are inspected. A completed set remains pending human review and is not a quality pass.
