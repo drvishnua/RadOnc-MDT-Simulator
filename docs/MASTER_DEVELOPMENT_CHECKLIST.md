@@ -1,3 +1,57 @@
+# Current authoritative checkpoint — 16 November 2026 (supersedes stale branch/CI summaries below)
+
+**Repository recheck:** `feature/four-round-mdt-and-performance` HEAD is `fc332c8f6e8e03c794fb87adf016d95d716fb182`. PR #1 is open, draft and unmerged, targeting `main`. `main` remains `39a356b8eb09399aa2da1b9b9085965999f5105a` and is untouched. This checkpoint is documentation-only; latest application/test commit remains `358bc1a2575318cb6c8509b090a34e9fae2a3c98`.
+
+**Exact current-HEAD standard CI:** all six workflows completed successfully on `fc332c8`:
+- Backend Tests: [43888295808](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43888295808) — success.
+- Browser E2E: [43888295726](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43888295726) — success.
+- Windows Packaging Prerequisites: [43888296075](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43888296075) — success.
+- Frontend Build: [43888295679](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43888295679) — success.
+- Security and Dependency Audit: [43888295752](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43888295752) — success.
+- Windows Installer Build: [43888295671](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43888295671) — success.
+These verify standard software/build/security workflows only; they do not establish successful live model inference, clinical validation, guideline concordance or GPU inference.
+
+**Latest bounded live-validation failure:** [workflow 43866946205](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43866946205) is terminal. Installer job succeeded; clean-hosted Windows Ollama/model-bootstrap/live-validation job failed at its combined provisioning/validation step. Preserve this failure. It is not a successful live validation.
+
+**Reel review — AI-agent “Mission Control” pattern:** the newly supplied 65.88-second recording visibly demonstrates a central role/agent graph around a CEO-like node, status/activity panels, task/log activity and a workload/team graph. The reel caption says the creator's working style changed after hiring AI agents. The precise underlying product, orchestration framework, model, code, measured productivity and reliability are **not established by the recording**. This is a concept-level review, not product verification.
+
+**Recommendation:** adopt the *bounded mission-control/observability concept for evaluation*, not an unrestricted autonomous-agent organisation and not an unverified third-party product. A RadOnc implementation should use a deterministic Run Controller as the orchestrator; specialist roles remain constrained tasks within the existing R1→R2→R3→R4 state machine. The Chair is the R4 synthesizer, not a CEO-style agent that can dispatch arbitrary clinical work or alter earlier saved contributions. The dashboard may show each role's queued/running/saved/failed/skipped state, round progress, timestamps, model/digest, token/time metrics, validation warnings, source links and immutable artifact history. The event/audit record—not the LLM or the dashboard—must remain the source of truth. R2/R3/R4 must consume only the correct persisted earlier-round records. Missing/failed work remains visible and blocks any claim of a complete review. Concurrency remains 1 unless measured tests justify otherwise. Human approvals remain necessary for sensitive actions; no automatic clinical decision or model promotion.
+
+**Scope boundary:** no third-party Mission Control product has been identified or selected; no autonomous-agent framework has been installed; no architecture/code change has been made from this Reel. The proposed dashboard/orchestration refinement is **NOT STARTED** pending repository design review and a separate implementation decision. This pattern can improve operational visibility and accountability, but it does not itself prevent hallucinations, false consensus, unsupported staging or fabricated provenance.
+
+## Master Checklist — current statuses (16 November 2026)
+
+| Workstream | Status | Evidence / boundary |
+|---|---|---|
+| R1–R4 architecture and data flow | IN PROGRESS | Existing implementation; live acceptance outstanding |
+| Clinical safety and staging integrity | IN PROGRESS | Historical and bounded findings remain open |
+| Case integrity and audit history | VERIFIED | Historical DB integrity only; full-run acceptance failed |
+| Provenance and evidence retrieval | IN PROGRESS | Provenance findings and guideline retrieval remain open |
+| Chair consensus, dissent and traceability | IN PROGRESS | Historical run has no proposition consensus; audit gate failed |
+| Missing/failed-agent handling | IN PROGRESS | Must be revalidated in current live pipeline |
+| Backend tests | VERIFIED | Current-head backend workflow 43888295808 succeeded |
+| Frontend and dashboard build | VERIFIED | Current-head frontend workflow 43888295679 succeeded |
+| Browser E2E | VERIFIED | Current-head workflow 43888295726 succeeded |
+| API validation | IN PROGRESS | Not all API/live cases verified |
+| Ollama context handling | VERIFIED | 6,144/8,192 allocation probe only; does not prove no truncation |
+| Ollama performance and concurrency | IN PROGRESS | Concurrency 1 retained; comparative performance evidence incomplete |
+| RTX 4060 request-time GPU verification | NOT STARTED | No measured inference-time GPU proof |
+| Hosted bounded R2/R3/R4 validation | FAILED | Workflow 43866946205 |
+| Historical full 45-role acceptance | FAILED | Audit-only revalidation found 343 integrity entries |
+| Qwen synthetic 12-case screens | VERIFIED | Execution/digest verification only; human review pending, no model pass |
+| MedGemma HAI-DEF acceptance statement | VERIFIED | User statement recorded; not independent legal verification |
+| MedGemma workflow dispatch | BLOCKED | No authorised workflow-dispatch action available in the connected GitHub tools |
+| MedGemma pull and inference | BLOCKED | Requires successful authorised dispatch |
+| MedGemma raw-output review | NOT STARTED | No MedGemma outputs |
+| Independent qualified clinical review | NOT STARTED | No review evidence |
+| Guideline retrieval and verification | NOT STARTED | No checked source corpus in current evidence |
+| Packaging and security CI | VERIFIED | Current-head workflows 43888295671, 43888296075, 43888295752 succeeded |
+| Mission-Control concept assessment | VERIFIED | Reel-level concept inspected; not a product or technical verification |
+| Mission-Control architecture/design | NOT STARTED | Proposed only; no implementation authorised or committed |
+| Release acceptance | BLOCKED | Clinical, live-model, GPU and evidence gates remain open |
+
+---
+
 ## MedGemma acceptance checkpoint — 16 November 2026
 
 **User acceptance recorded:** The user explicitly confirmed in this conversation: “I confirm that I have reviewed and accept Google's HAI-DEF Terms of Use personally, in my own legal capacity. Proceed with the synthetic-only MedGemma benchmark.” This records the user's statement; it is not independent legal verification or acceptance by the project on the user's behalf. Scope remains synthetic-only offline evaluation, with no patient data, clinical deployment, or model promotion.
