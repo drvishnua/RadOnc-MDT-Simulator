@@ -371,7 +371,10 @@ def test_run_screen_records_complete_immutable_case_set(tmp_path, monkeypatch):
     case_records = [record for record in records if record["record_type"] == "case_result"]
     preflight = next(record for record in records if record["record_type"] == "preflight")
     summary = next(record for record in records if record["record_type"] == "summary")
+    manifest = next(record for record in records if record["record_type"] == "manifest")
 
+    assert manifest["prompt_version"] == screening.PROMPT_VERSION
+    assert manifest["audit_version"] == "radonc-mdt-integrity-audit-v2"
     assert calls == {"tags": 25, "generate": 12, "show": 1, "version": 1}
     assert len(case_records) == 12
     assert len({record["case_id"] for record in case_records}) == 12

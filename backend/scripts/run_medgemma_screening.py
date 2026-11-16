@@ -32,6 +32,7 @@ CORPUS_PATH = (
     / "medgemma_model_integrity_screening_v1.json"
 )
 PROMPT_VERSION = "radonc-mdt-integrity-screen-v4"
+AUDIT_VERSION = "radonc-mdt-integrity-audit-v2"
 DEFAULT_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/")
 GENERATION_OPTIONS = {
     "temperature": 0,
@@ -405,6 +406,7 @@ def run_screen(model_name: str, output_path: Path, base_url: str = DEFAULT_BASE_
             "record_type": "manifest",
             "run_id": run_id,
             "prompt_version": PROMPT_VERSION,
+            "audit_version": AUDIT_VERSION,
             "started_at_utc": started,
             "model_requested": model_name,
             "base_url": base_url,
