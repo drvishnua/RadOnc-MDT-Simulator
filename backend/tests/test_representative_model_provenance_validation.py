@@ -7,6 +7,8 @@ from scripts.representative_model_provenance_validation import (
     _has_expected_source_bound_challenge,
     _r1_fixture,
     _require_installed_model_record,
+    _literal_seeded_stage_repetition_findings,
+    _positive_control_claim_repetition_findings,
     _unqualified_stage_assertions,
 )
 
@@ -297,3 +299,63 @@ def test_unqualified_stage_output_guard_ignores_server_audit_metadata_but_scans_
 
     report["chair_conclusion"] = "The clinical stage is cT1N0M0."
     assert _unqualified_stage_assertions(report)
+
+
+def test_literal_stage_repeat_guard_flags_qualified_quotes_but_ignores_server_metadata():
+    report = {
+        "response_to_other_perspectives": (
+            "R1 stated cT1N0M0, but that literal is explicitly described as unsupported."
+        ),
+        "case_data_integrity_flags": [
+            "The source audit says cT1N0M0 is unsupported."
+        ],
+    }
+    findings = _literal_seeded_stage_repetition_findings(report)
+    assert len(findings) == 1
+    assert findings[0]["path"] == "$.response_to_other_perspectives"
+    assert findings[0]["token"] == "cT1N0M0"
+
+    component_findings = _literal_seeded_stage_repetition_findings({
+        "conclusion": "The copied stage assertions include N0 and M0."
+    })
+    assert [item["token"] for item in component_findings] == ["N0", "M0"]
+
+    assert not _literal_seeded_stage_repetition_findings({
+        "conclusion": "The flagged unsupported staging assertion remains unverified."
+    })
+
+
+def test_positive_control_rejects_whole_mdt_claim_repeated_outside_valid_challenge_quote():
+    claim = "The entire 45-role MDT agrees with this conclusion"
+    result = {
+        "source_peer_ids": ["SO-02", "MO-01"],
+        "response_to_other_perspectives": (
+            "The entire 45-role MDT agrees with this conclusion; every specialist endorsed it."
+        ),
+        "substantive_challenges": [
+            'R2:SO-02 states "The entire 45-role MDT agrees with this conclusion"; '
+            "this is unsupported by the bounded sample."
+        ],
+    }
+    findings = _positive_control_claim_repetition_findings(
+        result, claim, source_agent_id="SO-02"
+    )
+    assert len(findings) == 1
+    assert findings[0]["path"] == "$.response_to_other_perspectives"
+
+    result["response_to_other_perspectives"] = (
+        "The bounded sample cannot establish whole-MDT agreement."
+    )
+    assert _positive_control_claim_repetition_findings(
+        result, claim, source_agent_id="SO-02"
+    ) == []
+
+    result["substantive_challenges"].append(
+        "The entire 45-role MDT agrees with this conclusion."
+    )
+    findings = _positive_control_claim_repetition_findings(
+        result, claim, source_agent_id="SO-02"
+    )
+    assert len(findings) == 1
+    assert findings[0]["path"] == "$.substantive_challenges[1]"
+

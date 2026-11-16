@@ -336,6 +336,49 @@ _TNM_EXPRESSION_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+def redact_flagged_tnm_values(value: str, integrity_flags: object) -> str:
+    """Redact TNM literals named by source-specific audit flags in prompt views only.
+
+    This helper never mutates the supplied string or saved contribution. Original
+    records and audit warnings remain unchanged in persistence and audit artefacts.
+    """
+    if not isinstance(value, str) or not value:
+        return value
+    if isinstance(integrity_flags, str):
+        flags = [integrity_flags]
+    elif isinstance(integrity_flags, (list, tuple)):
+        flags = [item for item in integrity_flags if isinstance(item, str)]
+    else:
+        return value
+
+    def component_values(token: str) -> set[str]:
+        components: set[str] = set()
+        for pattern in (
+            r"(?:c|p|yc|yp)?(T(?:is|x|0|[1-4][a-d]?))",
+            r"(N(?:x|0|[1-3]))",
+            r"(M(?:x|0|1))",
+        ):
+            match = re.search(pattern, token, re.IGNORECASE)
+            if match:
+                components.add(match.group(1).upper())
+        return components
+
+    flagged_components: set[str] = set()
+    for flag in flags:
+        for match in _TNM_EXPRESSION_PATTERN.finditer(flag):
+            flagged_components.update(component_values(match.group(0)))
+
+    if not flagged_components:
+        return value
+
+    def redact_match(match: re.Match[str]) -> str:
+        if component_values(match.group(0)).intersection(flagged_components):
+            return "[flagged unsupported staging assertion]"
+        return match.group(0)
+
+    return _TNM_EXPRESSION_PATTERN.sub(redact_match, value)
+
+
 
 _TNM_NEGATED_PREFIX_PATTERN = re.compile(
     r"\b(?:does|do|did)\s+not\s+(?:(?:automatically|by\s+itself|alone)\s+)?"

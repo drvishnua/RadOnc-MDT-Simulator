@@ -33,6 +33,7 @@ from app.services.case_integrity import (
     case_summary_has_attributed_opinions,
     extract_attributed_note_opinions,
     is_empty_challenge_placeholder as _is_empty_challenge_placeholder,
+    redact_flagged_tnm_values,
 )
 from app.services.chair_report_quality import (
     build_recorded_agreements,
@@ -342,8 +343,36 @@ def _prioritized_provenance_flags(value: object, limit: int = 5) -> list[str]:
     return [_compact(item, 220) for item in flags[:limit]]
 
 
-def _compact_case_integrity_flags(value: object, limit: int = 6) -> list[str]:
-    """Expose bounded server audit warnings to later rounds without rewriting source records."""
+def _combined_case_integrity_flags(*values: object) -> list[str]:
+    """Collect source-specific R1/R2 audit flags without mutating saved records."""
+    combined: list[str] = []
+    for value in values:
+        if isinstance(value, str) and value.strip():
+            combined.append(value.strip())
+        elif isinstance(value, (list, tuple)):
+            combined.extend(
+                item.strip()
+                for item in value
+                if isinstance(item, str) and item.strip()
+            )
+    return combined
+
+
+def _r3_peer_case_integrity_flags(peer: dict) -> list[str]:
+    """Return both saved audit layers for the exact R3 peer record."""
+    result = peer.get("result") or {}
+    return _combined_case_integrity_flags(
+        peer.get("round1_case_integrity_flags"),
+        result.get("case_data_integrity_flags"),
+    )
+
+
+def _compact_case_integrity_flags(
+    value: object,
+    limit: int = 6,
+    redaction_flags: object = None,
+) -> list[str]:
+    """Pass bounded audit warnings to prompts without leaking flagged TNM literals."""
     if not isinstance(value, (list, tuple)):
         return []
     flags = [
@@ -351,20 +380,34 @@ def _compact_case_integrity_flags(value: object, limit: int = 6) -> list[str]:
         for item in value
         if isinstance(item, str) and item.strip()
     ]
-    return [_compact(item, 220) for item in flags[:limit]]
+    redaction_source = flags if redaction_flags is None else redaction_flags
+    return [
+        _compact(redact_flagged_tnm_values(item, redaction_source), 220)
+        for item in flags[:limit]
+    ]
 
 
-def _compact_r1_text(value: str, limit: int) -> str:
-    """Keep the explicit R1 source label separate from round IDs embedded in peer prose."""
+def _compact_r1_text(
+    value: str,
+    limit: int,
+    integrity_flags: object = None,
+) -> str:
+    """Build an R1 prompt view with source-flagged TNM values redacted."""
+    redacted = redact_flagged_tnm_values(value, integrity_flags)
     neutralized = _EMBEDDED_ROUND_REFERENCE_PATTERN.sub(
         "[embedded reference omitted]",
-        value,
+        redacted,
     )
     return _compact(neutralized, limit)
 
 
-def _compact_r2_text(value: str, limit: int) -> str:
-    """Neutralise embedded round IDs without damaging the peer sentence structure."""
+def _compact_r2_text(
+    value: str,
+    limit: int,
+    integrity_flags: object = None,
+) -> str:
+    """Build an R2 prompt view with flagged TNM values redacted and references neutralised."""
+    redacted = redact_flagged_tnm_values(value, integrity_flags)
     reference = r"R[123]:[A-Z]{2}-[0-9]{2}"
     reference_list = re.compile(
         rf"\b{reference}(?:(?:\s*,\s*(?:and\s+)?|\s+(?:and|&)\s+){reference})+\b",
@@ -374,13 +417,14 @@ def _compact_r2_text(value: str, limit: int) -> str:
     # These generic phrases are not attributable citations; R3 must cite the
     # explicit outer source label attached to the supplied peer record instead.
     neutralized = _ROUND_REFERENCE_RANGE_PATTERN.sub(
-        "the referenced role records", value
+        "the referenced role records", redacted
     )
     neutralized = reference_list.sub("the referenced role records", neutralized)
     neutralized = _EMBEDDED_ROUND_REFERENCE_PATTERN.sub(
         "the referenced role record", neutralized
     )
     return _compact(neutralized, limit)
+
 
 def _bind_exact_peer_evidence_excerpt(
     model_excerpt: object,
@@ -1514,14 +1558,26 @@ async def generate_debate_contribution(
         {
             "role": peer["agent_name"],
             "position": peer["assessment"].get("position", "unknown"),
-            "conclusion": _compact_r1_text(peer["assessment"].get("provisional_conclusion", ""), 180),
-            "educational_option": _compact_r1_text(peer["assessment"].get("preferred_educational_option", ""), 140),
+            "conclusion": _compact_r1_text(
+                peer["assessment"].get("provisional_conclusion", ""),
+                180,
+                peer["assessment"].get("case_data_integrity_flags"),
+            ),
+            "educational_option": _compact_r1_text(
+                peer["assessment"].get("preferred_educational_option", ""),
+                140,
+                peer["assessment"].get("case_data_integrity_flags"),
+            ),
             "disagreement_notes": [
-                _compact_r1_text(item, 100)
+                _compact_r1_text(
+                    item, 100, peer["assessment"].get("case_data_integrity_flags")
+                )
                 for item in (peer["assessment"].get("disagreement_notes") or [])[:2]
             ],
             "unknowns": [
-                _compact_r1_text(item, 90)
+                _compact_r1_text(
+                    item, 90, peer["assessment"].get("case_data_integrity_flags")
+                )
                 for item in (peer["assessment"].get("unknowns") or [])[:2]
             ],
             "case_integrity_audit_flags": _compact_case_integrity_flags(
@@ -1530,12 +1586,21 @@ async def generate_debate_contribution(
         }
         for peer in peer_views
     ]
+    own_r1_integrity_flags = own_independent_assessment.get("case_data_integrity_flags") or []
     own = {
         "position": own_independent_assessment.get("position"),
-        "conclusion": _compact(own_independent_assessment.get("provisional_conclusion", ""), 240),
-        "option": _compact(own_independent_assessment.get("preferred_educational_option", ""), 160),
+        "conclusion": _compact_r1_text(
+            own_independent_assessment.get("provisional_conclusion", ""),
+            240,
+            own_r1_integrity_flags,
+        ),
+        "option": _compact_r1_text(
+            own_independent_assessment.get("preferred_educational_option", ""),
+            160,
+            own_r1_integrity_flags,
+        ),
         "case_integrity_audit_flags": _compact_case_integrity_flags(
-            own_independent_assessment.get("case_data_integrity_flags")
+            own_r1_integrity_flags
         ),
     }
     source_opinion_register = extract_attributed_note_opinions(case.case_summary)
@@ -1561,7 +1626,7 @@ async def generate_debate_contribution(
         "ABSENT-IS-NOT-UNMET RULE: distinguish missing documentation from an assessed negative finding for each prerequisite. "
         "If an MRI result, complete staging, or fitness/performance assessment is not present in the supplied case, describe it as 'not supplied', 'not documented', or 'unknown'. "
         "Do not say that a prerequisite is 'not met', failed, negative, or absent solely because its result or assessment is missing. "
-        "For example, no MRI result supplied means MRI staging is unknown; no staging entry means stage is undocumented, not N0/M0 or a negative staging result; "
+        "For example, no MRI result supplied means MRI staging is unknown; no staging entry means stage is undocumented, not evidence of a negative staging result; "
         "no fitness assessment means fitness is unknown, not that the patient is unfit or that a fitness threshold failed. "
         "Use 'not met' or 'unmet' only when the case explicitly records that the prerequisite was assessed and a documented finding establishes it was not fulfilled; "
         "identify that exact documented finding and do not infer a threshold. "
@@ -1605,8 +1670,7 @@ async def generate_debate_contribution(
         "corresponding R1 narrative contains a claim not supported by the immutable case snapshot; "
         "they are not new case facts and do not prove the opposite finding. Treat the flagged claim "
         "as unverified/quarantined, do not repeat it as a clinical fact, do not use it to justify "
-        "agreement or a position change, and do not infer the opposite (for example, an unsupported "
-        "N0 statement does not establish N-positive disease). Do not reproduce or quote the literal TNM/stage values from a flagged assertion, even when attributing or rebutting it; refer only to 'the flagged unsupported staging assertion'. If relevant, attribute it only as an "
+        "agreement or a position change, and do not infer the opposite. Do not reproduce or quote the literal TNM/stage values from a flagged assertion, even when attributing or rebutting it; refer only to 'the flagged unsupported staging assertion'. If relevant, attribute it only as an "
         "unverified statement from that named R1 contribution and explain that the source case does "
         "not establish it. The verbatim case and structured fields remain authoritative.\n"
         f"ROLE: {profile['name']}\nMANDATE: {profile['mandate']}\n"
@@ -1790,94 +1854,149 @@ async def generate_adversarial_contribution(
 ) -> RoundContribution:
     # R3 receives a deliberately small, source-labelled sample. All 45 saved
     # contributions remain in storage and are supplied to the Chair in R4.
-    peers = [
-        {
+    peers = []
+    for peer in peer_debate_views[:5]:
+        peer_integrity_flags = _r3_peer_case_integrity_flags(peer)
+        result = peer["result"]
+        peers.append({
             "source": f"R2:{peer['agent_id']}",
             "role": peer["agent_name"],
-            "position": peer["result"].get("position", "unknown"),
-            "conclusion": _compact_r2_text(peer["result"].get("provisional_conclusion", ""), 260),
-            "response": _compact_r2_text(peer["result"].get("response_to_other_perspectives", ""), 700),
+            "position": result.get("position", "unknown"),
+            "conclusion": _compact_r2_text(
+                result.get("provisional_conclusion", ""), 260, peer_integrity_flags
+            ),
+            "response": _compact_r2_text(
+                result.get("response_to_other_perspectives", ""), 700, peer_integrity_flags
+            ),
             "agreements": [
-                _compact_r2_text(item, 180)
-                for item in (peer["result"].get("agreements") or [])[:1]
+                _compact_r2_text(item, 180, peer_integrity_flags)
+                for item in (result.get("agreements") or [])[:1]
             ],
             "challenges": [
-                _compact_r2_text(item, 260)
-                for item in (peer["result"].get("substantive_challenges") or [])[:1]
+                _compact_r2_text(item, 260, peer_integrity_flags)
+                for item in (result.get("substantive_challenges") or [])[:1]
             ],
             "risks": [
-                _compact_r2_text(item, 160)
-                for item in (peer["result"].get("risk_flags") or [])[:1]
+                _compact_r2_text(item, 160, peer_integrity_flags)
+                for item in (result.get("risk_flags") or [])[:1]
             ],
             "position_changes": [
-                _compact_r2_text(item, 180)
-                for item in (peer["result"].get("position_changes") or [])[:1]
+                _compact_r2_text(item, 180, peer_integrity_flags)
+                for item in (result.get("position_changes") or [])[:1]
             ],
             "round1_case_integrity_audit_flags": _compact_case_integrity_flags(
-                peer.get("round1_case_integrity_flags")
+                peer.get("round1_case_integrity_flags"),
+                redaction_flags=peer_integrity_flags,
             ),
             "round2_case_integrity_audit_flags": _compact_case_integrity_flags(
-                peer["result"].get("case_data_integrity_flags")
+                result.get("case_data_integrity_flags"),
+                redaction_flags=peer_integrity_flags,
             ),
             "source_opinion_responses": [
                 {
                     "source_id": item.get("source_id", ""),
-                    "analysis": _compact_r2_text(item.get("analysis", ""), 300),
-                    "comparison": _compact_r2_text(item.get("comparison", ""), 120),
+                    "analysis": _compact_r2_text(
+                        item.get("analysis", ""), 300, peer_integrity_flags
+                    ),
+                    "comparison": _compact_r2_text(
+                        item.get("comparison", ""), 120, peer_integrity_flags
+                    ),
                 }
-                for item in (peer["result"].get("source_opinion_responses") or [])[:4]
+                for item in (result.get("source_opinion_responses") or [])[:4]
                 if isinstance(item, dict)
             ],
             "provenance_audit_flags": [
-                _compact_r2_text(item, 220)
+                _compact_r2_text(item, 220, peer_integrity_flags)
                 for item in _prioritized_provenance_flags(
-                    peer["result"].get("source_reference_integrity_flags") or []
+                    result.get("source_reference_integrity_flags") or []
                 )
             ],
             "provenance_excerpt": (
                 _compact_r2_text(
                     _bounded_exact_excerpt(
-                        peer["result"].get("response_to_other_perspectives", ""), 1600
+                        result.get("response_to_other_perspectives", ""), 1600
                     ),
                     1600,
+                    peer_integrity_flags,
                 )
-                if peer["result"].get("source_reference_integrity_flags")
+                if result.get("source_reference_integrity_flags")
                 else ""
             ),
-        }
-        for peer in peer_debate_views[:5]
-    ]
+        })
+
+    own_r1_integrity_flags = own_independent_assessment.get("case_data_integrity_flags") or []
+    own_r2_integrity_flags = own_debate_contribution.get("case_data_integrity_flags") or []
+    own_case_integrity_flags = _combined_case_integrity_flags(
+        own_r1_integrity_flags, own_r2_integrity_flags
+    )
     own = {
         "round1_source": f"R1:{profile['agent_id']}",
         "round1_position": own_independent_assessment.get("position"),
-        "round1_conclusion": _compact(own_independent_assessment.get("provisional_conclusion", ""), 150),
-        "round1_option": _compact(own_independent_assessment.get("preferred_educational_option", ""), 140),
+        "round1_conclusion": _compact_r1_text(
+            own_independent_assessment.get("provisional_conclusion", ""),
+            150,
+            own_r1_integrity_flags,
+        ),
+        "round1_option": _compact_r1_text(
+            own_independent_assessment.get("preferred_educational_option", ""),
+            140,
+            own_r1_integrity_flags,
+        ),
         "round1_case_integrity_audit_flags": _compact_case_integrity_flags(
-            own_independent_assessment.get("case_data_integrity_flags")
+            own_r1_integrity_flags,
+            redaction_flags=own_case_integrity_flags,
         ),
         "round2_source": f"R2:{profile['agent_id']}",
         "round2_position": own_debate_contribution.get("position"),
-        "round2_conclusion": _compact_r2_text(own_debate_contribution.get("provisional_conclusion", ""), 260),
-        "round2_response": _compact_r2_text(own_debate_contribution.get("response_to_other_perspectives", ""), 600),
-        "round2_agreements": [_compact_r2_text(item, 180) for item in (own_debate_contribution.get("agreements") or [])[:2]],
-        "round2_challenges": [_compact_r2_text(item, 220) for item in (own_debate_contribution.get("substantive_challenges") or [])[:2]],
-        "round2_position_changes": [_compact_r2_text(item, 180) for item in (own_debate_contribution.get("position_changes") or [])[:1]],
-        "round2_unknowns": [_compact_r2_text(item, 90) for item in (own_debate_contribution.get("remaining_unknowns") or [])[:2]],
-        "round2_risks": [_compact_r2_text(item, 90) for item in (own_debate_contribution.get("risk_flags") or [])[:2]],
+        "round2_conclusion": _compact_r2_text(
+            own_debate_contribution.get("provisional_conclusion", ""),
+            260,
+            own_case_integrity_flags,
+        ),
+        "round2_response": _compact_r2_text(
+            own_debate_contribution.get("response_to_other_perspectives", ""),
+            600,
+            own_case_integrity_flags,
+        ),
+        "round2_agreements": [
+            _compact_r2_text(item, 180, own_case_integrity_flags)
+            for item in (own_debate_contribution.get("agreements") or [])[:2]
+        ],
+        "round2_challenges": [
+            _compact_r2_text(item, 220, own_case_integrity_flags)
+            for item in (own_debate_contribution.get("substantive_challenges") or [])[:2]
+        ],
+        "round2_position_changes": [
+            _compact_r2_text(item, 180, own_case_integrity_flags)
+            for item in (own_debate_contribution.get("position_changes") or [])[:1]
+        ],
+        "round2_unknowns": [
+            _compact_r2_text(item, 90, own_case_integrity_flags)
+            for item in (own_debate_contribution.get("remaining_unknowns") or [])[:2]
+        ],
+        "round2_risks": [
+            _compact_r2_text(item, 90, own_case_integrity_flags)
+            for item in (own_debate_contribution.get("risk_flags") or [])[:2]
+        ],
         "round2_case_integrity_audit_flags": _compact_case_integrity_flags(
-            own_debate_contribution.get("case_data_integrity_flags")
+            own_r2_integrity_flags,
+            redaction_flags=own_case_integrity_flags,
         ),
         "round2_source_opinion_responses": [
             {
                 "source_id": item.get("source_id", ""),
-                "analysis": _compact_r2_text(item.get("analysis", ""), 300),
-                "comparison": _compact_r2_text(item.get("comparison", ""), 120),
+                "analysis": _compact_r2_text(
+                    item.get("analysis", ""), 300, own_case_integrity_flags
+                ),
+                "comparison": _compact_r2_text(
+                    item.get("comparison", ""), 120, own_case_integrity_flags
+                ),
             }
             for item in (own_debate_contribution.get("source_opinion_responses") or [])[:4]
             if isinstance(item, dict)
         ],
         "round2_provenance_audit_flags": [
-            _compact_r2_text(item, 220)
+            _compact_r2_text(item, 220, own_case_integrity_flags)
             for item in _prioritized_provenance_flags(
                 own_debate_contribution.get("source_reference_integrity_flags") or []
             )
@@ -1888,6 +2007,7 @@ async def generate_adversarial_contribution(
                     own_debate_contribution.get("response_to_other_perspectives", ""), 1600
                 ),
                 1600,
+                own_case_integrity_flags,
             )
             if own_debate_contribution.get("source_reference_integrity_flags")
             else ""
@@ -2730,6 +2850,23 @@ async def generate_chair_report(
     round3_views: list[dict],
     max_tokens: int = 1600,
 ) -> FinalMDTReport:
+    chair_integrity_flags: list[str] = []
+    for rows, field in (
+        (round1_views, "assessment"),
+        (round2_views, "result"),
+        (round3_views, "result"),
+    ):
+        for _, result in _round_items(rows, field):
+            values = result.get("case_data_integrity_flags") or []
+            if isinstance(values, str):
+                values = [values]
+            chair_integrity_flags.extend(
+                item for item in values if isinstance(item, str) and item.strip()
+            )
+
+    def chair_prompt_text(value: str, limit: int) -> str:
+        return _compact(redact_flagged_tnm_values(value, chair_integrity_flags), limit)
+
     def digest(items: list[dict], round_key: str) -> dict:
         """Send position counts and explicit non-modal views, not truncated unanimity cues."""
         field = "assessment" if round_key == "round1" else "result"
@@ -2748,35 +2885,35 @@ async def generate_chair_report(
             entry = {
                 "agent": row.get("agent_id"),
                 "position": position,
-                "conclusion": _compact(result.get("provisional_conclusion", ""), 160),
+                "conclusion": chair_prompt_text(result.get("provisional_conclusion", ""), 160),
             }
             if round_key in {"round2", "round3"}:
                 entry["agreements"] = [
-                    _compact(value, 100)
+                    chair_prompt_text(value, 100)
                     for value in (result.get("agreements") or [])[:1]
                 ]
                 entry["challenges"] = [
-                    _compact(value, 100)
+                    chair_prompt_text(value, 100)
                     for value in (result.get("substantive_challenges") or [])[:1]
                 ]
             if round_key == "round2":
                 entry["attributed_source_opinion_responses"] = [
                     {
                         "source_id": item.get("source_id", ""),
-                        "source_excerpt": _compact(item.get("source_excerpt", ""), 180),
-                        "analysis": _compact(item.get("analysis", ""), 240),
-                        "comparison": _compact(item.get("comparison", ""), 160),
+                        "source_excerpt": chair_prompt_text(item.get("source_excerpt", ""), 180),
+                        "analysis": chair_prompt_text(item.get("analysis", ""), 240),
+                        "comparison": chair_prompt_text(item.get("comparison", ""), 160),
                     }
                     for item in (result.get("source_opinion_responses") or [])[:4]
                     if isinstance(item, dict)
                 ]
             if round_key == "round3":
                 entry["risks"] = [
-                    _compact(value, 90)
+                    chair_prompt_text(value, 90)
                     for value in (result.get("risk_flags") or [])[:2]
                 ]
                 entry["unknowns"] = [
-                    _compact(value, 90)
+                    chair_prompt_text(value, 90)
                     for value in (result.get("remaining_unknowns") or [])[:2]
                 ]
             grouped_views.setdefault(position, []).append(entry)

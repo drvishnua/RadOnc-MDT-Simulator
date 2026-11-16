@@ -520,6 +520,195 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
     assert "\nSUPPLIED CASE:\n{" in prompts[1]
 
 
+def test_flagged_tnm_literals_are_redacted_from_r2_r3_and_chair_prompt_views(monkeypatch):
+    from app.round_schemas import AdversarialContributionDraft, Round2ContributionDraft
+    from app.services import mdt_generation
+
+    prompts = []
+
+    async def fake_generate(prompt, schema_type, max_tokens):
+        prompts.append((schema_type, prompt))
+        fields = dict(
+            position="insufficient_information",
+            provisional_conclusion="No proposition-level conclusion is established.",
+            response_to_other_perspectives="The flagged unsupported staging assertion remains unresolved.",
+            agreements=[],
+            substantive_challenges=[],
+            remaining_unknowns=["Clinical stage remains unknown."],
+            risk_flags=[],
+            confidence=0.5,
+        )
+        if schema_type is Round2ContributionDraft:
+            return Round2ContributionDraft(**fields, source_opinion_responses=[])
+        if schema_type is AdversarialContributionDraft:
+            return AdversarialContributionDraft(**fields, source_opinion_reviews=[])
+        if schema_type is FinalReportDraft:
+            return FinalReportDraft(
+                report_title="Synthetic Chair prompt redaction test",
+                consensus_status="insufficient_information",
+                chair_conclusion=(
+                    "No proposition-level consensus is established from the saved synthetic records. "
+                    "No treatment recommendation can be made from this educational record."
+                ),
+                overall_educational_synthesis=(
+                    "The saved synthetic contributions preserve uncertainty and do not support a "
+                    "definitive proposition. This is an educational report, not a treatment decision."
+                ),
+                chair_reflection=(
+                    "The Chair preserves source uncertainty and disagreement. "
+                    "The original saved records remain the audit source."
+                ),
+            )
+        raise AssertionError(f"Unexpected generation schema: {schema_type.__name__}")
+
+    monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate)
+    profile = {
+        "agent_id": "RO-01",
+        "name": "Radiation Oncology",
+        "mandate": "Review the synthetic case without inferring missing staging.",
+    }
+    case = SyntheticCase(
+        scenario_title="Synthetic flagged staging prompt test",
+        case_summary="Fictional case only. Clinical staging is not supplied.",
+    )
+    flag = (
+        "CASE_INTEGRITY_SEED_RO01: R1 states cT1N0M0, but the case supplies no T/N/M stage. "
+        "This claim is unsupported/unverified."
+    )
+    own_r1 = {
+        "position": "insufficient_information",
+        "provisional_conclusion": "The R1 statement cT1N0M0 is unsupported.",
+        "preferred_educational_option": "No option can be assessed from the incomplete record.",
+        "case_data_integrity_flags": [flag],
+    }
+    peer_r1 = [{
+        "agent_id": "SO-02",
+        "agent_name": "Surgical Oncology",
+        "assessment": {
+            "position": "insufficient_information",
+            "provisional_conclusion": "The clinical stage is cT1N0M0.",
+            "preferred_educational_option": "The cT1N0M0 stage requires review.",
+            "disagreement_notes": ["R1 records cT1N0M0."],
+            "unknowns": ["The cT1N0M0 assertion is not established."],
+            "case_data_integrity_flags": [flag],
+        },
+    }]
+    own_r1_before = json.loads(json.dumps(own_r1))
+    peer_r1_before = json.loads(json.dumps(peer_r1))
+
+    asyncio.run(mdt_generation.generate_debate_contribution(profile, case, own_r1, peer_r1))
+    r2_prompt = prompts[-1][1]
+    assert "[flagged unsupported staging assertion]" in r2_prompt
+    assert "cT1N0M0" not in r2_prompt
+    assert own_r1 == own_r1_before
+    assert peer_r1 == peer_r1_before
+
+    own_r2 = {
+        "position": "insufficient_information",
+        "provisional_conclusion": "The R2 source repeats cT1N0M0 as an unverified value.",
+        "response_to_other_perspectives": "R1 stated cT1N0M0; this remains unsupported.",
+        "agreements": ["The cT1N0M0 stage is not established."],
+        "substantive_challenges": [],
+        "position_changes": [],
+        "remaining_unknowns": ["The cT1N0M0 value is unverified."],
+        "risk_flags": [],
+        "case_data_integrity_flags": [flag],
+        "source_opinion_responses": [],
+        "source_reference_integrity_flags": [],
+    }
+    peer_r2 = [{
+        "agent_id": "SO-02",
+        "agent_name": "Surgical Oncology",
+        "round1_case_integrity_flags": [flag],
+        "result": {
+            "position": "insufficient_information",
+            "provisional_conclusion": "The R1 conclusion cT1N0M0 is repeated here.",
+            "response_to_other_perspectives": "The literal stage cT1N0M0 remains unsupported.",
+            "agreements": ["cT1N0M0 cannot be established."],
+            "substantive_challenges": ["R1 states cT1N0M0."],
+            "risk_flags": [],
+            "position_changes": [],
+            "remaining_unknowns": [],
+            "case_data_integrity_flags": [flag],
+            "source_opinion_responses": [],
+            "source_reference_integrity_flags": [],
+        },
+    }]
+    own_r2_before = json.loads(json.dumps(own_r2))
+    peer_r2_before = json.loads(json.dumps(peer_r2))
+
+    asyncio.run(
+        mdt_generation.generate_adversarial_contribution(
+            profile, case, own_r1, own_r2, peer_r2
+        )
+    )
+    r3_prompt = prompts[-1][1]
+    assert "[flagged unsupported staging assertion]" in r3_prompt
+    assert "cT1N0M0" not in r3_prompt
+    assert own_r1 == own_r1_before
+    assert own_r2 == own_r2_before
+    assert peer_r2 == peer_r2_before
+
+    round1_rows = [{
+        "agent_id": "RO-01",
+        "agent_name": "Radiation Oncology",
+        "status": "completed",
+        "assessment": {
+            "position": "insufficient_information",
+            "provisional_conclusion": "The clinical stage is cT1N0M0.",
+            "case_data_integrity_flags": [flag],
+            "unknowns": ["Stage is unknown."],
+            "evidence_gaps": [],
+        },
+    }]
+    round2_rows = [{
+        "agent_id": "RO-01",
+        "agent_name": "Radiation Oncology",
+        "status": "completed",
+        "result": {
+            "position": "insufficient_information",
+            "provisional_conclusion": "R2 repeats the literal cT1N0M0 as unverified.",
+            "agreements": [],
+            "substantive_challenges": ["R1 stated cT1N0M0, but it is unsupported."],
+            "remaining_unknowns": ["Stage remains unknown."],
+            "risk_flags": [],
+            "source_opinion_responses": [],
+            "source_reference_integrity_flags": [],
+            "case_data_integrity_flags": [flag],
+        },
+    }]
+    round3_rows = [{
+        "agent_id": "RO-01",
+        "agent_name": "Radiation Oncology",
+        "status": "completed",
+        "result": {
+            "position": "insufficient_information",
+            "provisional_conclusion": "R3 repeats cT1N0M0 while explaining it is unsupported.",
+            "agreements": [],
+            "substantive_challenges": ["The flagged cT1N0M0 value remains unverified."],
+            "remaining_unknowns": ["Stage remains unknown."],
+            "risk_flags": [],
+            "case_data_integrity_flags": [flag],
+            "source_reference_integrity_flags": [],
+        },
+    }]
+    chair_inputs_before = json.loads(json.dumps([round1_rows, round2_rows, round3_rows]))
+
+    asyncio.run(
+        mdt_generation.generate_chair_report(
+            "synthetic-tnm-redaction",
+            case,
+            round1_rows,
+            round2_rows,
+            round3_rows,
+        )
+    )
+    chair_prompt = prompts[-1][1]
+    assert "[flagged unsupported staging assertion]" in chair_prompt
+    assert "cT1N0M0" not in chair_prompt
+    assert [round1_rows, round2_rows, round3_rows] == chair_inputs_before
+
+
 def test_chair_reconciliation_preserves_saved_round_challenges_as_unresolved():
     case = SyntheticCase(
         scenario_title="Synthetic source challenge test",

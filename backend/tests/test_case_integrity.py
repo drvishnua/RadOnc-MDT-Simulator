@@ -6,6 +6,7 @@ from app.services.case_integrity import (
     build_case_validation_warnings,
     build_source_case_facts,
     is_empty_challenge_placeholder,
+    redact_flagged_tnm_values,
 )
 
 
@@ -24,6 +25,29 @@ def _case(**overrides):
     }
     values.update(overrides)
     return SyntheticCase(**values)
+
+
+def test_prompt_redaction_replaces_only_stage_components_named_by_the_audit_flag():
+    flag = "Audit warning: unsupported R1 staging assertion cT1N0M0."
+    original = (
+        "R1 recorded cT1N0M0. Separate T1 N0 M0 tokens are also visible. "
+        "A distinct T2 value is not part of this audit flag."
+    )
+    redacted = redact_flagged_tnm_values(original, [flag])
+    assert redacted.count("[flagged unsupported staging assertion]") == 4
+    assert "cT1N0M0" not in redacted
+    assert "T1" not in redacted
+    assert "N0" not in redacted
+    assert "M0" not in redacted
+    assert "T2" in redacted
+    assert original.count("cT1N0M0") == 1
+    assert "T1" in original and "N0" in original and "M0" in original
+
+
+def test_prompt_redaction_is_noop_without_a_matching_audit_flag():
+    original = "The synthetic source mentions cT1N0M0 and T2."
+    assert redact_flagged_tnm_values(original, []) == original
+    assert redact_flagged_tnm_values(original, ["Unsupported T3 assertion."]) == original
 
 
 def test_empty_structured_fields_are_marked_not_reported_not_absent():

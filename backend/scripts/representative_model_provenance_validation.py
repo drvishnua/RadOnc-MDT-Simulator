@@ -4,9 +4,10 @@ This is a synthetic software integration check, not a clinical accuracy assessme
 Three role fixtures and actual generated R2/R3 outputs are saved and reloaded from an
 isolated temporary SQLite database for Chair synthesis; one R1 fixture deliberately seeds an
 unsupported TNM claim with a separate audit flag to verify cross-round warning handling.
-The seeded retry also verifies later rounds do not repeat literal flagged TNM values and that
-server-authored quarantine metadata is excluded from the model-prose screen. No full 45-role MDT
-is run; the seeded output check is lexical and is not clinical validation.
+The seeded retry separately checks that later-round model-authored prose does not repeat literal
+flagged TNM values, even when described as unsupported, and excludes server-authored quarantine
+metadata from model-prose screens. No full 45-role MDT is run; these are lexical software gates,
+not clinical validation.
 """
 
 from __future__ import annotations
@@ -132,6 +133,85 @@ def _unqualified_stage_assertions(value: object, path: str = "$") -> list[dict]:
                 and not _STAGE_UNCERTAINTY_PATTERN.search(candidate)
             ):
                 findings.append({"path": text_path, "text": candidate[:600]})
+    return findings
+
+
+_SEEDED_FLAGGED_STAGE_LITERAL_PATTERN = re.compile(
+    r"\b(?:cT1N0M0|T1|N0|M0)\b",
+    re.IGNORECASE,
+)
+
+
+def _literal_seeded_stage_repetition_findings(value: object, path: str = "$") -> list[dict]:
+    """Fail if model-authored later-round prose repeats any literal seeded stage component."""
+    findings: list[dict] = []
+    for text_path, text_value in _iter_model_authored_text(value, path):
+        for match in _SEEDED_FLAGGED_STAGE_LITERAL_PATTERN.finditer(text_value):
+            start = max(0, match.start() - 100)
+            end = min(len(text_value), match.end() + 100)
+            findings.append({
+                "path": text_path,
+                "token": match.group(0),
+                "text": text_value[start:end].strip()[:300],
+            })
+    return findings
+
+
+def _positive_control_claim_repetition_findings(
+    result: object,
+    claim: str,
+    *,
+    source_agent_id: str,
+) -> list[dict]:
+    """Allow one qualifying source-bound challenge quote, but reject the claim elsewhere."""
+    if (
+        not isinstance(result, dict)
+        or not isinstance(claim, str)
+        or not claim.strip()
+        or not isinstance(source_agent_id, str)
+        or not source_agent_id.strip()
+    ):
+        return []
+
+    challenges = result.get("substantive_challenges")
+    allowed_challenge_index = None
+    if isinstance(challenges, (list, tuple)):
+        for index, challenge in enumerate(challenges):
+            if not isinstance(challenge, str):
+                continue
+            occurrences = re.findall(re.escape(claim), challenge, flags=re.IGNORECASE)
+            if len(occurrences) != 1:
+                continue
+            candidate = dict(result)
+            candidate["substantive_challenges"] = [challenge]
+            if _has_expected_source_bound_challenge(
+                candidate,
+                source_agent_id=source_agent_id,
+                quoted_claim=claim,
+            ):
+                allowed_challenge_index = index
+                break
+
+    findings: list[dict] = []
+    for text_path, text_value in _iter_model_authored_text(result):
+        challenge_match = re.fullmatch(r"\$\.substantive_challenges\[(\d+)\]", text_path)
+        if (
+            challenge_match
+            and allowed_challenge_index is not None
+            and int(challenge_match.group(1)) == allowed_challenge_index
+        ):
+            continue
+        lowered = text_value.casefold()
+        needle = claim.casefold()
+        offset = 0
+        while (index := lowered.find(needle, offset)) >= 0:
+            start = max(0, index - 100)
+            end = min(len(text_value), index + len(claim) + 100)
+            findings.append({
+                "path": text_path,
+                "text": text_value[start:end].strip()[:300],
+            })
+            offset = index + len(claim)
     return findings
 
 
@@ -1013,6 +1093,17 @@ async def main() -> int:
             quoted_claim=positive_control_claim,
         )
         positive_control_failures = []
+        positive_control_claim_repetitions = _positive_control_claim_repetition_findings(
+            positive_control_result,
+            positive_control_claim,
+            source_agent_id="SO-02",
+        )
+        if positive_control_claim_repetitions:
+            positive_control_failures.append({
+                "round": 3,
+                "type": "r3_positive_control_claim_repeated_outside_challenge",
+                "details": positive_control_claim_repetitions,
+            })
         if set(positive_control_result.get("source_peer_ids") or []) != {"SO-02", "MO-01"}:
             positive_control_failures.append({
                 "round": 3,
@@ -1050,6 +1141,8 @@ async def main() -> int:
             "seeded_claim": positive_control_claim,
             "supplied_peer_ids": positive_control_result.get("source_peer_ids") or [],
             "challenge_detected": positive_control_detected,
+            "claim_repeated_outside_challenge": bool(positive_control_claim_repetitions),
+            "claim_repetition_findings": positive_control_claim_repetitions,
             "response_to_other_perspectives": positive_control_result.get("response_to_other_perspectives") or "",
             "substantive_challenges": positive_control_result.get("substantive_challenges") or [],
             "case_data_integrity_flags": positive_control_result.get("case_data_integrity_flags") or [],
@@ -1132,23 +1225,44 @@ async def main() -> int:
             for round_name, findings in stage_claim_findings.items()
             if findings
         }
+        literal_stage_repetition_findings = {
+            "R2": _literal_seeded_stage_repetition_findings(payload["round2"], "$.round2"),
+            "R3": _literal_seeded_stage_repetition_findings(payload["round3"], "$.round3"),
+            "R4": _literal_seeded_stage_repetition_findings(payload["chair_report"], "$.chair_report"),
+        }
+        literal_stage_repetition_findings = {
+            round_name: findings
+            for round_name, findings in literal_stage_repetition_findings.items()
+            if findings
+        }
+        model_output_review_failed = bool(
+            stage_claim_findings or literal_stage_repetition_findings
+        )
         payload["seeded_case_integrity_audit_test"]["model_output_review"] = {
-            "status": "failed" if stage_claim_findings else "passed",
+            "status": "failed" if model_output_review_failed else "passed",
             "scope": (
-                "Lexical screen of generated R2/R3/R4 text for unqualified TNM tokens or numbered "
-                "stage labels related to the seeded unsupported R1 assertion. It does not prove "
-                "absence of other hallucinations or clinical correctness."
+                "Separate lexical gates scan generated R2/R3/R4 model-authored prose for both "
+                "unqualified TNM/stage assertions and literal repeats of the seeded flagged values, "
+                "even when described as unsupported. Server-authored audit metadata is excluded. "
+                "These screens do not prove absence of other hallucinations or clinical correctness."
             ),
             "unqualified_stage_assertions": stage_claim_findings,
+            "literal_flagged_stage_repetitions": literal_stage_repetition_findings,
         }
         payload["seeded_case_integrity_audit_test"]["status"] = (
-            "failed" if stage_claim_findings else "passed"
+            "failed" if model_output_review_failed else "passed"
         )
         if stage_claim_findings:
             failures.append({
                 "type": "seeded_case_integrity_warning_not_respected",
                 "rounds": sorted(stage_claim_findings),
                 "details": stage_claim_findings,
+            })
+        if literal_stage_repetition_findings:
+            failures.append({
+                "type": "seeded_case_integrity_literal_stage_values_repeated",
+                "rounds": sorted(literal_stage_repetition_findings),
+                "details": literal_stage_repetition_findings,
             })
 
         r4_failures = []
