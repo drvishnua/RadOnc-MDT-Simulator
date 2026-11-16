@@ -377,6 +377,55 @@ async function verifyFourRoundDashboard() {
   }
   console.log("MISSION_CONTROL_BROWSER_E2E_OK");
   console.log("Verified in headless Edge: the seeded run appears with R1/R2/R3 45/45 and Chair R4 1/1 completion counts and a case-snapshot hash prefix.");
+
+  const r2Opened = await evaluate(
+    "(() => {" +
+      "const shortId = " + json(dashboardRunId.slice(0, 8)) + ";" +
+      "const run = [...document.querySelectorAll('.mission-run-card')].find(node => (node.innerText || '').includes('Run ' + shortId));" +
+      "const round = run?.querySelectorAll('.mission-round-card')[1];" +
+      "const button = round?.querySelector('.mission-role-toggle');" +
+      "if (button) button.click();" +
+      "return !!button;" +
+    "})()"
+  );
+  if (!r2Opened) throw new Error("Mission Control R2 role expansion button was not found.");
+  await waitForExpression(
+    "!!document.querySelector('.mission-role-detail') && document.querySelectorAll('.mission-role-row').length === 45",
+    "all 45 R2 persisted role rows"
+  );
+  const r2Detail = await evaluate(
+    "(() => {" +
+      "const rows = [...document.querySelectorAll('.mission-role-row')];" +
+      "return { count: rows.length, first: rows[0]?.innerText || '', leaksProse: (document.querySelector('.mission-role-detail')?.innerText || '').includes('provisional conclusion') };" +
+    "})()"
+  );
+  if (r2Detail.count !== 45 || !r2Detail.first.includes("RO-01") || !r2Detail.first.includes("completed") || r2Detail.leaksProse) {
+    throw new Error("R2 role detail did not show 45 completed metadata-only rows: " + JSON.stringify(r2Detail));
+  }
+
+  const r4Opened = await evaluate(
+    "(() => {" +
+      "const shortId = " + json(dashboardRunId.slice(0, 8)) + ";" +
+      "const run = [...document.querySelectorAll('.mission-run-card')].find(node => (node.innerText || '').includes('Run ' + shortId));" +
+      "const round = run?.querySelectorAll('.mission-round-card')[3];" +
+      "const button = round?.querySelector('.mission-role-toggle');" +
+      "if (button) button.click();" +
+      "return !!button;" +
+    "})()"
+  );
+  if (!r4Opened) throw new Error("Mission Control R4 role expansion button was not found.");
+  await waitForExpression(
+    "document.querySelectorAll('.mission-role-row').length === 1",
+    "the single R4 Chair role row"
+  );
+  const r4Detail = await evaluate(
+    "(() => document.querySelector('.mission-role-row')?.innerText || '')()"
+  );
+  if (!r4Detail.includes("SG-07") || !r4Detail.includes("completed")) {
+    throw new Error("R4 drill-down did not show the completed Chair role only: " + r4Detail);
+  }
+  console.log("MISSION_CONTROL_ROLE_DRILLDOWN_E2E_OK");
+  console.log("Verified in headless Edge: R2 exposes 45 persisted metadata-only role states; R4 exposes only the completed SG-07 Chair.");
   await waitForExpression(
     "document.body.innerText.includes('Four-round MDT workflow')",
     "the four-round workflow panel"
