@@ -129,9 +129,9 @@ Mission Control phase 1 is **VERIFIED** for the bounded read-only summary and se
 | Provenance and evidence retrieval | IN PROGRESS | Provenance issues and guideline retrieval remain unresolved |
 | Chair consensus, dissent and traceability | IN PROGRESS | Historical run #9 failed integrity gate; current live 45-role reconciliation unverified |
 | Missing/failed-agent handling | IN PROGRESS | Deterministic paths covered in tests; current complete live simulation outstanding |
-| Backend tests | VERIFIED | 400 passed, 0 failed on 51cdbea; deterministic preflight 7/7 |
-| Frontend and dashboard build | VERIFIED | Exact-commit frontend build passed on 51cdbea |
-| Browser E2E | VERIFIED | Exact-commit headless Edge run 43917157793; four success markers including role drill-down; R2 45 roles/R4 SG-07 verified |
+| Backend tests | VERIFIED | 400 passed, 0 failed on application/test SHA a8ccaae; deterministic preflight 7/7 |
+| Frontend and dashboard build | VERIFIED | Type-check, frontend tests and production build passed on application/test SHA a8ccaae |
+| Browser E2E | VERIFIED | Headless Edge run 43923437915 on a8ccaae; five success markers including DEVELOPMENT_MONITOR_BROWSER_E2E_OK; R2 45 roles/R4 SG-07 verified |
 | API validation | IN PROGRESS | Mission Control endpoint regressions passed; full API/live surface not fully verified |
 | Ollama context handling | VERIFIED | 6,144/8,192 allocation probe only; no proof of full R3 truncation resolution |
 | Ollama performance and concurrency | IN PROGRESS | Concurrency 1 retained; repeatable comparative metrics incomplete |
@@ -144,12 +144,11 @@ Mission Control phase 1 is **VERIFIED** for the bounded read-only summary and se
 | MedGemma pull and inference | BLOCKED | Dispatch not performed |
 | Independent qualified clinical review | NOT STARTED | No formal qualified review artefact |
 | Guideline retrieval and verification | NOT STARTED | No validated source-retrieval corpus |
-| Packaging and security CI | VERIFIED | Installer, prerequisites, secret scan, dependencies and both CodeQL jobs passed on 51cdbea; model bootstrap skipped |
+| Packaging and security CI | VERIFIED | Installer build/install/smoke/checksum, prerequisites, secret scan, dependency audit and both CodeQL jobs passed on a8ccaae; model bootstrap skipped |
 | Mission Control phase 1 | VERIFIED | Read-only persisted summaries; six exact-commit CI workflows succeeded; direct E2E marker passed |
-| Mission Control phase 2 role drill-down | VERIFIED | Role endpoint and per-round UI drill-down; exact-commit backend/frontend/browser/security/installer CI passed on 51cdbea |
+| Mission Control phase 2 role drill-down | VERIFIED | Role endpoint and per-round UI drill-down remain browser-verified; exact current dashboard E2E passed on a8ccaae |
 | Mission Control development monitor | VERIFIED | Read-only GitHub PR/branch/Actions panel; explicit headless Edge marker on a8ccaae; six standard workflows passed |
 | Paperclip third-party integration | NOT APPLICABLE | Reviewed as agent-operations control plane; not installed; native read-only monitor selected |
-| Paperclip third-party integration | NOT APPLICABLE | Reviewed as agent-operations control plane; native read-only GitHub telemetry selected for current scope |
 | Release acceptance | BLOCKED | Clinical, live-model, GPU and evidence gates remain outstanding |
 
 ---
