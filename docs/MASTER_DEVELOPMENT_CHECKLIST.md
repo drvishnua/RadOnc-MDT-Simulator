@@ -1,4 +1,19 @@
 
+## Mission Control phase-1 verification checkpoint — 16 November 2026
+
+**Implementation commit:** `b063c52d7168194eb884d01b91dc1031fabb4e88` on the development branch added `GET /api/mission-control?limit=12`, deterministic persisted R1–R4 stage summaries, a read-only UI with five-second refresh, three backend regressions, and this checklist's phase-1 scope. No LLM calls, autonomous orchestration, schema changes, or concurrency changes were introduced.
+
+**Exact-commit CI on `b063c52`:**
+- Backend [43900046100](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43900046100): **395 passed, 0 failed, 0 errors, 0 skipped; 1 warning**. Deterministic preflight: **7/7 passed**. This includes the three new Mission Control API regressions.
+- Frontend [43900046020](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43900046020): passed type-check and production build.
+- Browser E2E [43900045851](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43900045851): passed patient-registry and existing saved four-round Chair/dashboard checks. Artifact [14240648728](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43900045851/artifacts/14240648728). **The initial E2E version did not explicitly assert the new Mission Control panel.** A targeted assertion is now added in the next commit and is awaiting its own E2E result.
+- Packaging prerequisites [43900046180](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43900046180): passed.
+- Windows installer PR workflow [43900046099](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43900046099): build, install, smoke test, checksum and upload passed; optional Ollama/model bootstrap was skipped. Push installer workflow [43900032529](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43900032529) also passed; optional model bootstrap skipped.
+- Security/dependency/CodeQL [43900045949](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43900045949): secret scan, dependency checks and both language CodeQL jobs passed.
+
+**Acceptance boundary:** backend aggregation and UI type/build are CI-verified. The old browser E2E preserves existing functionality, but direct Mission Control rendering still requires the new targeted E2E. No local runtime verification, laptop sync, live Ollama inference, RTX 4060 GPU test, clinical validation, or release acceptance is claimed. Phase 1 remains **IN PROGRESS** pending the targeted browser run.
+
+
 ## Mission Control phase 1 — read-only persisted run overview
 
 **Implementation scope:** add `GET /api/mission-control?limit=12` using the existing SQLite run and round tables; return only run ID, immutable case-snapshot hash, run timestamps/status, and deterministic role counts for R1–R4. Do not return raw case text, patient names, agent prose or error-body contents. Add a read-only frontend panel with recent runs, four-round completion/failure/queued/running counts, current role ID where persisted, snapshot-hash prefix and five-second polling. No run creation/resume/delete controls are added to this panel. Existing case workspace and R1→R4 controls remain unchanged.

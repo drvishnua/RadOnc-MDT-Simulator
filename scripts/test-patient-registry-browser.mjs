@@ -349,6 +349,34 @@ async function verifyFourRoundDashboard() {
     "!!document.querySelector('.app-shell')",
     "the dashboard after restoring the saved four-round run"
   );
+
+  await waitForExpression(
+    "!!document.querySelector('.mission-control-panel') && " +
+      "document.querySelectorAll('.mission-run-card').length > 0",
+    "the read-only Mission Control panel and recent saved runs"
+  );
+  const missionControlSnapshot = await evaluate(
+    "(() => {" +
+      "const shortId = " + JSON.stringify(json(dashboardRunId.slice(0, 8))) + ";" +
+      "const card = [...document.querySelectorAll('.mission-run-card')].find(node => (node.innerText || '').includes('Run ' + shortId));" +
+      "if (!card) return { found: false, stages: [] };" +
+      "const stages = [...card.querySelectorAll('.mission-round-card')].map(node => (node.innerText || '').replace(/\\s+/g, ' ').trim());" +
+      "return { found: true, stages, hasSnapshot: (card.innerText || '').includes('Snapshot SHA-256') };" +
+    "})()"
+  );
+  if (
+    !missionControlSnapshot.found ||
+    missionControlSnapshot.stages.length !== 4 ||
+    !missionControlSnapshot.stages[0].includes("45/45 complete") ||
+    !missionControlSnapshot.stages[1].includes("45/45 complete") ||
+    !missionControlSnapshot.stages[2].includes("45/45 complete") ||
+    !missionControlSnapshot.stages[3].includes("1/1 complete") ||
+    !missionControlSnapshot.hasSnapshot
+  ) {
+    throw new Error("Mission Control did not render the seeded run's four persisted stage summaries: " + JSON.stringify(missionControlSnapshot));
+  }
+  console.log("MISSION_CONTROL_BROWSER_E2E_OK");
+  console.log("Verified in headless Edge: the seeded run appears with R1/R2/R3 45/45 and Chair R4 1/1 completion counts and a case-snapshot hash prefix.");
   await waitForExpression(
     "document.body.innerText.includes('Four-round MDT workflow')",
     "the four-round workflow panel"
