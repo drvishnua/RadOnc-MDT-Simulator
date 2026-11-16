@@ -301,3 +301,13 @@ Workflow: `.github/workflows/model-integrity-screening.yml`.
 - Any complete output set is pending deterministic audit and independent human review. The corpus is not a clinically validated answer key. A single detected critical fabrication blocks promotion.
 - The initial marker-triggered run is a Qwen-only baseline. MedGemma remains blocked until a dispatcher supplies the explicit HAI-DEF terms attestation. Commercial packaging, redistribution, hosted-service deployment and any broader intended use remain subject to separate legal/regulatory review.
 - Do not infer model quality, clinical suitability, zero hallucinations, GPU performance or full 136-contribution MDT acceptance from this bounded screen.
+
+### First marker-triggered Qwen baseline execution — 16 November 2026
+
+- GitHub Actions run: [43782748488](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43782748488).
+- Workflow source commit: `38c65e2bf07b931c71497ef4a38bd655901ff0eb`; application/test code was last exact-head verified on `b69f1243708aa34853fefd5162f2d34ba8a12d56` (355 backend tests, deterministic preflight 7/7, six standard workflows passed). The trigger commit changes only the screening workflow comment/marker.
+- Event: marker-qualified push to `feature/four-round-mdt-and-performance`. Manual MedGemma input was not supplied; the HAI-DEF terms step was skipped. This run is Qwen-only.
+- Runner: ephemeral GitHub-hosted Windows; configured CPU-only, concurrency 1; isolated Ollama loopback endpoint 127.0.0.1:11435.
+- Observed state at the latest inspection: job `Frozen 12-case screen on isolated hosted CPU` remained in progress in its single provisioning/screening step. No full Qwen model digest or JSONL artifact was available for review at that time.
+- Do not infer successful model provisioning, generation, screening completion or quality from a running workflow. The run must complete and its manifest, model digest, all 12 case records, raw responses, metrics and summary must be inspected. A complete runner status is still only `completed_pending_human_review`.
+- No MedGemma model was requested or pulled. No GPU measurement was performed or implied.
