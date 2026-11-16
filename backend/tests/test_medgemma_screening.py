@@ -157,7 +157,8 @@ def _installed_model_tags(model_name, digest):
 
 def test_run_screen_records_complete_immutable_case_set(tmp_path, monkeypatch):
     model_name = "medgemma1.5:4b-it-q4_K_M"
-    digest = "sha256:" + ("a" * 64)
+    digest = "a" * 64  # Ollama /api/tags may return the full digest without a prefix.
+    canonical_digest = "sha256:" + digest
     calls = {"tags": 0, "generate": 0, "show": 0, "version": 0}
 
     def fake_read_json(url, *, body=None, timeout=30):
@@ -200,14 +201,14 @@ def test_run_screen_records_complete_immutable_case_set(tmp_path, monkeypatch):
     assert len(case_records) == 12
     assert len({record["case_id"] for record in case_records}) == 12
     assert all(record["status"] == "response_recorded" for record in case_records)
-    assert all(record["model_digest"] == digest for record in case_records)
-    assert all(record["post_generation_model_digest"] == digest for record in case_records)
+    assert all(record["model_digest"] == canonical_digest for record in case_records)
+    assert all(record["post_generation_model_digest"] == canonical_digest for record in case_records)
     assert all(record["response_parsed"] == {
         "response": "The synthetic record does not establish this."
     } for record in case_records)
     assert all(record["ollama_metrics"]["total_duration"] == 1_000_000 for record in case_records)
     assert preflight["model_metadata_captured"] is True
-    assert preflight["model_digest"] == digest
+    assert preflight["model_digest"] == canonical_digest
     assert summary["responses_recorded"] == 12
     assert summary["failed_or_malformed"] == 0
     assert summary["status"] == "completed_pending_human_review"
