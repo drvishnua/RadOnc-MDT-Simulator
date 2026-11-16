@@ -19,6 +19,26 @@ def test_resume_script_imports_without_starting_inference():
     assert callable(namespace["main"])
     assert namespace["EXPECTED_SOURCE_RUN"] == "43714529807"
 
+def test_audit_only_round_gate_never_generates_missing_or_incomplete_rounds():
+    namespace = _namespace()
+    requires = namespace["_round_generation_required"]
+
+    assert requires({"status": "completed"}, "R3", audit_only=True) is False
+    assert requires({"status": "completed"}, "Chair R4", audit_only=True) is False
+    assert requires({"status": "running"}, "R3", audit_only=False) is True
+
+    for summary, label in (
+        ({"status": "running"}, "R3"),
+        ({"status": "queued"}, "Chair R4"),
+        (None, "Chair R4"),
+    ):
+        try:
+            requires(summary, label, audit_only=True)
+        except RuntimeError as exc:
+            assert "Inference is prohibited in audit-only mode" in str(exc)
+        else:
+            raise AssertionError("Audit-only mode accepted an incomplete round and could infer.")
+
 
 def test_checkpoint_manifest_requires_original_lineage_and_exact_model_digest():
     validate = _namespace()["_validate_checkpoint"]
@@ -169,6 +189,24 @@ def test_resume_workflow_downloads_prior_run_and_reuploads_database_checkpoint()
     assert "if: always()" in workflow
     assert "live_four_round_hosted_cpu_validation.sqlite3" in workflow
     assert "live_four_round_hosted_cpu_resume_manifest.json" in workflow
+
+def test_saved_checkpoint_audit_workflow_is_bound_to_run9_and_forbids_inference():
+    workflow_path = (
+        ROOT
+        / ".github"
+        / "workflows"
+        / "audit-saved-hosted-cpu-four-round-checkpoint.yml"
+    )
+    workflow = workflow_path.read_text(encoding="utf-8")
+
+    assert 'default: "43753957255"' in workflow
+    assert 'RADONC_AUDIT_ONLY: "1"' in workflow
+    assert "run-id: ${{ env.RADONC_CHECKPOINT_RUN_ID }}" in workflow
+    assert "actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3" in workflow
+    assert "if: always()" in workflow
+    assert "Ensure-RadOnc-AIEngine" not in workflow
+    assert "OLLAMA_BASE_URL" not in workflow
+    assert "python backend/scripts/resume_hosted_four_round_validation.py" in workflow
 
 def test_resume_workflow_is_bound_to_run_16_checkpoint_lineage():
     workflow_path = (
