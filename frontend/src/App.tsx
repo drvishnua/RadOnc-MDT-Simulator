@@ -175,6 +175,39 @@ type MissionControlSnapshot = {
   read_only: true;
 };
 
+type DevelopmentWorkflowRun = {
+  id: number;
+  workflow_id: number;
+  name: string;
+  run_number: number;
+  status: string;
+  conclusion: string | null;
+  event: string;
+  head_sha: string;
+  created_at: string;
+  updated_at: string;
+  html_url: string;
+  matches_current_head: boolean;
+};
+
+type DevelopmentMonitorSnapshot = {
+  repository: string;
+  branch: string;
+  pull_request: {
+    number: number;
+    state: string;
+    draft: boolean;
+    url: string;
+    base_branch: string;
+    head_branch: string;
+    head_sha: string;
+    updated_at: string;
+  };
+  workflows: DevelopmentWorkflowRun[];
+  checked_at: string;
+  read_only: true;
+};
+
 type PatientRecordSummary = {
   patient_id: string;
   patient_identifier: string;
@@ -533,6 +566,9 @@ function App() {
   const [missionRoleDetails, setMissionRoleDetails] = useState<Record<string, MissionRoundRoleSnapshot>>({});
   const [missionRoleLoading, setMissionRoleLoading] = useState("");
   const [missionRoleErrors, setMissionRoleErrors] = useState<Record<string, string>>({});
+  const [developmentMonitor, setDevelopmentMonitor] = useState<DevelopmentMonitorSnapshot | null>(null);
+  const [developmentMonitorLoading, setDevelopmentMonitorLoading] = useState(false);
+  const [developmentMonitorError, setDevelopmentMonitorError] = useState("");
 
 
 
@@ -609,6 +645,113 @@ function App() {
       setMissionControlError(error instanceof Error ? error.message : "Unable to load Mission Control.");
     } finally {
       setMissionControlLoading(false);
+    }
+  }
+
+  async function refreshDevelopmentMonitor() {
+    setDevelopmentMonitorLoading(true);
+    const repository = "drvishnua/RadOnc-MDT-Simulator";
+    const branch = "feature/four-round-mdt-and-performance";
+    try {
+      // Public, read-only GitHub metadata only. No token or clinical data is sent.
+      const headers = {
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28"
+      };
+      const [pullResponse, runsResponse] = await Promise.all([
+        fetch("https://api.github.com/repos/" + repository + "/pulls/1", { headers }),
+        fetch(
+          "https://api.github.com/repos/" + repository +
+            "/actions/runs?branch=" + encodeURIComponent(branch) + "&per_page=50",
+          { headers }
+        )
+      ]);
+      if (!pullResponse.ok || !runsResponse.ok) {
+        const status = !pullResponse.ok ? pullResponse.status : runsResponse.status;
+        if (status === 403 || status === 429) {
+          throw new Error("GitHub API rate limit or access restriction; the last saved view is retained.");
+        }
+        throw new Error("GitHub development telemetry is temporarily unavailable (HTTP " + status + ").");
+      }
+
+      const pull = await pullResponse.json() as {
+        number?: number;
+        state?: string;
+        draft?: boolean;
+        html_url?: string;
+        updated_at?: string;
+        head?: { ref?: string; sha?: string };
+        base?: { ref?: string };
+      };
+      const runsPayload = await runsResponse.json() as { workflow_runs?: Array<{
+        id?: number;
+        workflow_id?: number;
+        name?: string;
+        run_number?: number;
+        status?: string;
+        conclusion?: string | null;
+        event?: string;
+        head_sha?: string;
+        created_at?: string;
+        updated_at?: string;
+        html_url?: string;
+      }> };
+      const headSha = pull.head?.sha;
+      if (!headSha || !Array.isArray(runsPayload.workflow_runs)) {
+        throw new Error("GitHub returned incomplete development metadata; the last saved view is retained.");
+      }
+
+      // Keep the newest run per workflow; do not mix status records from different attempts.
+      const latestByWorkflow = new Map<number | string, NonNullable<typeof runsPayload.workflow_runs[number]>>();
+      for (const run of runsPayload.workflow_runs) {
+        if (!run || typeof run.name !== "string" || typeof run.head_sha !== "string" ||
+            typeof run.created_at !== "string" || typeof run.id !== "number") continue;
+        const key = typeof run.workflow_id === "number" ? run.workflow_id : run.name;
+        const previous = latestByWorkflow.get(key);
+        if (!previous || run.created_at > (previous.created_at ?? "")) latestByWorkflow.set(key, run);
+      }
+      const workflows: DevelopmentWorkflowRun[] = Array.from(latestByWorkflow.values())
+        .sort((left, right) => (right.created_at ?? "").localeCompare(left.created_at ?? ""))
+        .slice(0, 12)
+        .map((run) => ({
+          id: run.id as number,
+          workflow_id: run.workflow_id ?? 0,
+          name: run.name as string,
+          run_number: run.run_number ?? 0,
+          status: run.status ?? "unknown",
+          conclusion: run.conclusion ?? null,
+          event: run.event ?? "unknown",
+          head_sha: run.head_sha as string,
+          created_at: run.created_at as string,
+          updated_at: run.updated_at ?? run.created_at as string,
+          html_url: run.html_url ?? "https://github.com/" + repository + "/actions",
+          matches_current_head: run.head_sha === headSha
+        }));
+      const snapshot: DevelopmentMonitorSnapshot = {
+        repository,
+        branch,
+        pull_request: {
+          number: pull.number ?? 1,
+          state: pull.state ?? "unknown",
+          draft: pull.draft ?? true,
+          url: pull.html_url ?? "https://github.com/" + repository + "/pull/1",
+          base_branch: pull.base?.ref ?? "main",
+          head_branch: pull.head?.ref ?? branch,
+          head_sha: headSha,
+          updated_at: pull.updated_at ?? ""
+        },
+        workflows,
+        checked_at: new Date().toISOString(),
+        read_only: true
+      };
+      setDevelopmentMonitor(snapshot);
+      setDevelopmentMonitorError("");
+    } catch (error) {
+      setDevelopmentMonitorError(
+        error instanceof Error ? error.message : "Unable to load GitHub development telemetry."
+      );
+    } finally {
+      setDevelopmentMonitorLoading(false);
     }
   }
 
@@ -800,7 +943,14 @@ function App() {
     const timer = window.setInterval(() => {
       void refreshMissionControl();
     }, 5000);
-    return () => window.clearInterval(timer);
+    void refreshDevelopmentMonitor();
+    const developmentTimer = window.setInterval(() => {
+      void refreshDevelopmentMonitor();
+    }, 5 * 60 * 1000);
+    return () => {
+      window.clearInterval(timer);
+      window.clearInterval(developmentTimer);
+    };
   }, []);
 
   const categories = useMemo(
@@ -1375,6 +1525,113 @@ function App() {
               );
             })}
           </div>
+        </section>
+
+        <section className="panel mission-control-panel" aria-label="Development Monitor">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">REPOSITORY · CI · READ ONLY</p>
+              <h2>Development monitor</h2>
+            </div>
+            <div className="mission-control-actions">
+              <span className="panel-index">
+                {developmentMonitorLoading ? "CHECKING" : "REFRESH · 5 MIN"}
+              </span>
+              <button
+                className="button button-quiet"
+                type="button"
+                onClick={() => void refreshDevelopmentMonitor()}
+                disabled={developmentMonitorLoading}
+              >
+                {developmentMonitorLoading ? "Refreshing…" : "Refresh"}
+              </button>
+            </div>
+          </div>
+          <p className="panel-intro">
+            Tracks the development branch, PR #1 and the newest GitHub Actions run for each workflow.
+            This view is read-only and contains no patient records or model-generated clinical text.
+            CI success does not mean model-quality or clinical validation has passed.
+          </p>
+          {developmentMonitorError && (
+            <p className="mission-control-message error-text" role="alert">
+              {developmentMonitorError}
+              {developmentMonitor ? " Showing the last retrieved snapshot." : ""}
+            </p>
+          )}
+          {!developmentMonitor && !developmentMonitorError && (
+            <p className="empty-state">Loading GitHub development activity…</p>
+          )}
+          {developmentMonitor && (
+            <>
+              <div className="mission-summary-grid">
+                <div className="mission-summary-item">
+                  <strong>#{developmentMonitor.pull_request.number} · {developmentMonitor.pull_request.draft ? "Draft" : developmentMonitor.pull_request.state}</strong>
+                  <span>
+                    <a href={developmentMonitor.pull_request.url} target="_blank" rel="noreferrer">Open pull request</a>
+                  </span>
+                </div>
+                <div className="mission-summary-item">
+                  <strong>{developmentMonitor.workflows.filter((run) => run.matches_current_head).length} / {developmentMonitor.workflows.length}</strong>
+                  <span>Latest workflow runs on current HEAD</span>
+                </div>
+                <div className="mission-summary-item">
+                  <strong>{developmentMonitor.workflows.filter((run) => run.status === "completed" && run.conclusion === "success" && run.matches_current_head).length}</strong>
+                  <span>Successful current-HEAD workflows</span>
+                </div>
+              </div>
+              <div className="mission-run-card" style={{ marginBottom: 12 }}>
+                <div className="mission-run-header">
+                  <div>
+                    <strong>{developmentMonitor.pull_request.head_branch}</strong>
+                    <small>Targets {developmentMonitor.pull_request.base_branch} · checked {new Date(developmentMonitor.checked_at).toLocaleString()}</small>
+                  </div>
+                  <a
+                    href={"https://github.com/" + developmentMonitor.repository + "/commit/" + developmentMonitor.pull_request.head_sha}
+                    target="_blank"
+                    rel="noreferrer"
+                    title={developmentMonitor.pull_request.head_sha}
+                    style={{ color: "#9edccb", font: '9px "Cascadia Code", monospace' }}
+                  >
+                    {developmentMonitor.pull_request.head_sha.slice(0, 12)}
+                  </a>
+                </div>
+              </div>
+              <div className="mission-run-list">
+                {developmentMonitor.workflows.length === 0 && (
+                  <p className="empty-state">No workflow runs were returned for this branch.</p>
+                )}
+                {developmentMonitor.workflows.map((run) => {
+                  const successful = run.status === "completed" && run.conclusion === "success";
+                  const failed = run.status === "completed" && run.conclusion !== "success";
+                  const stateClass = successful ? "completed" : failed ? "failed" :
+                    ["queued", "in_progress", "waiting", "requested"].includes(run.status) ? "running" : "not-started";
+                  const stateLabel = run.status === "completed"
+                    ? (run.conclusion ?? "completed")
+                    : run.status.replaceAll("_", " ");
+                  return (
+                    <article className="mission-run-card" key={run.id}>
+                      <div className="mission-run-header">
+                        <div>
+                          <strong>{run.name}</strong>
+                          <small>Run #{run.run_number} · {run.event} · {new Date(run.created_at).toLocaleString()}</small>
+                        </div>
+                        <span className={"mission-role-state state-" + stateClass}>{stateLabel.replaceAll("_", " ")}</span>
+                      </div>
+                      <div className="mission-run-footer">
+                        <span>
+                          {run.matches_current_head ? "Current branch HEAD" : "Earlier commit"} · {run.head_sha.slice(0, 8)}
+                        </span>
+                        <a href={run.html_url} target="_blank" rel="noreferrer">Open workflow run</a>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+              <p className="directory-footnote">
+                GitHub public API · read-only · last checked {new Date(developmentMonitor.checked_at).toLocaleTimeString()}
+              </p>
+            </>
+          )}
         </section>
 
         <div className="workspace-grid">
