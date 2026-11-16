@@ -433,6 +433,7 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
     # Prompt section boundaries must remain actual newlines, and audit instructions
     # may precede the ROLE section without collapsing the boundary.
     assert "SERVER CASE-INTEGRITY AUDIT:" in prompts[0]
+    assert "Do not reproduce or quote the literal TNM/stage values from a flagged assertion" in prompts[0]
     assert "\nROLE:" in prompts[0]
     assert "\\nROLE:" not in prompts[0]
 
@@ -473,6 +474,7 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
     assert "Missing information alone is not a defect when the R2 record correctly preserves it as unknown" in prompts[1]
     assert "never invent a challenge or risk merely to populate the schema" in prompts[1]
     assert "Risk flags are not substitutes" in prompts[1]
+    assert "Do not reproduce or quote literal TNM/stage values from any flagged R1/R2 assertion" in prompts[1]
     assert "YOUR R1 AND COMPLETE OWN R2 RECORD" in prompts[1]
     assert "The surgical assessment and multimodality options remain distinct" in prompts[1]
     assert "CASE:case_summary — do not collapse the two conditional options" in prompts[1]

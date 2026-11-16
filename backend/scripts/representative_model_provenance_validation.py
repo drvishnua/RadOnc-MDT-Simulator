@@ -95,10 +95,32 @@ def _iter_text_leaves(value: object, path: str = "$"):
             yield from _iter_text_leaves(child, f"{path}[{index}]")
 
 
+_SERVER_AUTHORED_AUDIT_TEXT_FIELDS = frozenset({
+    "case_data_integrity_flags",
+    "source_reference_integrity_flags",
+    "integrity_repair_flags",
+    "integrity_repair_original_flags",
+})
+
+
+def _iter_model_authored_text(value: object, path: str = "$"):
+    """Yield generated prose while excluding server-authored audit metadata."""
+    if isinstance(value, str):
+        yield path, value
+    elif isinstance(value, dict):
+        for key, child in value.items():
+            if key in _SERVER_AUTHORED_AUDIT_TEXT_FIELDS:
+                continue
+            yield from _iter_model_authored_text(child, f"{path}.{key}")
+    elif isinstance(value, (list, tuple)):
+        for index, child in enumerate(value):
+            yield from _iter_model_authored_text(child, f"{path}[{index}]")
+
+
 def _unqualified_stage_assertions(value: object, path: str = "$") -> list[dict]:
-    """Find unqualified TNM/stage mentions; this lexical gate is narrow, not a clinical proof."""
+    """Find unqualified model-authored TNM/stage mentions; server audit flags are excluded."""
     findings: list[dict] = []
-    for text_path, text_value in _iter_text_leaves(value, path):
+    for text_path, text_value in _iter_model_authored_text(value, path):
         sentences = re.split(r"(?<=[.!?])\s+|\r?\n+", text_value)
         for sentence in sentences:
             candidate = sentence.strip()

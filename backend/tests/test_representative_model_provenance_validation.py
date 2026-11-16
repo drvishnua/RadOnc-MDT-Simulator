@@ -282,3 +282,18 @@ def test_unqualified_stage_output_guard_fails_closed_but_allows_explicit_quarant
     assert not _unqualified_stage_assertions(
         {"conclusion": "The case does not establish T1N0M0; do not infer an alternative stage."}
     )
+
+
+
+def test_unqualified_stage_output_guard_ignores_server_audit_metadata_but_scans_chair_prose():
+    report = {
+        "chair_conclusion": "No treatment recommendation can be made from the supplied case.",
+        "case_data_integrity_flags": [
+            "R1 RO-01: CASE_INTEGRITY_SEED_RO01: R1 states cT1N0M0, but the case supplies no T/N/M stage. "
+            "This claim is unsupported/unverified; do not infer any alternative stage."
+        ],
+    }
+    assert _unqualified_stage_assertions(report) == []
+
+    report["chair_conclusion"] = "The clinical stage is cT1N0M0."
+    assert _unqualified_stage_assertions(report)
