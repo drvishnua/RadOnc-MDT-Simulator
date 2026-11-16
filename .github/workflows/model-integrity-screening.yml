@@ -207,27 +207,50 @@ jobs:
             $manifest.execution.failure = [ordered]@{ type = $_.Exception.GetType().FullName; message = $_.Exception.Message }
             throw
           } finally {
-            $manifest.execution.finished_at_utc = [DateTime]::UtcNow().ToString("o")
-            $manifest | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
-            if (Test-Path -LiteralPath $logDirectory -PathType Container) {
-              Get-ChildItem -LiteralPath $logDirectory -File | Copy-Item -Destination $artifactDir -Force -ErrorAction SilentlyContinue
+            # Finalisation must not prevent isolated-process cleanup.
+            try {
+              $manifest.execution.finished_at_utc = (Get-Date).ToUniversalTime().ToString("o")
+              $manifest | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
+            } catch {
+              Write-Warning ("Could not write final screening manifest state: " + $_.Exception.Message)
             }
-            if ($ollamaStarted) {
-              $pidPath = Join-Path $localAppData "RadOncMDT\AIEngine\ollama-server.pid"
-              if (Test-Path -LiteralPath $pidPath -PathType Leaf) {
-                $ollamaPid = 0
-                if ([int]::TryParse((Get-Content -LiteralPath $pidPath -Raw).Trim(),[ref]$ollamaPid)) {
-                  $processInfo = Get-CimInstance Win32_Process -Filter "ProcessId = $ollamaPid" -ErrorAction SilentlyContinue
-                  $managedRoot = [IO.Path]::GetFullPath((Join-Path $localAppData "RadOncMDT\AIEngine\Ollama")) + "\"
-                  $actualPath = [string]$processInfo.ExecutablePath
-                  if ($processInfo -and $actualPath -and [IO.Path]::GetFullPath($actualPath).StartsWith($managedRoot,[StringComparison]::OrdinalIgnoreCase)) {
-                    Stop-Process -Id $ollamaPid -Force
-                    Write-Host "MODEL_SCREEN_ISOLATED_OLLAMA_STOPPED"
+
+            try {
+              if (Test-Path -LiteralPath $logDirectory -PathType Container) {
+                Get-ChildItem -LiteralPath $logDirectory -File | Copy-Item -Destination $artifactDir -Force -ErrorAction SilentlyContinue
+              }
+            } catch {
+              Write-Warning ("Could not copy isolated Ollama logs to the evidence directory: " + $_.Exception.Message)
+            }
+
+            try {
+              if ($ollamaStarted) {
+                $pidPath = Join-Path $localAppData "RadOncMDT\AIEngine\ollama-server.pid"
+                if (Test-Path -LiteralPath $pidPath -PathType Leaf) {
+                  $ollamaPid = 0
+                  if ([int]::TryParse((Get-Content -LiteralPath $pidPath -Raw).Trim(),[ref]$ollamaPid)) {
+                    $processInfo = Get-CimInstance Win32_Process -Filter "ProcessId = $ollamaPid" -ErrorAction SilentlyContinue
+                    $managedRoot = [IO.Path]::GetFullPath((Join-Path $localAppData "RadOncMDT\AIEngine\Ollama")) + "\\"
+                    $actualPath = [string]$processInfo.ExecutablePath
+                    if ($processInfo -and $actualPath -and [IO.Path]::GetFullPath($actualPath).StartsWith($managedRoot,[StringComparison]::OrdinalIgnoreCase)) {
+                      try {
+                        Stop-Process -Id $ollamaPid -Force -ErrorAction Stop
+                        Write-Host "MODEL_SCREEN_ISOLATED_OLLAMA_STOPPED"
+                      } catch {
+                        Write-Warning ("Could not stop the verified isolated Ollama process: " + $_.Exception.Message)
+                      }
+                    } else {
+                      Write-Warning "Ollama PID could not be verified against the isolated executable path; no process was stopped."
+                    }
                   } else {
-                    Write-Warning "Ollama PID could not be verified as the isolated executable; no process was stopped."
+                    Write-Warning "Isolated Ollama PID file did not contain a valid process ID."
                   }
+                } else {
+                  Write-Warning "No isolated Ollama PID file was present during cleanup."
                 }
               }
+            } catch {
+              Write-Warning ("Isolated Ollama cleanup encountered an error: " + $_.Exception.Message)
             }
           }
 
