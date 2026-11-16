@@ -357,7 +357,7 @@ async function verifyFourRoundDashboard() {
   );
   const missionControlSnapshot = await evaluate(
     "(() => {" +
-      "const shortId = " + JSON.stringify(json(dashboardRunId.slice(0, 8))) + ";" +
+      "const shortId = " + json(dashboardRunId.slice(0, 8)) + ";" +
       "const card = [...document.querySelectorAll('.mission-run-card')].find(node => (node.innerText || '').includes('Run ' + shortId));" +
       "if (!card) return { found: false, stages: [] };" +
       "const stages = [...card.querySelectorAll('.mission-round-card')].map(node => (node.innerText || '').replace(/\\s+/g, ' ').trim());" +
