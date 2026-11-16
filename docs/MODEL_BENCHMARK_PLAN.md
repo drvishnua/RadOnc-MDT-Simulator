@@ -277,3 +277,27 @@ The screening runner increments its completed-response counter immediately after
 - Frontend `43778122666`; Browser E2E `43778122654`; packaging prerequisites `43778122655`; Windows installer `43778122683`; security/dependency/CodeQL `43778122625`: all succeeded.
 - Windows installer artifact `14187730022`; installer SHA-256 `821f45d0806e9f6df9114433a4e93535ff28534a8386fb551b5bf0b6035166ae`.
 - The optional Ollama/model bootstrap was skipped. No model download, inference, GPU test, paired comparison or clinical validation was performed.
+
+## 10C. Hosted synthetic screening workflow and MedGemma terms gate — 16 November 2026
+
+Workflow: `.github/workflows/model-integrity-screening.yml`.
+
+**Execution model**
+- Push-triggered execution is restricted to the development branch and requires the explicit `[model-integrity-screen]` commit-message marker. Manual dispatch is also restricted by the job guard to `feature/four-round-mdt-and-performance`; `main` is not a permitted execution ref.
+- Runs only on ephemeral GitHub-hosted `windows-latest`; it does not use a self-hosted runner or the project laptop. The workflow refuses to reuse occupied Ollama ports or a pre-existing Ollama executable and provisions the pinned portable runtime on loopback port 11435.
+- Concurrency is fixed at 1, hosted execution is explicitly CPU-only, and the job is time-bounded. No RTX 4060 activity or GPU inference is measured or implied.
+- Qwen `qwen3.5:4b` is always the first baseline. The runner captures the full installed model SHA-256, Ollama version, model metadata, corpus SHA-256, raw and parsed outputs, per-call inference metrics, and run/commit lineage in JSONL and a manifest.
+- If MedGemma is requested in a manual dispatch, it is pulled and screened only after the dispatcher explicitly attests that the current Google HAI-DEF Terms of Use have been reviewed and accepted and that they have authority to accept on behalf of any represented entity. The workflow checks this before provisioning and again before the MedGemma pull. A push-triggered run never pulls MedGemma.
+- The Qwen and MedGemma generations, when both requested, use the same ephemeral Ollama instance, runtime version, code SHA, corpus hash, request prompts/options and sequential execution order. Each model has its own immutable JSONL artifact. A separate dispatch creates a separate run and must not be merged into a paired comparison unless code SHA, corpus hash, runtime version, options and full model digests match.
+- All raw evidence is uploaded even if a later screening step fails. The runner's complete output status remains `completed_pending_human_review`, not accepted, passed, clinically validated or hallucination-free.
+
+**Google model constraints verified against primary documentation on 16 November 2026**
+- Google HAI-DEF Terms of Use: https://developers.google.com/health-ai-developer-foundations/terms (last modified 15 November 2024). The terms bind use/reproduction/modification/distribution/performance/display; the user represents legal capacity and, when acting for an entity, authority to bind that entity. Redistribution/hosted-service distribution has additional conditions, and use restrictions include regulatory and applicable-law limitations. The workflow's boolean is a user attestation only; it is not legal advice or commercial clearance.
+- Google MedGemma 1.5 model card: https://developers.google.com/health-ai-developer-foundations/medgemma/model-card (page last updated 6 November 2026). It says outputs are preliminary and require independent verification/clinical correlation; it does not intend outputs to directly inform clinical diagnosis, patient management or treatment recommendations; and it states MedGemma has not been evaluated or optimised for multi-turn applications. This is a material limitation for our R1–R4 use case, not evidence of superiority.
+- Registry tag: `medgemma1.5:4b-it-q4_K_M`; public Ollama listing reports approximately 3.3 GB and short tag identifier `433252621ab1`. The short identifier is not a reproducibility pin. The runner must capture a full local SHA-256 digest before reviewing any model output.
+
+**Safety boundary**
+- The hosted screen uses only the committed 12-case synthetic software-integrity corpus. No real patient, clinical service, production application configuration or identifiable data is involved.
+- Any complete output set is pending deterministic audit and independent human review. The corpus is not a clinically validated answer key. A single detected critical fabrication blocks promotion.
+- The initial marker-triggered run is a Qwen-only baseline. MedGemma remains blocked until a dispatcher supplies the explicit HAI-DEF terms attestation. Commercial packaging, redistribution, hosted-service deployment and any broader intended use remain subject to separate legal/regulatory review.
+- Do not infer model quality, clinical suitability, zero hallucinations, GPU performance or full 136-contribution MDT acceptance from this bounded screen.
