@@ -337,10 +337,10 @@ _TNM_EXPRESSION_PATTERN = re.compile(
 )
 
 def redact_flagged_tnm_values(value: str, integrity_flags: object) -> str:
-    """Redact TNM literals named by source-specific audit flags in prompt views only.
+    """Redact only TNM components named by source-specific flags in prompt views.
 
-    This helper never mutates the supplied string or saved contribution. Original
-    records and audit warnings remain unchanged in persistence and audit artefacts.
+    Supported, unflagged components in a combined TNM expression are preserved.
+    This helper never mutates saved contributions or the original audit flags.
     """
     if not isinstance(value, str) or not value:
         return value
@@ -351,33 +351,54 @@ def redact_flagged_tnm_values(value: str, integrity_flags: object) -> str:
     else:
         return value
 
-    def component_values(token: str) -> set[str]:
-        components: set[str] = set()
-        for pattern in (
-            r"(?:c|p|yc|yp)?(T(?:is|x|0|[1-4][a-d]?))",
-            r"(N(?:x|0|[1-3]))",
-            r"(M(?:x|0|1))",
-        ):
-            match = re.search(pattern, token, re.IGNORECASE)
-            if match:
-                components.add(match.group(1).upper())
-        return components
+    component_patterns = (
+        ("T", re.compile(r"(?:yc|yp|c|p)?(T(?:is|x|0|[1-4][a-d]?))", re.IGNORECASE)),
+        ("N", re.compile(r"(?:yc|yp|c|p)?(N(?:x|0|[1-3]))", re.IGNORECASE)),
+        ("M", re.compile(r"(?:yc|yp|c|p)?(M(?:x|0|1))", re.IGNORECASE)),
+    )
+
+    def component_matches(token: str) -> list[tuple[int, int, str]]:
+        found: list[tuple[int, int, str]] = []
+        for _, pattern in component_patterns:
+            for match in pattern.finditer(token):
+                # Replace the prefix together with the stage token so a redaction
+                # cannot leave a misleading orphaned c/p/yc/yp category prefix.
+                found.append((match.start(), match.end(), match.group(1).upper()))
+        return found
 
     flagged_components: set[str] = set()
     for flag in flags:
         for match in _TNM_EXPRESSION_PATTERN.finditer(flag):
-            flagged_components.update(component_values(match.group(0)))
+            flagged_components.update(
+                component for _, _, component in component_matches(match.group(0))
+            )
 
     if not flagged_components:
         return value
 
     def redact_match(match: re.Match[str]) -> str:
-        if component_values(match.group(0)).intersection(flagged_components):
+        token = match.group(0)
+        components = component_matches(token)
+        flagged = [
+            (start, end, component)
+            for start, end, component in components
+            if component in flagged_components
+        ]
+        if not flagged:
+            return token
+        if len(flagged) == len(components):
             return "[flagged unsupported staging assertion]"
-        return match.group(0)
+
+        redacted = token
+        for start, end, _ in sorted(flagged, reverse=True):
+            redacted = (
+                redacted[:start]
+                + "[flagged unsupported staging assertion]"
+                + redacted[end:]
+            )
+        return redacted
 
     return _TNM_EXPRESSION_PATTERN.sub(redact_match, value)
-
 
 
 _TNM_NEGATED_PREFIX_PATTERN = re.compile(

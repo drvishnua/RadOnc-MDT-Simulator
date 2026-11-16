@@ -50,6 +50,19 @@ def test_prompt_redaction_is_noop_without_a_matching_audit_flag():
     assert redact_flagged_tnm_values(original, ["Unsupported T3 assertion."]) == original
 
 
+
+def test_prompt_redaction_preserves_unflagged_components_in_a_combined_tnm_value():
+    original = "The supplied case has cT2N0M1. The unsupported nodal component is not established."
+    redacted = redact_flagged_tnm_values(
+        original,
+        ["Audit flag: unsupported N0 assertion in the R1 note."],
+    )
+    assert redacted == (
+        "The supplied case has cT2[flagged unsupported staging assertion]M1. "
+        "The unsupported nodal component is not established."
+    )
+
+
 def test_empty_structured_fields_are_marked_not_reported_not_absent():
     context = build_case_prompt_context(_case())
     assert context["field_status"]["relevant_comorbidities"]["status"] == "not_reported"
