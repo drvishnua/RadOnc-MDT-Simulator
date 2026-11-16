@@ -207,6 +207,9 @@ def test_saved_checkpoint_audit_workflow_is_bound_to_run9_and_forbids_inference(
     assert "Ensure-RadOnc-AIEngine" not in workflow
     assert "OLLAMA_BASE_URL" not in workflow
     assert "python backend/scripts/resume_hosted_four_round_validation.py" in workflow
+    assert "GITHUB_ENV" in workflow
+    assert "RADONC_CHECKPOINT_MANIFEST=" in workflow
+    assert "RADONC_MODEL_DIGEST=" in workflow
 
 def test_resume_workflow_is_bound_to_run_16_checkpoint_lineage():
     workflow_path = (
