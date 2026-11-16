@@ -157,6 +157,36 @@ def test_model_registry_requires_exact_installed_model_and_full_digest():
     assert record["digest"] == digest
 
 
+def test_model_registry_accepts_and_canonicalises_bare_full_digest_from_ollama():
+    model_name = "qwen3.5:4b"
+    bare_digest = "d8b0f5e9760cd1682034f292d7ef72ec46f432149be0df7574bf2d6e92e38c04"
+    snapshot = {
+        "tags": {
+            "models": [{
+                "name": model_name,
+                "model": model_name,
+                "digest": bare_digest,
+                "size": 3324173934,
+            }]
+        }
+    }
+
+    record = _require_installed_model_record(snapshot, model_name)
+
+    assert record["digest"] == f"sha256:{bare_digest}"
+    assert snapshot["tags"]["models"][0]["digest"] == bare_digest
+
+
+def test_model_registry_canonicalises_uppercase_bare_and_prefixed_digests():
+    model_name = "qwen3.5:4b"
+    bare = "D8B0F5E9760CD1682034F292D7EF72EC46F432149BE0DF7574BF2D6E92E38C04"
+    for raw in (bare, f"SHA256:{bare}"):
+        record = _require_installed_model_record({
+            "tags": {"models": [{"name": model_name, "digest": raw}]}
+        }, model_name)
+        assert record["digest"] == f"sha256:{bare.lower()}"
+
+
 def test_model_registry_rejects_public_short_identifier_as_digest():
     model_name = "medgemma1.5:4b-it-q4_K_M"
     snapshot = {

@@ -247,14 +247,24 @@ def _require_installed_model_record(snapshot: dict, model_name: str) -> dict:
             f"found {len(matches)}. No model pull or inference was attempted."
         )
 
-    record = matches[0]
+    record = dict(matches[0])
     digest = record.get("digest")
-    if not isinstance(digest, str) or re.fullmatch(r"sha256:[0-9a-fA-F]{64}", digest) is None:
+    if not isinstance(digest, str):
         raise RuntimeError(
             f"Installed Ollama model {model_name!r} has no full SHA-256 digest; "
             "short tag identifiers are not accepted. No inference was attempted."
         )
-    return dict(record)
+    # Ollama /api/tags and /api/ps may expose the full digest as bare hex.
+    # Accept only that exact representation or the optional sha256: prefix,
+    # then canonicalise before persisting or comparing any model identity.
+    bare_digest = digest[7:] if digest[:7].casefold() == "sha256:" else digest
+    if re.fullmatch(r"[0-9a-fA-F]{64}", bare_digest) is None:
+        raise RuntimeError(
+            f"Installed Ollama model {model_name!r} has no full SHA-256 digest; "
+            "short tag identifiers are not accepted. No inference was attempted."
+        )
+    record["digest"] = f"sha256:{bare_digest.lower()}"
+    return record
 
 
 def _build_case() -> SyntheticCase:
