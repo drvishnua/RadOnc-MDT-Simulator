@@ -116,6 +116,43 @@ type BatchRunSummary = {
   case_version_number?: number | null;
 };
 
+
+type MissionRoundSnapshot = {
+  round_number: number;
+  status: string;
+  total_agents: number;
+  completed_count: number;
+  failed_count: number;
+  queued_count: number;
+  running_count: number;
+  finished_count: number;
+  progress_percent: number;
+  current_agent_id: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+};
+
+type MissionRunSnapshot = {
+  run_id: string;
+  status: string;
+  total_agents: number;
+  created_at: string;
+  updated_at: string;
+  mdt_finished_at: string | null;
+  case_snapshot_sha256: string;
+  rounds: MissionRoundSnapshot[];
+};
+
+type MissionControlSnapshot = {
+  runs: MissionRunSnapshot[];
+  count: number;
+  total_runs: number;
+  active_run_count: number;
+  failed_run_count: number;
+  limit: number;
+  read_only: true;
+};
+
 type PatientRecordSummary = {
   patient_id: string;
   patient_identifier: string;
@@ -467,6 +504,10 @@ function App() {
   const [roundActionBusy, setRoundActionBusy] = useState<number | null>(null);
   const [roundError, setRoundError] = useState("");
   const [agentFilter, setAgentFilter] = useState("All perspectives");
+  const [missionControl, setMissionControl] = useState<MissionControlSnapshot | null>(null);
+  const [missionControlLoading, setMissionControlLoading] = useState(false);
+  const [missionControlError, setMissionControlError] = useState("");
+
 
   async function refreshStatus() {
     setConnectionState("loading");
@@ -495,6 +536,24 @@ function App() {
   }
 
 
+
+
+  async function refreshMissionControl() {
+    setMissionControlLoading(true);
+    try {
+      const response = await fetch(API_BASE + "/api/mission-control?limit=12");
+      const body = await response.json() as MissionControlSnapshot & { detail?: string };
+      if (!response.ok) {
+        throw new Error(body.detail ?? "Unable to load Mission Control.");
+      }
+      setMissionControl(body);
+      setMissionControlError("");
+    } catch (error) {
+      setMissionControlError(error instanceof Error ? error.message : "Unable to load Mission Control.");
+    } finally {
+      setMissionControlLoading(false);
+    }
+  }
 
   async function refreshPatients() {
     try {
@@ -680,6 +739,11 @@ function App() {
   useEffect(() => {
     void refreshStatus();
     void refreshPatients();
+    void refreshMissionControl();
+    const timer = window.setInterval(() => {
+      void refreshMissionControl();
+    }, 5000);
+    return () => window.clearInterval(timer);
   }, []);
 
   const categories = useMemo(
@@ -1094,6 +1158,109 @@ function App() {
             detail="All configured roles are listed"
             state={agents.length === 45 ? "good" : "neutral"}
           />
+
+        </section>
+
+        <section className="panel mission-control-panel" aria-label="Mission Control">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">RUN OVERSIGHT · READ ONLY</p>
+              <h2>Mission Control</h2>
+            </div>
+            <div className="mission-control-actions">
+              <span className="panel-index">LATEST {missionControl?.count ?? 0} / 12</span>
+              <button
+                className="button button-quiet"
+                type="button"
+                onClick={() => void refreshMissionControl()}
+                disabled={missionControlLoading}
+              >
+                {missionControlLoading ? "Refreshing…" : "Refresh"}
+              </button>
+            </div>
+          </div>
+          <p className="panel-intro">
+            Live operational view of persisted simulation records. It does not start agents, change saved contributions, or make clinical decisions. Statuses refresh automatically every five seconds.
+          </p>
+          <div className="mission-summary-grid">
+            <div className="mission-summary-item">
+              <strong>{missionControl ? missionControl.total_runs : "—"}</strong>
+              <span>Saved runs</span>
+            </div>
+            <div className="mission-summary-item">
+              <strong>{missionControl ? missionControl.active_run_count : "—"}</strong>
+              <span>Active in latest list</span>
+            </div>
+            <div className="mission-summary-item">
+              <strong>{missionControl ? missionControl.failed_run_count : "—"}</strong>
+              <span>Runs with failed roles</span>
+            </div>
+          </div>
+          {missionControlError && (
+            <p className="mission-control-message error-text" role="alert">{missionControlError}</p>
+          )}
+          {!missionControl && !missionControlError && (
+            <p className="empty-state">Loading saved run activity…</p>
+          )}
+          {missionControl && missionControl.runs.length === 0 && (
+            <p className="empty-state">No saved simulation runs are available yet.</p>
+          )}
+          <div className="mission-run-list">
+            {missionControl?.runs.map((run) => {
+              const finalRound = run.rounds.find((round) => round.round_number === 4);
+              const activeRound = run.rounds.find((round) => ["queued", "running"].includes(round.status));
+              const runLabel = finalRound?.status === "completed"
+                ? "MDT completed"
+                : finalRound?.status === "completed_with_errors"
+                  ? "Chair completed with errors"
+                  : activeRound
+                    ? "Round " + activeRound.round_number + " " + activeRound.status.replaceAll("_", " ")
+                    : run.rounds[0]?.status === "completed"
+                      ? "Awaiting MDT rounds"
+                      : run.status.replaceAll("_", " ");
+              return (
+                <article className="mission-run-card" key={run.run_id}>
+                  <div className="mission-run-header">
+                    <div>
+                      <strong title={run.run_id}>Run {run.run_id.slice(0, 8)}</strong>
+                      <small>Created {new Date(run.created_at).toLocaleString()}</small>
+                    </div>
+                    <span className={"mission-status status-" + runLabel.toLowerCase().replaceAll(/[^a-z0-9]+/g, "-")}>
+                      {runLabel}
+                    </span>
+                  </div>
+                  <div className="mission-round-grid">
+                    {run.rounds.map((round) => (
+                      <div className="mission-round-card" key={round.round_number}>
+                        <div className="mission-round-top">
+                          <span>R{round.round_number} · {["", "Independent", "Debate", "Adversarial", "Chair"][round.round_number]}</span>
+                          <span className={"mission-round-state state-" + round.status.replaceAll("_", "-")}>
+                            {round.status.replaceAll("_", " ")}
+                          </span>
+                        </div>
+                        <div className="mission-progress-track" aria-label={"Round " + round.round_number + " progress"}>
+                          <div className="mission-progress-fill" style={{ width: round.progress_percent + "%" }} />
+                        </div>
+                        <div className="mission-round-counts">
+                          <span>{round.completed_count}/{round.total_agents} complete</span>
+                          {round.failed_count > 0 && <span className="count-failed">{round.failed_count} failed</span>}
+                          {round.running_count > 0 && <span>{round.running_count} running</span>}
+                          {round.queued_count > 0 && <span>{round.queued_count} queued</span>}
+                        </div>
+                        {round.current_agent_id && (
+                          <small className="mission-current-role">Current role: {round.current_agent_id}</small>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mission-run-footer">
+                    <span>Snapshot SHA-256 · {run.case_snapshot_sha256.slice(0, 16)}…</span>
+                    <span>Updated {new Date(run.updated_at).toLocaleString()}</span>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
         </section>
 
         <div className="workspace-grid">

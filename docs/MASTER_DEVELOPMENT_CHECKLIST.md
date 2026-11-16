@@ -1,3 +1,14 @@
+
+## Mission Control phase 1 — read-only persisted run overview
+
+**Implementation scope:** add `GET /api/mission-control?limit=12` using the existing SQLite run and round tables; return only run ID, immutable case-snapshot hash, run timestamps/status, and deterministic role counts for R1–R4. Do not return raw case text, patient names, agent prose or error-body contents. Add a read-only frontend panel with recent runs, four-round completion/failure/queued/running counts, current role ID where persisted, snapshot-hash prefix and five-second polling. No run creation/resume/delete controls are added to this panel. Existing case workspace and R1→R4 controls remain unchanged.
+
+**Safety boundary:** dashboard status is derived from persisted rows; missing R2/R3/R4 rows display `not_started`, not fabricated completion. Failed role counts remain visible and count as finished for progress, but never as completed. The endpoint is an operational summary, not a clinical validation result. It introduces no autonomous agent manager, no arbitrary agent-to-agent messaging, no new model calls and no concurrency change.
+
+**Regression coverage added:** new `backend/tests/test_mission_control.py` checks no-case-text/no-prose response, default unstarted round states, 45/45/1 role denominators, persisted mixed R2 states, failed-role visibility, current role and query-limit rejection. Tests are pending CI execution; no test pass is claimed at commit time.
+
+**Status:** Mission Control concept assessment — VERIFIED (concept only); Mission Control phase-1 implementation — IN PROGRESS until exact-commit CI and browser E2E complete. No laptop sync or local runtime verification is claimed.
+
 # Current authoritative checkpoint — 16 November 2026 (supersedes stale branch/CI summaries below)
 
 **Repository recheck:** `feature/four-round-mdt-and-performance` HEAD is the documentation-only checklist commit containing this checkpoint; its exact SHA is taken from the live branch ref during each report. The pre-refresh parent was `2061236c2177c142f53cda64f5729808392122fd`.. PR #1 is open, draft and unmerged, targeting `main`. `main` remains `39a356b8eb09399aa2da1b9b9085965999f5105a` and is untouched. This checkpoint is documentation-only; latest application/test commit remains `358bc1a2575318cb6c8509b090a34e9fae2a3c98`.

@@ -301,3 +301,72 @@ textarea { resize: vertical; min-height: 110px; line-height: 1.55; }
 .report-section ul { margin: 6px 0 0; padding-left: 18px; }
 .report-section li { padding: 2px 0; }
 .report-section p { margin: 6px 0 0; }
+
+
+/* Read-only Mission Control view over persisted run and round state. */
+.mission-control-panel { margin: 0 0 20px; }
+.mission-control-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; }
+.mission-summary-grid {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;
+  margin: 0 0 16px;
+}
+.mission-summary-item {
+  display: grid; gap: 4px; padding: 13px 15px; border: 1px solid var(--line);
+  border-radius: 9px; background: rgba(11, 22, 37, .36);
+}
+.mission-summary-item strong { color: #e6f2ef; font: 700 22px Manrope, sans-serif; }
+.mission-summary-item span { color: #8fa1b6; font-size: 10px; }
+.mission-control-message { margin: 8px 0; font-size: 11px; }
+.mission-run-list { display: grid; gap: 11px; }
+.mission-run-card {
+  min-width: 0; padding: 14px; border: 1px solid var(--line);
+  border-radius: 10px; background: rgba(9, 20, 34, .34);
+}
+.mission-run-header, .mission-run-footer, .mission-round-top {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+}
+.mission-run-header > div { display: grid; gap: 4px; min-width: 0; }
+.mission-run-header strong { color: #e4f0ec; font: 600 12px "Cascadia Code", monospace; }
+.mission-run-header small, .mission-run-footer { color: #7f92a8; font-size: 9px; }
+.mission-status, .mission-round-state {
+  padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px;
+  color: #a8b7c8; font: 9px "Cascadia Code", monospace; text-transform: uppercase;
+}
+.mission-status.status-round-1-running, .mission-status.status-round-2-running,
+.mission-status.status-round-3-running, .mission-status.status-round-4-running,
+.mission-status.status-round-1-queued, .mission-status.status-round-2-queued,
+.mission-status.status-round-3-queued, .mission-status.status-round-4-queued {
+  color: #efd08a; border-color: rgba(239, 208, 138, .28);
+}
+.mission-status.status-mdt-completed { color: #8bdcc3; border-color: rgba(139,220,195,.35); }
+.mission-status.status-chair-completed-with-errors { color: #edb279; border-color: rgba(237,178,121,.35); }
+.mission-round-grid {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px; margin-top: 13px;
+}
+.mission-round-card {
+  min-width: 0; padding: 10px; border: 1px solid rgba(145, 162, 184, .12);
+  border-radius: 8px; background: rgba(255,255,255,.018);
+}
+.mission-round-top { align-items: flex-start; flex-wrap: wrap; gap: 6px; }
+.mission-round-top > span:first-child { color: #c9d7e4; font-size: 9px; font-weight: 700; }
+.mission-round-state { padding: 3px 5px; font-size: 8px; }
+.mission-round-state.state-completed { color: #8bdcc3; border-color: rgba(139,220,195,.3); }
+.mission-round-state.state-running, .mission-round-state.state-queued { color: #efd08a; }
+.mission-round-state.state-completed-with-errors { color: #edb279; border-color: rgba(237,178,121,.3); }
+.mission-progress-track { height: 5px; margin: 11px 0 8px; overflow: hidden; border-radius: 99px; background: rgba(255,255,255,.08); }
+.mission-progress-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, #4caa9a, #9ce3ce); }
+.mission-round-counts { display: flex; flex-wrap: wrap; gap: 5px 8px; color: #90a1b4; font-size: 9px; }
+.mission-current-role { display: block; margin-top: 7px; color: #e8d18f; font: 9px "Cascadia Code", monospace; }
+.mission-run-footer { flex-wrap: wrap; gap: 5px 12px; margin-top: 12px; padding-top: 9px; border-top: 1px solid rgba(145,162,184,.1); }
+@media (max-width: 960px) {
+  .mission-round-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 620px) {
+  .mission-control-actions { align-items: flex-start; flex-direction: column; }
+  .mission-summary-grid { gap: 7px; }
+  .mission-summary-item { padding: 10px; }
+  .mission-summary-item strong { font-size: 19px; }
+  .mission-round-grid { grid-template-columns: 1fr 1fr; }
+  .mission-run-header { align-items: flex-start; flex-direction: column; }
+}

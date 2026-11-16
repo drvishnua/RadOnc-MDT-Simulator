@@ -861,6 +861,186 @@ def get_round_summary(run_id: str, round_number: int) -> dict[str, Any]:
     }
 
 
+
+def list_recent_runs(limit: int = 12) -> dict[str, Any]:
+    """Return read-only run and round status summaries for Mission Control.
+
+    Clinical case text, patient names, generated prose and error bodies are
+    deliberately excluded. Counts are derived from persisted result rows.
+    """
+    bounded_limit = max(1, min(int(limit), 50))
+    initialize_database()
+    runs: list[dict[str, Any]] = []
+
+    with _connect() as db:
+        _ensure_round_tables(db)
+        total_runs = db.execute(
+            "SELECT COUNT(*) AS count FROM simulation_runs"
+        ).fetchone()["count"]
+        run_rows = db.execute(
+            """
+            SELECT run_id, case_json, status, total_agents, current_agent_id,
+                   created_at, updated_at, mdt_finished_at
+            FROM simulation_runs
+            ORDER BY created_at DESC, rowid DESC
+            LIMIT ?
+            """,
+            (bounded_limit,),
+        ).fetchall()
+
+        for run_row in run_rows:
+            run_id = run_row["run_id"]
+            round_summaries: list[dict[str, Any]] = []
+            r1_counts = {
+                item["status"]: item["count"]
+                for item in db.execute(
+                    """
+                    SELECT status, COUNT(*) AS count
+                    FROM agent_run_results
+                    WHERE run_id = ?
+                    GROUP BY status
+                    """,
+                    (run_id,),
+                ).fetchall()
+            }
+            r1_times = db.execute(
+                """
+                SELECT MIN(started_at) AS started_at,
+                       MAX(completed_at) AS finished_at
+                FROM agent_run_results
+                WHERE run_id = ?
+                """,
+                (run_id,),
+            ).fetchone()
+            r1_total = int(run_row["total_agents"])
+            r1_completed = int(r1_counts.get("completed", 0))
+            r1_failed = int(r1_counts.get("failed", 0))
+            r1_queued = int(r1_counts.get("queued", 0))
+            r1_running = int(r1_counts.get("running", 0))
+            r1_finished = r1_completed + r1_failed
+            round_summaries.append(
+                {
+                    "round_number": 1,
+                    "status": run_row["status"],
+                    "total_agents": r1_total,
+                    "completed_count": r1_completed,
+                    "failed_count": r1_failed,
+                    "queued_count": r1_queued,
+                    "running_count": r1_running,
+                    "finished_count": r1_finished,
+                    "progress_percent": round(r1_finished * 100 / r1_total, 1)
+                    if r1_total else 0,
+                    "current_agent_id": run_row["current_agent_id"],
+                    "started_at": r1_times["started_at"],
+                    "finished_at": r1_times["finished_at"],
+                }
+            )
+
+            persisted_rounds = {
+                row["round_number"]: row
+                for row in db.execute(
+                    "SELECT * FROM round_runs WHERE run_id = ?",
+                    (run_id,),
+                ).fetchall()
+            }
+            for round_number, expected_total in (
+                (2, len(AGENT_PROFILES)),
+                (3, len(AGENT_PROFILES)),
+                (4, 1),
+            ):
+                round_row = persisted_rounds.get(round_number)
+                if round_row is None:
+                    round_summaries.append(
+                        {
+                            "round_number": round_number,
+                            "status": "not_started",
+                            "total_agents": expected_total,
+                            "completed_count": 0,
+                            "failed_count": 0,
+                            "queued_count": 0,
+                            "running_count": 0,
+                            "finished_count": 0,
+                            "progress_percent": 0,
+                            "current_agent_id": None,
+                            "started_at": None,
+                            "finished_at": None,
+                        }
+                    )
+                    continue
+
+                counts = {
+                    item["status"]: item["count"]
+                    for item in db.execute(
+                        """
+                        SELECT status, COUNT(*) AS count
+                        FROM agent_round_results
+                        WHERE run_id = ? AND round_number = ?
+                        GROUP BY status
+                        """,
+                        (run_id, round_number),
+                    ).fetchall()
+                }
+                total = int(round_row["total_agents"])
+                completed = int(counts.get("completed", 0))
+                failed = int(counts.get("failed", 0))
+                queued = int(counts.get("queued", 0))
+                running = int(counts.get("running", 0))
+                finished = completed + failed
+                round_summaries.append(
+                    {
+                        "round_number": round_number,
+                        "status": round_row["status"],
+                        "total_agents": total,
+                        "completed_count": completed,
+                        "failed_count": failed,
+                        "queued_count": queued,
+                        "running_count": running,
+                        "finished_count": finished,
+                        "progress_percent": round(finished * 100 / total, 1)
+                        if total else 0,
+                        "current_agent_id": round_row["current_agent_id"],
+                        "started_at": round_row["started_at"],
+                        "finished_at": round_row["finished_at"],
+                    }
+                )
+
+            runs.append(
+                {
+                    "run_id": run_id,
+                    "status": run_row["status"],
+                    "total_agents": r1_total,
+                    "created_at": run_row["created_at"],
+                    "updated_at": run_row["updated_at"],
+                    "mdt_finished_at": run_row["mdt_finished_at"],
+                    "case_snapshot_sha256": hashlib.sha256(
+                        run_row["case_json"].encode("utf-8")
+                    ).hexdigest(),
+                    "rounds": round_summaries,
+                }
+            )
+
+    active_run_count = sum(
+        1 for run in runs
+        if any(stage["status"] in {"queued", "running"} for stage in run["rounds"])
+    )
+    failed_run_count = sum(
+        1 for run in runs
+        if any(
+            stage["failed_count"] > 0 or stage["status"] == "completed_with_errors"
+            for stage in run["rounds"]
+        )
+    )
+    return {
+        "runs": runs,
+        "count": len(runs),
+        "total_runs": int(total_runs),
+        "active_run_count": active_run_count,
+        "failed_run_count": failed_run_count,
+        "limit": bounded_limit,
+        "read_only": True,
+    }
+
+
 def list_round_results(run_id: str, round_number: int) -> list[dict[str, Any]]:
     with _connect() as db:
         _ensure_round_tables(db)

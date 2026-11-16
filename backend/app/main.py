@@ -6,7 +6,7 @@ import logging
 import sys
 from pathlib import Path
 
-from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -208,6 +208,15 @@ async def get_saved_patient_assessments(patient_id: str, case_version_id: str) -
         raise HTTPException(status_code=404, detail="Patient or saved case version not found.") from exc
     except ValueError as exc:
         raise HTTPException(status_code=500, detail="Saved case-version integrity check failed.") from exc
+
+
+
+@app.get("/api/mission-control")
+async def get_mission_control(
+    limit: int = Query(default=12, ge=1, le=50),
+) -> dict[str, object]:
+    """Read-only operational overview; never returns case text or model prose."""
+    return run_store.list_recent_runs(limit=limit)
 
 
 @app.post("/api/runs")
