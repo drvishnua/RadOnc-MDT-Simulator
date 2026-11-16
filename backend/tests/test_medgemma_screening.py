@@ -374,7 +374,9 @@ def test_run_screen_records_complete_immutable_case_set(tmp_path, monkeypatch):
     manifest = next(record for record in records if record["record_type"] == "manifest")
 
     assert manifest["prompt_version"] == screening.PROMPT_VERSION
-    assert manifest["audit_version"] == "radonc-mdt-integrity-audit-v2"
+    assert manifest["audit_version"] == "radonc-mdt-integrity-audit-v3"
+    assert manifest["screening_script_sha256"] == screening.SCRIPT_SHA256
+    assert len(manifest["screening_script_sha256"]) == 64
     assert calls == {"tags": 25, "generate": 12, "show": 1, "version": 1}
     assert len(case_records) == 12
     assert len({record["case_id"] for record in case_records}) == 12
@@ -521,3 +523,48 @@ def test_deterministic_audit_accepts_explicit_bounded_chair_synthesis():
     )
 
     assert screening.audit_screen_response(case, complete) == []
+
+
+def test_partial_agreement_audit_flags_medgemma_misstatement_of_saved_r1_positions():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R2-PARTIAL-AGREEMENT-006")
+    actual_medgemma_response = (
+        "The provided information is insufficient to determine the status of the treatment options. "
+        "The saved peer material only contains contributions from R1:MO-01, R1:RO-01, and R1:SO-02. "
+        "None of these contributions state whether additional information is required or make a treatment-option position. "
+        "Therefore, the status of the treatment options is unknown."
+    )
+
+    findings = screening.audit_screen_response(case, actual_medgemma_response)
+
+    assert any("R2 partial-agreement contradiction" in item for item in findings)
+
+
+def test_chair_audit_does_not_treat_attributed_r2_statement_as_chair_synthesis():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R4-CHAIR-TRACEABILITY-012")
+    actual_medgemma_response = (
+        "The following contributions are present:\\n\\n"
+        "*   R1:RO-01: Position: insufficient_information.\\n"
+        "*   R2:RO-01: No treatment proposition agreed.\\n"
+        "*   R3:RO-01: A missing-source finding remains unresolved."
+    )
+
+    findings = screening.audit_screen_response(case, actual_medgemma_response)
+
+    assert any("Chair synthesis omission" in item for item in findings)
+    assert not any("Chair traceability omission" in item for item in findings)
+
+
+def test_chair_audit_accepts_qwen_overall_no_consensus_synthesis():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R4-CHAIR-TRACEABILITY-012")
+    qwen_response = (
+        "Case R4-CHAIR-TRACEABILITY-012, Round R4. Saved contributions: R1 (RO-01) states "
+        "'insufficient_information'. R2 (RO-01) states 'No treatment proposition agreed'. "
+        "R3 (RO-01) states 'A missing-source finding remains unresolved'. The unsupplied claim "
+        "'All specialists unanimously support Option Z' is unsupported and not present in the saved "
+        "contributions; no consensus on a treatment proposition exists. Missing roles are reported as unknown."
+    )
+
+    assert screening.audit_screen_response(case, qwen_response) == []
