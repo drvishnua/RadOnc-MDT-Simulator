@@ -294,6 +294,7 @@ async def main() -> int:
             if ready["completed_count"] != len(completed_before) or ready["failed_count"] or ready["running_count"]:
                 raise RuntimeError("R3 resume preparation changed saved completions or left interrupted rows running.")
             resume_started = time.perf_counter()
+            report["inference_performed"] = True
             await mdt_rounds.run_mdt_round(run_id, 3)
             report["r3_resume_seconds"] = round(time.perf_counter() - resume_started, 2)
 
@@ -322,6 +323,7 @@ async def main() -> int:
             if round4_before:
                 mdt_rounds.prepare_round_resume(run_id, 4)
             chair_started = time.perf_counter()
+            report["inference_performed"] = True
             await mdt_rounds.run_mdt_round(run_id, 4)
             report["chair_r4_seconds"] = round(time.perf_counter() - chair_started, 2)
 
@@ -359,7 +361,7 @@ async def main() -> int:
             ("R4", [{"agent_id": "SG-07", "report": chair}], "report"),
         ])
         report.update({
-            "status": "completed_with_quality_gate_failures" if failures else "passed_structural_live_validation",
+            "status": (\n                "completed_with_quality_gate_failures" if failures\n                else ("passed_structural_checkpoint_audit" if audit_only else "passed_structural_live_validation")\n            ),
             "round_summaries_after": {
                 "R1": run_summary,
                 "R2": round2_summary,
