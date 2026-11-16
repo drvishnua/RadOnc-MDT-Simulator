@@ -342,6 +342,18 @@ def _prioritized_provenance_flags(value: object, limit: int = 5) -> list[str]:
     return [_compact(item, 220) for item in flags[:limit]]
 
 
+def _compact_case_integrity_flags(value: object, limit: int = 6) -> list[str]:
+    """Expose bounded server audit warnings to later rounds without rewriting source records."""
+    if not isinstance(value, (list, tuple)):
+        return []
+    flags = [
+        item.strip()
+        for item in value
+        if isinstance(item, str) and item.strip()
+    ]
+    return [_compact(item, 220) for item in flags[:limit]]
+
+
 def _compact_r1_text(value: str, limit: int) -> str:
     """Keep the explicit R1 source label separate from round IDs embedded in peer prose."""
     neutralized = _EMBEDDED_ROUND_REFERENCE_PATTERN.sub(
@@ -1512,6 +1524,9 @@ async def generate_debate_contribution(
                 _compact_r1_text(item, 90)
                 for item in (peer["assessment"].get("unknowns") or [])[:2]
             ],
+            "case_integrity_audit_flags": _compact_case_integrity_flags(
+                peer["assessment"].get("case_data_integrity_flags")
+            ),
         }
         for peer in peer_views
     ]
@@ -1519,6 +1534,9 @@ async def generate_debate_contribution(
         "position": own_independent_assessment.get("position"),
         "conclusion": _compact(own_independent_assessment.get("provisional_conclusion", ""), 240),
         "option": _compact(own_independent_assessment.get("preferred_educational_option", ""), 160),
+        "case_integrity_audit_flags": _compact_case_integrity_flags(
+            own_independent_assessment.get("case_data_integrity_flags")
+        ),
     }
     source_opinion_register = extract_attributed_note_opinions(case.case_summary)
     allowed_sources = {("R1", profile["agent_id"])} | {
@@ -1581,7 +1599,16 @@ async def generate_debate_contribution(
         "misrepresented, and what information would resolve it. Do not manufacture challenges. "
         "If no agreement or challenge is justified, explain the evidence limitation in "
         "response_to_other_perspectives and leave the corresponding list empty. Preserve "
-        "conditionality; do not convert conditional positions into support.\n"
+        "conditionality; do not convert conditional positions into support. "
+        "SERVER CASE-INTEGRITY AUDIT: your own R1 assessment and selected peer R1 records may "
+        "include case_integrity_audit_flags. These are deterministic server warnings that the "
+        "corresponding R1 narrative contains a claim not supported by the immutable case snapshot; "
+        "they are not new case facts and do not prove the opposite finding. Treat the flagged claim "
+        "as unverified/quarantined, do not repeat it as a clinical fact, do not use it to justify "
+        "agreement or a position change, and do not infer the opposite (for example, an unsupported "
+        "N0 statement does not establish N-positive disease). If relevant, attribute it only as an "
+        "unverified statement from that named R1 contribution and explain that the source case does "
+        "not establish it. The verbatim case and structured fields remain authoritative.\n"
         f"ROLE: {profile['name']}\nMANDATE: {profile['mandate']}\n"
         "SUPPLIED CASE:\n"
         + json.dumps(build_case_prompt_context(case), ensure_ascii=False, separators=(",", ":"))
@@ -1786,6 +1813,12 @@ async def generate_adversarial_contribution(
                 _compact_r2_text(item, 180)
                 for item in (peer["result"].get("position_changes") or [])[:1]
             ],
+            "round1_case_integrity_audit_flags": _compact_case_integrity_flags(
+                peer.get("round1_case_integrity_flags")
+            ),
+            "round2_case_integrity_audit_flags": _compact_case_integrity_flags(
+                peer["result"].get("case_data_integrity_flags")
+            ),
             "source_opinion_responses": [
                 {
                     "source_id": item.get("source_id", ""),
@@ -1819,6 +1852,9 @@ async def generate_adversarial_contribution(
         "round1_position": own_independent_assessment.get("position"),
         "round1_conclusion": _compact(own_independent_assessment.get("provisional_conclusion", ""), 150),
         "round1_option": _compact(own_independent_assessment.get("preferred_educational_option", ""), 140),
+        "round1_case_integrity_audit_flags": _compact_case_integrity_flags(
+            own_independent_assessment.get("case_data_integrity_flags")
+        ),
         "round2_source": f"R2:{profile['agent_id']}",
         "round2_position": own_debate_contribution.get("position"),
         "round2_conclusion": _compact_r2_text(own_debate_contribution.get("provisional_conclusion", ""), 260),
@@ -1828,6 +1864,9 @@ async def generate_adversarial_contribution(
         "round2_position_changes": [_compact_r2_text(item, 180) for item in (own_debate_contribution.get("position_changes") or [])[:1]],
         "round2_unknowns": [_compact_r2_text(item, 90) for item in (own_debate_contribution.get("remaining_unknowns") or [])[:2]],
         "round2_risks": [_compact_r2_text(item, 90) for item in (own_debate_contribution.get("risk_flags") or [])[:2]],
+        "round2_case_integrity_audit_flags": _compact_case_integrity_flags(
+            own_debate_contribution.get("case_data_integrity_flags")
+        ),
         "round2_source_opinion_responses": [
             {
                 "source_id": item.get("source_id", ""),
@@ -1957,6 +1996,17 @@ async def generate_adversarial_contribution(
         "clinical position solely because of it. Do not manufacture a challenge when the excerpt "
         "does not support the flag. Preserve uncertainty, conditions, and minority views. Risk "
         "flags are not substitutes for source-linked challenges. "
+        "CASE-INTEGRITY AUDIT FLAGS: your own R1/R2 records and selected peer R1/R2 records may "
+        "include server-computed case_integrity_audit_flags. These are audit warnings that specific "
+        "narrative claims were not supported by the immutable case snapshot; they are not new facts, "
+        "not clinical evidence, and do not establish the opposite finding. Treat the flagged claim "
+        "as unverified unless the actual supplied case source explicitly supports it. Do not repeat "
+        "or rely on it as a fact, do not infer the opposite, and do not silently rewrite the saved "
+        "contribution. When the exact supplied text and case source establish a genuine defect, "
+        "describe it as an unsupported-claim/provenance risk and cite the exact R2 source; when a "
+        "flag appears inconsistent with the supplied source, state that it remains a flag requiring "
+        "review rather than declaring the clinical assertion true or false. Preserve the original "
+        "narrative and the server audit flag as separate records. "
         "ADVERSARIAL ASSUMPTION AND RISK CHECK: inspect your own and each supplied R2 record for "
         "unsupported case facts or assumptions (stage, nodal/metastatic status, resectability, "
         "fitness, comorbidities, prior treatment, or patient goals); conclusions treating missing "

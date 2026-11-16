@@ -174,12 +174,18 @@ def test_r3_receives_server_computed_peer_provenance_flags_and_exact_excerpt(mon
         "position": "insufficient_information",
         "provisional_conclusion": "The available case information is insufficient.",
         "preferred_educational_option": "No option is established.",
+        "case_data_integrity_flags": [
+            "R1_OWN_SENTINEL: unsupported T1 was flagged against the case snapshot."
+        ],
     }
     own_r2 = {
         "position": "insufficient_information",
         "provisional_conclusion": "The debate remains insufficient on the available record.",
         "response_to_other_perspectives": own_r2_response,
         "source_reference_integrity_flags": [own_r2_flag],
+        "case_data_integrity_flags": [
+            "R2_OWN_SENTINEL: unsupported M0 was flagged against the case snapshot."
+        ],
     }
     peers = [{
         "agent_id": "MO-01",
@@ -192,6 +198,9 @@ def test_r3_receives_server_computed_peer_provenance_flags_and_exact_excerpt(mon
             "substantive_challenges": [],
             "risk_flags": [],
             "position_changes": [],
+            "case_data_integrity_flags": [
+                "R2_PEER_SENTINEL: unsupported contraindication was flagged against the case snapshot."
+            ],
             "source_reference_integrity_flags": [
                 "Reference finding before scope flag A.",
                 "Reference finding before scope flag B.",
@@ -201,6 +210,9 @@ def test_r3_receives_server_computed_peer_provenance_flags_and_exact_excerpt(mon
                 provenance_flag,
             ],
         },
+        "round1_case_integrity_flags": [
+            "R1_PEER_SENTINEL: unsupported N0 was flagged against the case snapshot."
+        ],
     }]
 
     result = asyncio.run(
@@ -228,6 +240,13 @@ def test_r3_receives_server_computed_peer_provenance_flags_and_exact_excerpt(mon
     assert "infer intermediate roles" in prompt
     assert "raw reference string remain saved separately by the server" in prompt
     assert "Do not use a provenance flag as clinical evidence" in prompt
+    assert "CASE-INTEGRITY AUDIT FLAGS" in prompt
+    assert "R1_OWN_SENTINEL: unsupported T1" in prompt
+    assert "R2_OWN_SENTINEL: unsupported M0" in prompt
+    assert "R1_PEER_SENTINEL: unsupported N0" in prompt
+    assert "R2_PEER_SENTINEL: unsupported contraindication" in prompt
+    assert "not new facts" in prompt
+    assert "do not infer the opposite" in prompt
     assert any("R2:MO-01" in item for item in result.substantive_challenges)
     assert any("Malformed paired-source wording" in item for item in result.source_reference_integrity_flags)
     assert result.source_peer_ids == ["MO-01"]

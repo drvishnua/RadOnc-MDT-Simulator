@@ -96,6 +96,18 @@ def _create_complete_round1(monkeypatch, tmp_path):
     return run_id
 
 
+def test_r3_peer_context_carries_r1_audit_flags_without_mutating_saved_r1(monkeypatch):
+    source_flags = ["R1 source record retains an unsupported T1 assertion."]
+    saved_r1 = {"MO-01": {"case_data_integrity_flags": source_flags}}
+    peer_views = [{"agent_id": "MO-01", "result": {"position": "insufficient_information"}}]
+
+    enriched = mdt_rounds._attach_r1_case_integrity_flags(peer_views, saved_r1)
+
+    assert enriched[0]["round1_case_integrity_flags"] == source_flags
+    assert saved_r1["MO-01"]["case_data_integrity_flags"] == source_flags
+    assert "case_data_integrity_flags" not in peer_views[0]["result"]
+
+
 def test_four_rounds_require_full_previous_round_and_preserve_all_roles(monkeypatch, tmp_path):
     run_id = _create_complete_round1(monkeypatch, tmp_path)
 

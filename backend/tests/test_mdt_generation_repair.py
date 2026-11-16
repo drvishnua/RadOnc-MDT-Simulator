@@ -650,6 +650,9 @@ def test_r2_prompt_distinguishes_not_documented_from_clinically_absent(monkeypat
         "position": "insufficient_information",
         "provisional_conclusion": "The prerequisite status remains unknown.",
         "preferred_educational_option": "Option A remains conditional on prerequisite X.",
+        "case_data_integrity_flags": [
+            "R1_OWN_SENTINEL: unsupported T1 was flagged against the case snapshot."
+        ],
     }
     peers = [{
         "agent_id": "MO-01",
@@ -660,6 +663,9 @@ def test_r2_prompt_distinguishes_not_documented_from_clinically_absent(monkeypat
             "preferred_educational_option": "Option A remains conditional on confirmation of prerequisite X.",
             "disagreement_notes": [],
             "unknowns": ["Prerequisite X status is unknown."],
+            "case_data_integrity_flags": [
+                "R1_PEER_SENTINEL: unsupported N0 was flagged against the case snapshot."
+            ],
         },
     }]
 
@@ -672,5 +678,9 @@ def test_r2_prompt_distinguishes_not_documented_from_clinically_absent(monkeypat
     assert "not present in the supplied record" in prompt
     assert "Do not paraphrase it as the peer claiming" in prompt
     assert "clinically absent, negative, failed, or unmet" in prompt
+    assert "case_integrity_audit_flags" in prompt
+    assert "R1_OWN_SENTINEL: unsupported T1" in prompt
+    assert "R1_PEER_SENTINEL: unsupported N0" in prompt
+    assert "do not infer the opposite" in prompt
     assert result.position == "insufficient_information"
     assert result.integrity_repair_status in {"not_needed", "completed"}

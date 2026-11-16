@@ -102,6 +102,17 @@ def _select_peer_views(
     return selected
 
 
+def _attach_r1_case_integrity_flags(peer_views: list[dict], round1_by_id: dict[str, dict]) -> list[dict]:
+    """Carry server R1 audit warnings beside each selected R2 peer, without mutating saved rows."""
+    for peer in peer_views:
+        assessment = round1_by_id.get(peer.get("agent_id"), {})
+        flags = assessment.get("case_data_integrity_flags") if isinstance(assessment, dict) else []
+        peer["round1_case_integrity_flags"] = [
+            item for item in flags if isinstance(item, str) and item.strip()
+        ] if isinstance(flags, (list, tuple)) else []
+    return peer_views
+
+
 async def _with_one_schema_retry(callable_, *args, retry_max_tokens: int):
     try:
         return await callable_(*args)
@@ -205,6 +216,7 @@ async def run_mdt_round(run_id: str, round_number: int) -> None:
                                 )
                             else:
                                 peer_views = _select_peer_views(profile, round2_rows, "result", max_total=5)
+                                peer_views = _attach_r1_case_integrity_flags(peer_views, round1_by_id)
                                 result = await _with_one_schema_retry(
                                     generate_adversarial_contribution,
                                     profile,
