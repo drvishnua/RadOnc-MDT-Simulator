@@ -430,13 +430,13 @@ async function verifyFourRoundDashboard() {
   // Assert the separate GitHub development-process panel without using the
   // clinical Mission Control card selectors or exposing clinical run content.
   await waitForExpression(
-    "(() => { const panel = document.querySelector('section[aria-label=\\\"Development Monitor\\\"]'); return !!panel && panel.querySelector('a[href*=\\\"/pull/1\\\"]') && panel.querySelectorAll('.development-run-card').length >= 2; })()",
+    "(() => { const panel = [...document.querySelectorAll('section')].find(node => node.getAttribute('aria-label') === 'Development Monitor'); return !!panel && [...panel.querySelectorAll('a')].some(node => (node.href || '').endsWith('/pull/1')) && panel.querySelectorAll('.development-run-card').length >= 2; })()",
     "the read-only GitHub Development Monitor and PR/workflow telemetry",
     45_000
   );
   const developmentSnapshot = await evaluate(
     "(() => {" +
-      "const panel = document.querySelector('section[aria-label=\\\"Development Monitor\\\"]');" +
+      "const panel = [...document.querySelectorAll('section')].find(node => node.getAttribute('aria-label') === 'Development Monitor');" +
       "if (!panel) return { found: false };" +
       "const text = panel.innerText || '';" +
       "const shaLink = [...panel.querySelectorAll('a')].find(node => (node.href || '').includes('/commit/'));" +
