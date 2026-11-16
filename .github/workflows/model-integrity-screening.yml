@@ -55,10 +55,10 @@ jobs:
           python-version: "3.11"
 
       - name: Reject unaccepted MedGemma terms before provisioning
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.include_medgemma == true }}
+        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.include_medgemma == true) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[medgemma]') && contains(github.event.head_commit.message, '[hai-def-terms-accepted]')) }}
         shell: powershell
         env:
-          HAI_DEF_TERMS_ACCEPTED: ${{ inputs.hai_def_terms_accepted }}
+          HAI_DEF_TERMS_ACCEPTED: ${{ (github.event_name == 'workflow_dispatch' && inputs.hai_def_terms_accepted == true) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[hai-def-terms-accepted]')) }}
         run: |
           $ErrorActionPreference = "Stop"
           if ($env:HAI_DEF_TERMS_ACCEPTED -ne "true") {
@@ -70,8 +70,8 @@ jobs:
         timeout-minutes: 165
         shell: powershell
         env:
-          MEDGEMMA_REQUESTED: ${{ inputs.include_medgemma }}
-          HAI_DEF_TERMS_ACCEPTED: ${{ inputs.hai_def_terms_accepted }}
+          MEDGEMMA_REQUESTED: ${{ (github.event_name == 'workflow_dispatch' && inputs.include_medgemma == true) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[medgemma]')) }}
+          HAI_DEF_TERMS_ACCEPTED: ${{ (github.event_name == 'workflow_dispatch' && inputs.hai_def_terms_accepted == true) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[hai-def-terms-accepted]')) }}
         run: |
           $ErrorActionPreference = "Stop"
           $artifactDir = Join-Path $env:GITHUB_WORKSPACE "backend\validation_artifacts\model_screening"
@@ -112,7 +112,7 @@ jobs:
               corpus_sha256 = (Get-FileHash -LiteralPath "backend/tests/fixtures/medgemma_model_integrity_screening_v1.json" -Algorithm SHA256).Hash.ToLowerInvariant()
               qwen_status = "NOT_STARTED"
               medgemma_status = "NOT_REQUESTED"
-              medgemma_terms_attested = ($env:GITHUB_EVENT_NAME -eq "workflow_dispatch" -and $env:MEDGEMMA_REQUESTED -eq "true" -and $env:HAI_DEF_TERMS_ACCEPTED -eq "true")
+              medgemma_terms_attested = ($env:MEDGEMMA_REQUESTED -eq "true" -and $env:HAI_DEF_TERMS_ACCEPTED -eq "true")
             }
             ollama = [ordered]@{ version = $null; endpoint = $ollamaUrl; model_records = @{} }
             artifacts = [ordered]@{
@@ -181,7 +181,7 @@ jobs:
             $manifest.execution.qwen_status = "COMPLETED_PENDING_HUMAN_REVIEW"
             Write-Host "MODEL_SCREEN_QWEN_COMPLETED_PENDING_HUMAN_REVIEW"
 
-            $includeMed = ($env:GITHUB_EVENT_NAME -eq "workflow_dispatch" -and $env:MEDGEMMA_REQUESTED -eq "true")
+            $includeMed = ($env:MEDGEMMA_REQUESTED -eq "true")
             if ($includeMed) {
               if ($env:HAI_DEF_TERMS_ACCEPTED -ne "true") { throw "MedGemma requested without HAI-DEF terms acceptance." }
               $medModel = "medgemma1.5:4b-it-q4_K_M"
