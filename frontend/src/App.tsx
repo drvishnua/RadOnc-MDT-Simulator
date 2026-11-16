@@ -1579,7 +1579,10 @@ function App() {
                   <span>Successful current-HEAD workflows</span>
                 </div>
               </div>
-              <div className="mission-run-card" style={{ marginBottom: 12 }}>
+              <div className="development-run-card" style={{
+                marginBottom: 12, padding: 14, border: "1px solid rgba(145, 162, 184, .13)",
+                borderRadius: 10, background: "rgba(9, 20, 34, .34)"
+              }}>
                 <div className="mission-run-header">
                   <div>
                     <strong>{developmentMonitor.pull_request.head_branch}</strong>
@@ -1609,7 +1612,10 @@ function App() {
                     ? (run.conclusion ?? "completed")
                     : run.status.replaceAll("_", " ");
                   return (
-                    <article className="mission-run-card" key={run.id}>
+                    <article className="development-run-card" key={run.id} style={{
+                      padding: 14, border: "1px solid rgba(145, 162, 184, .13)",
+                      borderRadius: 10, background: "rgba(9, 20, 34, .34)"
+                    }}>
                       <div className="mission-run-header">
                         <div>
                           <strong>{run.name}</strong>
