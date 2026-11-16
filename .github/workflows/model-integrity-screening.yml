@@ -1,4 +1,5 @@
 name: Synthetic Model Integrity Screening
+# [model-integrity-screen] Retry Qwen baseline after bare-digest and finalizer corrections; push remains Qwen-only.
 # [model-integrity-screen] Initial Qwen-only 12-case baseline; push dispatch keeps MedGemma disabled.
 
 on:
