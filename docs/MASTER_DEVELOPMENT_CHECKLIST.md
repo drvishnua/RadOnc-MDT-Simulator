@@ -1,4 +1,73 @@
 
+# Current Mission Control checkpoint — 16 November 2026
+
+**Live repository state:** Development branch `feature/four-round-mdt-and-performance`, current application/test commit `7674f35c349bf290bbcce31f5b744176b5c5b25a`. PR #1 remains open, draft and unmerged, targeting `main`. `main` remains `39a356b8eb09399aa2da1b9b9085965999f5105a` and is untouched. The Mission Control implementation and targeted browser assertion are on the development branch only.
+
+## Mission Control phase 1 — VERIFIED
+
+Read-only operational overview implemented:
+- Backend `GET /api/mission-control?limit=12`, bounded to 1–50.
+- Aggregates actual persisted SQLite R1–R4 stage summaries and computes counts from saved role rows.
+- Returns run ID, status/timestamps, immutable case-snapshot SHA-256, progress and role-state counts. It omits raw case text, patient names, generated assessment/round prose and detailed error strings.
+- Missing round rows display `not_started`; no missing agent outputs or completions are fabricated.
+- Failures are separately counted and remain distinguishable from successful completions.
+- Read-only React dashboard panel, manual refresh and five-second polling; existing case workspace, round controls and Chair synthesis paths are unchanged.
+- No autonomous agent framework, model-to-model messaging, LLM calls, DB schema changes or concurrency increases.
+
+## Exact corrected-commit verification — `7674f35`
+
+All six standard PR workflows completed successfully on this exact source SHA:
+- Backend Tests [43901312982](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43901312982): **395 passed, 0 failed, 0 errors, 0 skipped; 1 warning**. Deterministic preflight **7/7 passed**. New Mission Control API tests are included. No inference or clinical accuracy was evaluated by this suite.
+- Frontend Build [43901313184](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43901313184): type-check and production build passed.
+- Browser E2E [43901312963](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43901312963): passed in headless Edge. Log contains `MISSION_CONTROL_BROWSER_E2E_OK`, `FOUR_ROUND_DASHBOARD_BROWSER_E2E_OK` and `PATIENT_REGISTRY_BROWSER_E2E_OK`. The seeded run appeared in the Mission Control panel with **R1 45/45, R2 45/45, R3 45/45 and Chair R4 1/1**, and displayed the case snapshot hash prefix. Existing registry and saved Chair-report rendering checks also passed. No model inference was invoked.
+- Packaging prerequisites [43901312883](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43901312883): success.
+- Windows Installer Build [43901312862](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43901312862): installer build, install, smoke test, checksum and upload succeeded. Optional clean-hosted Ollama/model bootstrap was **skipped**.
+- Security and Dependency Audit [43901312877](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43901312877): secret scan, dependency checks, Python and JavaScript/TypeScript CodeQL all succeeded.
+
+## Corrected-test failure history — retained
+
+- Initial direct Mission Control E2E attempt on `3caee960deacb28040c27e03dd186811a72ec195` failed because the new browser assertion double-serialized the seeded run ID. The browser test code was corrected in `7674f35c349bf290bbcce31f5b744176b5c5b25a`.
+- The corrected browser E2E on `7674f35` passed with the explicit Mission Control success marker and four-round role counts above. The historical failed run [43900803448](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43900803448) remains recorded; it is not represented as a successful run.
+
+## Verification boundary and next phase
+
+Mission Control phase 1 is **VERIFIED** for the bounded read-only summary and seeded browser-rendering scope. This does not establish live model reliability, clinical safety, guideline concordance, RTX 4060 inference, or release acceptance. The new dashboard has not been validated against a live Ollama 45-role simulation. No local laptop sync or runtime reload is claimed.
+
+**Next planned phase 2:** per-role operational drill-down from persisted records (R1–R4), showing role ID/name/category, queued/running/completed/failed state, persisted timing, and clear not-started states. This should use a separate minimal read-only endpoint and avoid returning case text, model prose or raw error messages. Add tests for all four rounds and role failure/missing states before UI expansion. Phase 2 is **NOT STARTED**. No orchestration changes are authorised or implied.
+
+## Master Checklist — current statuses
+
+| Workstream | Status | Current evidence / limitation |
+|---|---|---|
+| R1–R4 architecture and data flow | IN PROGRESS | Four-round structure exists; representative full live acceptance remains outstanding |
+| Clinical safety and staging integrity | IN PROGRESS | Historical unsupported TNM and integrity findings remain open |
+| Case integrity and audit history | VERIFIED | Historical DB integrity check only; full-run quality acceptance failed |
+| Provenance and evidence retrieval | IN PROGRESS | Provenance issues and guideline retrieval remain unresolved |
+| Chair consensus, dissent and traceability | IN PROGRESS | Historical run #9 failed integrity gate; current live 45-role reconciliation unverified |
+| Missing/failed-agent handling | IN PROGRESS | Deterministic paths covered in tests; current complete live simulation outstanding |
+| Backend tests | VERIFIED | 395 passed, 0 failed on 7674f35; preflight 7/7 |
+| Frontend and dashboard build | VERIFIED | Exact-commit frontend build passed on 7674f35 |
+| Browser E2E | VERIFIED | Exact-commit headless Edge run 43901312963; direct Mission Control marker and 45/45/45/1 verified |
+| API validation | IN PROGRESS | Mission Control endpoint regressions passed; full API/live surface not fully verified |
+| Ollama context handling | VERIFIED | 6,144/8,192 allocation probe only; no proof of full R3 truncation resolution |
+| Ollama performance and concurrency | IN PROGRESS | Concurrency 1 retained; repeatable comparative metrics incomplete |
+| RTX 4060 request-time GPU verification | NOT STARTED | No current measured inference-time GPU/offload proof |
+| Hosted bounded R2/R3/R4 validation | FAILED | Run 43866946205 failed at combined bootstrap/live-validation step |
+| Historical full 45-role acceptance | FAILED | Audit-only validation found 343 integrity entries |
+| Qwen 12-case synthetic screens | VERIFIED | Execution/digest verification only; human review pending, no quality/clinical pass |
+| MedGemma HAI-DEF acceptance statement | VERIFIED | User confirmation recorded; not independent legal advice |
+| MedGemma workflow dispatch | BLOCKED | No connected dispatch/write capability for workflow_dispatch |
+| MedGemma pull and inference | BLOCKED | Dispatch not performed |
+| Independent qualified clinical review | NOT STARTED | No formal qualified review artefact |
+| Guideline retrieval and verification | NOT STARTED | No validated source-retrieval corpus |
+| Packaging and security CI | VERIFIED | Installer, prerequisites, secret scan, dependencies and both CodeQL jobs passed on 7674f35 |
+| Mission Control phase 1 | VERIFIED | Read-only persisted summaries; six exact-commit CI workflows succeeded; direct E2E marker passed |
+| Mission Control phase 2 role drill-down | NOT STARTED | Design described; not implemented |
+| Release acceptance | BLOCKED | Clinical, live-model, GPU and evidence gates remain outstanding |
+
+---
+
+
 ## Mission Control phase-1 verification checkpoint — 16 November 2026
 
 **Implementation commit:** `b063c52d7168194eb884d01b91dc1031fabb4e88` on the development branch added `GET /api/mission-control?limit=12`, deterministic persisted R1–R4 stage summaries, a read-only UI with five-second refresh, three backend regressions, and this checklist's phase-1 scope. No LLM calls, autonomous orchestration, schema changes, or concurrency changes were introduced.
