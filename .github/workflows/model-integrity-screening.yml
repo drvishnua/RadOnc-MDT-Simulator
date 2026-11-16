@@ -136,9 +136,9 @@ jobs:
             if ($preExisting) { throw "Pre-existing Ollama executable found at $preExisting; clean provisioning cannot be asserted." }
 
             Write-Host "MODEL_SCREEN_OLLAMA_PROVISION_STARTED"
+            $ollamaStarted = $true
             $actualUrl = Ensure-RadOncAIEngine -DataDirectory $dataDirectory -LogDirectory $logDirectory
             if ($actualUrl -ne $ollamaUrl) { throw "Expected isolated Ollama at $ollamaUrl; got $actualUrl." }
-            $ollamaStarted = $true
             $version = Invoke-RestMethod -Uri "$ollamaUrl/api/version" -TimeoutSec 10
             if ($version.version -ne $RadOncOllamaVersion) { throw "Unexpected Ollama version: $($version.version)" }
             $manifest.ollama.version = [string]$version.version
