@@ -99,6 +99,12 @@ def test_model_registry_normalizes_bare_and_prefixed_full_sha256_digests(reporte
             {"name": "medgemma1.5:4b-it-q4_K_M", "digest": "sha256:" + ("b" * 64)},
             {"name": "medgemma1.5:4b-it-q4_K_M", "digest": "sha256:" + ("c" * 64)},
         ],
+        [
+            {"name": "medgemma1.5:4b-it-q4_K_M", "digest": "sha256:" + ("g" * 64)},
+        ],
+        [
+            {"name": "medgemma1.5:4b-it-q4_K_M", "digest": " " + ("a" * 64)},
+        ],
     ],
 )
 def test_model_registry_rejects_missing_short_or_ambiguous_records(models):
