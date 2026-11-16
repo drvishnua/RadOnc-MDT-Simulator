@@ -38,10 +38,10 @@ def test_prompt_does_not_leak_expected_behaviour_or_critical_failure_labels():
 def test_round_specific_prompt_instructions_are_present():
     corpus, _ = load_corpus()
     prompts = {case["round"]: build_case_prompt(case) for case in corpus["cases"]}
-    assert "do not infer an absent stage" in prompts["R1"].casefold()
-    assert "same substantive proposition" in prompts["R2"]
-    assert "exact supplied source text" in prompts["R3"]
-    assert "Do not invent missing agents" in prompts["R4"]
+    assert "independent role-level reading" in prompts["R1"]
+    assert "positions relate to one another" in prompts["R2"]
+    assert "critical audit of source-linked statements" in prompts["R3"]
+    assert "closing board record" in prompts["R4"]
 
 
 def test_generate_payload_pins_identical_deterministic_options():

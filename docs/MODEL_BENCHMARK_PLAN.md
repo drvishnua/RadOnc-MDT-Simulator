@@ -261,3 +261,5 @@ No model has been installed, changed, selected or benchmarked by this plan. The 
 - Failure 1: R4 round instruction repeated the expected-behaviour fixture wording verbatim, so the no-oracle-leak regression correctly rejected it. The instruction was rewritten to state the round task without reproducing the case oracle.
 - Failure 2: the R1 round-task test used a case-sensitive substring despite the prompt correctly capitalising the sentence. The assertion now compares case-folded text.
 - This is a test/prompt-fixture correction, not evidence of any MedGemma or Qwen behaviour. The failed run remains visible; the corrected exact-head CI must pass before this harness is marked verified.
+
+- Follow-up CI on `9280e52` left **one failure** (346 passed, 1 failed): the round-instruction test still asserted the deliberately removed old R1 task phrase. The test now asserts the new neutral R1/R2/R3/R4 instructions; this does not affect model output or clinical scoring.

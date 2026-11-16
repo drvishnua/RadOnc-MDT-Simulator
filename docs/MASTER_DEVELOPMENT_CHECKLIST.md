@@ -662,3 +662,10 @@ Google's MedGemma model card states that the model has not been evaluated or opt
 |---|---|---|
 | Commit `5b7f7e653478ef276b83f7d4970782b3309b4b04` backend workflow `43777495870` | FAILED | 345 passed, 2 failed, 0 errors, 0 skipped; deterministic preflight 6/6 passed. The two failed tests are described in `docs/MODEL_BENCHMARK_PLAN.md`. No live model calls occurred. |
 | Corrective commit | IN PROGRESS | Remove case-oracle phrase from the R4 task instruction and case-fold the R1 prompt assertion; exact-head CI re-run required. |
+
+### MedGemma screening harness second CI attempt — corrective record
+
+| Evidence | Status | Detail |
+|---|---|---|
+| Commit `9280e52687db054c15f634b27ea35eb2919577f7` backend workflow `43777711230` | FAILED | 346 passed, 1 failed, 0 errors, 0 skipped; deterministic preflight 6/6 passed. The remaining test asserted the old R1 instruction after the prompt had been changed to remove answer-key leakage. |
+| Corrective commit | IN PROGRESS | Update the round-instruction regression assertions to match the new neutral R1–R4 task descriptions; exact-head CI re-run required. |
