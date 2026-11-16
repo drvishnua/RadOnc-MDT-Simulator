@@ -3,8 +3,10 @@
 This is a synthetic software integration check, not a clinical accuracy assessment.
 Three role fixtures and actual generated R2/R3 outputs are saved and reloaded from an
 isolated temporary SQLite database for Chair synthesis; one R1 fixture deliberately seeds an
-unsupported TNM claim with a separate audit flag to verify cross-round warning handling. No full
-45-role MDT is run; the seeded output check is lexical and is not clinical validation.
+unsupported TNM claim with a separate audit flag to verify cross-round warning handling.
+The seeded retry also verifies later rounds do not repeat literal flagged TNM values and that
+server-authored quarantine metadata is excluded from the model-prose screen. No full 45-role MDT
+is run; the seeded output check is lexical and is not clinical validation.
 """
 
 from __future__ import annotations
