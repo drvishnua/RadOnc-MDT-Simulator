@@ -426,6 +426,46 @@ async function verifyFourRoundDashboard() {
   }
   console.log("MISSION_CONTROL_ROLE_DRILLDOWN_E2E_OK");
   console.log("Verified in headless Edge: R2 exposes 45 persisted metadata-only role states; R4 exposes only the completed SG-07 Chair.");
+
+  // Assert the separate GitHub development-process panel without using the
+  // clinical Mission Control card selectors or exposing clinical run content.
+  await waitForExpression(
+    "(() => { const panel = document.querySelector('section[aria-label=\\\"Development Monitor\\\"]'); return !!panel && panel.querySelector('a[href*=\\\"/pull/1\\\"]') && panel.querySelectorAll('.development-run-card').length >= 2; })()",
+    "the read-only GitHub Development Monitor and PR/workflow telemetry",
+    45_000
+  );
+  const developmentSnapshot = await evaluate(
+    "(() => {" +
+      "const panel = document.querySelector('section[aria-label=\\\"Development Monitor\\\"]');" +
+      "if (!panel) return { found: false };" +
+      "const text = panel.innerText || '';" +
+      "const shaLink = [...panel.querySelectorAll('a')].find(node => (node.href || '').includes('/commit/'));" +
+      "const workflowLinks = [...panel.querySelectorAll('a')].filter(node => (node.href || '').includes('/actions/runs/'));" +
+      "return {" +
+        "found: true," +
+        "hasPr: [...panel.querySelectorAll('a')].some(node => (node.href || '').endsWith('/pull/1'))," +
+        "hasBranch: text.includes('feature/four-round-mdt-and-performance')," +
+        "headSha: shaLink?.textContent?.trim() || ''," +
+        "workflowCards: panel.querySelectorAll('.development-run-card').length - (shaLink ? 1 : 0)," +
+        "workflowLinks: workflowLinks.length," +
+        "hasUnavailableError: !!panel.querySelector('[role=alert]')" +
+      "};" +
+    "})()"
+  );
+  if (
+    !developmentSnapshot.found ||
+    !developmentSnapshot.hasPr ||
+    !developmentSnapshot.hasBranch ||
+    !/^[0-9a-f]{12}$/i.test(developmentSnapshot.headSha) ||
+    developmentSnapshot.workflowCards < 2 ||
+    developmentSnapshot.workflowLinks < 1 ||
+    developmentSnapshot.hasUnavailableError
+  ) {
+    throw new Error("Development Monitor did not render verified GitHub branch/PR/workflow metadata: " + JSON.stringify(developmentSnapshot));
+  }
+  console.log("DEVELOPMENT_MONITOR_BROWSER_E2E_OK");
+  console.log("Verified in headless Edge: PR #1, development branch, current HEAD SHA and linked GitHub Actions runs are visible without clinical case content.");
+
   await waitForExpression(
     "document.body.innerText.includes('Four-round MDT workflow')",
     "the four-round workflow panel"
