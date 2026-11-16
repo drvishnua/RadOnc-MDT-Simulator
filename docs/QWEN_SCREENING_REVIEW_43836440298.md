@@ -60,7 +60,7 @@ SHA-256 of each exact UTF-8 `response_raw` JSON envelope:
 | R4-MISSING-AGENT-011 | `65376bd6198c4d25af89634128b5a9117e8a358daf5f981971fe0b9db9d379e1` |
 | R4-CHAIR-TRACEABILITY-012 | `bcce28e8de21ee358a077eca5c67e252a1927154638d0cc958c2d9aa0d342bfa` |
 
-JSONL SHA-256: `4d9c6c59774ecfd0b4be33b2bcb` (recomputed from the downloaded artifact before final write; use artifact as immutable source of truth).
+JSONL SHA-256: `4d9c6c59774ecfdc0bb2217fcc91aa36dba6f3c39b43703a4f00402ab830ee3c`.
 
 ## Decision
 
