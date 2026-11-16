@@ -61,7 +61,8 @@ def test_lesion_measurement_does_not_establish_t_stage():
     context = build_case_prompt_context(_case())
     rules = " ".join(context["interpretation_rules"]).casefold()
     assert "lesion's size" in rules
-    assert "never convert a 1x1 cm measurement into t1" in rules
+    assert "never infer a t category from lesion size" in rules
+    assert "infer nodal/metastatic status from missing data" in rules
 
 
 def test_attributed_opinion_detector_requires_an_explicit_speaker_and_opinion_verb():

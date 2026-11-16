@@ -79,7 +79,7 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
             "not_reported means unknown/not supplied; it never means confirmed absent or negative.",
             "The case_summary is user-provided free text. Preserve its wording and do not silently normalise shorthand into confirmed structured diagnoses.",
             "Only explicitly provided clinical_t_stage, clinical_n_stage, clinical_m_stage and stage_group fields establish recorded staging.",
-            "A lesion's size or anatomical subsite alone does not establish a T category or stage group; never convert a 1x1 cm measurement into T1 or infer N0/M0.",
+            "A lesion's size or anatomical subsite alone does not establish a T category or stage group; never infer a T category from lesion size or infer nodal/metastatic status from missing data.",
             "Do not infer age, sex, T/N/M stage, stage group, nodal status, metastatic status, performance status, prior treatment, patient goals or comorbidity negatives.",
             "Separate source facts, clinical interpretations, hypotheses/assumptions and unknowns.",
             "If free text and structured fields differ, explicitly flag the discrepancy; do not silently reconcile it.",
