@@ -71,3 +71,11 @@ JSONL SHA-256: `4d9c6c59774ecfdc0bb2217fcc91aa36dba6f3c39b43703a4f00402ab830ee3c
 **GPU:** not measured; hosted CPU-only.  
 **MedGemma:** not run; HAI-DEF terms attestation not supplied.  
 **Next:** verify corrected v4 prompt assertions and all six CI workflows on the current development branch; then consider one further case-locality/robustness screen or proceed to a representative saved 45-role R1–R4 live validation only under the existing quality gates.
+
+
+## Aggregate metrics and subsequent repository verification
+
+- Recomputed from the downloaded immutable JSONL: 6,450 prompt tokens, 1,215 generated tokens, 148.596 seconds summed generation wall time (12.383 seconds mean). JSONL SHA-256: `4d9c6c59774ecfdc0bb2217fcc91aa36dba6f3c39b43703a4f00402ab830ee3c`.
+- The v4 screen ran on trigger/source commit `2dab0d89562a0c1db54fec5563aaf71f8a84a711`. Subsequent commits corrected only prompt-test expectations; the final development-branch tree was re-tested on HEAD `0c3f5293110d8af0fe99066a40b97e099e7dcd82`.
+- All six standard workflows passed on that exact branch HEAD: Backend [43837931365](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43837931365) **377 passed, 0 failed, 0 errors, 0 skipped**, deterministic preflight **7/7 passed**; Frontend [43837931530](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43837931530), Browser E2E [43837931575](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43837931575), Packaging Prerequisites [43837931393](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43837931393), Windows Installer [43837931394](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43837931394), and Security/Dependency/CodeQL [43837931516](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43837931516) all succeeded.
+- This is software CI plus a 12-case synthetic prompt screen. It does not prove full 45-role R1–R4 behaviour, clinical correctness, guideline concordance, zero hallucinations or GPU inference. The current v4 result remains `completed_pending_human_review`; model promotion is not authorised.
