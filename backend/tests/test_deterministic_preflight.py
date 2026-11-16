@@ -38,6 +38,27 @@ def _minimal_repository(root: Path) -> Path:
         "      (github.event_name == 'push' && github.ref == 'refs/heads/feature/four-round-mdt-and-performance' && contains(github.event.head_commit.message, '[hosted-validation]'))\\n",
         encoding="utf-8",
     )
+    (workflows / "model-integrity-screening.yml").write_text(
+        "on:\\n"
+        "  workflow_dispatch:\\n"
+        "  push:\\n"
+        "    branches:\\n"
+        "      - feature/four-round-mdt-and-performance\\n"
+        "if: ${{ github.ref == 'refs/heads/feature/four-round-mdt-and-performance' && contains(github.event.head_commit.message, '[model-integrity-screen]') }}\\n"
+        "runs-on: windows-latest\\n"
+        "cancel-in-progress: false\\n"
+        'RADONC_AGENT_CONCURRENCY: "1"\\n'
+        'RADONC_VALIDATION_CPU_ONLY: "1"\\n'
+        "timeout-minutes: 180\\n"
+        "inputs.include_medgemma == true\\n"
+        "inputs.hai_def_terms_accepted\\n"
+        "HAI_DEF_TERMS_ACCEPTED\\n"
+        "if ($includeMed)\\n"
+        "MODEL_SCREEN_MEDGEMMA_PULL_STARTED\\n"
+        "backend/scripts/run_medgemma_screening.py\\n"
+        "if: always()\\n",
+        encoding="utf-8",
+    )
     (workflows / "hosted-cpu-four-round-validation.yml").write_text(
         'RADONC_AGENT_CONCURRENCY: "1"\n'
         'RADONC_VALIDATION_CPU_ONLY: "1"\n'
@@ -52,7 +73,7 @@ def test_preflight_passes_minimal_valid_repository_without_model_inference(tmp_p
 
     report = preflight.run_preflight(backend)
 
-    assert report["summary"] == {"status": "passed", "passed": 6, "failed": 0, "inconclusive": 0}
+    assert report["summary"] == {"status": "passed", "passed": 7, "failed": 0, "inconclusive": 0}
     assert report["scope"]["model_inference_performed"] is False
     assert report["scope"]["ollama_started"] is False
     assert report["scope"]["mdt_run_created"] is False
@@ -156,3 +177,17 @@ def test_preflight_accepts_only_dispatch_or_marker_qualified_development_branch_
     broad = preflight.run_preflight(backend)
     broad_guard = next(item for item in broad["results"] if item["check_id"] == "WORKFLOW_BOOTSTRAP_001")
     assert broad_guard["status"] == "failed"
+
+def test_preflight_detects_missing_model_screening_workflow_guard(tmp_path):
+    backend = _minimal_repository(tmp_path)
+    workflow = tmp_path / ".github" / "workflows" / "model-integrity-screening.yml"
+    workflow.unlink()
+
+    report = preflight.run_preflight(backend)
+    failure = next(item for item in report["results"] if item["check_id"] == "WORKFLOW_MODEL_SCREEN_001")
+
+    assert report["summary"]["status"] == "failed"
+    assert failure["status"] == "failed"
+    assert failure["severity"] == "critical"
+    assert failure["root_cause_category"] == "environment"
+    assert failure["regression_test"] == "tests/test_medgemma_screening_workflow.py"
