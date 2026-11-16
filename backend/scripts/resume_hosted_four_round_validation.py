@@ -132,6 +132,19 @@ def _validate_chair_position_counts(
                 )
 
 
+
+def _round_generation_required(round_summary: dict | None, round_label: str, *, audit_only: bool) -> bool:
+    """Return whether a missing/incomplete round may be generated in this execution mode."""
+    if round_summary and round_summary.get("status") == "completed":
+        return False
+    if audit_only:
+        status = round_summary.get("status") if isinstance(round_summary, dict) else "missing"
+        raise RuntimeError(
+            f"Audit-only mode requires {round_label} to be completed; found status={status!r}. "
+            "Inference is prohibited in audit-only mode."
+        )
+    return True
+
 def _validate_checkpoint(manifest: dict, checkpoint_run_id: str, model_digest: str) -> None:
     source = manifest.get("source") or {}
     resume = manifest.get("resume_checkpoint") or {}
@@ -160,10 +173,18 @@ async def main() -> int:
     current_run_id = os.environ.get("GITHUB_RUN_ID", "").strip()
     current_sha = os.environ.get("GITHUB_SHA", "").strip()
     model_digest = os.environ.get("RADONC_MODEL_DIGEST", "").strip()
+    audit_only = os.environ.get("RADONC_AUDIT_ONLY", "").strip() == "1"
     run_id: str | None = None
+    checkpoint_database_sha256_before: str | None = None
     report: dict = {
-        "validation_type": "resumed_full_four_round_hosted_cpu_synthetic_integration",
+        "validation_type": (
+            "audited_saved_four_round_hosted_cpu_synthetic_integration"
+            if audit_only
+            else "resumed_full_four_round_hosted_cpu_synthetic_integration"
+        ),
         "status": "not_started",
+        "audit_only": audit_only,
+        "inference_performed": False,
         "execution_mode": "github_hosted_cpu_only",
         "gpu_measured": False,
         "clinical_accuracy_evaluated": False,
@@ -196,26 +217,27 @@ async def main() -> int:
         if len(stored_runs) != 1:
             raise RuntimeError(f"Expected one synthetic run in checkpoint; found {len(stored_runs)}.")
 
-        # Update lineage before inference. An interrupted continuation can therefore
-        # upload this new checkpoint and be resumed again without losing completed work.
-        history = list(manifest.get("resume_history") or [])
-        history.append({
-            "workflow_run_id": current_run_id,
-            "commit_sha": current_sha,
-            "started_at": _now(),
-            "previous_checkpoint_run_id": checkpoint_run_id,
-        })
-        manifest["resume_history"] = history
-        manifest["resume_checkpoint"] = {
-            "checkpoint_workflow_run_id": current_run_id,
-            "commit_sha": current_sha,
-            "started_at": _now(),
-            "source_checkpoint_workflow_run_id": checkpoint_run_id,
-        }
-        RESUME_MANIFEST_PATH.write_text(
-            json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
-            encoding="utf-8",
-        )
+        if not audit_only:
+            # Update lineage before inference. An interrupted continuation can therefore
+            # upload this new checkpoint and be resumed again without losing completed work.
+            history = list(manifest.get("resume_history") or [])
+            history.append({
+                "workflow_run_id": current_run_id,
+                "commit_sha": current_sha,
+                "started_at": _now(),
+                "previous_checkpoint_run_id": checkpoint_run_id,
+            })
+            manifest["resume_history"] = history
+            manifest["resume_checkpoint"] = {
+                "checkpoint_workflow_run_id": current_run_id,
+                "commit_sha": current_sha,
+                "started_at": _now(),
+                "source_checkpoint_workflow_run_id": checkpoint_run_id,
+            }
+            RESUME_MANIFEST_PATH.write_text(
+                json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
 
         run_id, patient_id, case_version_id, case_json = stored_runs[0]
         run_id = str(run_id)
@@ -263,9 +285,10 @@ async def main() -> int:
         report["r2_completed_before_resume"] = len(round2)
         report["r3_completed_before_resume"] = len(completed_before)
         report["r3_remaining_before_resume"] = 45 - len(completed_before)
-        report["checkpoint_database_sha256_before_resume"] = _sha256(DB_PATH)
+        checkpoint_database_sha256_before = _sha256(DB_PATH)
+        report["checkpoint_database_sha256_before_resume"] = checkpoint_database_sha256_before
 
-        if round3_summary_before["status"] != "completed":
+        if _round_generation_required(round3_summary_before, "R3", audit_only=audit_only):
             mdt_rounds.prepare_round_resume(run_id, 3)
             ready = run_store.get_round_summary(run_id, 3)
             if ready["completed_count"] != len(completed_before) or ready["failed_count"] or ready["running_count"]:
@@ -292,9 +315,10 @@ async def main() -> int:
         try:
             round4_before = run_store.get_round_summary(run_id, 4)
         except KeyError:
-            run_store.create_round_job(run_id, 4)
             round4_before = None
-        if not round4_before or round4_before["status"] != "completed":
+            if not audit_only:
+                run_store.create_round_job(run_id, 4)
+        if _round_generation_required(round4_before, "Chair R4", audit_only=audit_only):
             if round4_before:
                 mdt_rounds.prepare_round_resume(run_id, 4)
             chair_started = time.perf_counter()
@@ -373,13 +397,26 @@ async def main() -> int:
         report["total_wall_seconds"] = round(time.perf_counter() - started, 2)
         if DB_PATH.is_file():
             report["sqlite_database_sha256"] = _sha256(DB_PATH)
-        try:
-            import urllib.request
-            url = os.environ.get("OLLAMA_BASE_URL", "http://127.0.0.1:11435").rstrip("/") + "/api/ps"
-            with urllib.request.urlopen(url, timeout=5) as response:
-                report["model_process_after"] = json.loads(response.read().decode("utf-8"))
-        except Exception as exc:
-            report["model_process_snapshot_error"] = type(exc).__name__
+        if audit_only:
+            report["model_process_after"] = "NOT_CAPTURED_AUDIT_ONLY"
+            database_sha_after = _sha256(DB_PATH) if DB_PATH.is_file() else None
+            report["checkpoint_database_sha256_after_audit"] = database_sha_after
+            report["checkpoint_database_unchanged"] = (
+                checkpoint_database_sha256_before is not None
+                and database_sha_after == checkpoint_database_sha256_before
+            )
+            if not report["checkpoint_database_unchanged"]:
+                report["status"] = "failed_audit_database_mutation"
+                report["error"] = "Audit-only validation changed the restored SQLite database; checkpoint was not preserved byte-for-byte."
+                exit_code = 1
+        else:
+            try:
+                import urllib.request
+                url = os.environ.get("OLLAMA_BASE_URL", "http://127.0.0.1:11435").rstrip("/") + "/api/ps"
+                with urllib.request.urlopen(url, timeout=5) as response:
+                    report["model_process_after"] = json.loads(response.read().decode("utf-8"))
+            except Exception as exc:
+                report["model_process_snapshot_error"] = type(exc).__name__
         REPORT_PATH.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         print(f"RESUME_VALIDATION_ARTIFACT={REPORT_PATH}")
         print(f"RESUME_VALIDATION_STATUS={report.get('status')}")
