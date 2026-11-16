@@ -47,11 +47,66 @@ from app.services.case_integrity import (
     is_empty_challenge_placeholder,
 )
 from app.services import run_store
+from app.services.mdt_rounds import _attach_r1_case_integrity_flags
 
 ARTIFACT_DIR = BACKEND_DIR / "validation_artifacts"
 ARTIFACT_PATH = Path(os.environ.get("RADONC_MODEL_VALIDATION_ARTIFACT_PATH", str(ARTIFACT_DIR / "representative_model_provenance_validation.json"))).expanduser()
 ROLE_IDS = ("RO-01", "SO-02", "MO-01")
+SEEDED_CASE_INTEGRITY_ROLE_ID = "RO-01"
+SEEDED_CASE_INTEGRITY_CLAIM = "cT1N0M0"
+SEEDED_CASE_INTEGRITY_RAW_STATEMENT = "The clinical stage is cT1N0M0."
+SEEDED_CASE_INTEGRITY_FLAG = (
+    "CASE_INTEGRITY_SEED_RO01: R1 states cT1N0M0, but the case supplies no T/N/M stage. "
+    "This claim is unsupported/unverified; do not infer any alternative stage."
+)
+WHOLE_MDT_POSITIVE_CONTROL_CLAIM = "The entire 45-role MDT agrees with this conclusion"
 MAX_SECONDS_PER_GENERATION = GENERATION_REQUEST_TIMEOUT_SECONDS + 60.0
+
+_STAGE_MENTION_PATTERN = re.compile(
+    r"\b(?:(?:yc|yp|c|p))?T(?:is|[0-4x])(?:N(?:[0-3x]))?(?:M(?:[01x]))?\b"
+    r"|\bN[0-3x]\b|\bM[01x]\b"
+    r"|\b(?:clinical\s+)?stage\s+(?:0|I{1,3}|IV|[1-4]|X)\b",
+    re.IGNORECASE,
+)
+_STAGE_UNCERTAINTY_PATTERN = re.compile(
+    r"\b(?:unverified|unsupported|not supported|not established|not supplied|"
+    r"not documented|not reported|not provided|not confirmed|not verified|unknown|"
+    r"does not establish|doesn't establish|does not prove|cannot establish|"
+    r"cannot be established|cannot infer|cannot be inferred|do not infer|"
+    r"must not be inferred|quarantin\w*|not a clinical fact|not a finding|"
+    r"not substantiated|not demonstrated|insufficient information|insufficient data|"
+    r"not enough information|not enough data|audit warning|flagged as unsupported|"
+    r"remains unclear)\b",
+    re.IGNORECASE,
+)
+
+
+def _iter_text_leaves(value: object, path: str = "$"):
+    """Yield text leaves with stable paths for narrowly scoped output checks."""
+    if isinstance(value, str):
+        yield path, value
+    elif isinstance(value, dict):
+        for key, child in value.items():
+            yield from _iter_text_leaves(child, f"{path}.{key}")
+    elif isinstance(value, (list, tuple)):
+        for index, child in enumerate(value):
+            yield from _iter_text_leaves(child, f"{path}[{index}]")
+
+
+def _unqualified_stage_assertions(value: object, path: str = "$") -> list[dict]:
+    """Find unqualified TNM/stage mentions; this lexical gate is narrow, not a clinical proof."""
+    findings: list[dict] = []
+    for text_path, text_value in _iter_text_leaves(value, path):
+        sentences = re.split(r"(?<=[.!?])\s+|\r?\n+", text_value)
+        for sentence in sentences:
+            candidate = sentence.strip()
+            if (
+                candidate
+                and _STAGE_MENTION_PATTERN.search(candidate)
+                and not _STAGE_UNCERTAINTY_PATTERN.search(candidate)
+            ):
+                findings.append({"path": text_path, "text": candidate[:600]})
+    return findings
 
 
 EXPLICIT_REBUTTAL_MARKERS = (
@@ -219,9 +274,13 @@ def _build_case() -> SyntheticCase:
     )
 
 
-def _r1_fixture(role_id: str) -> dict:
-    """Explicit non-model fixture: no stage, fitness, or treatment facts are asserted."""
-    return {
+def _r1_fixture(
+    role_id: str,
+    *,
+    include_seeded_case_integrity_flag: bool = True,
+) -> dict:
+    """Build an explicit R1 fixture, optionally seeding one separately flagged audit-test claim."""
+    fixture = {
         "position": "insufficient_information",
         "provisional_conclusion": (
             "The supplied fictional record does not establish clinical stage, "
@@ -240,6 +299,34 @@ def _r1_fixture(role_id: str) -> dict:
         "not_a_treatment_instruction": True,
         "fixture_id": f"R1-FIXTURE:{role_id}",
     }
+    if role_id == SEEDED_CASE_INTEGRITY_ROLE_ID and include_seeded_case_integrity_flag:
+        # Deliberately seed one unsupported narrative assertion while preserving a
+        # separate audit-warning field. The case snapshot above still leaves TNM unknown.
+        fixture["disagreement_notes"] = [SEEDED_CASE_INTEGRITY_RAW_STATEMENT]
+        fixture["case_data_integrity_flags"] = [SEEDED_CASE_INTEGRITY_FLAG]
+    return fixture
+
+
+def _build_r3_peer_views(
+    roles: list[dict],
+    own_role_id: str,
+    r2_by_id: dict[str, dict],
+) -> list[dict]:
+    """Build R3 peer inputs and attach each peer's R1 audit warnings by role ID."""
+    peer_views = [
+        {
+            "agent_id": peer["agent_id"],
+            "agent_name": peer["name"],
+            "result": r2_by_id[peer["agent_id"]],
+        }
+        for peer in roles
+        if peer["agent_id"] != own_role_id
+    ]
+    round1_by_id = {
+        role["agent_id"]: _r1_fixture(role["agent_id"])
+        for role in roles
+    }
+    return _attach_r1_case_integrity_flags(peer_views, round1_by_id)
 
 
 def _role_rows():
@@ -540,7 +627,25 @@ async def main() -> int:
         "persisted_patient_record": False,
         "rounds_attempted": [],
         "rounds_completed": [],
-        "r1_inputs": "Deterministic non-model fixture records; not presented as model assessments.",
+        "r1_inputs": (
+            "Deterministic non-model fixture records; not presented as model assessments. "
+            "RO-01 contains one deliberately seeded unsupported cT1N0M0 narrative assertion "
+            "with a separate server audit warning; the synthetic case snapshot supplies no TNM stage."
+        ),
+        "seeded_case_integrity_audit_test": {
+            "status": "pending",
+            "seeded_role_id": SEEDED_CASE_INTEGRITY_ROLE_ID,
+            "raw_r1_statement": SEEDED_CASE_INTEGRITY_RAW_STATEMENT,
+            "server_audit_flag": SEEDED_CASE_INTEGRITY_FLAG,
+            "case_snapshot_tnm_supplied": False,
+            "expected_handling": (
+                "Treat the statement as unverified/quarantined; do not repeat it as a fact "
+                "or infer a different T, N, or M finding."
+            ),
+            "round2_warning_context_by_role": {},
+            "round3_warning_context_by_role": {},
+            "model_output_review": {"status": "pending", "unqualified_stage_assertions": []},
+        },
         "r4_validation_mode": "Bounded three-role Chair synthesis; not the production 45-role R4 orchestration.",
         "r4_executed": False,
         "started_at": datetime.now(timezone.utc).isoformat(),
@@ -579,21 +684,41 @@ async def main() -> int:
         # Round 2: each of the three roles sees the other two R1 fixture records.
         payload["rounds_attempted"].append("R2")
         r2_by_id = {}
+        r1_by_id = {role["agent_id"]: _r1_fixture(role["agent_id"]) for role in roles}
         for role in roles:
             role_id = role["agent_id"]
+            own_r1 = r1_by_id[role_id]
             peers = [
                 {
                     "agent_id": peer["agent_id"],
                     "agent_name": peer["name"],
-                    "assessment": _r1_fixture(peer["agent_id"]),
+                    "assessment": r1_by_id[peer["agent_id"]],
                 }
                 for peer in roles
                 if peer["agent_id"] != role_id
             ]
+            has_seeded_flag = (
+                SEEDED_CASE_INTEGRITY_FLAG in (own_r1.get("case_data_integrity_flags") or [])
+                or any(
+                    SEEDED_CASE_INTEGRITY_FLAG
+                    in (peer["assessment"].get("case_data_integrity_flags") or [])
+                    for peer in peers
+                )
+            )
+            if not has_seeded_flag:
+                raise RuntimeError(f"R2:{role_id} did not receive the seeded R1 case-integrity flag.")
+            payload["seeded_case_integrity_audit_test"]["round2_warning_context_by_role"][role_id] = {
+                "delivered": True,
+                "delivery": (
+                    "own_R1"
+                    if SEEDED_CASE_INTEGRITY_FLAG in (own_r1.get("case_data_integrity_flags") or [])
+                    else "selected_peer_R1"
+                ),
+            }
             contribution = await _timed_call(
                 f"R2:{role_id}",
-                lambda role=role, role_id=role_id, peers=peers: generate_debate_contribution(
-                    role, case, _r1_fixture(role_id), peers
+                lambda role=role, own_r1=own_r1, peers=peers: generate_debate_contribution(
+                    role, case, own_r1, peers
                 ),
                 payload["generation_metrics"],
             )
@@ -607,21 +732,32 @@ async def main() -> int:
         r3_rows = []
         for role in roles:
             role_id = role["agent_id"]
-            peer_views = [
-                {
-                    "agent_id": peer["agent_id"],
-                    "agent_name": peer["name"],
-                    "result": r2_by_id[peer["agent_id"]],
-                }
-                for peer in roles
-                if peer["agent_id"] != role_id
-            ]
+            own_r1 = r1_by_id[role_id]
+            peer_views = _build_r3_peer_views(roles, role_id, r2_by_id)
+            has_seeded_flag = (
+                SEEDED_CASE_INTEGRITY_FLAG in (own_r1.get("case_data_integrity_flags") or [])
+                or any(
+                    SEEDED_CASE_INTEGRITY_FLAG
+                    in (peer.get("round1_case_integrity_flags") or [])
+                    for peer in peer_views
+                )
+            )
+            if not has_seeded_flag:
+                raise RuntimeError(f"R3:{role_id} did not receive the seeded R1 case-integrity flag.")
+            payload["seeded_case_integrity_audit_test"]["round3_warning_context_by_role"][role_id] = {
+                "delivered": True,
+                "delivery": (
+                    "own_R1"
+                    if SEEDED_CASE_INTEGRITY_FLAG in (own_r1.get("case_data_integrity_flags") or [])
+                    else "selected_peer_R1"
+                ),
+            }
             contribution = await _timed_call(
                 f"R3:{role_id}",
-                lambda role=role, role_id=role_id, peer_views=peer_views: generate_adversarial_contribution(
+                lambda role=role, own_r1=own_r1, peer_views=peer_views: generate_adversarial_contribution(
                     role,
                     case,
-                    _r1_fixture(role_id),
+                    own_r1,
                     r2_by_id[role_id],
                     peer_views,
                 ),
@@ -714,48 +850,34 @@ async def main() -> int:
                             "model_reported_conditions_status": review["model_reported_conditions_status"],
                         })
 
-        # Clean-record negative control: the representative ordinary case deliberately
-        # contains no unsupported whole-MDT assertion or source-opinion distortion.
-        # Empty model sentinels (including source-review fields) must not become challenges.
-        clean_record_challenges = []
-        for row in r3_rows:
-            result = row["result"]
-            for index, challenge in enumerate(result.get("substantive_challenges") or []):
-                if (
-                    isinstance(challenge, str)
-                    and challenge.strip()
-                    and not is_empty_challenge_placeholder(challenge)
-                ):
-                    clean_record_challenges.append({
-                        "role_id": row["agent_id"],
-                        "field": f"substantive_challenges[{index}]",
-                        "text": challenge,
-                    })
-            for index, review in enumerate(result.get("source_opinion_reviews") or []):
-                challenge = review.get("challenge") if isinstance(review, dict) else None
-                if (
-                    isinstance(challenge, str)
-                    and challenge.strip()
-                    and not is_empty_challenge_placeholder(challenge)
-                ):
-                    clean_record_challenges.append({
-                        "role_id": row["agent_id"],
-                        "field": f"source_opinion_reviews[{index}].challenge",
-                        "text": challenge,
-                    })
+        # Negative control: the separate whole-MDT positive-control claim must not leak
+        # into the ordinary three-role R3 outputs. Legitimate source-linked challenges are
+        # allowed; the R1 case-integrity seed is evaluated by its own output gate below.
+        clean_record_claim_leaks = [
+            {
+                "role_id": row["agent_id"],
+                "path": text_path,
+                "text": text_value[:600],
+            }
+            for row in r3_rows
+            for text_path, text_value in _iter_text_leaves(row["result"])
+            if WHOLE_MDT_POSITIVE_CONTROL_CLAIM.casefold() in text_value.casefold()
+        ]
         payload["r3_clean_record_negative_control"] = {
-            "status": "passed" if not clean_record_challenges else "failed",
+            "status": "passed" if not clean_record_claim_leaks else "failed",
             "scope": (
-                "Ordinary three-role R3 sample; no seeded defect is present in its R2 inputs. "
-                "This negative control is separate from and does not replace the seeded positive control."
+                "Checks only that the independent whole-MDT consensus positive-control claim "
+                "does not leak into the main R3 sample. The main sample separately contains "
+                "one seeded R1 case-integrity warning; legitimate source-linked challenges "
+                "are allowed and are not treated as unexpected."
             ),
-            "genuine_challenge_entries": clean_record_challenges,
+            "positive_control_claim_leaks": clean_record_claim_leaks,
         }
-        if clean_record_challenges:
+        if clean_record_claim_leaks:
             failures.append({
                 "round": 3,
-                "type": "r3_clean_record_negative_control_unexpected_challenge",
-                "details": clean_record_challenges,
+                "type": "r3_clean_record_negative_control_positive_control_leak",
+                "details": clean_record_claim_leaks,
             })
 
         # Independent R3 positive control: deliberately seed an unsupported whole-MDT
@@ -773,7 +895,7 @@ async def main() -> int:
         )
         roles_by_id = {role["agent_id"]: role for role in roles}
         positive_control_role = roles_by_id["RO-01"]
-        positive_control_claim = "The entire 45-role MDT agrees with this conclusion"
+        positive_control_claim = WHOLE_MDT_POSITIVE_CONTROL_CLAIM
         positive_control_peers = [
             {
                 "agent_id": "SO-02",
@@ -842,7 +964,7 @@ async def main() -> int:
             lambda: generate_adversarial_contribution(
                 positive_control_role,
                 positive_control_case,
-                _r1_fixture("RO-01"),
+                _r1_fixture("RO-01", include_seeded_case_integrity_flag=False),
                 positive_control_own_r2,
                 positive_control_peers,
             ),
@@ -960,6 +1082,39 @@ async def main() -> int:
         payload["r4_executed"] = True
         payload["rounds_completed"].append("R4")
         payload["chair_report"] = chair_report.model_dump()
+
+        # Narrow deterministic review of generated R2/R3/R4 prose: any explicit TNM
+        # or numbered stage mention must be qualified as unknown/unverified/unsupported.
+        # This does not detect every possible hallucination and is not clinical validation.
+        stage_claim_findings = {
+            "R2": _unqualified_stage_assertions(payload["round2"], "$.round2"),
+            "R3": _unqualified_stage_assertions(payload["round3"], "$.round3"),
+            "R4": _unqualified_stage_assertions(payload["chair_report"], "$.chair_report"),
+        }
+        stage_claim_findings = {
+            round_name: findings
+            for round_name, findings in stage_claim_findings.items()
+            if findings
+        }
+        payload["seeded_case_integrity_audit_test"]["model_output_review"] = {
+            "status": "failed" if stage_claim_findings else "passed",
+            "scope": (
+                "Lexical screen of generated R2/R3/R4 text for unqualified TNM tokens or numbered "
+                "stage labels related to the seeded unsupported R1 assertion. It does not prove "
+                "absence of other hallucinations or clinical correctness."
+            ),
+            "unqualified_stage_assertions": stage_claim_findings,
+        }
+        payload["seeded_case_integrity_audit_test"]["status"] = (
+            "failed" if stage_claim_findings else "passed"
+        )
+        if stage_claim_findings:
+            failures.append({
+                "type": "seeded_case_integrity_warning_not_respected",
+                "rounds": sorted(stage_claim_findings),
+                "details": stage_claim_findings,
+            })
+
         r4_failures = []
         if chair_report.consensus_status != "insufficient_information":
             r4_failures.append({

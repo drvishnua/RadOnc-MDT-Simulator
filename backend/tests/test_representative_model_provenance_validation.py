@@ -1,8 +1,13 @@
 """Regression tests for the live R3 positive-control oracle."""
 
 from scripts.representative_model_provenance_validation import (
+    SEEDED_CASE_INTEGRITY_FLAG,
+    SEEDED_CASE_INTEGRITY_RAW_STATEMENT,
+    _build_r3_peer_views,
     _has_expected_source_bound_challenge,
+    _r1_fixture,
     _require_installed_model_record,
+    _unqualified_stage_assertions,
 )
 
 
@@ -200,3 +205,50 @@ def test_validation_artifact_path_guard_rejects_existing_path(tmp_path):
     with pytest.raises(FileExistsError, match="Refusing to overwrite"):
         _assert_artifact_path_is_new(path)
     assert path.read_text(encoding="utf-8") == "{\"original\": true}"
+
+
+
+def test_r1_fixture_seeds_one_unsupported_stage_claim_with_separate_audit_flag():
+    flagged = _r1_fixture("RO-01")
+    assert flagged["disagreement_notes"] == [SEEDED_CASE_INTEGRITY_RAW_STATEMENT]
+    assert flagged["case_data_integrity_flags"] == [SEEDED_CASE_INTEGRITY_FLAG]
+    assert "cT1N0M0" not in flagged["provisional_conclusion"]
+    assert not _r1_fixture("SO-02").get("case_data_integrity_flags")
+    clean = _r1_fixture("RO-01", include_seeded_case_integrity_flag=False)
+    assert not clean.get("case_data_integrity_flags")
+    assert clean["disagreement_notes"] == []
+
+
+def test_r3_peer_builder_attaches_r1_integrity_flags_to_matching_peer_without_mutation():
+    roles = [
+        {"agent_id": "RO-01", "name": "Radiation oncology"},
+        {"agent_id": "SO-02", "name": "Surgical oncology"},
+        {"agent_id": "MO-01", "name": "Medical oncology"},
+    ]
+    r2_by_id = {
+        role["agent_id"]: {"agent_id": role["agent_id"], "position": "insufficient_information"}
+        for role in roles
+    }
+
+    peer_views = _build_r3_peer_views(roles, "SO-02", r2_by_id)
+
+    flagged_peer = next(item for item in peer_views if item["agent_id"] == "RO-01")
+    assert flagged_peer["round1_case_integrity_flags"] == [SEEDED_CASE_INTEGRITY_FLAG]
+    assert next(item for item in peer_views if item["agent_id"] == "MO-01")["round1_case_integrity_flags"] == []
+    assert r2_by_id["RO-01"] == {"agent_id": "RO-01", "position": "insufficient_information"}
+    assert "round1_case_integrity_flags" not in r2_by_id["RO-01"]
+
+
+def test_unqualified_stage_output_guard_fails_closed_but_allows_explicit_quarantine():
+    assert _unqualified_stage_assertions(
+        {"conclusion": "The clinical stage is cT1N0M0."}
+    )
+    assert _unqualified_stage_assertions(
+        {"conclusion": "N0 and M0 are confirmed."}
+    )
+    assert not _unqualified_stage_assertions(
+        {"conclusion": "The cT1N0M0 assertion remains unverified and unsupported."}
+    )
+    assert not _unqualified_stage_assertions(
+        {"conclusion": "The case does not establish T1N0M0; do not infer an alternative stage."}
+    )
