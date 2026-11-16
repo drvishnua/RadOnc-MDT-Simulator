@@ -82,14 +82,28 @@ def require_installed_model_record(tags_payload: dict, model_name: str) -> dict:
         )
     record = matches[0]
     digest = record.get("digest")
-    if not isinstance(digest, str) or re.fullmatch(
-        r"sha256:[0-9a-fA-F]{64}", digest
-    ) is None:
+    if not isinstance(digest, str):
         raise RuntimeError(
             f"Model {model_name!r} does not have a full SHA-256 digest. "
             "Short tag IDs are not accepted; no generation was attempted."
         )
-    return dict(record)
+
+    # Ollama /api/tags has returned full digests both as bare 64-character
+    # hex and as sha256:<hex>, depending on runtime/version. Accept either
+    # representation, but canonicalise to one exact immutable identity before
+    # recording or comparing it. Never accept a shortened registry identifier.
+    digest_hex = digest
+    if digest_hex.lower().startswith("sha256:"):
+        digest_hex = digest_hex[7:]
+    if re.fullmatch(r"[0-9a-fA-F]{64}", digest_hex) is None:
+        raise RuntimeError(
+            f"Model {model_name!r} does not have a full SHA-256 digest. "
+            "Short tag IDs are not accepted; no generation was attempted."
+        )
+
+    canonical_record = dict(record)
+    canonical_record["digest"] = "sha256:" + digest_hex.lower()
+    return canonical_record
 
 
 def round_instruction(round_label: str) -> str:
