@@ -230,7 +230,8 @@ jobs:
                   $ollamaPid = 0
                   if ([int]::TryParse((Get-Content -LiteralPath $pidPath -Raw).Trim(),[ref]$ollamaPid)) {
                     $processInfo = Get-CimInstance Win32_Process -Filter "ProcessId = $ollamaPid" -ErrorAction SilentlyContinue
-                    $managedRoot = [IO.Path]::GetFullPath((Join-Path $localAppData "RadOncMDT\AIEngine\Ollama")) + "\\"
+                    $managedRoot = [IO.Path]::GetFullPath((Join-Path $localAppData "RadOncMDT\AIEngine\Ollama"))
+                    $managedRootPrefix = $managedRoot + [IO.Path]::DirectorySeparatorChar
                     $actualPath = [string]$processInfo.ExecutablePath
                     if ($processInfo -and $actualPath -and [IO.Path]::GetFullPath($actualPath).StartsWith($managedRoot,[StringComparison]::OrdinalIgnoreCase)) {
                       try {
