@@ -233,7 +233,7 @@ jobs:
                     $managedRoot = [IO.Path]::GetFullPath((Join-Path $localAppData "RadOncMDT\AIEngine\Ollama"))
                     $managedRootPrefix = $managedRoot + [IO.Path]::DirectorySeparatorChar
                     $actualPath = [string]$processInfo.ExecutablePath
-                    if ($processInfo -and $actualPath -and [IO.Path]::GetFullPath($actualPath).StartsWith($managedRoot,[StringComparison]::OrdinalIgnoreCase)) {
+                    if ($processInfo -and $actualPath -and [IO.Path]::GetFullPath($actualPath).StartsWith($managedRootPrefix,[StringComparison]::OrdinalIgnoreCase)) {
                       try {
                         Stop-Process -Id $ollamaPid -Force -ErrorAction Stop
                         Write-Host "MODEL_SCREEN_ISOLATED_OLLAMA_STOPPED"
