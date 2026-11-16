@@ -1,0 +1,240 @@
+name: Synthetic Model Integrity Screening
+
+on:
+  workflow_dispatch:
+    inputs:
+      include_medgemma:
+        description: "Also pull and screen MedGemma 1.5 after the Qwen baseline."
+        type: boolean
+        required: true
+        default: false
+      hai_def_terms_accepted:
+        description: "Confirm you reviewed and accepted Google's HAI-DEF Terms of Use and have authority to accept them for any represented entity."
+        type: boolean
+        required: true
+        default: false
+  push:
+    branches:
+      - feature/four-round-mdt-and-performance
+    paths:
+      - ".github/workflows/model-integrity-screening.yml"
+      - "backend/scripts/run_medgemma_screening.py"
+      - "backend/tests/fixtures/medgemma_model_integrity_screening_v1.json"
+      - "backend/tests/test_medgemma_screening_workflow.py"
+      - "packaging/windows/Ensure-RadOnc-AIEngine.ps1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: radonc-synthetic-model-integrity-screening
+  cancel-in-progress: false
+
+jobs:
+  screening:
+    if: ${{ github.ref == 'refs/heads/feature/four-round-mdt-and-performance' && (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[model-integrity-screen]')) }}
+    name: Frozen 12-case screen on isolated hosted CPU
+    runs-on: windows-latest
+    timeout-minutes: 180
+    env:
+      RADONC_AGENT_CONCURRENCY: "1"
+      RADONC_VALIDATION_CPU_ONLY: "1"
+      OLLAMA_HOST: "127.0.0.1:11435"
+
+    steps:
+      - name: Check out the development branch
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+        with:
+          python-version: "3.11"
+
+      - name: Reject unaccepted MedGemma terms before provisioning
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.include_medgemma == true }}
+        shell: powershell
+        env:
+          HAI_DEF_TERMS_ACCEPTED: ${{ inputs.hai_def_terms_accepted }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          if ($env:HAI_DEF_TERMS_ACCEPTED -ne "true") {
+            throw "MedGemma was requested without explicit HAI-DEF terms acceptance. No model was provisioned."
+          }
+          Write-Host "HAI_DEF_TERMS_ACCEPTED=TRUE"
+
+      - name: Provision isolated Ollama and run sequential model screens
+        timeout-minutes: 165
+        shell: powershell
+        env:
+          MEDGEMMA_REQUESTED: ${{ inputs.include_medgemma }}
+          HAI_DEF_TERMS_ACCEPTED: ${{ inputs.hai_def_terms_accepted }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $artifactDir = Join-Path $env:GITHUB_WORKSPACE "backend\validation_artifacts\model_screening"
+          New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null
+          $runId = [string]$env:GITHUB_RUN_ID
+          $manifestPath = Join-Path $artifactDir ("manifest_" + $runId + ".json")
+          $qwenOutput = Join-Path $artifactDir ("qwen35_4b_" + $runId + ".jsonl")
+          $medOutput = Join-Path $artifactDir ("medgemma15_4b_" + $runId + ".jsonl")
+          $localAppData = Join-Path $env:RUNNER_TEMP "RadOnc Model Screening LocalAppData"
+          $dataDirectory = Join-Path $localAppData "RadOncMDT\Data"
+          $logDirectory = Join-Path $localAppData "RadOncMDT\Logs"
+          New-Item -ItemType Directory -Force -Path $dataDirectory,$logDirectory | Out-Null
+          $env:LOCALAPPDATA = $localAppData
+          $env:RADONC_DATA_DIR = $dataDirectory
+          $ollamaUrl = "http://127.0.0.1:11435"
+          $env:OLLAMA_BASE_URL = $ollamaUrl
+          $env:OLLAMA_HOST = "127.0.0.1:11435"
+          $env:OLLAMA_MODELS = Join-Path $localAppData "RadOncMDT\Models"
+          $env:RADONC_AGENT_CONCURRENCY = "1"
+          $env:RADONC_VALIDATION_CPU_ONLY = "1"
+
+          $manifest = [ordered]@{
+            schema_version = 1
+            validation_type = "synthetic_model_integrity_screen"
+            source = [ordered]@{
+              repository = $env:GITHUB_REPOSITORY
+              ref = $env:GITHUB_REF
+              commit_sha = $env:GITHUB_SHA
+              workflow_run_id = $runId
+              workflow_run_attempt = $env:GITHUB_RUN_ATTEMPT
+              workflow_url = "https://github.com/$($env:GITHUB_REPOSITORY)/actions/runs/$runId"
+            }
+            execution = [ordered]@{
+              mode = "github_hosted_windows_cpu_only"
+              gpu_measurement = "NOT_PERFORMED"
+              concurrency = 1
+              corpus_path = "backend/tests/fixtures/medgemma_model_integrity_screening_v1.json"
+              corpus_sha256 = (Get-FileHash -LiteralPath "backend/tests/fixtures/medgemma_model_integrity_screening_v1.json" -Algorithm SHA256).Hash.ToLowerInvariant()
+              qwen_status = "NOT_STARTED"
+              medgemma_status = "NOT_REQUESTED"
+              medgemma_terms_attested = ($env:GITHUB_EVENT_NAME -eq "workflow_dispatch" -and $env:MEDGEMMA_REQUESTED -eq "true" -and $env:HAI_DEF_TERMS_ACCEPTED -eq "true")
+            }
+            ollama = [ordered]@{ version = $null; endpoint = $ollamaUrl; model_records = @{} }
+            artifacts = [ordered]@{
+              qwen_jsonl = [IO.Path]::GetFileName($qwenOutput)
+              medgemma_jsonl = [IO.Path]::GetFileName($medOutput)
+              manifest_json = [IO.Path]::GetFileName($manifestPath)
+            }
+            limitations = @(
+              "Synthetic software-integrity screen only; not clinical validation.",
+              "No automatic model quality score or promotion decision.",
+              "GitHub-hosted CPU only; no RTX 4060 or GPU inference evidence.",
+              "Complete outputs remain pending independent human review."
+            )
+          }
+          $manifest | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
+
+          $ollamaStarted = $false
+          try {
+            foreach ($port in @(11434,11435)) {
+              $listeners = @(Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction SilentlyContinue)
+              if ($listeners.Count -gt 0) { throw "Port $port is occupied; refusing to reuse or stop any pre-existing process." }
+            }
+            . (Join-Path $env:GITHUB_WORKSPACE "packaging/windows/Ensure-RadOnc-AIEngine.ps1")
+            $preExisting = Find-RadOncOllamaExecutable
+            if ($preExisting) { throw "Pre-existing Ollama executable found at $preExisting; clean provisioning cannot be asserted." }
+
+            Write-Host "MODEL_SCREEN_OLLAMA_PROVISION_STARTED"
+            $actualUrl = Ensure-RadOncAIEngine -DataDirectory $dataDirectory -LogDirectory $logDirectory
+            if ($actualUrl -ne $ollamaUrl) { throw "Expected isolated Ollama at $ollamaUrl; got $actualUrl." }
+            $ollamaStarted = $true
+            $version = Invoke-RestMethod -Uri "$ollamaUrl/api/version" -TimeoutSec 10
+            if ($version.version -ne $RadOncOllamaVersion) { throw "Unexpected Ollama version: $($version.version)" }
+            $manifest.ollama.version = [string]$version.version
+
+            function Get-ExactModelRecord {
+              param([string]$ModelName)
+              $tags = Invoke-RestMethod -Uri "$ollamaUrl/api/tags" -TimeoutSec 20
+              $matches = @($tags.models | Where-Object { ([string]$_.name -eq $ModelName) -or ([string]$_.model -eq $ModelName) })
+              if ($matches.Count -ne 1) { throw "Expected exactly one installed record for $ModelName; found $($matches.Count)." }
+              $record = $matches[0]
+              $digest = [string]$record.digest
+              if ($digest.StartsWith("sha256:",[StringComparison]::OrdinalIgnoreCase)) { $digest = $digest.Substring(7) }
+              if ($digest -notmatch '^[0-9a-fA-F]{64}$') { throw "$ModelName does not have a full SHA-256 digest." }
+              return [ordered]@{
+                name = [string]$record.name
+                model = [string]$record.model
+                digest = ("sha256:" + $digest.ToLowerInvariant())
+                size_bytes = [long]$record.size
+                modified_at = [string]$record.modified_at
+                details = $record.details
+              }
+            }
+
+            $qwenRecord = Get-ExactModelRecord -ModelName "qwen3.5:4b"
+            if ($qwenRecord.size_bytes -le 0) { throw "Qwen model size is missing or invalid." }
+            $manifest.ollama.model_records.qwen = $qwenRecord
+            $manifest.execution.qwen_status = "MODEL_DIGEST_CAPTURED"
+            $manifest | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
+
+            Write-Host "MODEL_SCREEN_QWEN_STARTED digest=$($qwenRecord.digest)"
+            python backend/scripts/run_medgemma_screening.py --model "qwen3.5:4b" --output $qwenOutput --base-url $ollamaUrl
+            if ($LASTEXITCODE -ne 0) {
+              $manifest.execution.qwen_status = "FAILED_OR_INCOMPLETE"
+              throw "Qwen screening failed or was incomplete (exit code $LASTEXITCODE)."
+            }
+            $manifest.execution.qwen_status = "COMPLETED_PENDING_HUMAN_REVIEW"
+            Write-Host "MODEL_SCREEN_QWEN_COMPLETED_PENDING_HUMAN_REVIEW"
+
+            $includeMed = ($env:GITHUB_EVENT_NAME -eq "workflow_dispatch" -and $env:MEDGEMMA_REQUESTED -eq "true")
+            if ($includeMed) {
+              if ($env:HAI_DEF_TERMS_ACCEPTED -ne "true") { throw "MedGemma requested without HAI-DEF terms acceptance." }
+              $medModel = "medgemma1.5:4b-it-q4_K_M"
+              Write-Host "MODEL_SCREEN_MEDGEMMA_PULL_STARTED"
+              $pullBody = @{ name = $medModel; stream = $false } | ConvertTo-Json -Compress
+              $pullResult = Invoke-RestMethod -Uri "$ollamaUrl/api/pull" -Method Post -ContentType "application/json" -Body $pullBody -TimeoutSec 7200
+              if ($pullResult.error) { throw "MedGemma pull failed: $($pullResult.error)" }
+              $medRecord = Get-ExactModelRecord -ModelName $medModel
+              if ($medRecord.size_bytes -le 0) { throw "MedGemma model size is missing or invalid." }
+              $manifest.ollama.model_records.medgemma = $medRecord
+              $manifest.execution.medgemma_status = "MODEL_DIGEST_CAPTURED"
+              $manifest | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
+
+              Write-Host "MODEL_SCREEN_MEDGEMMA_STARTED digest=$($medRecord.digest)"
+              python backend/scripts/run_medgemma_screening.py --model $medModel --output $medOutput --base-url $ollamaUrl
+              if ($LASTEXITCODE -ne 0) {
+                $manifest.execution.medgemma_status = "FAILED_OR_INCOMPLETE"
+                throw "MedGemma screening failed or was incomplete (exit code $LASTEXITCODE)."
+              }
+              $manifest.execution.medgemma_status = "COMPLETED_PENDING_HUMAN_REVIEW"
+              Write-Host "MODEL_SCREEN_MEDGEMMA_COMPLETED_PENDING_HUMAN_REVIEW"
+            } else {
+              $manifest.execution.medgemma_status = "SKIPPED_NOT_REQUESTED"
+            }
+          } catch {
+            $manifest.execution.failure = [ordered]@{ type = $_.Exception.GetType().FullName; message = $_.Exception.Message }
+            throw
+          } finally {
+            $manifest.execution.finished_at_utc = [DateTime]::UtcNow().ToString("o")
+            $manifest | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
+            if (Test-Path -LiteralPath $logDirectory -PathType Container) {
+              Get-ChildItem -LiteralPath $logDirectory -File | Copy-Item -Destination $artifactDir -Force -ErrorAction SilentlyContinue
+            }
+            if ($ollamaStarted) {
+              $pidPath = Join-Path $localAppData "RadOncMDT\AIEngine\ollama-server.pid"
+              if (Test-Path -LiteralPath $pidPath -PathType Leaf) {
+                $ollamaPid = 0
+                if ([int]::TryParse((Get-Content -LiteralPath $pidPath -Raw).Trim(),[ref]$ollamaPid)) {
+                  $processInfo = Get-CimInstance Win32_Process -Filter "ProcessId = $ollamaPid" -ErrorAction SilentlyContinue
+                  $managedRoot = [IO.Path]::GetFullPath((Join-Path $localAppData "RadOncMDT\AIEngine\Ollama")) + "\"
+                  $actualPath = [string]$processInfo.ExecutablePath
+                  if ($processInfo -and $actualPath -and [IO.Path]::GetFullPath($actualPath).StartsWith($managedRoot,[StringComparison]::OrdinalIgnoreCase)) {
+                    Stop-Process -Id $ollamaPid -Force
+                    Write-Host "MODEL_SCREEN_ISOLATED_OLLAMA_STOPPED"
+                  } else {
+                    Write-Warning "Ollama PID could not be verified as the isolated executable; no process was stopped."
+                  }
+                }
+              }
+            }
+          }
+
+      - name: Upload immutable model-screening evidence
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: radonc-synthetic-model-screening-${{ github.run_id }}
+          path: backend/validation_artifacts/model_screening/
+          if-no-files-found: warn
+          retention-days: 30
