@@ -50,10 +50,12 @@ def _minimal_repository(root: Path) -> Path:
         'RADONC_AGENT_CONCURRENCY: "1"\\n'
         'RADONC_VALIDATION_CPU_ONLY: "1"\\n'
         "timeout-minutes: 180\\n"
+        "if: ${{ github.event_name == 'workflow_dispatch' && inputs.include_medgemma == true }}\\n"
         "inputs.include_medgemma == true\\n"
         "inputs.hai_def_terms_accepted\\n"
         "HAI_DEF_TERMS_ACCEPTED\\n"
         "if ($includeMed)\\n"
+        'if ($env:HAI_DEF_TERMS_ACCEPTED -ne "true")\\n'
         "MODEL_SCREEN_MEDGEMMA_PULL_STARTED\\n"
         "backend/scripts/run_medgemma_screening.py\\n"
         "if: always()\\n",
