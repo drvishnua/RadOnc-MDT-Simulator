@@ -304,10 +304,18 @@ Workflow: `.github/workflows/model-integrity-screening.yml`.
 
 ### First marker-triggered Qwen baseline execution — 16 November 2026
 
-- GitHub Actions run: [43782748488](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43782748488).
-- Workflow source commit: `38c65e2bf07b931c71497ef4a38bd655901ff0eb`; application/test code was last exact-head verified on `b69f1243708aa34853fefd5162f2d34ba8a12d56` (355 backend tests, deterministic preflight 7/7, six standard workflows passed). The trigger commit changes only the screening workflow comment/marker.
-- Event: marker-qualified push to `feature/four-round-mdt-and-performance`. Manual MedGemma input was not supplied; the HAI-DEF terms step was skipped. This run is Qwen-only.
-- Runner: ephemeral GitHub-hosted Windows; configured CPU-only, concurrency 1; isolated Ollama loopback endpoint 127.0.0.1:11435.
-- Observed state at the latest inspection: job `Frozen 12-case screen on isolated hosted CPU` remained in progress in its single provisioning/screening step. No full Qwen model digest or JSONL artifact was available for review at that time.
-- Do not infer successful model provisioning, generation, screening completion or quality from a running workflow. The run must complete and its manifest, model digest, all 12 case records, raw responses, metrics and summary must be inspected. A complete runner status is still only `completed_pending_human_review`.
-- No MedGemma model was requested or pulled. No GPU measurement was performed or implied.
+- GitHub Actions run: [43782748488](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43782748488); source commit `38c65e2bf07b931c71497ef4a38bd655901ff0eb`.
+- The ephemeral hosted Windows runner successfully installed pinned Ollama `0.40.14`, started isolated endpoint `127.0.0.1:11435`, pulled `qwen3.5:4b`, and captured full digest `sha256:d8b0f5e9760cd1682034f292d7ef72ec46f432149be0df7574bf2d6e92e38c04`.
+- **Run conclusion: FAILED before inference; 0/12 generations.** The runner's separate `/api/tags` response provided the full digest as bare 64-hex, while its validator incorrectly required the `sha256:` prefix. The digest is complete and matches the workflow manifest after canonicalization; no model response was generated.
+- Artifact [14189605356](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43782748488/artifacts/14189605356) preserves the manifest and JSONL preflight error. Do not score or clinically review this as a Qwen response set.
+- Workflow finalization also exposed a PowerShell `[DateTime]::UtcNow()` method-call error, which interrupted the final manifest write and explicit cleanup. This separate workflow defect has also been corrected.
+- MedGemma was not requested; the HAI-DEF terms step was skipped. No GPU measurements were performed.
+
+### Qwen runner digest and workflow-finalizer correction — 16 November 2026
+
+- Corrected application/test head: `9b9d3d3b8c3b32c075c003385f253ec6986c707f`.
+- The runner accepts either bare full SHA-256 or `sha256:<hex>`, validates 64 hexadecimal characters and canonicalizes the value before every model identity comparison. Short or malformed identifiers remain rejected.
+- The full mocked 12-case runner test now returns a bare digest from its simulated Ollama `/api/tags` endpoint, and verifies canonical digest equality for all 12 pre/post-generation records.
+- Additional tests cover prefixed/bare and uppercase digest forms, malformed/short values, UTC finalization and safe isolated-process cleanup.
+- Backend [43783537385](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43783537385): **362 passed, 0 failed, 0 errors, 0 skipped**, 1 warning; deterministic preflight **7/7 passed**. Frontend [43783537334](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43783537334), Browser E2E [43783537341](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43783537341), Packaging [43783537331](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43783537331), Windows Installer [43783537343](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43783537343), Security/CodeQL [43783537413](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43783537413): all succeeded.
+- The Qwen retry has **not** been triggered yet. A future run must capture the model digest and complete 12/12 case responses before human review. A complete set remains `completed_pending_human_review`, not a quality pass.
