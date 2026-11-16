@@ -1,4 +1,9 @@
 
+## Mission Control phase 2 — per-role drill-down implementation
+
+Added a read-only endpoint `GET /api/mission-control/{run_id}/rounds/{round_number}/roles` and frontend expansion controls on each R1–R4 round card. The response is restricted to role ID, role name, category, persisted status, start/completion timestamps and duration. It deliberately excludes all assessment/contribution content, raw error messages, case details and patient identifiers. Expected roles come from the server-side 45-role catalogue; R4 is restricted to Chair role `SG-07`. An uncreated R2/R3/R4 round is shown as `not_started`; an absent row after a round exists is shown as `missing_record`. Regression tests cover these states, failures, timing, R4 cardinality, invalid rounds and unknown runs. Targeted browser E2E assertions are being added for R2's 45 role rows and R4's single Chair row. CI pending; do not mark phase 2 verified until exact-commit backend, frontend and browser workflows succeed.
+
+
 # Current Mission Control checkpoint — 16 November 2026
 
 **Live repository state:** Development branch `feature/four-round-mdt-and-performance`, current application/test commit `7674f35c349bf290bbcce31f5b744176b5c5b25a`. PR #1 remains open, draft and unmerged, targeting `main`. `main` remains `39a356b8eb09399aa2da1b9b9085965999f5105a` and is untouched. The Mission Control implementation and targeted browser assertion are on the development branch only.
@@ -62,7 +67,7 @@ Mission Control phase 1 is **VERIFIED** for the bounded read-only summary and se
 | Guideline retrieval and verification | NOT STARTED | No validated source-retrieval corpus |
 | Packaging and security CI | VERIFIED | Installer, prerequisites, secret scan, dependencies and both CodeQL jobs passed on 7674f35 |
 | Mission Control phase 1 | VERIFIED | Read-only persisted summaries; six exact-commit CI workflows succeeded; direct E2E marker passed |
-| Mission Control phase 2 role drill-down | NOT STARTED | Design described; not implemented |
+| Mission Control phase 2 role drill-down | IN PROGRESS | Backend and UI implementation added; targeted E2E and exact-commit CI pending |
 | Release acceptance | BLOCKED | Clinical, live-model, GPU and evidence gates remain outstanding |
 
 ---

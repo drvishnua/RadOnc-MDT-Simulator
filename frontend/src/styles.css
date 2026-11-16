@@ -370,3 +370,40 @@ textarea { resize: vertical; min-height: 110px; line-height: 1.55; }
   .mission-round-grid { grid-template-columns: 1fr 1fr; }
   .mission-run-header { align-items: flex-start; flex-direction: column; }
 }
+
+
+/* Per-role Mission Control drill-down: metadata and persisted timing only. */
+.mission-role-toggle, .mission-role-refresh {
+  margin-top: 9px; padding: 5px 7px; border: 1px solid rgba(117,211,191,.25);
+  border-radius: 6px; color: #b9e4d8; background: rgba(117,211,191,.07);
+  cursor: pointer; font-size: 9px;
+}
+.mission-role-toggle:hover, .mission-role-refresh:hover { background: rgba(117,211,191,.14); }
+.mission-role-detail {
+  grid-column: 1 / -1; min-width: 0; margin-top: 10px; padding: 9px;
+  border: 1px solid rgba(145,162,184,.14); border-radius: 8px;
+  background: rgba(4,14,25,.42);
+}
+.mission-role-detail-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.mission-role-detail-header strong { color: #d9e8e4; font-size: 10px; }
+.mission-role-refresh { margin: 0; }
+.mission-role-summary { margin: 7px 0; color: #8fa1b6; font-size: 9px; }
+.mission-role-list { max-height: 300px; overflow: auto; border-top: 1px solid rgba(145,162,184,.12); }
+.mission-role-row {
+  display: grid; grid-template-columns: 48px minmax(120px, 1fr) 92px 90px;
+  align-items: center; gap: 8px; padding: 7px 2px; border-bottom: 1px solid rgba(145,162,184,.1);
+}
+.mission-role-id { color: #82cdbc; font: 9px "Cascadia Code", monospace; }
+.mission-role-name { display: grid; min-width: 0; gap: 2px; }
+.mission-role-name strong { overflow: hidden; color: #d4e0e9; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.mission-role-name small { color: #7f92a8; font-size: 8px; }
+.mission-role-state { color: #8fa1b6; font: 8px "Cascadia Code", monospace; text-transform: uppercase; }
+.mission-role-state.state-completed { color: #8bdcc3; }
+.mission-role-state.state-failed, .mission-role-state.state-missing-record { color: #ef9a95; }
+.mission-role-state.state-running, .mission-role-state.state-queued { color: #efd08a; }
+.mission-role-state.state-not-started { color: #8999ac; }
+.mission-role-timing { color: #8496aa; font: 8px "Cascadia Code", monospace; text-align: right; }
+@media (max-width: 620px) {
+  .mission-role-row { grid-template-columns: 43px minmax(90px, 1fr) 76px; gap: 5px; }
+  .mission-role-timing { grid-column: 2 / -1; text-align: left; }
+}

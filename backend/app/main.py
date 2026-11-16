@@ -6,7 +6,7 @@ import logging
 import sys
 from pathlib import Path
 
-from fastapi import BackgroundTasks, FastAPI, HTTPException, Query
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Path as APIPath, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -217,6 +217,21 @@ async def get_mission_control(
 ) -> dict[str, object]:
     """Read-only operational overview; never returns case text or model prose."""
     return run_store.list_recent_runs(limit=limit)
+
+
+
+@app.get("/api/mission-control/{run_id}/rounds/{round_number}/roles")
+async def get_mission_control_round_roles(
+    run_id: str,
+    round_number: int = APIPath(ge=1, le=4),
+) -> dict[str, object]:
+    """Read-only role status and timing; intentionally excludes clinical content."""
+    try:
+        return run_store.list_round_role_statuses(run_id, round_number)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Simulation run not found.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @app.post("/api/runs")

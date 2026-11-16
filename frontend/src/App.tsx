@@ -143,6 +143,28 @@ type MissionRunSnapshot = {
   rounds: MissionRoundSnapshot[];
 };
 
+
+type MissionRoleSnapshot = {
+  agent_id: string;
+  agent_name: string;
+  category_label: string;
+  status: string;
+  started_at: string | null;
+  completed_at: string | null;
+  duration_seconds: number | null;
+};
+
+type MissionRoundRoleSnapshot = {
+  run_id: string;
+  round_number: number;
+  expected_role_count: number;
+  persisted_role_count: number;
+  missing_role_record_count: number;
+  status_counts: Record<string, number>;
+  roles: MissionRoleSnapshot[];
+  read_only: true;
+};
+
 type MissionControlSnapshot = {
   runs: MissionRunSnapshot[];
   count: number;
@@ -507,6 +529,11 @@ function App() {
   const [missionControl, setMissionControl] = useState<MissionControlSnapshot | null>(null);
   const [missionControlLoading, setMissionControlLoading] = useState(false);
   const [missionControlError, setMissionControlError] = useState("");
+  const [expandedMissionRound, setExpandedMissionRound] = useState("");
+  const [missionRoleDetails, setMissionRoleDetails] = useState<Record<string, MissionRoundRoleSnapshot>>({});
+  const [missionRoleLoading, setMissionRoleLoading] = useState("");
+  const [missionRoleErrors, setMissionRoleErrors] = useState<Record<string, string>>({});
+
 
 
   async function refreshStatus() {
@@ -537,6 +564,36 @@ function App() {
 
 
 
+
+
+  async function refreshMissionRoundRoles(runId: string, roundNumber: number) {
+    const key = runId + "::" + roundNumber;
+    setMissionRoleLoading(key);
+    try {
+      const response = await fetch(
+        API_BASE + "/api/mission-control/" + encodeURIComponent(runId) +
+          "/rounds/" + roundNumber + "/roles"
+      );
+      const body = await response.json() as MissionRoundRoleSnapshot & { detail?: string };
+      if (!response.ok) throw new Error(body.detail ?? "Unable to load role activity.");
+      setMissionRoleDetails((current) => ({ ...current, [key]: body }));
+      setMissionRoleErrors((current) => ({ ...current, [key]: "" }));
+    } catch {
+      setMissionRoleErrors((current) => ({ ...current, [key]: "Role activity is currently unavailable." }));
+    } finally {
+      setMissionRoleLoading("");
+    }
+  }
+
+  async function toggleMissionRoundRoles(runId: string, roundNumber: number) {
+    const key = runId + "::" + roundNumber;
+    if (expandedMissionRound === key) {
+      setExpandedMissionRound("");
+      return;
+    }
+    setExpandedMissionRound(key);
+    await refreshMissionRoundRoles(runId, roundNumber);
+  }
 
   async function refreshMissionControl() {
     setMissionControlLoading(true);
@@ -1247,8 +1304,65 @@ function App() {
                           {round.running_count > 0 && <span>{round.running_count} running</span>}
                           {round.queued_count > 0 && <span>{round.queued_count} queued</span>}
                         </div>
+
                         {round.current_agent_id && (
                           <small className="mission-current-role">Current role: {round.current_agent_id}</small>
+                        )}
+                        <button
+                          className="mission-role-toggle"
+                          type="button"
+                          aria-expanded={expandedMissionRound === run.run_id + "::" + round.round_number}
+                          onClick={() => void toggleMissionRoundRoles(run.run_id, round.round_number)}
+                        >
+                          {expandedMissionRound === run.run_id + "::" + round.round_number ? "Hide roles" : "View roles"}
+                        </button>
+                        {expandedMissionRound === run.run_id + "::" + round.round_number && (
+                          <div className="mission-role-detail">
+                            <div className="mission-role-detail-header">
+                              <strong>Persisted role activity</strong>
+                              <button
+                                className="mission-role-refresh"
+                                type="button"
+                                onClick={() => void refreshMissionRoundRoles(run.run_id, round.round_number)}
+                                disabled={missionRoleLoading === run.run_id + "::" + round.round_number}
+                              >
+                                {missionRoleLoading === run.run_id + "::" + round.round_number ? "Refreshing…" : "Refresh roles"}
+                              </button>
+                            </div>
+                            {missionRoleErrors[run.run_id + "::" + round.round_number] && (
+                              <p className="mission-control-message error-text" role="alert">
+                                {missionRoleErrors[run.run_id + "::" + round.round_number]}
+                              </p>
+                            )}
+                            {missionRoleDetails[run.run_id + "::" + round.round_number] && (
+                              <>
+                                <p className="mission-role-summary">
+                                  {missionRoleDetails[run.run_id + "::" + round.round_number].persisted_role_count} persisted ·
+                                  {" "}{missionRoleDetails[run.run_id + "::" + round.round_number].missing_role_record_count} missing records ·
+                                  {" "}{missionRoleDetails[run.run_id + "::" + round.round_number].expected_role_count} expected
+                                </p>
+                                <div className="mission-role-list">
+                                  {missionRoleDetails[run.run_id + "::" + round.round_number].roles.map((role) => (
+                                    <div className="mission-role-row" key={role.agent_id}>
+                                      <span className="mission-role-id">{role.agent_id}</span>
+                                      <span className="mission-role-name">
+                                        <strong>{role.agent_name}</strong>
+                                        <small>{role.category_label}</small>
+                                      </span>
+                                      <span className={"mission-role-state state-" + role.status.replaceAll("_", "-")}>
+                                        {role.status.replaceAll("_", " ")}
+                                      </span>
+                                      <span className="mission-role-timing">
+                                        {role.duration_seconds === null
+                                          ? "Duration not recorded"
+                                          : role.duration_seconds.toFixed(2) + "s"}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </>
+                            )}
+                          </div>
                         )}
                       </div>
                     ))}

@@ -862,6 +862,102 @@ def get_round_summary(run_id: str, round_number: int) -> dict[str, Any]:
 
 
 
+
+def list_round_role_statuses(run_id: str, round_number: int) -> dict[str, Any]:
+    """Return persisted role identity/status/timing only; never return model output."""
+    if round_number not in (1, 2, 3, 4):
+        raise ValueError("Round number must be between 1 and 4.")
+
+    initialize_database()
+    profiles = AGENT_PROFILES
+    if round_number == 4:
+        chair = next(profile for profile in AGENT_PROFILES if profile["agent_id"] == "SG-07")
+        profiles = [{**chair, "category_label": "Final MDT report"}]
+
+    with _connect() as db:
+        _ensure_round_tables(db)
+        if not db.execute(
+            "SELECT 1 FROM simulation_runs WHERE run_id = ?", (run_id,)
+        ).fetchone():
+            raise KeyError(run_id)
+
+        if round_number == 1:
+            rows = db.execute(
+                """
+                SELECT agent_id, agent_name, category_label, status,
+                       started_at, completed_at, duration_seconds
+                FROM agent_run_results
+                WHERE run_id = ?
+                """,
+                (run_id,),
+            ).fetchall()
+            round_exists = True
+        else:
+            round_exists = bool(
+                db.execute(
+                    "SELECT 1 FROM round_runs WHERE run_id = ? AND round_number = ?",
+                    (run_id, round_number),
+                ).fetchone()
+            )
+            rows = db.execute(
+                """
+                SELECT agent_id, agent_name, category_label, status,
+                       started_at, completed_at, duration_seconds
+                FROM agent_round_results
+                WHERE run_id = ? AND round_number = ?
+                """,
+                (run_id, round_number),
+            ).fetchall() if round_exists else []
+
+    saved_by_id = {row["agent_id"]: row for row in rows}
+    roles: list[dict[str, Any]] = []
+    for profile in profiles:
+        row = saved_by_id.get(profile["agent_id"])
+        if row is None:
+            state = "not_started" if round_number > 1 and not round_exists else "missing_record"
+            roles.append(
+                {
+                    "agent_id": profile["agent_id"],
+                    "agent_name": profile["name"],
+                    "category_label": profile["category_label"],
+                    "status": state,
+                    "started_at": None,
+                    "completed_at": None,
+                    "duration_seconds": None,
+                }
+            )
+            continue
+
+        roles.append(
+            {
+                "agent_id": row["agent_id"],
+                "agent_name": row["agent_name"],
+                "category_label": row["category_label"],
+                "status": row["status"],
+                "started_at": row["started_at"],
+                "completed_at": row["completed_at"],
+                "duration_seconds": row["duration_seconds"],
+            }
+        )
+
+    status_counts: dict[str, int] = {}
+    for role in roles:
+        status_counts[role["status"]] = status_counts.get(role["status"], 0) + 1
+
+    return {
+        "run_id": run_id,
+        "round_number": round_number,
+        "expected_role_count": len(profiles),
+        "persisted_role_count": sum(
+            1 for role in roles if role["status"] not in {"not_started", "missing_record"}
+        ),
+        "missing_role_record_count": status_counts.get("missing_record", 0),
+        "status_counts": status_counts,
+        "roles": roles,
+        "read_only": True,
+    }
+
+
 def list_recent_runs(limit: int = 12) -> dict[str, Any]:
     """Return read-only run and round status summaries for Mission Control.
 
