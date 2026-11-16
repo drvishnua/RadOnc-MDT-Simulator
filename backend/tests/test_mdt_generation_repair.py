@@ -670,7 +670,7 @@ def test_r2_prompt_distinguishes_not_documented_from_clinically_absent(monkeypat
     prompt = captured["prompt"]
     assert "SOURCE-WORDING FIDELITY" in prompt
     assert "not present in the supplied record" in prompt
-    assert "do not paraphrase it as the peer claiming" in prompt
+    assert "Do not paraphrase it as the peer claiming" in prompt
     assert "clinically absent, negative, failed, or unmet" in prompt
     assert result.position == "insufficient_information"
     assert result.integrity_repair_status in {"not_needed", "completed"}
