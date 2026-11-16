@@ -73,6 +73,24 @@ def test_model_registry_requires_one_exact_model_and_full_digest():
 
 
 @pytest.mark.parametrize(
+    "reported_digest",
+    [
+        "a" * 64,
+        "A" * 64,
+        "sha256:" + ("A" * 64),
+        "SHA256:" + ("a" * 64),
+    ],
+)
+def test_model_registry_normalizes_bare_and_prefixed_full_sha256_digests(reported_digest):
+    model = "qwen3.5:4b"
+    record = require_installed_model_record(
+        {"models": [{"name": model, "model": model, "digest": reported_digest}]},
+        model,
+    )
+    assert record["digest"] == "sha256:" + ("a" * 64)
+
+
+@pytest.mark.parametrize(
     "models",
     [
         [],
