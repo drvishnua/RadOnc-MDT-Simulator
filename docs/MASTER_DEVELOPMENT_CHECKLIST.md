@@ -140,7 +140,7 @@ Mission Control phase 1 is **VERIFIED** for the bounded read-only summary and se
 | Historical full 45-role acceptance | FAILED | Audit-only validation found 343 integrity entries |
 | Qwen 12-case synthetic screens | VERIFIED | Execution/digest verification only; human review pending, no quality/clinical pass |
 | MedGemma HAI-DEF acceptance statement | VERIFIED | User confirmation recorded; not independent legal advice |
-| MedGemma workflow dispatch | BLOCKED | No connected dispatch/write capability for workflow_dispatch |
+| MedGemma workflow dispatch | IN PROGRESS | No connected dispatch/write capability for workflow_dispatch |
 | MedGemma pull and inference | BLOCKED | Dispatch not performed |
 | Independent qualified clinical review | NOT STARTED | No formal qualified review artefact |
 | Guideline retrieval and verification | NOT STARTED | No validated source-retrieval corpus |
@@ -1110,7 +1110,7 @@ The screening runner previously had helper-level tests but lacked no-inference c
 | New hosted seeded R2/R3/R4 validation | IN PROGRESS | Push workflow [43866946205](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43866946205) on source commit 358bc1a; installer prerequisite job 133297818731 succeeded. Clean-hosted model job 133298583867 remains IN PROGRESS in `Install on a clean hosted VM and verify real Ollama/model provisioning`; no verified digest, generation count, model output or validation artefact yet. |
 | Historical 45-role live acceptance | FAILED | Run #9 audit-only revalidation [43843343751](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43843343751): 343 integrity findings (R1 11, R2 41, R3 271, Chair R4 20). Original rows, report and database remain preserved. |
 | Synthetic Qwen v1–v4 screening | VERIFIED | Four hosted CPU executions each recorded 12/12 response records and matching model digest; all remain pending human review and are not model promotion or clinical validation. |
-| MedGemma inference | BLOCKED | User's explicit personal-capacity HAI-DEF acceptance is recorded in the 16 Nov 2026 checkpoint. Model remains unpulled: this session's GitHub connector has no Actions workflow-dispatch/write action. Do not bypass the workflow's manual-dispatch gate. Clinical use remains prohibited/out of scope; evaluation is synthetic-only. |
+| MedGemma inference | IN PROGRESS | User's explicit personal-capacity HAI-DEF acceptance is recorded in the 16 Nov 2026 checkpoint. Model remains unpulled: this session's GitHub connector has no Actions workflow-dispatch/write action. Do not bypass the workflow's manual-dispatch gate. Clinical use remains prohibited/out of scope; evaluation is synthetic-only. |
 | Guideline evidence retrieval and verification | NOT STARTED | No retrieved-and-checked current guideline evidence is connected to the simulator. |
 | Independent qualified clinical review | NOT STARTED | Required before any clinical-quality acceptance. |
 | Security, dependency audit and CodeQL | VERIFIED | Exact branch-head workflow [43867759450](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/43867759450) passed on `1706869977724319d777a4623c48aef860d87557`. |
