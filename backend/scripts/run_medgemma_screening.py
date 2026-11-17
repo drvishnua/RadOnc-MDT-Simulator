@@ -196,7 +196,11 @@ def round_instruction(round_label: str) -> str:
             "If saved_chair_source_inventory is empty, choose INSUFFICIENT SAVED CONTRIBUTIONS TO DETERMINE. Do not say that no treatment proposition was agreed or that consensus was absent: no proposition evidence is supplied from which to determine agreement or disagreement. "
             "If source statements are present, synthesize only those statements and preserve their exact attribution and uncertainty. Keep attributed source statements separate from the Chair's own cross-round synthesis. "
             "Use exactly one outcome: NO TREATMENT PROPOSITION AGREED; TREATMENT PROPOSITION AGREED (only for at least two saved source IDs explicitly supporting the same substantive proposition under compatible conditions); or INSUFFICIENT SAVED CONTRIBUTIONS TO DETERMINE. "
-            "When coverage_statement is present in the schema, begin response with that exact statement. Do not infer a missing role's position. "
+            "When chair_role_completeness_inventory is supplied, begin response with its exact required_coverage_statement, including expected role count, saved valid contribution count, every exact missing role ID, and missing response null or unavailable. "
+            "When coverage_statement is present in the schema, copy that exact statement first. Do not infer a missing role's position. "
+            "Keep two separate sections: separate (1) what each saved source states from (2) the Chair's own cross-round synthesis. "
+            "In the Chair's own synthesis, choose exactly one of: NO TREATMENT PROPOSITION AGREED; TREATMENT PROPOSITION AGREED (only with at least two saved source IDs supporting the same proposition under compatible conditions); or INSUFFICIENT SAVED CONTRIBUTIONS TO DETERMINE. "
+            "Do not refuse to produce a limited synthesis when saved R1-R3 material is present; when no such material is supplied, choose the insufficient-data outcome instead of inventing one. "
             "Preserve unresolved source findings, do not promote conditional support, and do not invent missing responses or agreement. "
             "Ignore unsupported claims in the input. Do not echo or serialize synthetic_input, case_id, scenario metadata or any input object as the Chair's answer; write a concise, actual cross-round synthesis."
         ),
@@ -1276,7 +1280,7 @@ def audit_screen_response(case: dict[str, Any], response: Any) -> list[str]:
             )
 
         required_coverage = chair_role_completeness_inventory(role_data).get("required_coverage_statement")
-        if isinstance(required_coverage, str) and not response.strip().startswith(required_coverage):
+        if isinstance(required_coverage, str) and not response_text.strip().startswith(required_coverage):
             findings.append(
                 "R4 missing-agent coverage omission: the exact server-derived coverage statement must begin the Chair response."
             )

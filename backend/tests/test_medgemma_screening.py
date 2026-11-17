@@ -907,7 +907,7 @@ def test_run_screen_records_complete_immutable_case_set(tmp_path, monkeypatch):
         "R3-INVALID-SOURCE-008": "R2:RO-01 and R2:MO-01 are supplied. R2:MO-99 is unsupplied. The malformed range R2:RO-01-RO-09 is preserved without expansion.",
         "R3-FABRICATED-QUOTE-009": "The claimed MRI quote is not present in the saved source R2:MO-01. The exact saved source text is: 'No imaging result is included in the supplied fictional record.' The MRI claim is unsupported and is not evidence.",
         "R3-NEGATION-010": "The statement explicitly says no peer claimed Option Q was contraindicated. This is a negated attribution, not a positive contraindication.",
-        "R4-MISSING-AGENT-011": "There are 44 saved contributions from 45 expected roles. PT-ROLE-UNAVAILABLE has no response; its position remains unknown, and 45/45 participation or unanimity cannot be claimed.",
+        "R4-MISSING-AGENT-011": "Coverage: 45 expected roles; 44 saved valid contributions; missing role ID(s): PT-ROLE-UNAVAILABLE; missing response: null; missing role position: unknown. The supplied screening input contains no saved contribution text, so agreement or disagreement cannot be determined; outcome: INSUFFICIENT SAVED CONTRIBUTIONS TO DETERMINE.",
         "R4-CHAIR-TRACEABILITY-012": "The supplied contributions do not establish agreement on a treatment proposition. No treatment proposition was agreed; the missing-source finding remains unresolved, and the Option Z consensus claim is unsupported.",
     }
 
