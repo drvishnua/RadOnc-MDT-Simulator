@@ -139,6 +139,8 @@ def test_round_specific_prompt_instructions_are_present():
     assert "source_ledger" in prompts["R2"]
     assert "structured proposition assessments" in prompts["R2"]
     assert "independent propositions" in prompts["R2"]
+    assert "use an empty string for that field" in prompts["R2"]
+    assert "not_applicable when the saved statement contains no prerequisite" in prompts["R2"]
     assert "synthetic input is not a reason to refuse" in prompts["R1"].casefold()
     assert "Perform a critical audit" in prompts["R3"]
     assert "identifier_inventory_review" in prompts["R3"]
@@ -447,6 +449,39 @@ def test_case_specific_schema_rejects_dropped_or_altered_r2_source_rows():
     assert "exact case-specific structured schema" in error
 
 
+def test_r2_source_bound_normalization_handles_model_label_suffixes_and_empty_sentinels():
+    corpus, _ = load_corpus()
+    conditional = next(item for item in corpus["cases"] if item["case_id"] == "R2-CONDITIONALITY-007")
+    output = _valid_model_output(conditional, "The source option remains conditional.")
+    output["source_ledger"]["R1:RO-01"]["treatment_option"] = "Option_A (conditional)"
+    parsed, error = validate_model_response(json.dumps(output), conditional)
+    assert error is None
+    assert parsed["source_ledger"]["R1:RO-01"]["treatment_option"] == "Option A"
+    assert any(
+        item["field"] == "treatment_option"
+        and item["model_value"] == "Option_A (conditional)"
+        and item["server_value"] == "Option A"
+        for item in parsed["server_derived"]["field_normalizations"]
+    )
+
+    partial = next(item for item in corpus["cases"] if item["case_id"] == "R2-PARTIAL-AGREEMENT-006")
+    output = _valid_model_output(partial, "Two sources agree only that more information is required.")
+    for source_id, row in output["source_ledger"].items():
+        row["prerequisite"] = "unknown"
+        row["prerequisite_status"] = "unknown"
+        row["treatment_option"] = "not_shared"
+    parsed, error = validate_model_response(json.dumps(output), partial)
+    assert error is None
+    for row in parsed["source_ledger"].values():
+        assert row["prerequisite"] == ""
+        assert row["prerequisite_status"] == "not_applicable"
+        assert row["treatment_option"] == ""
+    normalizations = parsed["server_derived"]["field_normalizations"]
+    assert len(normalizations) == 9
+    assert all(item["basis"] == "no prerequisite is stated in this exact saved statement"
+               for item in normalizations if item["field"] in {"prerequisite", "prerequisite_status"})
+
+
 def test_r2_structured_audit_flags_false_consensus_and_lost_prerequisite_status():
     corpus, _ = load_corpus()
     false_consensus = next(item for item in corpus["cases"] if item["case_id"] == "R2-FALSE-CONSENSUS-005")
@@ -486,6 +521,23 @@ def test_r3_structured_audit_requires_explicit_rejection_of_absent_quote():
     findings = screening.audit_screen_response(case, parsed)
     assert any("R3 structured fabricated-quote error" in item for item in findings)
     assert any("R3 structured quote-rejection omission" in item for item in findings)
+
+
+def test_r3_audit_detects_nested_json_object_contradicting_structured_identifier_inventory():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R3-INVALID-SOURCE-008")
+    output = _valid_model_output(case, json.dumps({
+        "case_id": case["case_id"],
+        "identifier_inventory_review": {
+            "explicitly_supplied_source_ids": ["R2:MO-01"],
+            "deliberately_unsupplied_ids": ["R2:RO-01", "R2:MO-99"],
+        },
+    }))
+    findings = screening.audit_screen_response(case, output)
+    assert any(
+        "R3 narrative identifier contradiction" in item and "R2:RO-01" in item
+        for item in findings
+    )
 
 
 def test_model_registry_requires_one_exact_model_and_full_digest():
@@ -639,8 +691,8 @@ def test_run_screen_records_complete_immutable_case_set(tmp_path, monkeypatch):
     summary = next(record for record in records if record["record_type"] == "summary")
     manifest = next(record for record in records if record["record_type"] == "manifest")
 
-    assert manifest["prompt_version"] == "radonc-mdt-integrity-screen-v11"
-    assert manifest["audit_version"] == "radonc-mdt-integrity-audit-v10"
+    assert manifest["prompt_version"] == "radonc-mdt-integrity-screen-v12"
+    assert manifest["audit_version"] == "radonc-mdt-integrity-audit-v11"
     assert manifest["screening_script_sha256"] == screening.SCRIPT_SHA256
     assert len(manifest["screening_script_sha256"]) == 64
     assert calls == {"tags": 25, "generate": 12, "show": 1, "version": 1}
