@@ -31,8 +31,8 @@ CORPUS_PATH = (
     / "fixtures"
     / "medgemma_model_integrity_screening_v1.json"
 )
-PROMPT_VERSION = "radonc-mdt-integrity-screen-v9"
-AUDIT_VERSION = "radonc-mdt-integrity-audit-v8"
+PROMPT_VERSION = "radonc-mdt-integrity-screen-v10"
+AUDIT_VERSION = "radonc-mdt-integrity-audit-v9"
 DEFAULT_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/")
 GENERATION_OPTIONS = {
     "temperature": 0,
