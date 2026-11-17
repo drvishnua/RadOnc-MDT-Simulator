@@ -2,11 +2,11 @@
 
 Repository: drvishnua/RadOnc-MDT-Simulator  
 Development branch: feature/four-round-mdt-and-performance  
-Latest source implementation commit: 5ac3e09d3ae174923b33deaa881aeb6709807452 (prompt-v14 / audit-v13)  
-Latest regression-test commit: f038f109b2219e14ea0974e5f721fc66f335bf42 (461/461 backend tests passed)  
-Latest verified application/test SHA: f038f109b2219e14ea0974e5f721fc66f335bf42 (461/461 backend tests; all six standard PR checks passed)  
+Latest source implementation commit: 9a4e9f6bac63ef4b471037f5166b21deeb3aab3a (prompt-v15 / audit-v14)  
+Latest regression-test commit: ae6f1f8f44708e98ecd3ffe59e048b4030bbeb48 (prompt-v15 / audit-v14 regression tests)  
+Latest verified application/test SHA: ae6f1f8f44708e98ecd3ffe59e048b4030bbeb48; exact-head verification repeated on documentation-only branch HEAD 10f530d397a3a82785bd86929baa1e91e6ec19b8 (463/463 backend tests; all six standard PR checks passed)  
 Latest model-screen trigger commit: 9583e15671d3d8bdca7f88d383bc0e2fbfb9b60b (v14 / audit-v13)  
-Latest checklist commit before this reconciliation: 4c017999bf155c261cbda168857f7aab6c3551e0  
+Latest checklist commit before this reconciliation: 10f530d397a3a82785bd86929baa1e91e6ec19b8  
 PR #1: open, draft, unmerged, base main  
 main: 39a356b8eb09399aa2da1b9b9085965999f5105a, unchanged.
 
@@ -15,11 +15,37 @@ This is the single authoritative Master Development and Verification Checklist. 
 Continuity files: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_LOG.md, RECOVERY_STATE.md, KNOWN_ISSUES.md.
 
 
+## Current checkpoint — 17 November 2026 — prompt-v15/audit-v14 ready for bounded screen
+
+**Repository / branch**
+- Development branch HEAD: 10f530d397a3a82785bd86929baa1e91e6ec19b8 (documentation-only checklist commit; no source changes in this commit).
+- Latest prompt-v15/audit-v14 source commit: 9a4e9f6bac63ef4b471037f5166b21deeb3aab3a.
+- Latest prompt-v15/audit-v14 regression-test commit: ae6f1f8f44708e98ecd3ffe59e048b4030bbeb48.
+- Latest model-screen trigger remains v14/audit-v13 SHA 9583e15671d3d8bdca7f88d383bc0e2fbfb9b60b; v15 screen has NOT been triggered.
+- PR #1 remains open, draft, unmerged, base main. Main SHA 39a356b8eb09399aa2da1b9b9085965999f5105a remains unchanged.
+
+**Exact branch-head CI — 10f530d397a3a82785bd86929baa1e91e6ec19b8**
+- Backend run [44070168040](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44070168040): 463 passed, 0 failed, 0 errors, 0 skipped; deterministic preflight 7 passed, 0 failed, 0 inconclusive. JUnit artifact 14322645718; preflight artifact 14322640818.
+- Frontend run [44070168039](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44070168039): passed.
+- Browser E2E run [44070167975](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44070167975): passed.
+- Security/dependency run [44070168390](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44070168390): passed.
+- Windows packaging prerequisites [44070168162](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44070168162): passed.
+- Windows installer [44070168142](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44070168142): passed build, installation, health/frontend/API smoke tests, 45-role profile check, synthetic registry persistence, uninstall-preservation check, checksum and artifact upload. Installer artifact 14321943253; Setup.exe SHA-256 a5d31d19bedede5333b733e63e7125ca7c67ddd813b81c951d1cf4a0b1efe004. Hosted installer job explicitly performed no Ollama inference.
+- These six runs are associated with exact branch HEAD 10f530d. CI is software/build evidence, not model or clinical validation.
+
+**Prompt-v15/audit-v14 implementation and regression scope**
+- R2 audit now flags certainty strengthening of a case-supplied unknown/not-documented prerequisite to absent, missing, unmet, failed, negative or ruled out. “Not present in the supplied record” remains an acceptable documentation-status statement.
+- R3 audit now flags refusal to compare the supplied synthetic quote with the exact saved source text.
+- Regression tests cover both invalid outputs and valid counterexamples. Source and test changes are committed; exact branch-head CI above passed.
+- v14/audit-v13 model screen [44061072616](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44061072616) remains failed for both models: Qwen 1 finding; MedGemma 8 findings. Preserve its artifact and failure.
+- Next: create one separate marker-qualified model-screen trigger commit from this CI-green branch head; run the existing sequential Qwen-first/MedGemma-second fail-closed workflow; inspect all 24 outputs and artifact provenance. If Qwen fails or truncates, MedGemma must remain NOT_REQUESTED. No model promotion or clinical claim from workflow success.
 
 
 
 
-## Current checkpoint — 17 November 2026 — prompt-v14/audit-v13 bounded retest running
+
+
+## Historical checkpoint — 17 November 2026 — prompt-v14/audit-v13 bounded retest
 
 **Repository / branch**
 - Development branch: feature/four-round-mdt-and-performance.
@@ -117,9 +143,9 @@ Continuity files: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_
 | Provenance and guideline/evidence retrieval | IN PROGRESS | Source-bound normalizations logged; guideline retrieval and claim linkage not integrated. |
 | Chair consensus, dissent and traceability | IN PROGRESS | Deterministic controls/tests exist; model adherence and full 45-role traceability unaccepted. |
 | Missing/failed-agent handling | IN PROGRESS | Qwen bounded R4 passed; MedGemma failed R4 completeness; full failure-injection acceptance outstanding. |
-| Backend tests | VERIFIED | 461 passed, 0 failed/errors/skipped on application/test SHA f038f109 (run 44060579022); repeated 461/461 on docs-only HEAD d141d366 (run 44061781200); preflight 7/7 on both. |
-| Frontend build | VERIFIED | Application/test SHA f038f109 run 44060579045; repeated on docs-only HEAD d141d366 run 44061781057. |
-| Browser E2E | VERIFIED | Application/test SHA f038f109 run 44060579149; repeated on docs-only HEAD d141d366 run 44061781158. |
+| Backend tests | VERIFIED | Exact branch HEAD 10f530d: 463 passed, 0 failed, 0 errors, 0 skipped; preflight 7/7; run 44070168040; artifacts 14322645718 and 14322640818. |
+| Frontend build | VERIFIED | Exact branch HEAD 10f530d: run 44070168039 passed. |
+| Browser E2E | VERIFIED | Exact branch HEAD 10f530d: run 44070167975 passed. |
 | Dashboard/API validation | VERIFIED | Mission Control / Development Monitor bounded checks and E2E passed on f038f109. |
 | Mission Control phase 1 and 2 | VERIFIED | Read-only persisted-run overview and metadata-only role drill-down tested. |
 | Development Monitor | VERIFIED | Read-only branch/PR/Actions monitor tested; no dispatch authority. |
@@ -133,23 +159,24 @@ Continuity files: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_
 | Hosted v12/audit-v12 screen | FAILED | Run 44055332966; Qwen 11 parseable / 1 truncated; MedGemma NOT_REQUESTED. |
 | Hosted v13/audit-v12 screen | FAILED | Run 44057996924; Qwen 2 findings; MedGemma 1 malformed and 5 findings; raw artifact retained. |
 | Hosted v14/audit-v13 screen | FAILED | Run 44061072616; artifact 14320435156; Qwen 1 finding; MedGemma 8 findings; both failed bounded acceptance; CPU-only. |
-| Prompt-v15/audit-v14 bounded screen | NOT STARTED | New audits/tests committed; exact-head CI must pass before trigger. |\n| Current full 45-role R1–R4 validation | NOT STARTED | No fresh complete 45-role model run accepted. |
+| Prompt-v15/audit-v14 implementation and regression tests | VERIFIED | Source commit 9a4e9f6; test commit ae6f1f8; exact branch-head CI 10f530d passed (463 backend tests; all six standard checks). |\n| Prompt-v15/audit-v14 bounded screen | NOT STARTED | Ready for one marker-qualified trigger; v14/audit-v13 remains failed for both models. Sequential Qwen-first gate must be preserved. |\n| Current full 45-role R1–R4 validation | NOT STARTED | No fresh complete 45-role model run accepted. |
 | Historical full 45-role run-9 acceptance | FAILED | Historical audit reported 343 integrity findings; original records retained. |
 | MedGemma HAI-DEF acceptance | VERIFIED | User acceptance retained; current v14 run's pre-provision gate passed. |
 | Independent blinded model-output review | NOT STARTED | v10–v13 outputs preserved; independent blinded review not completed. |
 | Guideline retrieval and verification | NOT STARTED | No current authoritative source set linked to claims. |
 | Independent qualified clinical review | NOT STARTED | No signed/attributable review artifact. |
-| Packaging prerequisites | VERIFIED | Application/test SHA f038f109 run 44060579083; repeated on docs-only HEAD d141d366 run 44061781157. |
-| Windows installer | VERIFIED | Application/test SHA f038f109: PR run 44060579122 and push run 44060569668 passed; repeated on docs-only HEAD d141d366 PR run 44061781055 passed build/install/smoke/checksum/upload. |
-| Security, dependency audit and CodeQL | VERIFIED | Application/test SHA f038f109 run 44060579131; repeated on docs-only HEAD d141d366 run 44061781014. |
+| Packaging prerequisites | VERIFIED | Exact branch HEAD 10f530d: run 44070168162 passed. |
+| Windows installer | VERIFIED | Exact branch HEAD 10f530d: run 44070168142 passed build/install/health/frontend/API/45-role/registry persistence/uninstall-preservation/checksum/upload; artifact 14321943253; Setup.exe SHA-256 a5d31d19bedede5333b733e63e7125ca7c67ddd813b81c951d1cf4a0b1efe004. No Ollama inference. |
+| Security, dependency audit and CodeQL | VERIFIED | Exact branch HEAD 10f530d: run 44070168390 passed. |
 | Release acceptance | BLOCKED | v14 failed; v15 audit/tests pending CI; full-run integrity, independent reviews, guidelines, GPU and clinical review gates outstanding. |
 
 ## Immediate next actions
 
-1. Inspect workflow 44061072616 and its immutable artifact when complete: exact trigger SHA, prompt/audit versions, corpus hash, both model digests, all 24 outputs, completion reasons, normalization provenance, flags and Qwen-before-MedGemma gate.
-2. Confirm that R2 proposition/status repairs correct only exact-source derivable values and that contradictory model narratives still fail.
-3. If Qwen fails or truncates, preserve MedGemma as NOT_REQUESTED; do not bypass sequential gate.
-4. Review the R3 refusal and R4 missing-agent / Chair echo outcomes independently; do not infer success from structured fields when narrative contradicts them.
+1. Create one separate marker-qualified model-screen trigger commit from the CI-green branch head 10f530d; do not change source files or start a second overlapping model run.
+2. Inspect the v15/audit-v14 workflow, model identity/digests, corpus/prompt/audit hashes, all 24 outputs, completion reasons, normalization provenance, flags and raw artefacts.
+3. Preserve the Qwen-first fail-closed gate: if Qwen fails or truncates, MedGemma remains NOT_REQUESTED.
+4. Check R2 unknown-prerequisite certainty, R3 fabricated-quote refusal, R4 missing-agent completeness and Chair synthesis from actual saved R1–R3 contributions.
+5. Treat any bounded pass as engineering evidence only; no clinical validation, guideline compliance, zero-hallucination or GPU claim.
 5. Arrange independent blinded review of retained v10–v14 outputs before model promotion.
 6. Only after bounded acceptance and human review, prepare fresh full 45-role R1–R4 validation with failed-agent injection and Chair synthesis from saved contributions.
 7. Complete local RTX 4060 request-time telemetry, authoritative guideline retrieval and independent qualified clinical review.
