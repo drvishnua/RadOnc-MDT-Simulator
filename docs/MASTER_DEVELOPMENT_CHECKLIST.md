@@ -15,6 +15,14 @@ This is the single authoritative Master Development and Verification Checklist. 
 Continuity files: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_LOG.md, RECOVERY_STATE.md, KNOWN_ISSUES.md.
 
 
+## Current checkpoint — 17 November 2026 — v15 screen trigger commit pushed
+
+- Checklist formatting defect corrected; the three prompt-v15/audit-v14 rows are now separate Markdown table rows.
+- Six standard CI checks passed on parent SHA d836076f1f6f7543c6b226957e85249d76548a5b (Backend 44093599360; Frontend 44093599332; Browser E2E 44093599376; Security 44093599364; Packaging prerequisites 44093599358; Windows installer 44093599558).
+- Model-screen workflow trigger commit: b34dc1d4df31971b66a8a816cf503db18ad03860. It changes only the workflow comment and includes [model-integrity-screen], [medgemma] and [hai-def-terms-accepted] in the commit message.
+- Trigger execution is NOT YET VERIFIED: the available GitHub run lookup returns only pull-request-triggered runs, and no run ID for this push-triggered workflow has yet been surfaced. Do not claim the model screen started or completed until its run ID/status is retrieved.
+- v14/audit-v13 remains FAILED for both models. v15/audit-v14 screen remains NOT STARTED pending run confirmation. Preserve Qwen-first fail-closed gating and CPU-only limitation.
+
 ## Current checkpoint — 17 November 2026 — d836076 exact-head CI green; v15 screen authorised
 
 **Current repository state**
