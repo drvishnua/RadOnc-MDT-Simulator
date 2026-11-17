@@ -34,6 +34,7 @@ CORPUS_PATH = (
 PROMPT_VERSION = "radonc-mdt-integrity-screen-v14"
 AUDIT_VERSION = "radonc-mdt-integrity-audit-v13"
 # Paired v14/audit-v13 retest: source-derived proposition/status normalization and stricter R2 narrative audit.
+# [model-integrity-screen] bounded paired Qwen/MedGemma retest after exact-SHA backend regression pass.
 DEFAULT_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/")
 GENERATION_OPTIONS = {
     "temperature": 0,
