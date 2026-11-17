@@ -32,7 +32,7 @@ CORPUS_PATH = (
     / "medgemma_model_integrity_screening_v1.json"
 )
 PROMPT_VERSION = "radonc-mdt-integrity-screen-v6"
-AUDIT_VERSION = "radonc-mdt-integrity-audit-v4"
+AUDIT_VERSION = "radonc-mdt-integrity-audit-v5"
 DEFAULT_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/")
 GENERATION_OPTIONS = {
     "temperature": 0,
@@ -412,6 +412,17 @@ def audit_screen_response(case: dict[str, Any], response: str) -> list[str]:
             findings.append(
                 "R2 conditionality omission: the response did not explicitly preserve Option A as conditional on prerequisite X while X remains unknown or unverified."
             )
+        shared_absence_claim = re.search(
+            r"\b(?:shared|common)\s+(?:proposition|position|agreement)\b.{0,180}"
+            r"\bprerequisite\s+x\b.{0,100}\b(?:not present|not documented|not supplied|unknown|unverified)\b"
+            r"|\bprerequisite\s+x\b.{0,100}\b(?:not present|not documented|not supplied|unknown|unverified)\b"
+            r".{0,180}\b(?:shared|common)\s+(?:proposition|position|agreement)\b",
+            folded,
+        )
+        if shared_absence_claim:
+            findings.append(
+                "R2 conditionality misattribution: a prerequisite-status statement from one saved source was presented as a shared proposition; keep the conditional Option A support distinct from the separate unknown prerequisite status."
+            )
 
     if case_id == "R3-FABRICATED-QUOTE-009":
         source = (case.get("input") or {}).get("saved_source_contribution", {})
@@ -489,6 +500,7 @@ def audit_screen_response(case: dict[str, Any], response: str) -> list[str]:
             for source_id, source_text in saved_positions.items()
             if re.search(r"\b(?:agrees?|states?)\s+that\s+additional information is required\b", str(source_text), re.IGNORECASE)
         ]
+        all_source_ids = [str(source_id) for source_id in saved_positions]
         denies_group_agreement = re.search(
             r"\bnone of (?:these|the supplied|the saved) contributions\b"
             r".{0,120}\b(?:state|states|say|says|indicate|indicates)\b"
@@ -498,6 +510,46 @@ def audit_screen_response(case: dict[str, Any], response: str) -> list[str]:
         if explicitly_affirming_sources and denies_group_agreement:
             findings.append(
                 "R2 partial-agreement contradiction: the response says no supplied contributions state that additional information is required, although the saved R1 material contains explicit affirmative positions."
+            )
+
+        def source_position_context(source_id: str) -> str:
+            source_index = folded.find(source_id.casefold())
+            if source_index < 0:
+                return ""
+            next_indexes = [
+                folded.find(other_id.casefold(), source_index + len(source_id))
+                for other_id in all_source_ids
+                if other_id.casefold() != source_id.casefold()
+            ]
+            next_indexes = [index for index in next_indexes if index >= 0]
+            segment_end = min(next_indexes) if next_indexes else min(len(folded), source_index + 220)
+            return folded[source_index:segment_end][:220]
+
+        affirmative_claim = re.compile(
+            r"\b(?:agrees?|agreed|states?|stated|affirms?|affirmed|supports?|supported|confirms?|confirmed)\b"
+            r".{0,160}\badditional information is required\b"
+        )
+        source_errors: list[str] = []
+        for source_id in explicitly_affirming_sources:
+            context = source_position_context(source_id)
+            if not context or not affirmative_claim.search(context):
+                source_errors.append(
+                    f"{source_id} was not attributed its explicit position that additional information is required"
+                )
+        silent_sources = [
+            source_id
+            for source_id, source_text in saved_positions.items()
+            if re.search(r"\bdoes not state whether additional information is required\b", str(source_text), re.IGNORECASE)
+        ]
+        for source_id in silent_sources:
+            context = source_position_context(str(source_id))
+            if affirmative_claim.search(context):
+                source_errors.append(
+                    f"{source_id} was incorrectly attributed agreement that additional information is required despite being silent"
+                )
+        if source_errors:
+            findings.append(
+                "R2 partial-agreement source-attribution error: " + "; ".join(source_errors) + "."
             )
 
     if case_id == "R3-INVALID-SOURCE-008":
@@ -585,6 +637,12 @@ def audit_screen_response(case: dict[str, Any], response: str) -> list[str]:
             r"|\b(?:unresolved|missing|not supplied|unverified)\b.{0,100}\bsource\b",
             folded,
         )
+        affirmative_agreement = re.search(
+            r"\b(?:saved|supplied) contributions?\s+(?:establish|show|indicate|support)\s+"
+            r"(?:the same\s+)?(?:substantive\s+)?(?:treatment\s+)?(?:proposition\s+)?(?:agreement|consensus)\b"
+            r"|\b(?:saved|supplied) contributions?\s+(?:establish|show|indicate|support)\s+agreement\b",
+            synthesis_text,
+        )
         if refusal:
             findings.append(
                 "Chair synthesis omission: the response refused to create a limited closing record despite saved R1-R3 material being supplied."
@@ -592,6 +650,10 @@ def audit_screen_response(case: dict[str, Any], response: str) -> list[str]:
         if not no_agreement:
             findings.append(
                 "Chair synthesis omission: the Chair did not state an overall conclusion that no treatment proposition was agreed; a quoted or attributed source statement alone is insufficient."
+            )
+        if affirmative_agreement and no_agreement:
+            findings.append(
+                "Chair synthesis contradiction: the response asserts that the saved contributions establish agreement/consensus and also concludes that no treatment proposition was agreed."
             )
         if not source_uncertainty:
             findings.append(
