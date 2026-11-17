@@ -56,3 +56,8 @@ No merge, release, deployment, force-push or main-branch modification without ex
 
 13. Paired model comparisons must pin effective sampler parameters, not only send matching Python dictionaries. Model-specific Modelfile defaults may otherwise cause different top_k/top_p/presence_penalty behaviour. The synthetic Qwen/MedGemma screen explicitly pins top_k=20, top_p=0.95, frequency_penalty=0, presence_penalty=1.5, repeat_last_n=64, repeat_penalty=1.1 and num_predict=500 for both. This represents the observed Qwen baseline plus the shared repeat-control experiment; live model output quality remains to be tested.
 14. MedGemma provisioning failures are distinct from inference failures. Persist pull state, URI, HTTP status, response body and exception details in the manifest before raising. Do not classify a model as NOT_REQUESTED when the user explicitly requested it and the pull fails.
+
+## Cloud execution and local hardware boundary
+
+15. Repository changes, GitHub Actions CI, Windows hosted builds and the synthetic Ollama model-screen workflow execute on GitHub-hosted cloud runners. Do not require the user's laptop/desktop to remain online for these cloud operations.
+16. RTX 4060 request-time GPU verification is a separate local-hardware acceptance task. It requires the target Windows PC to be powered on and a real local Ollama inference request to be running while GPU/process telemetry is collected. Do not confuse this requirement with hosted development or with the ChatGPT app's own network connection.

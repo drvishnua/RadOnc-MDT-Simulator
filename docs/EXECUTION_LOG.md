@@ -85,3 +85,26 @@ Append new entries chronologically. Record actual commit SHAs, run IDs and resul
 - Frontend [44006977316](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44006977316), Browser E2E [44006977161](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44006977161), Packaging Prerequisites [44006977075](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44006977075), Windows Installer [44006977053](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44006977053), Security/Dependency/CodeQL [44006977278](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44006977278) passed. Browser artifact 14294282765 contains patient registry, Mission Control, role drilldown, Development Monitor and four-round dashboard success markers.
 - PR Installer passed; optional model bootstrap was skipped. Push Installer [44006972458](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44006972458) passed.
 - Marker-qualified paired model screen [44006972494](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44006972494), job 133784577318, is IN PROGRESS. HAI-DEF gate passed. Combined hosted provisioning/sequential-inference step active; no model artifact yet. Hosted Windows CPU only, concurrency 1, GPU measurement not performed.
+
+
+## 17 November 2026 — paired audit-v4 result, audit-v5 corrections and cloud/device boundary
+
+### Completed paired model screen on d2e85a9
+
+- Run 44006972494 completed SUCCESS on GitHub-hosted Windows CPU; artifact 14296070216.
+- Qwen: 12/12 complete and parseable, 0 audit-v4 flags. MedGemma: 12/12 complete and parseable, 2 audit-v4 flags (R3 quote-review omission, R4 unresolved-source traceability omission).
+- Raw manual review found additional MedGemma defects: R2 partial-agreement source attribution was reversed (MO-01 was labelled silent; SO-02 was attributed agreement); R2 conditionality promoted a single source's missing-prerequisite statement into a shared proposition; R4 asserted the saved contributions established agreement and later said no proposition was agreed.
+- Both JSONL manifests and Ollama logs confirmed common sampler profile: temperature 0, seed 73, num_ctx 4096, top_k 20, top_p 0.95, frequency_penalty 0, presence_penalty 1.5, repeat_last_n 64, repeat_penalty 1.1, num_predict 500. Each model had 12/12 parseable outputs; all done_reason values were stop. One sample did not reproduce the 500-token repetition/truncation. This is not a universal robustness claim or model-quality acceptance.
+- The screen manifests remain PENDING_HUMAN_REVIEW, automatic quality score null, clinical accuracy unevaluated, GPU measurement NOT_PERFORMED. No model promotion.
+
+### Audit-v5 implementation and regression correction
+
+- Commit c7927bd introduced audit-v5 checks for R2 exact source attribution, single-source/shared prerequisite misattribution and the Chair positive-agreement/no-agreement contradiction. Initial Backend CI [44010384887](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44010384887) FAILED: 425 passed, 3 failed. Artifact **14296247292** showed the checker incorrectly treated "does not state" as affirmative and a synthetic run fixture lacked the exact R1 source IDs required by the new rule.
+- Commit e877600 fixed negation handling and updated the mock response to use exact source IDs. Exact-head Backend [44010725653](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44010725653) passed **428/428**, preflight **7/7**; JUnit artifact **14295864149**, preflight artifact **14295604676**.
+- Other exact-head PR workflows passed: Frontend [44010725661](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44010725661), Browser E2E [44010725667](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44010725667), Packaging Prerequisites [44010725662](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44010725662), Windows Installer [44010725707](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44010725707), Security/Dependency/CodeQL [44010725678](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44010725678). Push Installer [44010719955](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44010719955) passed.
+- The older paired model screen [44010377043](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44010377043) is still IN PROGRESS on c7927bd, with the flawed first audit-v5 matcher. Do not accept its audit flags. Corrected-head paired screen [44010717466](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44010717466) is PENDING behind workflow concurrency 1.
+
+### Cloud and device clarification
+
+- GitHub cloud development and hosted model screening do not depend on the user's PC being online. The ChatGPT app's offline banner affects message sending only.
+- RTX 4060 request-time inference proof is separate and requires the target Windows PC to be on and running real local Ollama inference during telemetry collection.
