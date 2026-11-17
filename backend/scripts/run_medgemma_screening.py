@@ -413,20 +413,20 @@ def audit_screen_response(case: dict[str, Any], response: str) -> list[str]:
         bad_status = r"(?:malformed|invalid|unsupplied|unrecognised|unrecognized)"
         identifier_prefix = r"(?:source[_ ](?:id|identifier)|identifier)"
         identifier_value = (
-            rf"(?:\\b{identifier_prefix}\\s*(?:[:=]\\s*)?['\"]?{escaped_source_id}['\"]?"
-            rf"|\\b{escaped_source_id}\\b)"
+            rf"(?:\b{identifier_prefix}\s*(?:[:=]\s*)?['\"]?{escaped_source_id}['\"]?"
+            rf"|\b{escaped_source_id}\b)"
         ) if source_id else ""
         direct_misclassification = re.search(
-            rf"{identifier_value}\\s+(?:is|was|has been|is marked as|was marked as|"
+            rf"{identifier_value}\s+(?:is|was|has been|is marked as|was marked as|"
             rf"is labelled as|was labelled as|is labeled as|was labeled as|"
-            rf"is classified as|was classified as|is treated as|was treated as)\\s+{bad_status}\\b"
-            rf"|\\b{bad_status}\\s+{identifier_prefix}\\s*(?:[:=]\\s*)?['\"]?{escaped_source_id}\\b",
+            rf"is classified as|was classified as|is treated as|was treated as)\s+{bad_status}\b"
+            rf"|\b{bad_status}\s+{identifier_prefix}\s*(?:[:=]\s*)?['\"]?{escaped_source_id}\b",
             text,
             flags=re.IGNORECASE,
         ) if source_id else None
         failed_validation = re.search(
-            rf"{identifier_value}\\s+(?:cannot|can't|could not)\\s+be\\s+"
-            r"(?:validated|verified|recognised|recognized|accepted)\\b",
+            rf"{identifier_value}\s+(?:cannot|can't|could not)\s+be\s+"
+            r"(?:validated|verified|recognised|recognized|accepted)\b",
             text,
             flags=re.IGNORECASE,
         ) if source_id else None
