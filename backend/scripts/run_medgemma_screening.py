@@ -1376,6 +1376,20 @@ def audit_screen_response(case: dict[str, Any], response: Any) -> list[str]:
                 findings.append(
                     "R2 narrative conditionality omission: state Option A remains conditional on prerequisite X and X remains unknown/unverified."
                 )
+            # "Not present in the supplied record" means undocumented/unknown.
+            # Do not let a separate phrase silently strengthen it to absent,
+            # failed, unmet or confirmed negative.
+            prerequisite_strengthening = re.search(
+                r"\\bprerequisite\\s+x\\b.{0,80}\\b(?:is|was|remains)\\s+"
+                r"(?:absent|missing|unmet|failed|negative|ruled out)\\b"
+                r"|\\b(?:absent|missing|unmet|failed|negative|ruled out)\\b"
+                r".{0,80}\\bprerequisite\\s+x\\b",
+                folded,
+            )
+            if prerequisite_strengthening:
+                findings.append(
+                    "R2 narrative prerequisite certainty error: prerequisite X is only undocumented/unknown in the supplied record and must not be described as absent, unmet, failed or negative."
+                )
 
         treatment = structured["shared_treatment_proposition"]
         distinct_options = {option for option, _ in option_rows.values() if option}
@@ -1436,7 +1450,7 @@ def audit_screen_response(case: dict[str, Any], response: Any) -> list[str]:
                     "R3 structured quote classification error: the claimed quote is not absent from the saved source."
                 )
 
-    if case_id == "R3-INVALID-SOURCE-008":
+    if case_id in {"R3-INVALID-SOURCE-008", "R3-FABRICATED-QUOTE-009"}:
         # The prose/JSON response must not contradict the separately validated
         # structured inventory. A supplied ID cannot be relabelled as unsupplied
         # or malformed in the response string.
@@ -1489,9 +1503,13 @@ def audit_screen_response(case: dict[str, Any], response: Any) -> list[str]:
             r"|\b(?:cannot|can't|unable to)\b.{0,80}\b(?:audit|review|classify)\b",
             folded,
         )
-        if refusal:
+        if refusal and case_id == "R3-INVALID-SOURCE-008":
             findings.append(
                 "R3 audit refusal: the response says the supplied synthetic identifier inventory cannot be audited despite the exact inventory being provided."
+            )
+        if refusal and case_id == "R3-FABRICATED-QUOTE-009":
+            findings.append(
+                "R3 quote-audit refusal: the response refuses to compare the supplied claimed quote with the exact saved source text."
             )
 
     return findings
