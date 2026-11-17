@@ -56,7 +56,9 @@ Continuity files: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_
 - Exact-SHA Windows Packaging Prerequisites 44040195720: VERIFIED.
 - Exact-SHA PR Windows Installer 44040195512: VERIFIED; installed-app smoke test and artifact upload completed.
 - Exact-SHA push Windows Installer 44040185771: VERIFIED; build/install/smoke/upload passed.
-- Model screening push run 44040185706: SKIPPED as expected because code commit 57d6064 did not include a model-screen marker. The next marker-qualified documentation commit starts the v11/audit-v10 screen only after these exact-SHA software checks passed.
+- Model screening push run 44040185706: SKIPPED as expected because code commit 57d6064 did not include a model-screen marker.
+- The documentation-only marker commit f1cf9e0a5579122277c2eec241250fb5db1c6156 did NOT start the screen because docs are excluded by the workflow push-path filter. No v11 model run was assumed.
+- A follow-up commit changes the model workflow file itself plus this checklist. The workflow YAML is included in the push-path filter, so this commit is intended to trigger v11/audit-v10 after the exact-SHA 57d6064 software checks passed.
 
 ### Master Development and Verification Checklist — Current Status
 
@@ -84,7 +86,7 @@ Continuity files: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_
 | RTX 4060 request-time GPU inference | NOT STARTED | Local Windows PC must run real Ollama inference with request-time nvidia-smi/offload evidence. |
 | Hosted Qwen/MedGemma v9 screen | FAILED | Run 44031253593, artifact 14304964550; preserved. |
 | Hosted Qwen/MedGemma v10/audit-v9 screen | IN PROGRESS | Run 44037072649, artifact 14308901197; both models 12/12 but Qwen 4 flags/3 cases and MedGemma 18 flags/4 cases; PENDING_HUMAN_REVIEW; not a quality pass. |
-| Hosted Qwen/MedGemma v11/audit-v10 screen | IN PROGRESS | Triggered by this marker-qualified documentation commit on top of code SHA 57d6064; Qwen first, MedGemma only after Qwen script gate and HAI-DEF attestation. Record run ID/artifact once confirmed. Hosted CPU only; GPU NOT_PERFORMED. |
+| Hosted Qwen/MedGemma v11/audit-v10 screen | IN PROGRESS | Documentation-only marker commit f1cf9e0a5579122277c2eec241250fb5db1c6156 did not match workflow push-path filters, so no run started. New workflow-file marker commit is now being used to trigger it. Qwen first; MedGemma only after Qwen script gate and HAI-DEF attestation. Await exact run ID. Hosted CPU only; GPU NOT_PERFORMED. |
 | Current full 45-role R1–R4 validation | NOT STARTED | No fresh complete model execution accepted. |
 | Historical full 45-role run-9 acceptance | FAILED | Audit found 343 integrity findings; originals preserved. |
 | MedGemma HAI-DEF pre-provision gate | VERIFIED | Previously accepted personally by user; v10 gate passed. New workflow retains same gate. |
@@ -98,7 +100,7 @@ Continuity files: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_
 
 ## Immediate next actions
 
-1. Inspect the v11/audit-v10 run's exact manifest, model digests, 12 outputs per model, completion reasons, token metrics, normalization records and deterministic flags.
+1. Confirm the workflow-file marker commit starts exactly one v11/audit-v10 run on the development branch. Then inspect its exact manifest, model digests, 12 outputs per model, completion reasons, token metrics, normalization records and deterministic flags.
 2. Specifically verify R2 partial agreement (information sufficiency independent of treatment), R2 conditional option labels, R3 narrative/structured identifier consistency, fabricated-quote rejection, and R4 echo detection.
 3. If Qwen exits non-zero, MedGemma must remain NOT_REQUESTED. If Qwen completes but integrity flags remain, preserve them and do not call the model a pass.
 4. Arrange independent blinded review of all v10 and v11 raw outputs before model promotion.
