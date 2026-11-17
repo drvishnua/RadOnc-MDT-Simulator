@@ -31,9 +31,9 @@ CORPUS_PATH = (
     / "fixtures"
     / "medgemma_model_integrity_screening_v1.json"
 )
-PROMPT_VERSION = "radonc-mdt-integrity-screen-v12"
+PROMPT_VERSION = "radonc-mdt-integrity-screen-v13"
 AUDIT_VERSION = "radonc-mdt-integrity-audit-v12"
-# Paired v12/audit-v11 retest: source-bound R2 empty-label and nested R3 JSON checks.
+# Paired v13/audit-v12 retest: structured R2 fields precede bounded explanation; 700-token output ceiling.
 DEFAULT_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/")
 GENERATION_OPTIONS = {
     "temperature": 0,
@@ -45,11 +45,11 @@ GENERATION_OPTIONS = {
     "top_p": 0.95,
     "frequency_penalty": 0.0,
     "presence_penalty": 1.5,
-    # Ollama defaults repeat_penalty to 1.0 (disabled). Prior MedGemma screens
-    # looped to the 500-token cap, so apply a mild penalty to BOTH models.
+    # Ollama defaults repeat_penalty to 1.0 (disabled). Apply a mild penalty
+    # to BOTH models and allow room for the complete structured R2 ledger.
     "repeat_last_n": 64,
     "repeat_penalty": 1.1,
-    "num_predict": 500,
+    "num_predict": 700,
 }
 
 SCRIPT_SHA256 = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
@@ -304,6 +304,12 @@ def build_response_schema(case: dict[str, Any]) -> dict[str, Any]:
                     },
                 })
 
+            # Ollama follows schema property order during constrained decoding.
+            # Emit auditable fields before free text so the explanation cannot
+            # consume the output budget before the required R2 ledger is generated.
+            response_property = properties.pop("response")
+            properties["response"] = response_property
+
     if case.get("round") == "R3":
         inventory = case_local_identifier_inventory(case.get("input") or {})
         if (
@@ -513,7 +519,13 @@ def build_case_prompt(case: dict[str, Any]) -> str:
         "For R3, complete each identifier_inventory_review and source_quote_review field present "
         "in the schema. Never alter locked source IDs or saved text. Do not include hidden reasoning "
         "or extra fields.\n"
-        "SCREENING INPUT:\n"
+        + (
+            "For R2, the response field must be one factual sentence of at most 30 words; "
+            "do not put analysis or reasoning in that field.\n"
+            if case["round"] == "R2"
+            else ""
+        )
+        + "SCREENING INPUT:\n"
         + json.dumps(prompt_payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     )
 
