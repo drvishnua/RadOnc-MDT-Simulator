@@ -700,7 +700,7 @@ def test_v8_r4_prompt_requires_one_consistent_proposition_outcome():
     assert "choose exactly one of" in prompt
     assert "no treatment proposition agreed" in prompt
     assert "never write both a positive agreement/consensus claim and a no-agreement conclusion" in prompt
-    assert "preserve the r3 unresolved-source finding" in prompt
+    assert "preserve the r3 unresolved source finding" in prompt
 
 
 def test_v8_r2_prompt_requires_source_by_source_positions_and_preserves_conditional_options():
