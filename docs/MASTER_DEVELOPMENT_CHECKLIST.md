@@ -56,7 +56,7 @@ All six PR workflows associated with this exact documentation-only commit have c
 | Provenance and guideline/evidence retrieval | IN PROGRESS | Screening harness has source text/IDs; in-app guideline retrieval and linked evidence incomplete. |
 | Chair consensus, dissent and traceability | FAILED | v15 partial-agreement contradiction and R4 source-echo failures await live retest. |
 | Missing/failed-agent handling | FAILED | v15 MedGemma omitted counts/role identity; deterministic guard is regression-tested, not live-model verified. |
-| Backend tests — exact head ffac504 | VERIFIED | Run 44139659389: 471/471 passed; preflight 7/7; diagnostic errors 0. |
+| Backend tests — exact CI-tested baseline ffac504 | VERIFIED | Run 44142134948: 471/471 passed; preflight 7/7; diagnostic errors 0. |
 | Frontend build — exact head ffac504 | VERIFIED | Run 44142134991 passed. |
 | Patient registry and saved MDT dashboard browser E2E — exact head ffac504 | VERIFIED | Run 44142134881 passed; not full 45-role clinical simulation. |
 | Mission Control development-process monitor | IN PROGRESS | Backend tests pass; complete operational/browser acceptance of live development monitor not established. |
