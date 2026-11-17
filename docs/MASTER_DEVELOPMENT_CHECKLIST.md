@@ -3,7 +3,7 @@
 Repository: drvishnua/RadOnc-MDT-Simulator  
 Development branch: feature/four-round-mdt-and-performance  
 Latest application/test commit: 57d6064087c63ccb94eeec43aa670891fe3792c8  
-Latest documentation/checklist checkpoint reviewed: da07b1d0ae2f9fb6cec61c1ff3988646967cde6e  
+Latest documentation/checklist checkpoint reviewed: f4948e351d4a580643cca52d14e0474ef7966ac6  
 PR #1: open, draft, unmerged, base main  
 main: 39a356b8eb09399aa2da1b9b9085965999f5105a, unchanged.
 
@@ -59,10 +59,11 @@ Continuity files: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_
 - Exact-SHA push Windows Installer 44040185771: VERIFIED; build/install/smoke/upload passed.
 - Model screening push run 44040185706: SKIPPED as expected because code commit 57d6064 did not include a model-screen marker.
 - Documentation checkpoint d65534e837c141f88e7268b29e7b2b75f7bec2e0 did not change application code. All six PR checks on that exact head passed: Backend 44040716001; Frontend 44040715987; Browser E2E 44040716041; Windows Packaging Prerequisites 44040716022; Windows Installer 44040716081; Security/Dependency/CodeQL 44040715993.
-- Latest checklist reconciliation commit da07b1d0ae2f9fb6cec61c1ff3988646967cde6e also changes documentation only. On that exact SHA, Backend 44041146885, Frontend 44041146868 and Windows Packaging Prerequisites 44041147002 passed; Browser E2E 44041146870, Security/Dependency/CodeQL 44041146896 and Windows Installer 44041146854 were IN PROGRESS at the latest check. Do not claim six of six on da07.
+- Latest checklist reconciliation commit da07b1d0ae2f9fb6cec61c1ff3988646967cde6e changes documentation only. On that exact SHA, Backend 44041146885, Frontend 44041146868, Windows Packaging Prerequisites 44041147002, Browser E2E 44041146870 and Security/Dependency/CodeQL 44041146896 passed; Windows Installer 44041146854 remained IN PROGRESS at the later check.
+- Current documentation-only branch head f4948e351d4a580643cca52d14e0474ef7966ac6 has a fresh six-check PR cycle: Backend 44041294229, Frontend 44041294224, Browser E2E 44041294378, Packaging Prerequisites 44041294222, Security/CodeQL 44041294235 and Windows Installer 44041294340. All were IN PROGRESS or queued at the latest exact-head check. These changes do not modify the application/test source SHA 57d6064.
 - The documentation-only marker commit f1cf9e0a5579122277c2eec241250fb5db1c6156 did NOT start the screen because docs are excluded by the workflow push-path filter. No v11 model run was assumed.
 - Workflow-file trigger commit 07548081f2b41ee1ed9db652e78156e2b65cc9be matched the push-path filter and started Synthetic Model Integrity Screening **44040631649** on that exact SHA.
-- The HAI-DEF pre-provision gate completed successfully. At the latest live check (17 November 2026, 13:14 IST), the combined isolated Ollama provisioning/inference step remained IN PROGRESS. GitHub exposed no artifact or confirmed generation count; Qwen completion and MedGemma pull/execution are therefore NOT YET VERIFIED.
+- The HAI-DEF pre-provision gate completed successfully. At the latest live check (17 November 2026, approximately 13:17 IST), the combined isolated Ollama provisioning/inference step remained IN PROGRESS. GitHub exposed no artifact or confirmed generation count; Qwen completion and MedGemma pull/execution are therefore NOT YET VERIFIED.
 - The workflow run's source SHA is 07548081; subsequent branch commits d65534e are documentation-only and do not alter the screening code checked out for this run.
 
 ### Master Development and Verification Checklist — Current Status
@@ -90,7 +91,7 @@ Continuity files: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_
 | Ollama performance and concurrency | IN PROGRESS | Concurrency 1 retained; CPU screening metrics captured; comparative local performance incomplete. |
 | RTX 4060 request-time GPU inference | NOT STARTED | Local Windows PC must run real Ollama inference with request-time nvidia-smi/offload evidence. |
 | Hosted Qwen/MedGemma v9 screen | FAILED | Run 44031253593, artifact 14304964550; preserved. |
-| Hosted Qwen/MedGemma v10/audit-v9 screen | IN PROGRESS | Run 44037072649, artifact 14308901197; both models 12/12 but Qwen 4 flags/3 cases and MedGemma 18 flags/4 cases; PENDING_HUMAN_REVIEW; not a quality pass. |
+| Hosted Qwen/MedGemma v10/audit-v9 screen | FAILED | Run 44037072649, artifact 14308901197; both models completed 12/12, but Qwen had 4 integrity findings and MedGemma 18; bounded acceptance failed. Raw outputs preserved; independent review remains outstanding. |
 | Hosted Qwen/MedGemma v11/audit-v10 screen | IN PROGRESS | Workflow 44040631649 on trigger SHA 07548081f2b41ee1ed9db652e78156e2b65cc9be. HAI-DEF pre-provision gate passed; combined isolated Ollama provisioning/inference step remains active; no artifacts or model generation count available, so Qwen/MedGemma execution stage not yet independently verified. Qwen first; MedGemma only after Qwen script gate and terms gate. Hosted CPU only; GPU NOT_PERFORMED. |
 | Current full 45-role R1–R4 validation | NOT STARTED | No fresh complete model execution accepted. |
 | Historical full 45-role run-9 acceptance | FAILED | Audit found 343 integrity findings; originals preserved. |
