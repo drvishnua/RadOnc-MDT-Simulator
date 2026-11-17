@@ -42,7 +42,7 @@ def test_round_specific_prompt_instructions_are_present():
     corpus, _ = load_corpus()
     prompts = {case["round"]: build_case_prompt(case) for case in corpus["cases"]}
     assert "independent role-level reading" in prompts["R1"]
-    assert "Compare each position and option separately" in prompts["R2"]
+    assert "inspect EVERY entry in each saved_R1_contributions object one" in prompts["R2"]
     assert "critical audit of source-linked statements" in prompts["R3"]
     assert "closing board record" in prompts["R4"]
 
@@ -56,7 +56,7 @@ def test_r2_prompt_preserves_unknown_vs_absent_and_conditionality():
         "clinically absent, negative, failed or unmet",
         "the prerequisite status is unknown",
         "do not call the prerequisite or condition 'unmet'",
-        "the option remains conditional pending confirmation",
+        "explicitly retain the source's conditional option",
     ):
         assert phrase in prompt
 
@@ -67,11 +67,11 @@ def test_r3_prompt_requires_case_local_raw_range_rejection_and_negation():
     prompt = build_generate_payload("qwen3.5:4b", case)["prompt"].casefold()
     for phrase in (
         "r2:ro-01-ro-09",
-        "preserve its raw text verbatim",
+        "preserve it verbatim",
         "never normalise ranges",
-        "a case_id is a test-case label",
+        "a case_id is a test label",
         "deliberately_unsupplied_ids",
-        "do not mention a field, quote, source id, role, case id or claim from",
+        "do not mention material from another case or an external example",
     ):
         assert phrase in prompt
 
@@ -80,17 +80,17 @@ def test_r3_prompt_requires_case_local_raw_range_rejection_and_negation():
     assert "no peer claimed that" in negation_prompt
     assert "recognise explicit negation and never reverse it" in negation_prompt
 
-def test_v4_prompts_preserve_unknown_conditionality_and_prevent_cross_case_leakage():
+def test_v5_prompts_preserve_unknown_conditionality_and_prevent_cross_case_leakage():
     corpus, _ = load_corpus()
     conditional_case = next(item for item in corpus["cases"] if item["case_id"] == "R2-CONDITIONALITY-007")
     conditional_prompt = build_generate_payload("qwen3.5:4b", conditional_case)["prompt"]
     assert "do not call the prerequisite or condition 'unmet'" in conditional_prompt.casefold()
-    assert "the option remains conditional pending confirmation" in conditional_prompt
+    assert "explicitly retain the source's conditional option" in conditional_prompt
 
     invalid_case = next(item for item in corpus["cases"] if item["case_id"] == "R3-INVALID-SOURCE-008")
     invalid_prompt = build_generate_payload("qwen3.5:4b", invalid_case)["prompt"].casefold()
-    assert "a case_id is a test-case label, never" in invalid_prompt
-    assert "do not mention a field, quote, source id" in invalid_prompt
+    assert "a case_id is a test label, never a contribution source_id" in invalid_prompt
+    assert "do not mention material from another case or an external example" in invalid_prompt
     assert "r3-fabricated-quote-009" not in invalid_prompt
     assert "model_claimed_quote" not in invalid_prompt
 
@@ -101,7 +101,7 @@ def test_v4_prompts_preserve_unknown_conditionality_and_prevent_cross_case_leaka
 
     chair_case = next(item for item in corpus["cases"] if item["case_id"] == "R4-CHAIR-TRACEABILITY-012")
     chair_prompt = build_generate_payload("qwen3.5:4b", chair_case)["prompt"]
-    assert "Reject unsupported consensus claims without refusing" in chair_prompt
+    assert "Do not refuse to produce a limited synthesis when saved R1-R3 material is present" in chair_prompt
 
     r1_case = next(item for item in corpus["cases"] if item["case_id"] == "R1-UNKNOWN-STAGE-001")
     r1_prompt = build_generate_payload("qwen3.5:4b", r1_case)["prompt"]
