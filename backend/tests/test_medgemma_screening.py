@@ -61,7 +61,6 @@ def _valid_model_output(case, response):
             else {"status": "not_shared", "source_ids": []}
         )
         output.update({
-            "source_order": [row["source_id"] for row in screening.saved_r1_source_inventory(case.get("input") or {})],
             "source_ledger": ledger,
             "shared_information_sufficiency": shared_information,
             "shared_treatment_proposition": {"status": "not_shared", "source_ids": []},
@@ -427,11 +426,23 @@ def test_case_specific_schema_rejects_dropped_or_altered_r2_source_rows():
     assert parsed is None
     assert "altered or omitted a server-saved statement" in error
 
-    reordered = json.loads(json.dumps(valid))
-    reordered["source_order"] = list(reversed(reordered["source_order"]))
-    parsed, error = validate_model_response(json.dumps(reordered), case)
+    # Object-key insertion order is not trusted. The server derives the
+    # authoritative sequence from saved R1 rows after exact key coverage passes.
+    ledger_reordered = json.loads(json.dumps(valid))
+    ledger_reordered["source_ledger"] = dict(reversed(list(ledger_reordered["source_ledger"].items())))
+    parsed, error = validate_model_response(json.dumps(ledger_reordered), case)
+    assert parsed is not None
+    expected_order = [row["source_id"] for row in screening.saved_r1_source_inventory(case["input"])]
+    assert parsed["server_derived"]["source_order"] == expected_order
+    assert parsed["server_derived"]["source_order_basis"] == "original saved R1 contribution order"
+
+    # A model-supplied ordering field is an unexpected field and cannot override
+    # or impersonate the server-derived sequence.
+    model_order = json.loads(json.dumps(valid))
+    model_order["source_order"] = list(reversed(expected_order))
+    parsed, error = validate_model_response(json.dumps(model_order), case)
     assert parsed is None
-    assert "original saved contribution order" in error
+    assert "exact case-specific structured schema" in error
 
 
 def test_r2_structured_audit_flags_false_consensus_and_lost_prerequisite_status():
@@ -907,7 +918,7 @@ def test_v9_r2_structured_schema_preserves_order_attribution_and_consensus_types
     partial_payload = build_generate_payload("qwen3.5:4b", partial_case)
     partial_schema = partial_payload["format"]["properties"]
     source_ids = ["R1:RO-01", "R1:MO-01", "R1:SO-02"]
-    assert partial_schema["source_order"]["items"]["enum"] == source_ids
+    assert "source_order" not in partial_schema  # Derived by the server after validation.
     assert list(partial_schema["source_ledger"]["properties"]) == source_ids
     assert partial_schema["source_ledger"]["required"] == source_ids
     assert "shared_information_sufficiency" in partial_schema
@@ -1112,3 +1123,86 @@ def test_v4_audit_accepts_r4_exact_counts_and_missing_role():
         "R4 missing-agent completeness omission" in item
         for item in screening.audit_screen_response(case, complete)
     )
+
+
+
+def test_r2_server_derives_source_order_and_normalizes_only_matching_short_labels():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R2-FALSE-CONSENSUS-005")
+    output = _valid_model_output(
+        case,
+        "The two saved sources state different conditional options; no shared treatment proposition is established.",
+    )
+    output["source_ledger"]["R1:RO-01"]["treatment_option"] = "A"
+    output["source_ledger"]["R1:RO-01"]["prerequisite"] = "X"
+    output["source_ledger"]["R1:MO-01"]["treatment_option"] = "B"
+    output["source_ledger"]["R1:MO-01"]["prerequisite"] = "Y"
+    output["source_ledger"]["R1:RO-01"]["prerequisite_status"] = "unknown"
+    output["source_ledger"]["R1:MO-01"]["prerequisite_status"] = "unknown"
+
+    parsed, error = validate_model_response(json.dumps(output), case)
+
+    assert error is None
+    assert parsed is not None
+    assert parsed["server_derived"]["source_order"] == [
+        "R1:RO-01", "R1:MO-01"
+    ]
+    assert parsed["server_derived"]["field_normalizations"] == [
+        {
+            "source_id": "R1:RO-01",
+            "field": "treatment_option",
+            "model_value": "A",
+            "server_value": "Option A",
+            "basis": "unique exact label in this source's saved statement",
+        },
+        {
+            "source_id": "R1:RO-01",
+            "field": "prerequisite",
+            "model_value": "X",
+            "server_value": "prerequisite X",
+            "basis": "unique exact label in this source's saved statement",
+        },
+        {
+            "source_id": "R1:MO-01",
+            "field": "treatment_option",
+            "model_value": "B",
+            "server_value": "Option B",
+            "basis": "unique exact label in this source's saved statement",
+        },
+        {
+            "source_id": "R1:MO-01",
+            "field": "prerequisite",
+            "model_value": "Y",
+            "server_value": "prerequisite Y",
+            "basis": "unique exact label in this source's saved statement",
+        },
+    ]
+    assert parsed["source_ledger"]["R1:RO-01"]["prerequisite_status"] == "unknown"
+    assert parsed["source_ledger"]["R1:MO-01"]["prerequisite_status"] == "unknown"
+    assert output["source_ledger"]["R1:RO-01"]["treatment_option"] == "A"  # Raw fixture unchanged.
+    assert screening.audit_screen_response(case, parsed) == []
+
+
+def test_r2_short_label_mismatch_is_not_normalized_or_silently_accepted():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R2-FALSE-CONSENSUS-005")
+    output = _valid_model_output(
+        case,
+        "The two saved sources state different conditional options; no shared treatment proposition is established.",
+    )
+    output["source_ledger"]["R1:RO-01"]["treatment_option"] = "B"  # Saved source says Option A.
+    output["source_ledger"]["R1:RO-01"]["prerequisite"] = "Y"  # Saved source says prerequisite X.
+    output["source_ledger"]["R1:RO-01"]["prerequisite_status"] = "unknown"
+
+    parsed, error = validate_model_response(json.dumps(output), case)
+
+    assert error is None
+    assert parsed is not None
+    assert parsed["source_ledger"]["R1:RO-01"]["treatment_option"] == "B"
+    assert parsed["source_ledger"]["R1:RO-01"]["prerequisite"] == "Y"
+    assert not any(
+        item["source_id"] == "R1:RO-01"
+        for item in parsed["server_derived"]["field_normalizations"]
+    )
+    findings = screening.audit_screen_response(case, parsed)
+    assert any("R2 structured conditionality omission" in finding for finding in findings)

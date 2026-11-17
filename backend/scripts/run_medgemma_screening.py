@@ -274,11 +274,6 @@ def build_response_schema(case: dict[str, Any]) -> dict[str, Any]:
                     },
                 })
             source_ids = [row["source_id"] for row in rows]
-            properties["source_order"] = {
-                "type": "array",
-                "items": {"type": "string", "enum": source_ids},
-                "uniqueItems": True,
-            }
             properties["source_ledger"] = _closed_object_schema(ledger_properties)
             for field_name in ("shared_information_sufficiency", "shared_treatment_proposition"):
                 properties[field_name] = _closed_object_schema({
@@ -361,8 +356,6 @@ def _validate_case_specific_fields(
     if case.get("round") == "R2" and "source_ledger" in schema["properties"]:
         rows = saved_r1_source_inventory(case.get("input") or {})
         source_ids = [row["source_id"] for row in rows]
-        if parsed.get("source_order") != source_ids:
-            return "R2 source_order did not preserve the original saved contribution order."
         ledger = parsed.get("source_ledger")
         expected_ids = set(source_ids)
         if not isinstance(ledger, dict) or set(ledger) != expected_ids:
@@ -494,8 +487,10 @@ def build_case_prompt(case: dict[str, Any]) -> str:
         "Do not cite external sources or invent evidence. Identify unsupported information "
         "as unknown or unverified. If the input is insufficient, say so. "
         "Return the exact JSON fields required by the case-specific response schema. "
-        "For R2, reproduce source_order exactly as the original saved row order, complete every "
-        "source_ledger row and both structured proposition assessments. "
+        "For R2, complete exactly one source_ledger row for every supplied saved source ID. "
+        "The server independently derives the authoritative source order from the original saved "
+        "R1 contribution order; do not add a model-generated source_order field. "
+        "Complete both structured proposition assessments. "
         "For R3, complete each identifier_inventory_review and source_quote_review field present "
         "in the schema. Never alter locked source IDs or saved text. Do not include hidden reasoning "
         "or extra fields.\n"
@@ -548,6 +543,66 @@ def extract_raw_model_response(payload: Any) -> str | None:
     return raw if isinstance(raw, str) else None
 
 
+def _normalize_r2_source_labels(
+    parsed: dict[str, Any], case: dict[str, Any]
+) -> dict[str, Any]:
+    """Derive authoritative R2 order and normalize only exact source-bound short labels.
+
+    A model may abbreviate a uniquely supplied label (for example, "A" for
+    "Option A"). The abbreviation is expanded only when that exact label occurs
+    once in that same saved source statement. This never transfers labels across
+    sources or repairs a mismatched option/prerequisite.
+    """
+    rows = saved_r1_source_inventory(case.get("input") or {})
+    source_ids = [row["source_id"] for row in rows]
+    ledger = parsed["source_ledger"]
+    normalizations: list[dict[str, str]] = []
+
+    fields = (
+        (
+            "treatment_option",
+            re.compile(r"\bOption\s+([A-Z])\b", re.IGNORECASE),
+            re.compile(r"(?:Option\s+)?([A-Z])", re.IGNORECASE),
+        ),
+        (
+            "prerequisite",
+            re.compile(r"\bprerequisite\s+([A-Z])\b", re.IGNORECASE),
+            re.compile(r"(?:prerequisite\s+)?([A-Z])", re.IGNORECASE),
+        ),
+    )
+    for row in rows:
+        source_id = row["source_id"]
+        saved_statement = row["saved_statement"]
+        source_row = ledger[source_id]
+        for field_name, source_pattern, candidate_pattern in fields:
+            candidate = source_row.get(field_name)
+            if not isinstance(candidate, str) or not candidate.strip():
+                continue
+            source_matches = list(source_pattern.finditer(saved_statement))
+            candidate_match = candidate_pattern.fullmatch(candidate.strip())
+            if len(source_matches) != 1 or candidate_match is None:
+                continue
+            source_match = source_matches[0]
+            if candidate_match.group(1).upper() != source_match.group(1).upper():
+                continue
+            canonical_value = source_match.group(0)
+            if candidate != canonical_value:
+                source_row[field_name] = canonical_value
+                normalizations.append({
+                    "source_id": source_id,
+                    "field": field_name,
+                    "model_value": candidate,
+                    "server_value": canonical_value,
+                    "basis": "unique exact label in this source's saved statement",
+                })
+
+    return {
+        "source_order": source_ids,
+        "field_normalizations": normalizations,
+        "source_order_basis": "original saved R1 contribution order",
+    }
+
+
 def validate_model_response(
     raw_response: Any, case: dict[str, Any] | None = None
 ) -> tuple[dict[str, Any] | None, str | None]:
@@ -565,6 +620,8 @@ def validate_model_response(
     case_error = _validate_case_specific_fields(parsed, case)
     if case_error:
         return None, case_error
+    if case is not None and case.get("round") == "R2" and "source_ledger" in parsed:
+        parsed["server_derived"] = _normalize_r2_source_labels(parsed, case)
     return parsed, None
 
 
