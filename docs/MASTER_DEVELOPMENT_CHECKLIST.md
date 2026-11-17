@@ -2,11 +2,12 @@
 
 Repository: drvishnua/RadOnc-MDT-Simulator  
 Development branch: feature/four-round-mdt-and-performance  
-Latest prompt/source implementation commit: c3530019f70ec43fbb2a0f0d896d922d6981b8a0 (screen-v15/audit-v14, R2/R3 prompt changes and exact Qwen version gate)  
-Latest test and current checklist commit before this model-screen marker: 785a094bb3e9a8b345eac231a57ea82a9fc963ae  
-Latest exact-head CI: 785a094; backend 467 passed; all six standard PR checks passed (runs 44112201757, 44112201887, 44112201703, 44112201832, 44112202136, 44112201993)  
-Latest valid model-screen attempt: none yet; previous run 44095336849 failed version integrity (artifact manifest v14/audit-v13; artifact 14335580025 preserved)  
-Current checklist is updated in this marker commit; branch parent is 785a094bb3e9a8b345eac231a57ea82a9fc963ae  
+Latest prompt/source implementation commit: c3530019f70ec43fbb2a0f0d896d922d6981b8a0 (screen-v15/audit-v14 prompt, audit metadata and Qwen version gate)  
+Latest test/checklist baseline: 785a094bb3e9a8b345eac231a57ea82a9fc963ae; all six standard PR workflows passed  
+Current model-screen marker commit: 011dda99dc8de4783a10448a12c02dc24a346660  
+Current model-screen run: 44113146755 IN PROGRESS; job 134143893041; pre-provision terms gate passed; model outputs/artifact not yet available  
+Previous misversioned run 44095336849 remains FAILED for version integrity; artifact 14335580025 preserved  
+This checklist update is based on marker commit 011dda99dc8de4783a10448a12c02dc24a346660  
 PR #1: open, draft, unmerged, base main  
 main: 39a356b8eb09399aa2da1b9b9085965999f5105a, unchanged.
 
@@ -15,14 +16,16 @@ This is the single authoritative Master Development and Verification Checklist. 
 Continuity files: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_LOG.md, RECOVERY_STATE.md, KNOWN_ISSUES.md.
 
 
-## Current checkpoint — v15 prompt/version-gate correction and test maintenance
+## Current checkpoint — v15/audit-v14 hosted screening executing
 
-- Current source implementation commit: c3530019f70ec43fbb2a0f0d896d922d6981b8a0. It advances the screening prompt to v15, audit metadata to v14, and adds the pre-MedGemma exact-version guard.
-- This follow-up fixes two stale test assertions exposed by backend CI on c353001: immutable manifest expectations now match v15/audit-v14; the workflow test now checks the actual initial `medgemma_status = "NOT_REQUESTED"` field.
-- Backend run [44111354417](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44111354417) on c353001 failed: 465 passed, 2 failed, 1 warning. Preflight 7/7 and script compilation passed. Preserve this failure; exact-head CI after assertion fixes is pending.
-- Frontend [44111354403], Browser E2E [44111354967], Security [44111354397], Windows installer [44111354247], and push installer [44111335865] were still running at last inspection; do not claim passed. Packaging prerequisites [44111354473] passed.
-- The misversioned model-screen run 44095336849 remains FAILED for v15/audit-v14 acceptance; artifact 14335580025 and SHA-256 af9f88873e0ad5e4009f144e1df48baf25973a4319043e0d98aa12003603bd89 are preserved.
-- No model-screen retry is authorised until exact-head standard CI is green. The next marker commit must carry the required workflow trigger tokens and use the version-gated Qwen-first execution.
+- Source/prompt implementation and expected-version gate: c3530019f70ec43fbb2a0f0d896d922d6981b8a0.
+- Test expectation corrections and exact-head CI: 785a094bb3e9a8b345eac231a57ea82a9fc963ae.
+- Marker commit: 011dda99dc8de4783a10448a12c02dc24a346660. It changes only the workflow annotation and checklist; commit message contains all three required markers.
+- Hosted screening run [44113146755](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44113146755), job 134143893041, exact marker SHA 011dda9.
+- Job steps 1–4 completed successfully, including the HAI-DEF terms pre-provision check. Step 5, “Provision isolated Ollama and run sequential model screens”, remains IN PROGRESS.
+- Live job logs and artifacts are not downloadable yet. No model-specific generation marker, Qwen JSONL manifest, or output count has been confirmed.
+- Qwen is first. The workflow validates the Qwen JSONL manifest against exact prompt-v15/audit-v14 after script-hash validation and before the MedGemma gate/pull. Qwen failure, truncation, or version mismatch must leave MedGemma NOT_REQUESTED.
+- The earlier misversioned run [44095336849](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44095336849) remains FAILED for version integrity; artifact 14335580025 and its SHA-256 are retained.
 
 ### Master Checklist — Current Status
 
@@ -39,26 +42,27 @@ Continuity files: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_
 | Provenance and guideline/evidence retrieval | IN PROGRESS | Exact source text and IDs are bound; verified guideline retrieval/claim linkage not integrated. |
 | Chair consensus, dissent and traceability | IN PROGRESS | Deterministic controls exist; full 45-role source-level acceptance outstanding. |
 | Missing/failed-agent handling | IN PROGRESS | MedGemma missed R4 missing-agent completeness in run 44095336849; full failure-injection acceptance outstanding. |
-| Backend CI on c353001 | FAILED | Run 44111354417: 465 passed, 2 failed, 1 warning. Failures were stale v14/v13 expected strings and an incorrect workflow-test string; preflight 7/7 and script compilation passed. Follow-up fixes test expectations; preserve this failed run. |
-| Backend tests | IN PROGRESS | Run 44111354417 on c353001 had 465 passed / 2 failed; both failures were stale test expectations, corrected in this follow-up; exact-head rerun pending. |
-| Frontend build | IN PROGRESS | Parent 609a0dca frontend check 44095398267 passed; exact remediation-head CI pending. |
-| Browser E2E | IN PROGRESS | Parent 609a0dca browser check 44095398302 passed; exact remediation-head CI pending. |
-| Dashboard/API and Development Monitor | IN PROGRESS | Existing bounded checks previously passed; no new frontend changes, but exact remediation-head CI pending. |
+| Backend CI on c353001 | FAILED | Run 44111354417: 465 passed, 2 failed, 1 warning. Stale v14/v13 manifest expectations and wrong workflow-test string; preflight 7/7 and Python compilation passed. Follow-up fixes in 785a094; later exact-head backend passed 467/467. Preserve failure. |
+| Backend tests | VERIFIED | Exact SHA 785a094: 467 passed, 0 failed/errors/skipped, 1 warning; run 44112201757; deterministic preflight 7/7. |
+| Frontend build | VERIFIED | Exact SHA 785a094: run 44112201887 passed. |
+| Browser E2E | VERIFIED | Exact SHA 785a094: run 44112201703 passed. |
+| Dashboard/API and Development Monitor | VERIFIED | Exact-SHA browser E2E 44112201703 passed; isolated dashboard/registry browser workflow only, not full clinical simulation. |
 | Ollama context handling | VERIFIED | Historical 6,144/8,192 allocation only; long-run truncation is not proven fixed. |
 | Ollama performance and concurrency | IN PROGRESS | Concurrency remains 1; comparable current local timings incomplete. |
 | RTX 4060 request-time GPU inference | NOT STARTED | Requires real local inference with request-time nvidia-smi/Ollama offload evidence. |
 | Hosted v9–v14 model screens | FAILED | Earlier bounded screens retain their recorded integrity failures. |
-| v15/audit-v14 prompt, audit metadata and regression tests | IN PROGRESS | c353001 adds actual R2/R3 prompt-v15 instructions, v15/audit-v14 constants, exact-version gate and prompt tests; stale test expectations corrected in this follow-up; exact-head CI pending. |
-| v15/audit-v14 screening attempt — run 44095336849 | FAILED | Execution succeeded but artifact manifest says v14/audit-v13; Qwen 2 findings, MedGemma 9 findings; not accepted as v15/audit-v14. Artifact 14335580025 retained. |
-| Qwen expected-version gate before MedGemma | IN PROGRESS | Exact v15/audit-v14 manifest check added after Qwen script-hash validation; test added; exact-head CI pending. |
+| Hosted v15/audit-v14 run 44113146755 | IN PROGRESS | Marker SHA 011dda99dc8de4783a10448a12c02dc24a346660; job 134143893041. HAI-DEF terms pre-provision gate passed; isolated Ollama/provisioning and screen step in progress; no Qwen outputs or artifact yet. |
+| v15/audit-v14 prompt, audit metadata and regression tests | VERIFIED | Prompt/audit changes and exact-version gate in c353001; stale test expectations corrected in 785a094; exact-SHA backend 467 passed and all six standard PR checks passed. Live model adherence remains unverified. |
+| Misversioned v15 marker attempt — run 44095336849 | FAILED | Execution succeeded but manifest says v14/audit-v13; Qwen 2 findings, MedGemma 9 findings; not accepted as v15/audit-v14. Artifact 14335580025 / SHA-256 af9f88873e0ad5e4009f144e1df48baf25973a4319043e0d98aa12003603bd89 retained. |
+| Qwen expected-version gate before MedGemma | VERIFIED | Expected prompt-v15/audit-v14 check runs after Qwen script-hash validation and before MedGemma pull; regression test passed in 44112201757. Runtime gate awaits current run 44113146755. |
 | Fresh full 45-role R1–R4 validation | NOT STARTED | No current complete run accepted. |
 | MedGemma HAI-DEF acceptance | VERIFIED | User's prior explicit acceptance retained; screen run records terms attested. |
 | Independent blinded model-output review | NOT STARTED | Required independent review not completed. |
 | Guideline retrieval and verification | NOT STARTED | No current authoritative evidence set linked to simulator conclusions. |
 | Independent qualified clinical review | NOT STARTED | No signed/attributable clinical review artifact. |
-| Packaging prerequisites | IN PROGRESS | Parent 609a0dca check 44095398339 passed; exact remediation-head CI pending. |
-| Windows installer | IN PROGRESS | Parent 609a0dca check 44095398272 passed; hosted Ollama bootstrap was skipped; exact remediation-head CI pending. |
-| Security, dependency audit and CodeQL | IN PROGRESS | Parent 609a0dca check 44095398355 passed; exact remediation-head CI pending. |
+| Packaging prerequisites | VERIFIED | Exact SHA 785a094: run 44112202136 passed. |
+| Windows installer | VERIFIED | Exact SHA 785a094: PR installer 44112201993 and push installer 44112185192 passed build/install/smoke/checksum/upload; artifact 14342215280 (14,882,605 bytes), digest sha256:0fd37d36150ae98c9f426e87cf289de68e1785bd1c91dd0e07cd75c0b3caaac2. Hosted Ollama/model bootstrap skipped. |
+| Security, dependency audit and CodeQL | VERIFIED | Exact SHA 785a094: run 44112201832 passed Python/JS CodeQL, dependency audit and full-history secret scan. |
 | Release acceptance | BLOCKED | Misversioned screen failed; corrected v15 prompt/version guard and CI retest pending; full-run, independent review, guideline, GPU and clinical gates remain outstanding. |
 
 ## Historical checkpoint — 17 November 2026 — d836076 exact-head CI green; v15 screen authorised
