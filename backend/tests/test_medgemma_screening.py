@@ -80,7 +80,7 @@ def test_r3_prompt_requires_case_local_raw_range_rejection_and_negation():
     assert "no peer claimed that" in negation_prompt
     assert "recognise explicit negation and never reverse it" in negation_prompt
 
-def test_v5_prompts_preserve_unknown_conditionality_and_prevent_cross_case_leakage():
+def test_v6_prompts_preserve_unknown_conditionality_and_prevent_cross_case_leakage():
     corpus, _ = load_corpus()
     conditional_case = next(item for item in corpus["cases"] if item["case_id"] == "R2-CONDITIONALITY-007")
     conditional_prompt = build_generate_payload("qwen3.5:4b", conditional_case)["prompt"]
@@ -144,8 +144,9 @@ def test_deterministic_review_audit_accepts_correct_source_identifier_and_bounde
     corpus, _ = load_corpus()
     quote_case = next(item for item in corpus["cases"] if item["case_id"] == "R3-FABRICATED-QUOTE-009")
     quote_response = (
-        "The supplied source ID R2:MO-01 is retained as given. "
-        "The claimed MRI quote is absent from that saved contribution."
+        "The claimed MRI quote is not present in the saved source R2:MO-01. "
+        "The exact saved source text is: 'No imaging result is included in the supplied fictional record.' "
+        "The MRI claim is unsupported and is not evidence."
     )
     assert screening.audit_screen_response(quote_case, quote_response) == []
 
@@ -331,7 +332,7 @@ def test_run_screen_records_complete_immutable_case_set(tmp_path, monkeypatch):
         "R2-PARTIAL-AGREEMENT-006": "RO-01 and MO-01 agree only that more information is required. SO-02 does not state this; no treatment option or all-role consensus is established.",
         "R2-CONDITIONALITY-007": "Option A remains conditional on confirmation of prerequisite X. The prerequisite status is unknown from the supplied record.",
         "R3-INVALID-SOURCE-008": "R2:RO-01 and R2:MO-01 are supplied. R2:MO-99 is unsupplied. The malformed range R2:RO-01-RO-09 is preserved without expansion.",
-        "R3-FABRICATED-QUOTE-009": "The claimed MRI quote is not present in the saved source. Source ID R2:MO-01 is supplied; the quote must not be treated as evidence.",
+        "R3-FABRICATED-QUOTE-009": "The claimed MRI quote is not present in the saved source R2:MO-01. The exact saved source text is: 'No imaging result is included in the supplied fictional record.' The MRI claim is unsupported and is not evidence.",
         "R3-NEGATION-010": "The statement explicitly says no peer claimed Option Q was contraindicated. This is a negated attribution, not a positive contraindication.",
         "R4-MISSING-AGENT-011": "There are 44 saved contributions from 45 expected roles. PT-ROLE-UNAVAILABLE has no response; its position remains unknown, and 45/45 participation or unanimity cannot be claimed.",
         "R4-CHAIR-TRACEABILITY-012": "The supplied contributions do not establish agreement on a treatment proposition. No treatment proposition was agreed; the missing-source finding remains unresolved, and the Option Z consensus claim is unsupported.",
@@ -374,7 +375,7 @@ def test_run_screen_records_complete_immutable_case_set(tmp_path, monkeypatch):
     manifest = next(record for record in records if record["record_type"] == "manifest")
 
     assert manifest["prompt_version"] == screening.PROMPT_VERSION
-    assert manifest["audit_version"] == "radonc-mdt-integrity-audit-v3"
+    assert manifest["audit_version"] == "radonc-mdt-integrity-audit-v4"
     assert manifest["screening_script_sha256"] == screening.SCRIPT_SHA256
     assert len(manifest["screening_script_sha256"]) == 64
     assert calls == {"tags": 25, "generate": 12, "show": 1, "version": 1}
@@ -570,7 +571,7 @@ def test_chair_audit_accepts_qwen_overall_no_consensus_synthesis():
     assert screening.audit_screen_response(case, qwen_response) == []
 
 
-def test_v5_r2_prompt_requires_source_by_source_positions_and_preserves_conditional_options():
+def test_v6_r2_prompt_requires_source_by_source_positions_and_preserves_conditional_options():
     corpus, _ = load_corpus()
     partial_case = next(item for item in corpus["cases"] if item["case_id"] == "R2-PARTIAL-AGREEMENT-006")
     partial_prompt = build_generate_payload("qwen3.5:4b", partial_case)["prompt"].casefold()
@@ -590,7 +591,7 @@ def test_v5_r2_prompt_requires_source_by_source_positions_and_preserves_conditio
     assert "prerequisite x" in conditional_prompt
 
 
-def test_v5_r3_prompt_includes_an_exact_case_local_source_identifier_inventory():
+def test_v6_r3_prompt_includes_an_exact_case_local_source_identifier_inventory():
     corpus, _ = load_corpus()
     invalid_case = next(item for item in corpus["cases"] if item["case_id"] == "R3-INVALID-SOURCE-008")
     prompt = build_generate_payload("qwen3.5:4b", invalid_case)["prompt"]
@@ -604,7 +605,7 @@ def test_v5_r3_prompt_includes_an_exact_case_local_source_identifier_inventory()
     assert '"R2:MO-01"' in fabricated_prompt
 
 
-def test_v5_r4_prompt_requires_a_distinct_chair_synthesis_not_just_a_quoted_peer_statement():
+def test_v6_r4_prompt_requires_completeness_and_a_distinct_chair_synthesis():
     corpus, _ = load_corpus()
     chair_case = next(item for item in corpus["cases"] if item["case_id"] == "R4-CHAIR-TRACEABILITY-012")
     prompt = build_generate_payload("qwen3.5:4b", chair_case)["prompt"].casefold()
@@ -628,3 +629,102 @@ def test_case_local_identifier_inventory_uses_only_explicit_input_ids():
         "deliberately_unsupplied_ids": ["R2:MO-99"],
         "malformed_reference_text_verbatim": "R2:RO-01-RO-09",
     }
+
+
+def test_v6_r2_inventory_lists_each_saved_r1_source_with_exact_text():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R2-CONDITIONALITY-007")
+    inventory = screening.saved_r1_source_inventory(case["input"])
+    assert inventory == [
+        {
+            "source_id": "R1:RO-01",
+            "saved_statement": "Conditional support for Option A only if prerequisite X is confirmed.",
+        },
+        {
+            "source_id": "R1:MO-01",
+            "saved_statement": "Prerequisite X is not present in the supplied record.",
+        },
+    ]
+    prompt = build_generate_payload("qwen3.5:4b", case)["prompt"]
+    assert '"saved_R1_source_inventory"' in prompt
+    assert "R1:RO-01" in prompt
+    assert "one separate bullet for EVERY inventory row" in prompt
+
+
+def test_v6_r4_completeness_inventory_exposes_exact_role_gap():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R4-MISSING-AGENT-011")
+    inventory = screening.chair_role_completeness_inventory(case["input"])
+    assert inventory["expected_role_count"] == 45
+    assert inventory["saved_valid_contribution_count"] == 44
+    assert inventory["missing_role_id"] == "PT-ROLE-UNAVAILABLE"
+    assert inventory["missing_role_response"] is None
+    assert "45 expected roles; 44 saved valid contributions" in inventory["required_coverage_statement"]
+    prompt = build_generate_payload("qwen3.5:4b", case)["prompt"]
+    assert "chair_role_completeness_inventory" in prompt
+    assert "exact required_coverage_statement" in prompt
+
+
+def test_v4_audit_flags_incomplete_r3_identifier_inventory():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R3-INVALID-SOURCE-008")
+    incomplete = "The case_local_identifier_inventory includes the deliberately_unsupplied_ids list ["
+    findings = screening.audit_screen_response(case, incomplete)
+    assert any("R3 source-inventory omission" in item for item in findings)
+
+
+def test_v4_audit_accepts_complete_r3_identifier_inventory():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R3-INVALID-SOURCE-008")
+    complete = (
+        "Explicitly supplied source IDs: R2:RO-01 and R2:MO-01 are supplied. "
+        "Deliberately unsupplied source ID: R2:MO-99 is unsupplied. "
+        "Malformed raw reference: R2:RO-01-RO-09 is malformed and preserved verbatim."
+    )
+    assert not any(
+        "R3 source-inventory omission" in item
+        for item in screening.audit_screen_response(case, complete)
+    )
+
+
+def test_v4_audit_flags_r3_quote_review_without_exact_source_comparison():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R3-FABRICATED-QUOTE-009")
+    incomplete = "No imaging result is included in the supplied fictional record."
+    findings = screening.audit_screen_response(case, incomplete)
+    assert any("R3 quote-review omission" in item for item in findings)
+
+
+def test_v4_audit_accepts_exact_source_and_explicit_fabricated_quote_rejection():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R3-FABRICATED-QUOTE-009")
+    complete = (
+        "The claimed MRI quote is not present in the saved source R2:MO-01. "
+        "The exact saved source text is: 'No imaging result is included in the supplied fictional record.' "
+        "The MRI claim is unsupported and is not evidence."
+    )
+    assert not any(
+        "R3 quote-review omission" in item
+        for item in screening.audit_screen_response(case, complete)
+    )
+
+
+def test_v4_audit_flags_r4_missing_agent_without_counts_or_exact_role():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R4-MISSING-AGENT-011")
+    incomplete = "The saved contributions do not establish agreement. No treatment proposition was agreed."
+    findings = screening.audit_screen_response(case, incomplete)
+    assert any("R4 missing-agent completeness omission" in item for item in findings)
+
+
+def test_v4_audit_accepts_r4_exact_counts_and_missing_role():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R4-MISSING-AGENT-011")
+    complete = (
+        "There are 44 saved valid contributions from 45 expected roles. "
+        "PT-ROLE-UNAVAILABLE is the missing role; its response is null and its position remains unknown."
+    )
+    assert not any(
+        "R4 missing-agent completeness omission" in item
+        for item in screening.audit_screen_response(case, complete)
+    )

@@ -105,7 +105,7 @@ def test_combined_manifest_derives_and_cross_checks_versions_from_raw_model_mani
     workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
 
     assert 'prompt_version = "PENDING_FROM_MODEL_OUTPUT"' in workflow
-    assert 'audit_version = "radonc-mdt-integrity-audit-v3"' in workflow
+    assert 'audit_version = "PENDING_FROM_MODEL_OUTPUT"' in workflow
     assert 'script_sha256 = (Get-FileHash -LiteralPath "backend/scripts/run_medgemma_screening.py" -Algorithm SHA256).Hash.ToLowerInvariant()' in workflow
     assert "function Get-ModelScreenOutputManifest" in workflow
     assert '$qwenRunManifest = Get-ModelScreenOutputManifest -Path $qwenOutput' in workflow

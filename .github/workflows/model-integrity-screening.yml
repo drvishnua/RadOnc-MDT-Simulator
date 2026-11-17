@@ -106,7 +106,7 @@ jobs:
             }
             screening = [ordered]@{
               prompt_version = "PENDING_FROM_MODEL_OUTPUT"
-              audit_version = "radonc-mdt-integrity-audit-v3"
+              audit_version = "PENDING_FROM_MODEL_OUTPUT"
               script_sha256 = (Get-FileHash -LiteralPath "backend/scripts/run_medgemma_screening.py" -Algorithm SHA256).Hash.ToLowerInvariant()
             }
             execution = [ordered]@{
