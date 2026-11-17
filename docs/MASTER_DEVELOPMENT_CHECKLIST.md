@@ -6,7 +6,7 @@ Latest source implementation commit: 5ac3e09d3ae174923b33deaa881aeb6709807452 (p
 Latest regression-test commit: f038f109b2219e14ea0974e5f721fc66f335bf42 (461/461 backend tests passed)  
 Latest verified application/test SHA: f038f109b2219e14ea0974e5f721fc66f335bf42 (461/461 backend tests; all six standard PR checks passed)  
 Latest model-screen trigger commit: 9583e15671d3d8bdca7f88d383bc0e2fbfb9b60b (v14 / audit-v13)  
-Latest checklist commit before this reconciliation: d141d366f37c68cf890f5ef6aec7d9eca3f895b0  
+Latest checklist commit before this reconciliation: e309a87901c5d9a696671053f234e28e5709f13d  
 PR #1: open, draft, unmerged, base main  
 main: 39a356b8eb09399aa2da1b9b9085965999f5105a, unchanged.
 
@@ -85,6 +85,8 @@ Continuity files: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_
 - Six standard PR workflows on exact trigger SHA 9583e156 are IN PROGRESS / queued: Backend 44061081762; Frontend 44061081774; Browser E2E 44061081798; Security/Dependency 44061081822; Windows Installer 44061081909; Packaging Prerequisites 44061081644.
 - The documentation-only checklist commit d141d366f37c68cf890f5ef6aec7d9eca3f895b0 has now passed all six standard PR workflows on that exact SHA: Backend 44061781200; Frontend 44061781057; Packaging Prerequisites 44061781157; Windows Installer 44061781055; Browser E2E 44061781158; Security/Dependency 44061781014.
 - Backend on d141: 461 passed, 0 failed, 0 errors, 0 skipped; deterministic preflight 7/7 passed. Windows installer install/smoke/checksum/upload all succeeded. This SHA changes the checklist only; source/model-screen SHA remains 9583e156.
+- The current checklist commit e309a87901c5d9a696671053f234e28e5709f13d has now also passed all six standard PR workflows on that exact SHA: Backend 44062459945; Frontend 44062459918; Packaging Prerequisites 44062460173; Windows Installer 44062459882; Browser E2E 44062460006; Security/Dependency 44062459961.
+- Backend on e309: 461 passed, 0 failed, 0 errors, 0 skipped; deterministic preflight 7/7 passed. Windows installer build/install/smoke/checksum/upload passed. These two latest commits are documentation-only and do not change the prompt-v14 model-screen source SHA 9583e156.
 - This checklist-only commit will trigger a fresh standard PR CI cycle; the bounded model run is pinned to 9583e156 and remains independently inspectable.
 
 ### Master Checklist — Current Status
