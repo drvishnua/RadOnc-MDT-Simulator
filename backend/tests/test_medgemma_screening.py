@@ -1653,3 +1653,59 @@ def test_prompt_explicitly_says_synthetic_input_is_not_a_reason_to_refuse():
     prompt = build_generate_payload("medgemma1.5:4b-it-q4_K_M", case)["prompt"].casefold()
     assert "synthetic input is not a reason to refuse" in prompt
     assert "no clinical judgement or treatment recommendation is requested" in prompt
+
+def test_r2_narrative_audit_flags_unknown_prerequisite_strengthened_to_absent():
+    corpus, _ = load_corpus()
+    case = next(
+        item for item in corpus["cases"]
+        if item["case_id"] == "R2-CONDITIONALITY-007"
+    )
+    strengthened = _valid_model_output(
+        case,
+        "R1:RO-01 conditionally supports Option A only if prerequisite X is confirmed; "
+        "R1:MO-01 states prerequisite X is absent, although its status is unknown.",
+    )
+    findings = screening.audit_screen_response(case, strengthened)
+    assert any(
+        "R2 narrative prerequisite certainty error" in item
+        for item in findings
+    )
+
+    accurate = _valid_model_output(
+        case,
+        "R1:RO-01 conditionally supports Option A only if prerequisite X is confirmed; "
+        "R1:MO-01 states prerequisite X is not present in the supplied record, so its status remains unknown.",
+    )
+    assert not any(
+        "R2 narrative prerequisite certainty error" in item
+        for item in screening.audit_screen_response(case, accurate)
+    )
+
+
+def test_r3_audit_flags_refusal_to_compare_supplied_fabricated_quote():
+    corpus, _ = load_corpus()
+    case = next(
+        item for item in corpus["cases"]
+        if item["case_id"] == "R3-FABRICATED-QUOTE-009"
+    )
+    refusal = _valid_model_output(
+        case,
+        "The supplied input is synthetic, so I cannot perform the quote audit.",
+    )
+    findings = screening.audit_screen_response(case, refusal)
+    assert any(
+        "R3 quote-audit refusal" in item
+        for item in findings
+    )
+
+    complete = _valid_model_output(
+        case,
+        "The claimed MRI quote is not present in the saved source R2:MO-01. "
+        "The exact saved source text is: 'No imaging result is included in the supplied fictional record.' "
+        "The MRI claim is unsupported and is not evidence.",
+    )
+    assert not any(
+        "R3 quote-audit refusal" in item
+        for item in screening.audit_screen_response(case, complete)
+    )
+
