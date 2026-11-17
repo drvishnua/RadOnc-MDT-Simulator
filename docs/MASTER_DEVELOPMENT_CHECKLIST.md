@@ -2,23 +2,23 @@
 
 **Repository:** drvishnua/RadOnc-MDT-Simulator  
 **Development branch:** feature/four-round-mdt-and-performance  
-**Latest application/test SHA:** c0fbb2ac4a586d5effa51ea8bcc4af623137008f. This is the controlled repetition-mitigation experiment; the following docs are the continuity checkpoint.  
+**Latest application/test SHA:** d2e85a92fd5c91c002d36c133821dfb5aab9c09f. This commit pins paired sampler settings and adds MedGemma pull-error diagnostics.  
 **PR #1:** open, draft, unmerged; base main.  
 **main:** 39a356b8eb09399aa2da1b9b9085965999f5105a, unchanged.
 
 This is the single authoritative Master Development and Verification Checklist. Older dated checkpoints and their tables remain below as historical evidence and are superseded by the one Current status table.
 
-**Continuity records:** PROJECT_STATUS.md · TASK_CHECKLIST.md · DECISIONS.md · EXECUTION_LOG.md · RECOVERY_STATE.md · KNOWN_ISSUES.md. These supporting files do not create competing verification tables.
+**Continuity records:** PROJECT_STATUS.md · TASK_CHECKLIST.md · DECISIONS.md · EXECUTION_LOG.md · RECOVERY_STATE.md · KNOWN_ISSUES.md. These are supporting records; no duplicate detailed verification table is maintained.
 
 ## Current position
 
-- **Latest code/test SHA:** c0fbb2ac4a586d5effa51ea8bcc4af623137008f. Shared model options set Ollama repeat_last_n=64 and repeat_penalty=1.1 for both Qwen and MedGemma. The 500-token output cap, prompt v6, audit v4, temperature, seed and context remain unchanged. A regression test pins the identical options.
-- **Root-cause evidence:** corrected-source screen 44000583529, artifact 14293084055, failed with 3/12 MedGemma responses malformed after repetitive loops reached done_reason=length, eval_count=500. The same three cases failed in prior run 44000326185. Ollama logs showed repeat_penalty=1.000 (disabled). Qwen returned 12/12 parseable outputs in run 44000583529; no clinical accuracy was evaluated.
-- **Controlled experiment:** commit c0fbb2a automatically started paired screen 44004929958, hosted Windows CPU, concurrency 1. HAI-DEF terms gate passed. Provisioning/sequential screen is active; no final artifact/result is available. Do not start another model workflow.
-- **Exact-head standard CI:** all six PR workflows passed on c0fbb2a. Backend 423 passed, 0 failed/errors/skipped; deterministic preflight 7/7. Backend 44004936087, Frontend 44004936006, Browser E2E 44004935981, Packaging Prerequisites 44004936065, Windows Installer 44004935939, Security/Dependency/CodeQL 44004935954. JUnit artifact 14294230423, preflight artifact 14293402941, Browser E2E artifact 14293343125. All five browser registry/dashboard/monitor success markers are present.
-- **Push Installer:** 44004930010 passed. Packaging evidence only; not model-inference evidence.
-- **Model-screen limitation:** controlled run is CPU-only and does not demonstrate RTX 4060 GPU offload, local latency, model promotion, clinical accuracy or a zero-hallucination guarantee.
-- **Release boundary:** historical 45-role run-9 audit-only revalidation remains FAILED with 343 findings. No fresh full 45-role R1–R4 acceptance, current guideline verification or independent qualified clinical review is complete. Release remains BLOCKED.
+- **Latest code/test SHA:** d2e85a92fd5c91c002d36c133821dfb5aab9c09f. It pins identical effective generation settings for Qwen and MedGemma: temperature 0, seed 73, num_ctx 4096, top_k 20, top_p 0.95, frequency_penalty 0, presence_penalty 1.5, repeat_last_n 64, repeat_penalty 1.1, num_predict 500.
+- **Reason for effective-sampler pinning:** previous logs showed that identical request payloads still used model-specific Modelfile defaults: Qwen top_k20/top_p0.95/presence1.5; MedGemma top_k40/top_p0.90/presence0.0. Comparative quality conclusions would not be fair under differing effective samplers.
+- **MedGemma pull failure:** run 44004929958 (artifact 14294366737) completed Qwen 12/12 parseable, 0 flags, then local Ollama /api/pull returned HTTP 500 after a MedGemma blob download began. MedGemma inference did not run; no response body was captured, so the failure root cause is unknown. d2e85a9 persists pull status/URI/status code/response body/exception detail in the manifest if a future pull fails.
+- **Exact-head CI:** all six standard PR workflows passed on d2e85a9. Backend **424 passed, 0 failed, 0 errors, 0 skipped**; deterministic preflight **7/7**. Backend 44006977077 (JUnit 14294297598, preflight 14294467337), Frontend 44006977316, Browser E2E 44006977161 (artifact 14294282765), Packaging Prerequisites 44006977075, Windows Installer 44006977053, Security/Dependency/CodeQL 44006977278. Browser log contains patient-registry, Mission Control, role drilldown, Development Monitor and four-round dashboard markers. Installer's optional Ollama/model bootstrap was skipped.
+- **Push Installer:** 44006972458 passed on d2e85a9.
+- **Current paired screen:** marker-qualified run 44006972494, job 133784577318, source d2e85a9, remains IN PROGRESS in the combined hosted provisioning/sequential-inference step. HAI-DEF terms gate passed. No model artifact/result is available; it is hosted Windows CPU, concurrency 1, GPU measurement not performed.
+- **Safety/release boundary:** historical 45-role run-9 audit-only revalidation remains FAILED with 343 findings. No fresh full 45-role acceptance, guideline verification or independent qualified clinical review exists. No clinical validity, guideline compliance, GPU verification or zero-hallucination claim. Release remains BLOCKED.
 
 ## Mission Control phase 1 and phase 2 — VERIFIED (bounded scope)
 
@@ -311,42 +311,42 @@ V4 runner change: `2dab0d89562a0c1db54fec5563aaf71f8a84a711`; subsequent test-on
 | Workstream | Status | Evidence and limits |
 |---|---|---|
 | R1–R4 architecture and persisted data flow | IN PROGRESS | Four-round orchestration and saved-contribution flow exist; fresh full 45-role acceptance remains outstanding. |
-| R1 independent assessment and staging | IN PROGRESS | Unknown/staging safeguards and quarantine have regression coverage; historical unsupported TNM/staging findings remain preserved. |
-| R2 debate, proposition agreement and conditionality | IN PROGRESS | Prompt v6 requires source-by-source position accounting and conditional-prerequisite preservation. Software tests pass; live model behaviour remains under paired retest. |
-| R3 adversarial review and source provenance | IN PROGRESS | Audit-v4 binds invalidity to exact source IDs; nearby malformed-range regression passes. MedGemma R3 output was truncated in the prior paired run; current retest is active. |
-| R4 Chair synthesis, consensus and dissent | IN PROGRESS | Prompt v6 requires Chair's own synthesis and unresolved-source preservation. Prior MedGemma Chair response repeated to the token cap; current retest is active. |
-| Clinical safety and unsupported claims | IN PROGRESS | Deterministic safeguards and regression tests exist; no clinical validation or zero-hallucination guarantee. |
-| Case integrity, contradictions and audit history | IN PROGRESS | Original records and historical audit findings preserved; current full-run acceptance remains outstanding. |
-| Provenance and evidence traceability | IN PROGRESS | Exact source-ID code regression verified. The 44000583529 MedGemma quote-review case was truncated; no complete live R3 acceptance. |
-| Consensus, dissent and Chair traceability | IN PROGRESS | Chair prompt and deterministic reconciliation tests exist. Current full 45-role consensus/dissent behaviour remains unverified. |
-| Missing/failed-agent handling | IN PROGRESS | Deterministic missing/failure paths have regression coverage; full 45-role failure-injection acceptance is outstanding. |
-| Backend tests | VERIFIED | Exact code/test SHA c0fbb2a: 423 passed, 0 failed/errors/skipped. Preflight 7/7. Run 44004936087; JUnit 14294230423; preflight 14293402941. |
-| Frontend and dashboard build | VERIFIED | Exact-head Frontend run 44004936006 passed. |
-| Browser E2E | VERIFIED | Exact-head Browser E2E 44004935981 passed. Artifact 14293343125 contains all five expected success markers. |
-| Dashboard/API validation | IN PROGRESS | Mission Control summary, 45-role drill-down, four-round dashboard and Development Monitor fixture rendering pass E2E. Live browser access to public GitHub API remains subject to network/rate limits. |
-| Ollama context handling | VERIFIED | Historical hosted stage-boundary context probes passed; this does not prove per-request truncation is absent in a full simulation. |
-| Ollama performance and concurrency | IN PROGRESS | Concurrency remains 1. Current repeated-output mitigation is under test; no RTX 4060 request-time telemetry. |
-| RTX 4060 request-time GPU inference | NOT STARTED | Hosted model screens are CPU-only; no current request-time GPU/offload evidence. |
-| Hosted paired Qwen/MedGemma audit-v2 screen | VERIFIED | Workflow 43933270251, artifact 14259164352; execution 12/12 per model. Known MedGemma weaknesses remain. |
-| Hosted paired Qwen/MedGemma audit-v3 screen | VERIFIED | Workflow 43948147982, artifact 14265764260; Qwen 0 flags, MedGemma 4 flags. Human review remains outstanding. |
-| Hosted paired Qwen/MedGemma prompt-v6 / audit-v4 screen | IN PROGRESS | Runs 44000326185 and 44000583529 FAILED from 3 MedGemma truncations at 500 tokens. Current controlled run 44004929958, source c0fbb2a, is IN PROGRESS with shared repeat_penalty 1.1; no output artifact yet. |
-| MedGemma output repetition/truncation | IN PROGRESS | Repeated across two runs in R2 false-consensus, R3 fabricated-quote and R4 Chair-traceability cases. Logs showed repeat_penalty 1.000 (disabled). Current shared 1.1 experiment holds num_predict=500; not yet verified. |
-| Deterministic screening audit-v4 | VERIFIED | Software regressions for source-ID association, malformed-range separation, R2 conditionality and Chair synthesis pass. Live output acceptance remains separate. |
-| Prompt-v6 screening safeguards and tests | VERIFIED | Prompt v6 and source inventories committed; exact-head Backend 423/423 includes prompt/audit regressions. Model adherence remains IN PROGRESS. |
-| Shared paired-model generation options | VERIFIED | Regression pins identical Qwen/MedGemma options: repeat_last_n 64, repeat_penalty 1.1 and num_predict 500, with the same prompt/system/seed/context. Live effect remains IN PROGRESS. |
-| Automatic MedGemma commit trigger | VERIFIED | Marker-qualified commit c0fbb2a automatically started workflow 44004929958. |
-| MedGemma HAI-DEF acceptance statement | VERIFIED | Personal-capacity acceptance recorded; current run terms gate passed before provisioning. Not an independent legal/authority opinion. |
+| R1 independent assessment and staging | IN PROGRESS | Unknown/staging safeguards and quarantine have regression coverage; historical unsupported staging findings remain preserved. |
+| R2 debate, proposition agreement and conditionality | IN PROGRESS | Prompt v6 requires source-by-source position accounting and conditional prerequisites. Software tests pass; live model adherence remains pending. |
+| R3 adversarial review and source provenance | IN PROGRESS | Exact source-ID audit and malformed-range regression pass. Live R3 model behaviour remains unverified; prior MedGemma output was truncated. |
+| R4 Chair synthesis, consensus and dissent | IN PROGRESS | Prompt v6 requires independent Chair synthesis. Prior MedGemma Chair response truncated; current paired retest remains active. |
+| Clinical safety and unsupported claims | IN PROGRESS | Deterministic safeguards/tests exist; no clinical validation or zero-hallucination guarantee. |
+| Case integrity, contradictions and audit history | IN PROGRESS | Original records and audit history preserved; full current-run integrity acceptance outstanding. |
+| Provenance and evidence traceability | IN PROGRESS | Exact source-ID software regression verified; no complete current live model screen/human review. |
+| Missing/failed-agent handling | IN PROGRESS | Deterministic missing/failure paths tested; full 45-role failure-injection acceptance outstanding. |
+| Backend tests | VERIFIED | Exact code/test SHA d2e85a9: **424 passed, 0 failed, 0 errors, 0 skipped**. Preflight **7/7**. Run 44006977077; JUnit 14294297598; preflight 14294467337. |
+| Frontend and dashboard build | VERIFIED | Exact-head Frontend run 44006977316 passed. |
+| Browser E2E | VERIFIED | Exact-head Browser E2E 44006977161 passed; artifact 14294282765 contains all five patient/mission-control/drilldown/development-monitor/four-round markers. |
+| Dashboard/API validation | IN PROGRESS | Mission Control, role drilldown, four-round dashboard and Development Monitor fixture rendering pass E2E. Live GitHub API availability in a user browser remains network/rate-limit dependent. |
+| Ollama context handling | VERIFIED | Historical hosted stage-boundary context probes passed; not proof of per-request truncation absence. |
+| Ollama performance and concurrency | IN PROGRESS | Concurrency 1 retained. Sampler parity and repeat-control changes are under live paired testing; no RTX 4060 telemetry. |
+| RTX 4060 request-time GPU inference | NOT STARTED | Hosted screens are CPU-only; no current GPU/offload proof. |
+| Hosted paired Qwen/MedGemma audit-v2 screen | VERIFIED | Workflow 43933270251, artifact 14259164352; 12/12 records each. Known MedGemma weaknesses remain. |
+| Hosted paired Qwen/MedGemma audit-v3 screen | VERIFIED | Workflow 43948147982, artifact 14265764260; Qwen 0 flags, MedGemma 4 flags. Independent human review outstanding. |
+| Hosted paired prompt-v6/audit-v4 with effective sampler parity | IN PROGRESS | Run 44006972494, source d2e85a9, is active after HAI-DEF terms gate passed. No artifact/result yet. |
+| MedGemma output repetition/truncation | IN PROGRESS | Runs 44000326185 and 44000583529 had 3 repeated-output truncations at 500 tokens. Run 44004929958 only generated Qwen because MedGemma pull returned HTTP 500. Current run pins repeat_penalty 1.1 and equal effective samplers; effect pending. |
+| MedGemma pull HTTP 500 | IN PROGRESS | Run 44004929958 artifact 14294366737 has no response body; root cause unknown. d2e85a9 now persists HTTP status/URI/body/exception into manifest; current rerun pending. |
+| Effective paired sampler parity | VERIFIED | Exact-head regression pins top_k20/top_p0.95/frequency0/presence1.5/repeat_last_n64/repeat_penalty1.1/num_predict500 for both models. Runtime output comparison remains IN PROGRESS. |
+| Deterministic screening audit-v4 | VERIFIED | Source-ID association, malformed-range separation, R2 conditionality and Chair synthesis software regressions pass; live output acceptance pending. |
+| Prompt-v6 screening safeguards and tests | VERIFIED | Prompt v6 and source inventories pass exact-head backend suite 424/424. Model adherence remains IN PROGRESS. |
+| Automatic MedGemma commit trigger | VERIFIED | Marker-qualified commit d2e85a9 automatically started run 44006972494. |
+| MedGemma HAI-DEF acceptance statement | VERIFIED | Personal-capacity acceptance recorded; current run's terms gate passed before provisioning. Not an independent legal/authority opinion. |
 | Historical full 45-role acceptance | FAILED | Run-9 audit-only revalidation 43843343751: 343 integrity entries (R1 11, R2 41, R3 271, R4 20); original records unchanged. |
-| Current full 45-role validation | NOT STARTED | No current-head 45-role four-round acceptance has passed. Twelve-case screening and unit tests are not substitutes. |
-| Qwen model-output review | IN PROGRESS | Qwen returned 12/12 parseable with 0 deterministic flags in run 44000583529; independent qualified human review remains outstanding. Review new paired outputs before comparative judgement. |
-| Qwen versus MedGemma model quality | IN PROGRESS | MedGemma had 3 malformed outputs in two consecutive v6 runs. Shared repetition-control experiment is active; MedGemma is not promoted. |
-| Packaging and Windows installer | VERIFIED | Exact-head PR installer 44004935939 and push installer 44004930010 passed. |
-| Security, dependency audit and CodeQL | VERIFIED | Exact-head Security/Dependency/CodeQL 44004935954 passed, including full-history secret scan and Python/JS-TS CodeQL. |
-| Guideline retrieval and verification | NOT STARTED | No current authoritative guideline set retrieved, checked and integrated. |
+| Current full 45-role validation | NOT STARTED | No current-head 45-role four-round acceptance has passed; bounded 12-case screen and CI are not substitutes. |
+| Qwen model-output review | IN PROGRESS | Qwen 12/12 parseable, 0 flags on run 44004929958, but new exact sampler profile is still running and human review remains outstanding. |
+| Qwen versus MedGemma model quality | IN PROGRESS | Prior MedGemma screens had 3 malformed outputs; one follow-up failed before MedGemma inference. New equal-sampler paired result pending; MedGemma not promoted. |
+| Packaging and Windows installer | VERIFIED | Exact-head PR Installer 44006977053 and push Installer 44006972458 succeeded. Optional PR installer Ollama/model bootstrap skipped. |
+| Security, dependency audit and CodeQL | VERIFIED | Exact-head Security/Dependency/CodeQL 44006977278 passed, including full-history secret scan and Python/JS-TS CodeQL. |
+| Guideline retrieval and verification | NOT STARTED | No current authoritative guideline corpus retrieved, checked and integrated. |
 | Independent qualified clinical review | NOT STARTED | No independent clinical review artifact. |
-| Persistent continuity documentation | VERIFIED | Six supporting continuity files are committed and linked here; Master Checklist remains the one authoritative detailed status table. |
-| Release acceptance | BLOCKED | Historical integrity failure, active repetition-control retest, full 45-role validation, GPU evidence, guideline verification and qualified clinical review remain outstanding. |
-| Authoritative repository checklist | VERIFIED | This is the single Master Development and Verification Checklist; older dated tables remain as historical evidence. |
+| Persistent continuity documentation | VERIFIED | Six supporting records are committed and linked here; this Master Checklist is the single detailed status table. |
+| Release acceptance | BLOCKED | Historical integrity failure, active paired model screen, full 45-role validation, GPU evidence, guideline verification and qualified clinical review remain outstanding. |
+| Authoritative repository checklist | VERIFIED | This is the single Master Development and Verification Checklist; historical dated tables remain preserved. |
 
 
 ## Latest full live run forensic record — 16 November 2026

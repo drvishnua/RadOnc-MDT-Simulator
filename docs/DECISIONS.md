@@ -51,3 +51,8 @@ No merge, release, deployment, force-push or main-branch modification without ex
 ## Controlled model-screen repetition experiment
 
 12. After two paired prompt-v6/audit-v4 screens showed MedGemma repeating phrases/passages until done_reason=length at the unchanged 500-token cap, the next paired experiment explicitly sets Ollama repeat_last_n=64 and repeat_penalty=1.1 for BOTH Qwen and MedGemma. The output cap remains num_predict=500; do not hide loops by blindly raising it. This is a controlled test setting, not evidence that repetition is fixed or that either model is promoted. Inspect both models' raw outputs, options and completion telemetry before deciding whether to retain or revise it. Parameter reference: https://docs.ollama.com/modelfile (Ollama documents repeat_penalty 1.0 as disabled and 1.1 as an example).
+
+## Effective sampler parity and pull-failure diagnostics
+
+13. Paired model comparisons must pin effective sampler parameters, not only send matching Python dictionaries. Model-specific Modelfile defaults may otherwise cause different top_k/top_p/presence_penalty behaviour. The synthetic Qwen/MedGemma screen explicitly pins top_k=20, top_p=0.95, frequency_penalty=0, presence_penalty=1.5, repeat_last_n=64, repeat_penalty=1.1 and num_predict=500 for both. This represents the observed Qwen baseline plus the shared repeat-control experiment; live model output quality remains to be tested.
+14. MedGemma provisioning failures are distinct from inference failures. Persist pull state, URI, HTTP status, response body and exception details in the manifest before raising. Do not classify a model as NOT_REQUESTED when the user explicitly requested it and the pull fails.

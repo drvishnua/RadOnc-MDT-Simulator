@@ -61,3 +61,27 @@ Append new entries chronologically. Record actual commit SHAs, run IDs and resul
 - Exact-head PR CI passed: Backend 423/423, preflight 7/7; Frontend, Browser E2E, Packaging Prerequisites, Windows Installer and Security/Dependency/CodeQL all passed. Runs: 44004936087, 44004936006, 44004935981, 44004936065, 44004935939, 44004935954. Backend JUnit artifact 14294230423; Browser E2E artifact 14293343125. All five browser success markers were present.
 - Push Installer 44004930010 passed.
 - Marker-qualified paired screen 44004929958, job 133777841510, is IN PROGRESS. HAI-DEF terms gate passed; provisioning/sequential inference is active; no final artifact/result is available yet. Hosted CPU only, concurrency 1.
+
+
+## 17 November 2026 — paired sampler parity and MedGemma pull diagnostics
+
+### Prior repetition-penalty run 44004929958
+
+- Source SHA c0fbb2ac4a586d5effa51ea8bcc4af623137008f; run FAILED; artifact 14294366737 inspected.
+- Qwen completed 12/12 parseable responses, 0 deterministic audit flags. Ollama log confirmed repeat_penalty=1.1 was applied to Qwen.
+- MedGemma was explicitly requested and HAI-DEF terms attestation was true, but the isolated Ollama POST /api/pull returned HTTP 500 after MedGemma blob download began. No MedGemma inference occurred. The manifest incorrectly retained medgemma_status=NOT_REQUESTED because pull failure status was not persisted before the request. The artifact contained no HTTP response body, so the 500 root cause remains unknown.
+- Effective sampler settings from the prior paired logs were not equal despite identical Python options: Qwen used top_k=20, top_p=0.95, presence_penalty=1.5; MedGemma used top_k=40, top_p=0.90, presence_penalty=0.0. Both had repeat_penalty=1.1. This invalidated the fairness of an output-quality comparison under that run.
+
+### Corrective commit d2e85a9
+
+- Commit d2e85a92fd5c91c002d36c133821dfb5aab9c09f changes backend/scripts/run_medgemma_screening.py, backend/tests/test_medgemma_screening.py, .github/workflows/model-integrity-screening.yml and backend/tests/test_medgemma_screening_workflow.py.
+- Shared options now pin top_k=20, top_p=0.95, frequency_penalty=0, presence_penalty=1.5, repeat_last_n=64, repeat_penalty=1.1 and num_predict=500 for both models.
+- Workflow now persists MedGemma PULL_IN_PROGRESS before the request. On HTTP failure it records URI, status, exception type/message and response body (capped at 8000 chars), sets PULL_FAILED and updates the manifest before raising. Success records PULL_COMPLETED_DIGEST_PENDING before digest capture.
+- Regression tests assert sampler parity, fixed output cap and persisted HTTP-pull diagnostics.
+
+### Exact-head verification and current run
+
+- Standard PR runs on d2e85a9: Backend [44006977077](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44006977077), **424 passed, 0 failed/errors/skipped**; deterministic preflight **7/7**. JUnit artifact 14294297598; preflight artifact 14294467337.
+- Frontend [44006977316](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44006977316), Browser E2E [44006977161](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44006977161), Packaging Prerequisites [44006977075](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44006977075), Windows Installer [44006977053](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44006977053), Security/Dependency/CodeQL [44006977278](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44006977278) passed. Browser artifact 14294282765 contains patient registry, Mission Control, role drilldown, Development Monitor and four-round dashboard success markers.
+- PR Installer passed; optional model bootstrap was skipped. Push Installer [44006972458](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44006972458) passed.
+- Marker-qualified paired model screen [44006972494](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44006972494), job 133784577318, is IN PROGRESS. HAI-DEF gate passed. Combined hosted provisioning/sequential-inference step active; no model artifact yet. Hosted Windows CPU only, concurrency 1, GPU measurement not performed.

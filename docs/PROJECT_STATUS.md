@@ -3,36 +3,38 @@
 **Snapshot:** 17 November 2026  
 **Repository:** drvishnua/RadOnc-MDT-Simulator  
 **Branch:** feature/four-round-mdt-and-performance  
-**Latest application/test SHA:** c0fbb2ac4a586d5effa51ea8bcc4af623137008f  
+**Latest application/test SHA:** d2e85a92fd5c91c002d36c133821dfb5aab9c09f  
 **PR #1:** open, draft, unmerged, targets main.  
 **Main:** 39a356b8eb09399aa2da1b9b9085965999f5105a (unchanged).
 
 ## Overall position
 
-The latest code/test commit applies a controlled repetition-mitigation experiment to the paired synthetic Qwen/MedGemma screen. It explicitly sets Ollama repeat_last_n=64 and repeat_penalty=1.1 for both models, while keeping num_predict=500, prompt v6, audit v4 and concurrency 1 unchanged. This responds to two runs in which MedGemma repeated questions or source text until the 500-token cap truncated JSON.
+The latest application/test commit pins the effective Qwen sampler profile for both Qwen and MedGemma, in addition to the shared repetition penalty. This is necessary because prior paired runs sent identical request options but Ollama applied model-specific Modelfile defaults: Qwen used top_k=20/top_p=0.95/presence_penalty=1.5 while MedGemma used top_k=40/top_p=0.90/presence_penalty=0.0. The current request explicitly pins top_k=20, top_p=0.95, frequency_penalty=0, presence_penalty=1.5, repeat_last_n=64, repeat_penalty=1.1 and num_predict=500 for both models.
 
-Exact-head standard PR CI on c0fbb2a passed: Backend 423/423, deterministic preflight 7/7, Frontend, Browser E2E, Packaging Prerequisites, Windows Installer and Security/Dependency/CodeQL. Run IDs are in the Master Checklist and Execution Log.
+The same commit adds workflow-manifest capture of MedGemma pull HTTP status, URI and response body. This follows workflow 44004929958, where Qwen completed 12/12 with 0 flags, then the MedGemma /api/pull returned HTTP 500; no MedGemma inference took place and the original artifact had no response body.
 
-The new marker-triggered paired model screen, workflow 44004929958, is IN PROGRESS on this commit. Its result is not yet available. The HAI-DEF terms gate passed before provisioning.
+Exact-head standard PR CI on d2e85a9 is green: Backend 424/424, deterministic preflight 7/7, Frontend, Browser E2E, Packaging Prerequisites, Windows Installer and Security/Dependency/CodeQL passed. The marker-triggered paired model screen 44006972494 is IN PROGRESS; its HAI-DEF terms gate passed and the combined hosted provisioning/sequential inference step remains active. No final model artifact is available yet.
 
 ## Completed and verified
 
-- Prompt-v6 assertion correction and R3 exact-source-ID detector correction.
-- Browser Development Monitor E2E uses deterministic public GitHub API fixtures; production UI still performs live read-only GitHub requests and retains error handling.
-- Exact-head test asserts identical prompts/options for Qwen and MedGemma, repetition penalty 1.1 and unchanged output cap 500.
-- Standard CI on c0fbb2a: Backend 423/423, preflight 7/7; frontend, real-browser E2E, packaging prerequisites, installer and security/CodeQL passed.
-- Previous corrected-source paired screen 44000583529 and its raw artifact were downloaded and inspected. Qwen returned 12/12 parseable responses; MedGemma returned 9/12 parseable. Three MedGemma cases repeated content until done_reason=length, eval_count=500 and incomplete JSON. This is a failed/incomplete run, not a model-quality pass.
+- R3 exact source-ID regex correction and regression; prompt-v6 case-insensitive assertion correction.
+- Browser Development Monitor E2E uses deterministic GitHub API fixtures; production still performs live read-only requests with error handling.
+- Shared paired sampler regression pins identical prompts/system/options including top_k=20, top_p=0.95, frequency_penalty=0, presence_penalty=1.5, repeat_last_n=64, repeat_penalty=1.1 and num_predict=500.
+- Workflow tests assert MedGemma pull state and HTTP error-body persistence.
+- Exact-head CI on d2e85a9: Backend 424/424; preflight 7/7; Frontend, Browser E2E, Packaging Prerequisites, Installer and Security/CodeQL all passed.
+- Push Installer 44006972458 passed. Its optional model bootstrap is separate from the model-screen workflow.
 
 ## In progress / outstanding
 
-- Inspect new paired run 44004929958 and its manifest/raw JSONL when uploaded. Confirm recorded generation options, 12/12 output completeness, repetition behaviour, integrity flags and raw text.
-- Resolve historical 45-role run-9 audit failure (343 findings) without modifying original saved records.
+- Inspect workflow 44006972494 and artifact when complete. Verify effective sampler options for BOTH models, 12 responses/model, parseability, done_reason/eval_count, audit flags and raw response text.
+- If MedGemma pull fails again, use the persisted HTTP status/URI/response body. Do not assume the pull failure is a model inference failure.
+- Resolve historical run-9 full 45-role audit failure (343 findings) without modifying original saved records.
 - Complete fresh 45-role R1–R4 validation and missing/failed-agent acceptance.
-- Verify RTX 4060 request-time GPU activity/performance; hosted CPU runs are not GPU evidence.
+- Verify RTX 4060 request-time GPU activity/performance; hosted CPU screens are not GPU evidence.
 - Retrieve and verify current authoritative guideline sources and claim/reference links.
 - Obtain independent qualified clinical review. No zero-hallucination or clinical-validity claim is permitted.
 - Release remains blocked.
 
 ## Source of truth
 
-Use MASTER_DEVELOPMENT_CHECKLIST.md for the single authoritative detailed status/evidence table. Use TASK_CHECKLIST.md for next actions, DECISIONS.md for durable decisions, EXECUTION_LOG.md for chronological events, RECOVERY_STATE.md for the exact resume point, and KNOWN_ISSUES.md for unresolved defects.
+MASTER_DEVELOPMENT_CHECKLIST.md is the single authoritative detailed status/evidence table. TASK_CHECKLIST.md lists next actions, DECISIONS.md records durable requirements, EXECUTION_LOG.md is chronological, RECOVERY_STATE.md gives the precise resume point, and KNOWN_ISSUES.md lists unresolved defects.
