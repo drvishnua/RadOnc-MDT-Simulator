@@ -48,6 +48,22 @@ def test_qwen_baseline_is_first_and_medgemma_requires_explicit_terms_attestation
     assert "medgemma1.5:4b-it-q4_K_M" in workflow
 
 
+def test_medgemma_pull_persists_state_and_http_failure_diagnostics():
+    workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
+    pull_start = workflow.index('MODEL_SCREEN_MEDGEMMA_PULL_STARTED')
+    pull_block = workflow[pull_start:workflow.index('$medRecord = Get-ExactModelRecord -ModelName $medModel', pull_start)]
+
+    assert '$manifest.execution.medgemma_status = "PULL_IN_PROGRESS"' in workflow
+    assert '$manifest.execution.medgemma_status = "PULL_FAILED"' in pull_block
+    assert '$manifest.execution.medgemma_pull_failure = [ordered]@{' in pull_block
+    assert 'http_status = $httpStatus' in pull_block
+    assert 'uri = $responseUri' in pull_block
+    assert 'response_body = $responseBody' in pull_block
+    assert '$pullResponse.GetResponseStream()' in pull_block
+    assert 'MODEL_SCREEN_MEDGEMMA_PULL_FAILED http_status=$httpStatus' in pull_block
+    assert '$manifest.execution.medgemma_status = "PULL_COMPLETED_DIGEST_PENDING"' in workflow
+
+
 def test_screening_workflow_uploads_raw_evidence_even_after_failure():
     workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
 

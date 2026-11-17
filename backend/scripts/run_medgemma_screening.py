@@ -38,9 +38,14 @@ GENERATION_OPTIONS = {
     "temperature": 0,
     "seed": 73,
     "num_ctx": 4096,
-    # Ollama defaults repeat_penalty to 1.0 (disabled). The first paired
-    # MedGemma screens showed phrase loops ending at the 500-token cap, so
-    # use a mild documented penalty for BOTH models without raising the cap.
+    # Pin Qwen's observed effective sampler profile so model-specific
+    # Modelfile defaults cannot make paired Qwen/MedGemma settings diverge.
+    "top_k": 20,
+    "top_p": 0.95,
+    "frequency_penalty": 0.0,
+    "presence_penalty": 1.5,
+    # Ollama defaults repeat_penalty to 1.0 (disabled). Prior MedGemma screens
+    # looped to the 500-token cap, so apply a mild penalty to BOTH models.
     "repeat_last_n": 64,
     "repeat_penalty": 1.1,
     "num_predict": 500,

@@ -222,10 +222,53 @@ jobs:
             if ($includeMed) {
               if ($env:HAI_DEF_TERMS_ACCEPTED -ne "true") { throw "MedGemma requested without HAI-DEF terms acceptance." }
               $medModel = "medgemma1.5:4b-it-q4_K_M"
+              $pullUri = "$ollamaUrl/api/pull"
+              $manifest.execution.medgemma_status = "PULL_IN_PROGRESS"
+              $manifest.execution.medgemma_pull_uri = $pullUri
+              $manifest | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
               Write-Host "MODEL_SCREEN_MEDGEMMA_PULL_STARTED"
               $pullBody = @{ name = $medModel; stream = $false } | ConvertTo-Json -Compress
-              $pullResult = Invoke-RestMethod -Uri "$ollamaUrl/api/pull" -Method Post -ContentType "application/json" -Body $pullBody -TimeoutSec 7200
-              if ($pullResult.error) { throw "MedGemma pull failed: $($pullResult.error)" }
+              try {
+                $pullResult = Invoke-RestMethod -Uri $pullUri -Method Post -ContentType "application/json" -Body $pullBody -TimeoutSec 7200
+                if ($pullResult.error) { throw "MedGemma pull failed: $($pullResult.error)" }
+              } catch {
+                $pullException = $_
+                $pullResponse = $pullException.Exception.Response
+                $httpStatus = $null
+                $responseUri = $pullUri
+                $responseBody = $null
+                if ($pullResponse) {
+                  try { $httpStatus = [int]$pullResponse.StatusCode } catch { }
+                  try {
+                    if ($pullResponse.ResponseUri) { $responseUri = $pullResponse.ResponseUri.AbsoluteUri }
+                  } catch { }
+                  try {
+                    $responseStream = $pullResponse.GetResponseStream()
+                    if ($responseStream) {
+                      $reader = New-Object System.IO.StreamReader($responseStream)
+                      try { $responseBody = $reader.ReadToEnd() } finally { $reader.Dispose() }
+                    }
+                  } catch {
+                    $responseBody = "Unable to read HTTP error body: " + $_.Exception.Message
+                  }
+                }
+                if ($responseBody -and $responseBody.Length -gt 8000) {
+                  $responseBody = $responseBody.Substring(0,8000)
+                }
+                $manifest.execution.medgemma_status = "PULL_FAILED"
+                $manifest.execution.medgemma_pull_failure = [ordered]@{
+                  uri = $responseUri
+                  http_status = $httpStatus
+                  exception_type = $pullException.Exception.GetType().FullName
+                  exception_message = $pullException.Exception.Message
+                  response_body = $responseBody
+                }
+                $manifest | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
+                Write-Host "MODEL_SCREEN_MEDGEMMA_PULL_FAILED http_status=$httpStatus"
+                throw "MedGemma pull failed; HTTP diagnostic details were saved to the screening manifest."
+              }
+              $manifest.execution.medgemma_status = "PULL_COMPLETED_DIGEST_PENDING"
+              $manifest | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
               $medRecord = Get-ExactModelRecord -ModelName $medModel
               if ($medRecord.size_bytes -le 0) { throw "MedGemma model size is missing or invalid." }
               $manifest.ollama.model_records.medgemma = $medRecord

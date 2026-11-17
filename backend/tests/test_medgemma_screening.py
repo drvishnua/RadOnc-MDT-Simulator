@@ -220,8 +220,13 @@ def test_generate_payload_pins_identical_deterministic_options():
     assert qwen["options"] == medgemma["options"]
     assert qwen["options"]["temperature"] == 0
     assert qwen["options"]["seed"] == 73
-    # Repetition control is shared by both models; the output ceiling stays
-    # fixed so this experiment tests looping rather than hiding truncation.
+    # Explicitly override model-specific Modelfile sampler defaults so the
+    # effective paired options remain equal, not merely the request payload.
+    assert qwen["options"]["top_k"] == 20
+    assert qwen["options"]["top_p"] == 0.95
+    assert qwen["options"]["frequency_penalty"] == 0.0
+    assert qwen["options"]["presence_penalty"] == 1.5
+    # Repetition control is shared; the output ceiling remains fixed.
     assert qwen["options"]["repeat_last_n"] == 64
     assert qwen["options"]["repeat_penalty"] == 1.1
     assert qwen["options"]["num_predict"] == 500
