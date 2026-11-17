@@ -482,6 +482,136 @@ def test_r2_source_bound_normalization_handles_model_label_suffixes_and_empty_se
                for item in normalizations if item["field"] in {"prerequisite", "prerequisite_status"})
 
 
+def test_r2_source_bound_normalization_fills_only_unambiguous_blank_fields():
+    corpus, _ = load_corpus()
+
+    false_consensus = next(
+        item for item in corpus["cases"]
+        if item["case_id"] == "R2-FALSE-CONSENSUS-005"
+    )
+    output = _valid_model_output(
+        false_consensus,
+        "The two saved sources retain distinct conditional options; no treatment proposition is shared.",
+    )
+    for row in output["source_ledger"].values():
+        row["treatment_option"] = ""
+    parsed, error = validate_model_response(json.dumps(output), false_consensus)
+    assert error is None
+    assert parsed["source_ledger"]["R1:RO-01"]["treatment_option"] == "Option A"
+    assert parsed["source_ledger"]["R1:MO-01"]["treatment_option"] == "Option B"
+    normalized = {
+        (item["source_id"], item["field"], item["server_value"])
+        for item in parsed["server_derived"]["field_normalizations"]
+    }
+    assert ("R1:RO-01", "treatment_option", "Option A") in normalized
+    assert ("R1:MO-01", "treatment_option", "Option B") in normalized
+    assert not screening.audit_screen_response(false_consensus, parsed)
+
+    conditional = next(
+        item for item in corpus["cases"]
+        if item["case_id"] == "R2-CONDITIONALITY-007"
+    )
+    output = _valid_model_output(
+        conditional,
+        "Option A remains conditional on prerequisite X; its status remains unknown.",
+    )
+    for row in output["source_ledger"].values():
+        row["treatment_option"] = ""
+        row["prerequisite"] = ""
+    parsed, error = validate_model_response(json.dumps(output), conditional)
+    assert error is None
+    assert parsed["source_ledger"]["R1:RO-01"]["treatment_option"] == "Option A"
+    assert parsed["source_ledger"]["R1:RO-01"]["prerequisite"] == "prerequisite X"
+    assert parsed["source_ledger"]["R1:MO-01"]["prerequisite"] == "Prerequisite X"
+    assert parsed["source_ledger"]["R1:RO-01"]["prerequisite_status"] == "unknown"
+    assert parsed["source_ledger"]["R1:MO-01"]["prerequisite_status"] == "unknown"
+    assert "Conditional support" in parsed["source_ledger"]["R1:RO-01"]["saved_statement"]
+    assert not screening.audit_screen_response(conditional, parsed)
+
+
+def test_r2_source_bound_normalization_fills_exact_information_positions():
+    corpus, _ = load_corpus()
+    partial = next(
+        item for item in corpus["cases"]
+        if item["case_id"] == "R2-PARTIAL-AGREEMENT-006"
+    )
+    output = _valid_model_output(
+        partial,
+        "Only R1:RO-01 and R1:MO-01 agree that additional information is required; R1:SO-02 is silent.",
+    )
+    for row in output["source_ledger"].values():
+        row["information_position"] = "not_applicable"
+    parsed, error = validate_model_response(json.dumps(output), partial)
+    assert error is None
+    assert parsed["source_ledger"]["R1:RO-01"]["information_position"] == "agrees"
+    assert parsed["source_ledger"]["R1:MO-01"]["information_position"] == "agrees"
+    assert parsed["source_ledger"]["R1:SO-02"]["information_position"] == "does_not_state"
+    normalizations = parsed["server_derived"]["field_normalizations"]
+    assert {
+        (item["source_id"], item["field"], item["server_value"])
+        for item in normalizations
+    } >= {
+        ("R1:RO-01", "information_position", "agrees"),
+        ("R1:MO-01", "information_position", "agrees"),
+        ("R1:SO-02", "information_position", "does_not_state"),
+    }
+    assert not screening.audit_screen_response(partial, parsed)
+
+
+def test_r2_source_bound_normalization_does_not_overwrite_conflicting_or_ambiguous_values():
+    corpus, _ = load_corpus()
+    false_consensus = next(
+        item for item in corpus["cases"]
+        if item["case_id"] == "R2-FALSE-CONSENSUS-005"
+    )
+    output = _valid_model_output(false_consensus, "Conflicting model labels remain visible for audit.")
+    output["source_ledger"]["R1:RO-01"]["treatment_option"] = "Option B"
+    parsed, error = validate_model_response(json.dumps(output), false_consensus)
+    assert error is None
+    assert parsed["source_ledger"]["R1:RO-01"]["treatment_option"] == "Option B"
+    assert not any(
+        item["source_id"] == "R1:RO-01" and item["field"] == "treatment_option"
+        for item in parsed["server_derived"]["field_normalizations"]
+    )
+    assert any(
+        "R2 structured conditionality omission: R1:RO-01 did not retain Option A"
+        in finding
+        for finding in screening.audit_screen_response(false_consensus, parsed)
+    )
+
+    ambiguous = json.loads(json.dumps(false_consensus))
+    ambiguous["input"]["saved_R1_contributions"]["R1:RO-01"] = (
+        "Option A and Option B are both mentioned, but no single option is selected."
+    )
+    output = _valid_model_output(ambiguous, "The exact source statement is preserved.")
+    output["source_ledger"]["R1:RO-01"]["treatment_option"] = ""
+    parsed, error = validate_model_response(json.dumps(output), ambiguous)
+    assert error is None
+    assert parsed["source_ledger"]["R1:RO-01"]["treatment_option"] == ""
+    assert not any(
+        item["source_id"] == "R1:RO-01" and item["field"] == "treatment_option"
+        for item in parsed["server_derived"]["field_normalizations"]
+    )
+
+
+def test_r2_structured_information_assessment_rejects_source_ids_when_not_shared():
+    corpus, _ = load_corpus()
+    partial = next(
+        item for item in corpus["cases"]
+        if item["case_id"] == "R2-PARTIAL-AGREEMENT-006"
+    )
+    output = _valid_model_output(partial, "Two sources share only the information-sufficiency proposition.")
+    output["shared_information_sufficiency"] = {
+        "status": "not_shared",
+        "source_ids": ["R1:RO-01", "R1:MO-01"],
+    }
+    findings = screening.audit_screen_response(partial, output)
+    assert any(
+        "R2 structured information-source contradiction" in finding
+        for finding in findings
+    )
+
+
 def test_r2_structured_audit_flags_false_consensus_and_lost_prerequisite_status():
     corpus, _ = load_corpus()
     false_consensus = next(item for item in corpus["cases"] if item["case_id"] == "R2-FALSE-CONSENSUS-005")
