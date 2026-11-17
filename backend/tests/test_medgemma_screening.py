@@ -140,7 +140,7 @@ def test_deterministic_review_audit_flags_observed_v2_misreadings(case_id, respo
     assert any(expected_flag in finding for finding in findings)
 
 
-def test_audit_v5_flags_r2_source_position_misattribution_observed_in_medgemma():
+def test_audit_v6_flags_r2_source_position_misattribution_observed_in_medgemma():
     corpus, _ = load_corpus()
     case = next(item for item in corpus["cases"] if item["case_id"] == "R2-PARTIAL-AGREEMENT-006")
     medgemma_response = (
@@ -154,7 +154,7 @@ def test_audit_v5_flags_r2_source_position_misattribution_observed_in_medgemma()
     assert any("R1:MO-01" in item and "R1:SO-02" in item for item in findings)
 
 
-def test_audit_v5_accepts_correct_r2_partial_agreement_source_positions():
+def test_audit_v6_accepts_correct_r2_partial_agreement_source_positions():
     corpus, _ = load_corpus()
     case = next(item for item in corpus["cases"] if item["case_id"] == "R2-PARTIAL-AGREEMENT-006")
     qwen_response = (
@@ -167,7 +167,22 @@ def test_audit_v5_accepts_correct_r2_partial_agreement_source_positions():
     assert screening.audit_screen_response(case, qwen_response) == []
 
 
-def test_audit_v5_flags_single_source_prerequisite_absence_claimed_as_shared_r2_position():
+def test_audit_v6_accepts_explicit_negation_of_a_shared_r2_proposition():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R2-CONDITIONALITY-007")
+    qwen_response = (
+        "Source R1:MO-01 states Prerequisite X is not present in the supplied record. "
+        "Source R1:RO-01 expresses conditional support for Option A only if Prerequisite X is confirmed. "
+        "The prerequisite remains unknown. No shared proposition on a treatment option exists; "
+        "the sources have distinct positions."
+    )
+    assert not any(
+        "R2 conditionality misattribution" in item
+        for item in screening.audit_screen_response(case, qwen_response)
+    )
+
+
+def test_audit_v6_flags_single_source_prerequisite_absence_claimed_as_shared_r2_position():
     corpus, _ = load_corpus()
     case = next(item for item in corpus["cases"] if item["case_id"] == "R2-CONDITIONALITY-007")
     medgemma_response = (
@@ -179,7 +194,7 @@ def test_audit_v5_flags_single_source_prerequisite_absence_claimed_as_shared_r2_
     assert any("R2 conditionality misattribution" in item for item in findings)
 
 
-def test_audit_v5_flags_chair_contradiction_between_positive_agreement_and_no_agreement():
+def test_audit_v6_flags_chair_contradiction_between_positive_agreement_and_no_agreement():
     corpus, _ = load_corpus()
     case = next(item for item in corpus["cases"] if item["case_id"] == "R4-CHAIR-TRACEABILITY-012")
     medgemma_response = (
@@ -436,7 +451,7 @@ def test_run_screen_records_complete_immutable_case_set(tmp_path, monkeypatch):
     manifest = next(record for record in records if record["record_type"] == "manifest")
 
     assert manifest["prompt_version"] == screening.PROMPT_VERSION
-    assert manifest["audit_version"] == "radonc-mdt-integrity-audit-v5"
+    assert manifest["audit_version"] == "radonc-mdt-integrity-audit-v6"
     assert manifest["screening_script_sha256"] == screening.SCRIPT_SHA256
     assert len(manifest["screening_script_sha256"]) == 64
     assert calls == {"tags": 25, "generate": 12, "show": 1, "version": 1}
