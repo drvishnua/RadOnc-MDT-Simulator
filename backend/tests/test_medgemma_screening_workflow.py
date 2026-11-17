@@ -59,7 +59,7 @@ def test_qwen_exact_prompt_and_audit_versions_are_required_before_medgemma():
     assert qwen_manifest < expected_prompt < expected_audit < version_failure < medgemma_gate
     assert "Qwen output version mismatch; expected prompt-v15/audit-v14" in workflow
     assert "MedGemma remains NOT_REQUESTED." in workflow
-    assert '$manifest.execution.medgemma_status = "NOT_REQUESTED"' in workflow
+    assert 'medgemma_status = "NOT_REQUESTED"' in workflow
 
 
 def test_medgemma_pull_persists_state_and_http_failure_diagnostics():
