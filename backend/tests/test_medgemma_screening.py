@@ -409,9 +409,29 @@ def test_generate_payload_pins_identical_deterministic_options():
     # Repetition control is shared; the output ceiling remains fixed.
     assert qwen["options"]["repeat_last_n"] == 64
     assert qwen["options"]["repeat_penalty"] == 1.1
-    assert qwen["options"]["num_predict"] == 500
+    assert qwen["options"]["num_predict"] == 700
     assert qwen["stream"] is False
     assert qwen["format"]["required"] == ["response"]
+
+
+def test_r2_schema_prioritises_structured_fields_and_bounds_free_text():
+    corpus, _ = load_corpus()
+    case = next(
+        item for item in corpus["cases"]
+        if item["case_id"] == "R2-CONDITIONALITY-007"
+    )
+    schema = screening.build_response_schema(case)
+    assert list(schema["properties"]) == [
+        "source_ledger",
+        "shared_information_sufficiency",
+        "shared_treatment_proposition",
+        "response",
+    ]
+    assert schema["required"] == list(schema["properties"])
+
+    prompt = build_case_prompt(case)
+    assert "response field must be one factual sentence of at most 30 words" in prompt
+    assert "do not put analysis or reasoning in that field" in prompt
 
 
 def test_case_specific_schema_rejects_dropped_or_altered_r2_source_rows():
@@ -821,7 +841,7 @@ def test_run_screen_records_complete_immutable_case_set(tmp_path, monkeypatch):
     summary = next(record for record in records if record["record_type"] == "summary")
     manifest = next(record for record in records if record["record_type"] == "manifest")
 
-    assert manifest["prompt_version"] == "radonc-mdt-integrity-screen-v12"
+    assert manifest["prompt_version"] == "radonc-mdt-integrity-screen-v13"
     assert manifest["audit_version"] == "radonc-mdt-integrity-audit-v12"
     assert manifest["screening_script_sha256"] == screening.SCRIPT_SHA256
     assert len(manifest["screening_script_sha256"]) == 64
