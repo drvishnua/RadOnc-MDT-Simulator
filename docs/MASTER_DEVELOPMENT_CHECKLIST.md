@@ -1,4 +1,92 @@
-# Master Development and Verification Checklist — current snapshot, 17 November 2026
+# Master Development and Verification Checklist — CURRENT, 17 November 2026
+
+Repository: drvishnua/RadOnc-MDT-Simulator  
+Development branch: feature/four-round-mdt-and-performance  
+Current branch head before this checklist-only update: b26de934a0c7134cd80368b9dcae3fabfa567aad  
+Latest application-code implementation: 65ac2d5a602d31fce0b79e4079b0d203447edcae  
+PR #1: open, draft, unmerged; base main  
+main: 39a356b8eb09399aa2da1b9b9085965999f5105a, unchanged  
+Latest model screen: run 44113146755 — FAILED; prompt v15/audit-v14; artifact 14343725249  
+Latest model-screen workflow: run 44137110065 — SKIPPED by commit-message marker guard; no model provisioning or inference.  
+Latest environment evidence: GitHub-hosted Windows CPU, concurrency 1; GPU measurement NOT_PERFORMED; clinical accuracy NOT_EVALUATED.
+
+This top section is the single authoritative current checklist. The earlier dated snapshots below are retained as historical evidence and must not override this status.
+
+## Latest exact-head CI — b26de934a0c7134cd80368b9dcae3fabfa567aad
+
+- Backend run 44139659389: SUCCESS; 471/471 tests passed, 0 failures/errors/skips/inconclusive; deterministic preflight 7/7; diagnostic errors 0.
+- Frontend build run 44139659408: SUCCESS.
+- Patient registry and saved MDT dashboard browser E2E run 44139659759: SUCCESS.
+- Windows packaging prerequisites run 44139659413: SUCCESS.
+- Windows installer run 44139659377: SUCCESS; installer artifact 14354056580, 14,883,008 bytes. Clean-hosted first-run Ollama/model bootstrap job 134239629910: SKIPPED.
+- Security/dependency run 44139659481: WORKFLOW FAILED solely because npm audit reported four high findings for picomatch 4.0.7. Python dependency audit reported no known vulnerabilities; Node audit failed.
+- Full-history secret scan and Python/JavaScript CodeQL both SUCCESS.
+- Six standard workflows: five SUCCESS, one FAILED. This is software/build verification only, not model acceptance, GPU verification, clinical validation or release approval.
+
+## Dependency-security investigation — CVE-2026-112366
+
+- Resolved frontend lockfile has one picomatch 4.0.7 occurrence, marked dev=true. It is reached through fdir and tinyglobby, which are used by Vite 7.3.8. The finding is in the build-tool dependency tree, not the declared React runtime dependencies. Full dependency audit still remains a required security gate and is FAILED.
+- npm audit --force proposes downgrading Vite to 6.2.7, a breaking downgrade from 7.3.8; not applied.
+- GitHub Advisory GHSA-fc5q-39xc-vjpf / CVE-2026-112366 remains HIGH, describing ReDoS in single-branch repeated extglobs; advisory currently lists no fixed npm version.
+- Upstream picomatch PR #237 (head 1bf0d04563cb9ce568cf36efc5f6b7187d9911d5) and PR #238 (head 44f192261f312ddf236cb7bdc05d8f22663f98f9) remain OPEN and UNMERGED. They are proposals, not released packages; no upstream CI completion evidence was established from the inspected commit checks.
+- Important conflicting evidence: upstream PR #235, which proposed a broader CVE fix, is CLOSED without merge. The picomatch maintainer commented that they consider the reported pattern not a vulnerability and advised not using such patterns or allowing untrusted users to define regex/glob patterns. PR #238's author explicitly referenced that maintainer objection. This is a maintainer dispute, not a formal withdrawal of the GitHub Advisory.
+- Current disposition: keep the Node dependency audit FAILED until the advisory is formally withdrawn/clarified or a defensible official remediation is published and verified. Do not install unmerged forks, use private unreviewed overrides, suppress audit severity, omit dev dependencies from the required full audit, or downgrade Vite to manufacture a green result.
+- Runtime exposure appears narrower because picomatch is in the frontend build tool chain, but this does not nullify the finding or prove the package safe.
+
+## Model-screen trigger and execution gate
+
+- `.github/workflows/model-integrity-screening.yml` listens to pushes affecting selected model-screen files, but its job condition additionally requires commit message marker `[model-integrity-screen]`; MedGemma additionally requires `[medgemma]` and `[hai-def-terms-accepted]`. Ordinary relevant pushes without markers are skipped.
+- The workflow is deliberately sequential: Qwen 3.5 4B must complete and pass exact prompt-v16/audit-v15 manifest and script-digest checks before MedGemma is pulled. Concurrency is 1 and hosted run is CPU-only.
+- Do not trigger v16/audit-v15 while the required dependency-security gate remains failed. After security disposition is resolved, create a separate marker-qualified trigger commit and inspect immutable raw outputs, manifest, model digests, logs and audit findings. Qwen failure/truncation must keep MedGemma NOT_REQUESTED.
+- The user's prior HAI-DEF terms acceptance remains recorded; it does not make a model screen clinical validation.
+
+## Master Checklist — Current Status
+
+| Workstream | Status | Evidence / boundary |
+|---|---|---|
+| R1–R4 architecture and persisted data flow | IN PROGRESS | Four-round pipeline exists; full live 45-role R1–R4 acceptance outstanding. |
+| R1 independent assessments and unknown/staging safeguards | IN PROGRESS | Deterministic safeguards/regressions exist; broad model adherence not established. |
+| R2 saved-source identity, exact text and row ordering | VERIFIED | Backend 471/471 on implementation SHA 65ac2d5 and exact-head run 44139659389. |
+| R2 option/prerequisite normalization and proposition-level consensus | FAILED | v15 run 44113146755 exposed model narrative/position contradictions and MedGemma source-ID misattribution; v16 live retest not run. |
+| R3 adversarial provenance and fabricated-quote review | IN PROGRESS | Source-bound audit regressions pass; broad model adherence not established. |
+| R4 Chair synthesis from actual saved R1–R3 | FAILED | v15 MedGemma echoed input; both models overclaimed missing-agent consensus from counts-only evidence; v16 live retest not run. |
+| Clinical safety, staging and unknown data | IN PROGRESS | No clinical validation, guideline concordance or zero-hallucination claim; independent review outstanding. |
+| Case integrity, contradiction preservation and audit history | IN PROGRESS | Failed raw run and immutable artifact retained; historical model-integrity failures remain unresolved. |
+| Provenance and guideline/evidence retrieval | IN PROGRESS | Screening harness has source text/IDs; in-app guideline retrieval and linked evidence incomplete. |
+| Chair consensus, dissent and traceability | FAILED | v15 partial-agreement contradiction and R4 source-echo failures await live retest. |
+| Missing/failed-agent handling | FAILED | v15 MedGemma omitted counts/role identity; deterministic guard is regression-tested, not live-model verified. |
+| Backend tests — exact head b26de934 | VERIFIED | Run 44139659389: 471/471 passed; preflight 7/7; diagnostic errors 0. |
+| Frontend build — exact head b26de934 | VERIFIED | Run 44139659408 passed. |
+| Patient registry and saved MDT dashboard browser E2E — exact head b26de934 | VERIFIED | Run 44139659759 passed; not full 45-role clinical simulation. |
+| Mission Control development-process monitor | IN PROGRESS | Backend tests pass; complete operational/browser acceptance of live development monitor not established. |
+| Ollama context handling | IN PROGRESS | Historical 6,144/8,192 allocation only; long-run context truncation not proven fixed. |
+| Ollama performance and concurrency | IN PROGRESS | Hosted screening concurrency 1; comparable local RTX 4060 timings incomplete. |
+| RTX 4060 request-time GPU inference | NOT STARTED | Requires real local inference with request-time nvidia-smi and Ollama offload evidence. |
+| Hosted v9–v15 model screens | FAILED | Historical bounded runs retain recorded integrity failures. |
+| v16/audit-v15 code/schema/audit regression suite | VERIFIED | Backend 471/471; model behaviour remains a separate unverified gate. |
+| v16/audit-v15 live model screen | NOT STARTED | Held until dependency-security disposition; prior push screen skipped; no v16 inference. |
+| Qwen exact-version gate before MedGemma | VERIFIED | Workflow checks Qwen manifest prompt/audit version and script digest before MedGemma pull; live v16 gate pending. |
+| Fresh full 45-role R1–R4 validation | NOT STARTED | No fresh complete end-to-end live run accepted. |
+| MedGemma HAI-DEF acceptance | VERIFIED | Prior explicit user attestation retained; v15 run recorded terms gate true. |
+| Independent blinded model-output review | NOT STARTED | Required independent review not completed. |
+| Guideline retrieval and verification | NOT STARTED | No current authoritative evidence set retrieved and linked to simulator conclusions. |
+| Independent qualified clinical review | NOT STARTED | No attributable clinical review artifact. |
+| Packaging prerequisites — exact head b26de934 | VERIFIED | Run 44139659413 passed. |
+| Windows installer — exact head b26de934 | VERIFIED | Run 44139659377 passed installer build/smoke/checksum/upload; artifact 14354056580. Clean-hosted first-run Ollama/model bootstrap was SKIPPED. |
+| Full-history secret scan — exact head b26de934 | VERIFIED | Run 44139659481 passed. |
+| CodeQL — exact head b26de934 | VERIFIED | Python and JavaScript/TypeScript jobs passed in run 44139659481. |
+| Dependency audit — exact head b26de934 | FAILED | Run 44139659481: four high picomatch 4.0.7 findings, GHSA-fc5q-39xc-vjpf / CVE-2026-112366. Python audit had no known vulnerabilities; no override/downgrade/suppression applied. |
+| Release acceptance | BLOCKED | Dependency audit failed; v15 model screen failed; v16 screen held; full 45-role run, GPU telemetry, evidence verification and independent clinical review outstanding. |
+
+## Next controlled actions
+
+1. Continue monitoring the official GHSA and upstream picomatch maintainer resolution; distinguish formal advisory status from maintainer opinion.
+2. Do not weaken the audit or introduce an unreviewed fork/override. If maintainers formally dispute the advisory, seek authoritative advisory clarification and document the risk decision rather than silently suppressing it.
+3. Once the security gate is genuinely clean or an explicit documented risk disposition is approved, trigger v16/audit-v15 with the existing sequential Qwen-first/MedGemma-second guard.
+4. Inspect all immutable model artefacts and classify every finding; correct model behaviour before full 45-role validation.
+5. Complete Mission Control operational E2E, first-run installer bootstrap, local RTX 4060 telemetry, guideline retrieval and independent clinical review.
+
+# Historical checkpoint — previous Master Development and Verification Checklist, 17 November 2026
 
 Repository: drvishnua/RadOnc-MDT-Simulator  
 Development branch: feature/four-round-mdt-and-performance  
