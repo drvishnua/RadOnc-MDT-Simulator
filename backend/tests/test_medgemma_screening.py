@@ -80,7 +80,7 @@ def test_r3_prompt_requires_case_local_raw_range_rejection_and_negation():
     assert "no peer claimed that" in negation_prompt
     assert "recognise explicit negation and never reverse it" in negation_prompt
 
-def test_v7_prompts_preserve_unknown_conditionality_and_prevent_cross_case_leakage():
+def test_v8_prompts_preserve_unknown_conditionality_and_prevent_cross_case_leakage():
     corpus, _ = load_corpus()
     conditional_case = next(item for item in corpus["cases"] if item["case_id"] == "R2-CONDITIONALITY-007")
     conditional_prompt = build_generate_payload("qwen3.5:4b", conditional_case)["prompt"]
@@ -664,7 +664,7 @@ def test_r3_separate_malformed_range_does_not_reclassify_nearby_supplied_source_
     assert not any("R3 quote-review omission" in item for item in findings)
 
 
-def test_v7_prompts_require_copy_first_r2_attribution_and_separate_consensus_types():
+def test_v8_prompts_require_copy_first_r2_attribution_and_separate_consensus_types():
     corpus, _ = load_corpus()
     partial_case = next(item for item in corpus["cases"] if item["case_id"] == "R2-PARTIAL-AGREEMENT-006")
     partial_prompt = build_generate_payload("qwen3.5:4b", partial_case)["prompt"].casefold()
@@ -682,7 +682,7 @@ def test_v7_prompts_require_copy_first_r2_attribution_and_separate_consensus_typ
     assert "not present in the supplied record" in conditional_prompt
 
 
-def test_v7_r3_prompt_requires_character_for_character_source_quote():
+def test_v8_r3_prompt_requires_character_for_character_source_quote():
     corpus, _ = load_corpus()
     case = next(item for item in corpus["cases"] if item["case_id"] == "R3-FABRICATED-QUOTE-009")
     prompt = build_generate_payload("qwen3.5:4b", case)["prompt"].casefold()
@@ -693,7 +693,7 @@ def test_v7_r3_prompt_requires_character_for_character_source_quote():
     assert "absent from the saved source and unsupported" in prompt
 
 
-def test_v7_r4_prompt_requires_one_consistent_proposition_outcome():
+def test_v8_r4_prompt_requires_one_consistent_proposition_outcome():
     corpus, _ = load_corpus()
     case = next(item for item in corpus["cases"] if item["case_id"] == "R4-CHAIR-TRACEABILITY-012")
     prompt = build_generate_payload("qwen3.5:4b", case)["prompt"].casefold()
@@ -703,7 +703,7 @@ def test_v7_r4_prompt_requires_one_consistent_proposition_outcome():
     assert "preserve the r3 unresolved-source finding" in prompt
 
 
-def test_v7_r2_prompt_requires_source_by_source_positions_and_preserves_conditional_options():
+def test_v8_r2_prompt_requires_source_by_source_positions_and_preserves_conditional_options():
     corpus, _ = load_corpus()
     partial_case = next(item for item in corpus["cases"] if item["case_id"] == "R2-PARTIAL-AGREEMENT-006")
     partial_prompt = build_generate_payload("qwen3.5:4b", partial_case)["prompt"].casefold()
@@ -723,7 +723,7 @@ def test_v7_r2_prompt_requires_source_by_source_positions_and_preserves_conditio
     assert "prerequisite x" in conditional_prompt
 
 
-def test_v7_r3_prompt_includes_an_exact_case_local_source_identifier_inventory():
+def test_v8_r3_prompt_includes_an_exact_case_local_source_identifier_inventory():
     corpus, _ = load_corpus()
     invalid_case = next(item for item in corpus["cases"] if item["case_id"] == "R3-INVALID-SOURCE-008")
     prompt = build_generate_payload("qwen3.5:4b", invalid_case)["prompt"]
@@ -737,7 +737,7 @@ def test_v7_r3_prompt_includes_an_exact_case_local_source_identifier_inventory()
     assert '"R2:MO-01"' in fabricated_prompt
 
 
-def test_v7_r4_prompt_requires_completeness_and_a_distinct_chair_synthesis():
+def test_v8_r4_prompt_requires_completeness_and_a_distinct_chair_synthesis():
     corpus, _ = load_corpus()
     chair_case = next(item for item in corpus["cases"] if item["case_id"] == "R4-CHAIR-TRACEABILITY-012")
     prompt = build_generate_payload("qwen3.5:4b", chair_case)["prompt"].casefold()
@@ -763,7 +763,7 @@ def test_case_local_identifier_inventory_uses_only_explicit_input_ids():
     }
 
 
-def test_v7_r2_inventory_lists_each_saved_r1_source_with_exact_text():
+def test_v8_r2_inventory_lists_each_saved_r1_source_with_exact_text():
     corpus, _ = load_corpus()
     case = next(item for item in corpus["cases"] if item["case_id"] == "R2-CONDITIONALITY-007")
     inventory = screening.saved_r1_source_inventory(case["input"])
@@ -783,7 +783,7 @@ def test_v7_r2_inventory_lists_each_saved_r1_source_with_exact_text():
     assert "one separate bullet for EVERY inventory row" in prompt
 
 
-def test_v7_r4_completeness_inventory_exposes_exact_role_gap():
+def test_v8_r4_completeness_inventory_exposes_exact_role_gap():
     corpus, _ = load_corpus()
     case = next(item for item in corpus["cases"] if item["case_id"] == "R4-MISSING-AGENT-011")
     inventory = screening.chair_role_completeness_inventory(case["input"])

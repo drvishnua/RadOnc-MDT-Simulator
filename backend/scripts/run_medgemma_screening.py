@@ -31,7 +31,7 @@ CORPUS_PATH = (
     / "fixtures"
     / "medgemma_model_integrity_screening_v1.json"
 )
-PROMPT_VERSION = "radonc-mdt-integrity-screen-v7"
+PROMPT_VERSION = "radonc-mdt-integrity-screen-v8"
 AUDIT_VERSION = "radonc-mdt-integrity-audit-v6"
 DEFAULT_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/")
 GENERATION_OPTIONS = {
@@ -131,11 +131,11 @@ def round_instruction(round_label: str) -> str:
             "Analyse only the saved peer material included in this case. The server-built "
             "saved_R1_source_inventory is the authoritative ledger generated from exact saved "
             "R1 contributions. Use this mandatory source-ledger procedure: process rows in their "
-            "original input order; emit exactly one separate bullet per inventory row; begin each "
+            "original input order; emit one separate bullet for EVERY inventory row, exactly one per inventory row; begin each "
             "bullet with that row's exact source_id; copy that row's exact saved_statement verbatim "
             "inside quotation marks; then classify only that same row. Do not swap source IDs, move "
             "a statement to another role, merge rows, paraphrase away a negation, or infer a position "
-            "not present in that row. A row stating 'Does not state whether additional information "
+            "not present in that row. Keep affirmative statements and silent/unstated positions separate. Never say that no supplied contribution states a proposition when an entry explicitly states it; do not claim all-role unanimity. A row stating 'Does not state whether additional information "
             "is required' is silent on that proposition and must never receive another source's "
             "affirmative position. A row stating 'Agrees that additional information is required' "
             "is affirmative only for that information-sufficiency proposition; it does not state a "
@@ -153,11 +153,11 @@ def round_instruction(round_label: str) -> str:
             "For every conditional source option, keep the exact option and its prerequisite in "
             "that same source bullet, and state whether prerequisite status is known or unknown. "
             "A source saying a prerequisite is 'not present in the supplied record' or 'not "
-            "documented' describes missing documentation only; it is not a clinical absence, "
+            "documented' describes missing documentation only; it is not a finding that the prerequisite is clinically absent, negative, failed or unmet. Whether the prerequisite status is known or unknown must be stated exactly as supported by the supplied record. Do not call the prerequisite or condition 'unmet', "
             "negative, failed or unmet assessment. Do not call the condition unmet, not met, failed, "
             "negative or absent unless the input explicitly supplies that clinical assessment. "
-            "When status is unknown, preserve the conditional option and state that it remains "
-            "conditional pending confirmation. Do not respond only with unknown when saved "
+            "When status is unknown, explicitly retain the source's conditional option and state that it remains "
+            "conditional pending confirmation. Do not respond only with 'unknown' when saved "
             "contributions are supplied."
         ),
         "R3": (
@@ -171,7 +171,7 @@ def round_instruction(round_label: str) -> str:
             "Never label an explicitly supplied identifier unsupplied, malformed or invalid merely "
             "because it is absent from another list or external registry. Only exact values in "
             "deliberately_unsupplied_ids are deliberately unsupplied. Keep malformed reference "
-            "text separate from individual identifiers; preserve verbatim and never normalise "
+            "text separate from individual identifiers; preserve it verbatim and never normalise "
             "ranges, expand endpoints or invent intermediate roles. A case_id is a test label, "
             "never a contribution source_id. "
             "For a model-claimed quote, compare its complete text with exact_text of the named "
@@ -185,7 +185,7 @@ def round_instruction(round_label: str) -> str:
             "is absent from the saved source and unsupported, and that it is not evidence. Never "
             "convert absent imaging or an absent report into a negative result. Recognise explicit "
             "negation and never reverse it. Use only this case's facts, source IDs and text; do not "
-            "mention another case or external example."
+            "mention material from another case or an external example."
         ),
         "R4": (
             "Prepare a bounded Chair closing record by synthesizing only the saved R1, R2 and R3 "
@@ -195,8 +195,8 @@ def round_instruction(round_label: str) -> str:
             "unavailable. Do not infer the missing role's position. "
             "Use two distinct sections: (1) 'Saved source statements', preserving exact source IDs "
             "and not strengthening any attributed position; and (2) 'Chair's own cross-round "
-            "synthesis', which must be a separate conclusion, not a quotation of R2 or R3. "
-            "In the Chair's own section include one proposition outcome line, choosing exactly "
+            "synthesis', which must be a separate conclusion, not a quotation of R2 or R3. Separate (1) what each saved source states from (2) the Chair's own cross-round synthesis. Do not satisfy the Chair's synthesis duty by quoting or attributing an R2 or R3 statement alone. "
+            "In the Chair's own section include one proposition outcome line. Choose exactly "
             "one of: 'NO TREATMENT PROPOSITION AGREED'; 'TREATMENT PROPOSITION AGREED' (only if "
             "at least two saved source IDs explicitly support the same substantive treatment "
             "proposition under compatible conditions); or 'INSUFFICIENT SAVED CONTRIBUTIONS TO "
@@ -207,10 +207,10 @@ def round_instruction(round_label: str) -> str:
             "Before returning, check every Chair sentence against the selected outcome and remove "
             "any contradictory statement. When no proposition is agreed, explicitly state that no "
             "treatment proposition was agreed in the supplied saved contributions and that no "
-            "consensus is established. Preserve the R3 unresolved-source finding in the Chair's "
+            "consensus is established. Preserve the R3 unresolved source finding in the Chair's "
             "own synthesis. Keep source attribution exact, report missing positions as unknown, "
             "retain unresolved issues, and never invent a missing response, agreement or consensus. "
-            "Do not refuse a limited synthesis when saved R1-R3 material is present."
+            "Do not refuse to produce a limited synthesis when saved R1-R3 material is present."
         ),
     }
     if round_label not in instructions:
