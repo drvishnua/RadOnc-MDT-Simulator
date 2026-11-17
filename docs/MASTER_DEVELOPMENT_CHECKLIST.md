@@ -4,7 +4,7 @@ Repository: drvishnua/RadOnc-MDT-Simulator
 Development branch: feature/four-round-mdt-and-performance  
 Latest application/test commit: aa6dac613288d948f3c952f5b5c9de80fc5448a2  
 Latest model-screen trigger commit: eb75b076459a4f5da62758b631c59ca2fef1232f  
-Latest documentation/checklist checkpoint reviewed: f4948e351d4a580643cca52d14e0474ef7966ac6  
+Latest documentation/checklist checkpoint reviewed: 984f259944b0341b8f0ce70bc665da5ccc5e34b7  
 PR #1: open, draft, unmerged, base main  
 main: 39a356b8eb09399aa2da1b9b9085965999f5105a, unchanged.
 
@@ -74,7 +74,9 @@ Continuity files: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_
 - v11 bounded acceptance is FAILED for both models; preserve raw outputs and do not promote either.
 - v12/audit-v11 changes on aa6dac: R2 prompt explicitly requires exact source labels and empty strings for absent options/prerequisites; source-bound normalization handles Option_A (conditional), not_shared no-option sentinels and no-prerequisite sentinels, logging every change in server_derived.field_normalizations; R3 audit checks nested JSON-object inventory contradictions as well as list-style output.
 - First v12 test attempt failed one new normalization regression due to over-escaped regex. Failure was inspected and corrected; exact-SHA backend run 44045273632 passed 453 tests, 0 failed/errors/skipped. Earlier failed run 44045174509 remains preserved.
-- Trigger commit eb75b076459a4f5da62758b631c59ca2fef1232f contains [model-integrity-screen], [medgemma] and [hai-def-terms-accepted]. Screening run 44045424408 was queued on that exact SHA at the latest check; no v12 outputs yet.
+- Trigger commit eb75b076459a4f5da62758b631c59ca2fef1232f contains [model-integrity-screen], [medgemma] and [hai-def-terms-accepted]. Screening run 44045424408 passed its HAI-DEF pre-provision gate and is IN PROGRESS in the combined Ollama provisioning/inference step; no v12 outputs/artifact yet.
+- On exact trigger SHA eb75b076, Backend 44045430442, Frontend 44045430218, Browser E2E 44045430256, Security/Dependency/CodeQL 44045430170 and Packaging Prerequisites 44045430220 passed; PR Windows Installer 44045430183 and push Windows Installer 44045424397 remained IN PROGRESS at latest check.
+- Checklist reconciliation commit 984f259944b0341b8f0ce70bc665da5ccc5e34b7 is documentation-only. Its six new PR checks 44045682142 (Backend), 44045682255 (Frontend), 44045682137 (Browser E2E), 44045682129 (Security/CodeQL), 44045682155 (Packaging Prerequisites) and 44045682163 (Windows Installer) were IN PROGRESS or queued at latest check.
 
 ### Master Development and Verification Checklist — Current Status
 
@@ -83,15 +85,15 @@ Continuity files: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_
 | R1–R4 architecture and persisted data flow | IN PROGRESS | Four-round pipeline exists; fresh full 45-role end-to-end acceptance outstanding. |
 | R1 independent assessments and unknown/staging safeguards | IN PROGRESS | v10 synthetic outputs manually inspected; no clinical validity claim; broader adversarial review remains. |
 | R2 saved-source identity, exact text and row ordering | VERIFIED | Screening-harness contract: exact saved IDs/text validated; source order server-derived from saved R1 order. |
-| R2 conditionality and proposition-level consensus | IN PROGRESS | v11 prompt and bounded source-bound normalizations implemented; 451 tests pass. v10 live model outputs still showed R2 failures; v11 live retest pending. |
-| R3 adversarial provenance and fabricated-quote review | IN PROGRESS | Structured quote and identifier validation implemented; audit-v10 now catches v10 narrative/structured identifier contradiction. v11 model retest pending. |
-| R4 Chair synthesis from actual saved R1–R3 | IN PROGRESS | Audit-v10 detects JSON echo without synthesis; v11 live retest pending. Full production Chair acceptance remains outstanding. |
+| R2 conditionality and proposition-level consensus | IN PROGRESS | v11 live screen: Qwen still had 4 R2 findings; MedGemma 15 R2 findings. v12 prompt adds exact source-label/empty-field requirements and bounded source-derived normalizations; backend regression tests pass on exact SHA aa6dac. v12 live retest pending. |
+| R3 adversarial provenance and fabricated-quote review | IN PROGRESS | v11: Qwen had no R3 flags; MedGemma refused the supplied identifier audit; fabricated-quote rejection was correctly represented. Audit-v11 adds nested JSON-object contradiction regression; v12 live retest pending. |
+| R4 Chair synthesis from actual saved R1–R3 | IN PROGRESS | v11: Qwen passed both bounded R4 cases; MedGemma failed missing-agent completeness and Chair synthesis (input echo). v12 live retest pending; full production Chair acceptance outstanding. |
 | Clinical safety, staging and unknown data | IN PROGRESS | No zero-hallucination or clinical-validity claim; independent qualified review outstanding. |
 | Case integrity, contradiction preservation and audit history | IN PROGRESS | Original v9/v10 outputs and artifacts preserved; historical run-9 still has 343 integrity findings. |
 | Provenance and guideline/evidence retrieval | IN PROGRESS | Screening manifests and source-bound transformations recorded; current guideline retrieval and claim linkage not integrated. |
 | Chair consensus, dissent and traceability | IN PROGRESS | Deterministic safeguards and audit tests pass; live model adherence and full 45-role review outstanding. |
 | Missing/failed-agent handling | IN PROGRESS | Missing-agent synthetic case outputs inspected; full 45-role failure-injection acceptance outstanding. |
-| Backend tests | VERIFIED | 451 passed, 0 failed/errors/skipped; run 44040195517; JUnit artifact 14309136871. No model inference or clinical accuracy evaluation in this test run. |
+| Backend tests | VERIFIED | 453 passed, 0 failed, 0 errors, 0 skipped; exact-SHA run 44045273632 on aa6dac613288d948f3c952f5b5c9de80fc5448a2; JUnit artifact 14311247409 and deterministic preflight artifact 14311386191. No model inference or clinical accuracy evaluation in this test run. |
 | Frontend build | VERIFIED | Run 44040195520 on exact SHA 57d6064. |
 | Browser E2E | VERIFIED | Run 44040195519 on exact SHA 57d6064. |
 | Dashboard and read-only API validation | VERIFIED | Mission Control and Developer Monitor previously browser-verified; broader production API testing remains IN PROGRESS. |
@@ -103,7 +105,7 @@ Continuity files: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_
 | Hosted Qwen/MedGemma v9 screen | FAILED | Run 44031253593, artifact 14304964550; preserved. |
 | Hosted Qwen/MedGemma v10/audit-v9 screen | FAILED | Run 44037072649, artifact 14308901197; both models completed 12/12, but Qwen had 4 integrity findings and MedGemma 18; bounded acceptance failed. Raw outputs preserved; independent review remains outstanding. |
 | Hosted Qwen/MedGemma v11/audit-v10 screen | FAILED | Run 44040631649; artifact 14310935167; Qwen 12/12, 4 findings in 2 cases; MedGemma 12/12, 18 findings in 6 cases. Both PENDING_HUMAN_REVIEW; bounded acceptance failed. Hosted CPU only; GPU NOT_PERFORMED. |
-| Hosted Qwen/MedGemma v12/audit-v11 screen | IN PROGRESS | Run 44045424408 on trigger SHA eb75b076459a4f5da62758b631c59ca2fef1232f. Required model-screen, MedGemma and HAI-DEF acceptance markers present; workflow queued at latest check. Sequential Qwen then MedGemma; no outputs yet. Hosted CPU only; GPU NOT_PERFORMED. |
+| Hosted Qwen/MedGemma v12/audit-v11 screen | IN PROGRESS | Run 44045424408 on trigger SHA eb75b076459a4f5da62758b631c59ca2fef1232f. HAI-DEF gate passed; combined Ollama provisioning/inference active; Qwen first then MedGemma after Qwen gate. No outputs/artifact yet. Hosted CPU only; GPU NOT_PERFORMED. |
 | Current full 45-role R1–R4 validation | NOT STARTED | No fresh complete model execution accepted. |
 | Historical full 45-role run-9 acceptance | FAILED | Audit found 343 integrity findings; originals preserved. |
 | MedGemma HAI-DEF pre-provision gate | VERIFIED | Previously accepted personally by user; v10 gate passed. New workflow retains same gate. |
