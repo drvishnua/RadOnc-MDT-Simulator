@@ -128,64 +128,36 @@ def round_instruction(round_label: str) -> str:
             "Do not invent a diagnosis or infer T, N, M or stage."
         ),
         "R2": (
-            "Analyse only the saved peer material included in this case. The server-built "
-            "saved_R1_source_inventory is the authoritative ledger generated from exact saved "
-            "R1 contributions. Use this mandatory source-ledger procedure: process rows in their "
-            "original input order; emit one separate bullet for EVERY inventory row, exactly one per inventory row; begin each "
-            "bullet with that row's exact source_id; copy that row's exact saved_statement verbatim "
-            "inside quotation marks; then classify only that same row. Do not swap source IDs, move "
-            "a statement to another role, merge rows, paraphrase away a negation, or infer a position "
-            "not present in that row. Keep affirmative statements and silent/unstated positions separate. Never say that no supplied contribution states a proposition when an entry explicitly states it; do not claim all-role unanimity. A row stating 'Does not state whether additional information "
-            "is required' is silent on that proposition and must never receive another source's "
-            "affirmative position. A row stating 'Agrees that additional information is required' "
-            "is affirmative only for that information-sufficiency proposition; it does not state a "
-            "treatment-option position unless the row explicitly names one. "
-            "After the source ledger, use two separate headings: 'Shared information-sufficiency "
-            "proposition' and 'Shared treatment proposition'. A shared information-sufficiency "
-            "proposition may be reported only when at least two exact source IDs independently "
-            "state the same proposition; name those IDs and preserve any silent roles. A shared "
-            "treatment proposition may be reported only when at least two source IDs explicitly "
-            "support the same treatment option or sequence under compatible prerequisites. Do not "
-            "turn agreement that more information is required into treatment consensus. If no "
-            "treatment proposition meets that rule, write exactly: 'No shared treatment proposition "
-            "is established by the supplied contributions.' Do not claim all-role unanimity when "
-            "any source is silent. "
-            "For every conditional source option, keep the exact option and its prerequisite in "
-            "that same source bullet, and state whether prerequisite status is known or unknown. "
-            "A source saying a prerequisite is 'not present in the supplied record' or 'not "
-            "documented' describes missing documentation only; it is not a finding that the prerequisite is clinically absent, negative, failed or unmet. Whether the prerequisite status is known or unknown must be stated exactly as supported by the supplied record. Do not call the prerequisite or condition 'unmet', "
-            "negative, failed or unmet assessment. Do not call the condition unmet, not met, failed, "
-            "negative or absent unless the input explicitly supplies that clinical assessment. "
-            "When status is unknown, explicitly retain the source's conditional option and state that it remains "
-            "conditional pending confirmation. Do not respond only with 'unknown' when saved "
-            "contributions are supplied."
+            "Analyse only the supplied saved R1 contributions. The case-specific JSON schema "
+            "contains a required source_ledger property for every exact saved source ID. Each "
+            "saved_statement field is schema-locked to the exact server text; do not alter it. "
+            "For each row, classify information_position, treatment_option, prerequisite and "
+            "prerequisite_status. A statement agreeing that more information is required is not "
+            "a treatment-option position. A silent statement must remain silent. Keep every "
+            "conditional option attached to its own prerequisite; missing documentation means "
+            "unknown, not clinically absent, negative, failed or unmet. "
+            "Report shared information sufficiency only for at least two agreeing source rows. "
+            "Report shared treatment only when at least two sources explicitly support the same "
+            "option or sequence under compatible prerequisites. Distinct options are not consensus. "
+            "When no shared treatment proposition is established, set the structured treatment "
+            "assessment to not_shared with an empty source_ids list. Do not infer missing positions "
+            "or generalise the bounded synthetic rows to all 45 roles. The response string is a "
+            "brief explanation only; the structured source_ledger and proposition assessments "
+            "are the auditable output."
         ),
         "R3": (
-            "Perform a critical audit of source-linked statements using only source material and "
-            "identifiers actually included in THIS case input. The case-local identifier inventory "
-            "is derived from exact input fields. Enumerate under separate labels every "
-            "explicitly_supplied_source_id, every deliberately_unsupplied_id, and the "
-            "malformed_reference_text_verbatim; copy each identifier and malformed reference "
-            "exactly. Do not stop after an incomplete list. An identifier in supplied_source_ids, "
-            "an explicitly saved source object's source_id, or a saved-contribution key is supplied. "
-            "Never label an explicitly supplied identifier unsupplied, malformed or invalid merely "
-            "because it is absent from another list or external registry. Only exact values in "
-            "deliberately_unsupplied_ids are deliberately unsupplied. Keep malformed reference "
-            "text separate from individual identifiers; preserve it verbatim and never normalise "
-            "ranges, expand endpoints or invent intermediate roles. A case_id is a test label, "
-            "never a contribution source_id. "
-            "For a model-claimed quote, compare its complete text with exact_text of the named "
-            "saved source object. Use this mandatory output: first state the exact source_id; next "
-            "write 'Exact saved source text (verbatim):' followed by the entire exact_text copied "
-            "character-for-character, preserving every word and punctuation mark; next write "
-            "'Model-claimed quote result:' and state PRESENT or ABSENT. Do not paraphrase the "
-            "saved text, describe what it means instead of quoting it, shorten it, or substitute "
-            "a statement that the source merely contains no confirmation. If the claimed quote "
-            "does not exactly appear in exact_text, explicitly state that the model-claimed quote "
-            "is absent from the saved source and unsupported, and that it is not evidence. Never "
-            "convert absent imaging or an absent report into a negative result. Recognise explicit "
-            "negation and never reverse it. Use only this case's facts, source IDs and text; do not "
-            "mention material from another case or an external example."
+            "Perform a critical audit using only this case's supplied source IDs and exact text. "
+            "The JSON schema includes identifier_inventory_review when the case has an identifier "
+            "inventory. Classify every schema-listed value exactly as supplied, deliberately "
+            "unsupplied, or malformed; do not add, omit, expand or normalise IDs or ranges. "
+            "A case_id is a test label, never a contribution source_id. "
+            "When source_quote_review is present, compare model_claimed_quote with the exact "
+            "schema-locked exact_saved_source_text. If the claim is absent, set "
+            "model_claimed_quote_status to absent AND evidence_status to unsupported_not_evidence. "
+            "Copying or recognising the saved text alone is not an explicit rejection of the claim. "
+            "Never treat missing imaging/report text as a negative result. Do not alter the locked "
+            "source_id or exact_saved_source_text. Preserve explicit negation and do not import "
+            "material from another case or an external example."
         ),
         "R4": (
             "Prepare a bounded Chair closing record by synthesizing only the saved R1, R2 and R3 "
@@ -279,7 +251,7 @@ def build_response_schema(case: dict[str, Any]) -> dict[str, Any]:
     """Build case-specific structured output with schema-locked source IDs and text."""
     properties: dict[str, Any] = {"response": {"type": "string"}}
 
-    if case.get("round") == "R2" and structured is None:
+    if case.get("round") == "R2":
         rows = saved_r1_source_inventory(case.get("input") or {})
         if rows:
             ledger_properties: dict[str, Any] = {}
@@ -390,10 +362,16 @@ def _validate_case_specific_fields(
             item = ledger.get(row["source_id"])
             if not isinstance(item, dict) or item.get("saved_statement") != row["saved_statement"]:
                 return "R2 source_ledger altered or omitted a server-saved statement."
-            if not all(isinstance(item.get(key), str) for key in (
-                "information_position", "treatment_option", "prerequisite", "prerequisite_status"
-            )):
-                return "R2 source_ledger contains a missing or non-string classification field."
+            if not isinstance(item.get("information_position"), str) or item["information_position"] not in {
+                "agrees", "does_not_state", "not_applicable", "other"
+            }:
+                return "R2 source_ledger contains an invalid information_position classification."
+            if not isinstance(item.get("treatment_option"), str) or not isinstance(item.get("prerequisite"), str):
+                return "R2 source_ledger option/prerequisite fields must be strings."
+            if not isinstance(item.get("prerequisite_status"), str) or item["prerequisite_status"] not in {
+                "known", "unknown", "not_stated", "not_applicable"
+            }:
+                return "R2 source_ledger contains an invalid prerequisite_status classification."
         for field_name in ("shared_information_sufficiency", "shared_treatment_proposition"):
             value = parsed.get(field_name)
             if (
@@ -419,11 +397,22 @@ def _validate_case_specific_fields(
                 value = review.get(section)
                 if not isinstance(value, dict) or set(value) != set(ids):
                     return "R3 identifier inventory does not match the exact server-supplied IDs."
+                expected_classification = "supplied" if section == "explicitly_supplied" else "deliberately_unsupplied"
+                if any(
+                    not isinstance(value[source_id], dict)
+                    or value[source_id].get("classification") != expected_classification
+                    for source_id in ids
+                ):
+                    return "R3 identifier inventory contains an incorrect classification."
             malformed = inventory["malformed_reference_text_verbatim"]
             if malformed:
                 value = review.get("malformed_reference")
-                if not isinstance(value, dict) or value.get("raw_text") != malformed:
-                    return "R3 malformed reference text does not match the exact server-supplied value."
+                if (
+                    not isinstance(value, dict)
+                    or value.get("raw_text") != malformed
+                    or value.get("classification") != "malformed"
+                ):
+                    return "R3 malformed reference text does not match or is not classified malformed."
 
         if "source_quote_review" in schema["properties"]:
             saved_source = case["input"]["saved_source_contribution"]
@@ -433,8 +422,12 @@ def _validate_case_specific_fields(
             if (
                 value.get("source_id") != saved_source.get("source_id")
                 or value.get("exact_saved_source_text") != saved_source.get("exact_text")
+                or value.get("model_claimed_quote_status") not in {"present", "absent"}
+                or value.get("evidence_status") not in {
+                    "supported_by_saved_source", "unsupported_not_evidence"
+                }
             ):
-                return "R3 source_quote_review altered the exact server-bound source ID or text."
+                return "R3 source_quote_review altered the bound source or omitted a valid classification."
     return None
 
 
@@ -696,7 +689,7 @@ def audit_screen_response(case: dict[str, Any], response: Any) -> list[str]:
                 f"Identifier-boundary error: case_id {case_id} was explicitly labelled or recast as a contribution source identifier."
             )
 
-    if case.get("round") == "R2":
+    if case.get("round") == "R2" and structured is None:
         saved_rows = (case.get("input") or {}).get("saved_R1_contributions", {})
         if isinstance(saved_rows, dict) and saved_rows:
             missing_source_rows: list[str] = []
