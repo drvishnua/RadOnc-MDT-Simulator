@@ -6,7 +6,7 @@ Latest source implementation commit: 5ac3e09d3ae174923b33deaa881aeb6709807452 (p
 Latest regression-test commit: f038f109b2219e14ea0974e5f721fc66f335bf42 (461/461 backend tests passed)  
 Latest verified application/test SHA: f038f109b2219e14ea0974e5f721fc66f335bf42 (461/461 backend tests; all six standard PR checks passed)  
 Latest model-screen trigger commit: 9583e15671d3d8bdca7f88d383bc0e2fbfb9b60b (v14 / audit-v13)  
-Latest checklist commit before this reconciliation: 8766b14103bfd5315abc97d70f5cbeacc7eb13dd  
+Latest checklist commit before this reconciliation: d141d366f37c68cf890f5ef6aec7d9eca3f895b0  
 PR #1: open, draft, unmerged, base main  
 main: 39a356b8eb09399aa2da1b9b9085965999f5105a, unchanged.
 
@@ -83,6 +83,8 @@ Continuity files: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_
 - Qwen must complete before MedGemma can start. No artifact or v14 output is published yet.
 - CPU-only; this run cannot verify RTX 4060 inference.
 - Six standard PR workflows on exact trigger SHA 9583e156 are IN PROGRESS / queued: Backend 44061081762; Frontend 44061081774; Browser E2E 44061081798; Security/Dependency 44061081822; Windows Installer 44061081909; Packaging Prerequisites 44061081644.
+- The documentation-only checklist commit d141d366f37c68cf890f5ef6aec7d9eca3f895b0 has now passed all six standard PR workflows on that exact SHA: Backend 44061781200; Frontend 44061781057; Packaging Prerequisites 44061781157; Windows Installer 44061781055; Browser E2E 44061781158; Security/Dependency 44061781014.
+- Backend on d141: 461 passed, 0 failed, 0 errors, 0 skipped; deterministic preflight 7/7 passed. Windows installer install/smoke/checksum/upload all succeeded. This SHA changes the checklist only; source/model-screen SHA remains 9583e156.
 - This checklist-only commit will trigger a fresh standard PR CI cycle; the bounded model run is pinned to 9583e156 and remains independently inspectable.
 
 ### Master Checklist — Current Status
@@ -100,9 +102,9 @@ Continuity files: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_
 | Provenance and guideline/evidence retrieval | IN PROGRESS | Source-bound normalizations logged; guideline retrieval and claim linkage not integrated. |
 | Chair consensus, dissent and traceability | IN PROGRESS | Deterministic controls/tests exist; model adherence and full 45-role traceability unaccepted. |
 | Missing/failed-agent handling | IN PROGRESS | Qwen bounded R4 passed; MedGemma failed R4 completeness; full failure-injection acceptance outstanding. |
-| Backend tests | VERIFIED | 461 passed, 0 failed/errors/skipped on exact SHA f038f109; run 44060579022; deterministic preflight 7/7. |
-| Frontend build | VERIFIED | Exact SHA f038f109; run 44060579045. |
-| Browser E2E | VERIFIED | Exact SHA f038f109; run 44060579149. |
+| Backend tests | VERIFIED | 461 passed, 0 failed/errors/skipped on application/test SHA f038f109 (run 44060579022); repeated 461/461 on docs-only HEAD d141d366 (run 44061781200); preflight 7/7 on both. |
+| Frontend build | VERIFIED | Application/test SHA f038f109 run 44060579045; repeated on docs-only HEAD d141d366 run 44061781057. |
+| Browser E2E | VERIFIED | Application/test SHA f038f109 run 44060579149; repeated on docs-only HEAD d141d366 run 44061781158. |
 | Dashboard/API validation | VERIFIED | Mission Control / Development Monitor bounded checks and E2E passed on f038f109. |
 | Mission Control phase 1 and 2 | VERIFIED | Read-only persisted-run overview and metadata-only role drill-down tested. |
 | Development Monitor | VERIFIED | Read-only branch/PR/Actions monitor tested; no dispatch authority. |
@@ -122,9 +124,9 @@ Continuity files: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_
 | Independent blinded model-output review | NOT STARTED | v10–v13 outputs preserved; independent blinded review not completed. |
 | Guideline retrieval and verification | NOT STARTED | No current authoritative source set linked to claims. |
 | Independent qualified clinical review | NOT STARTED | No signed/attributable review artifact. |
-| Packaging prerequisites | VERIFIED | Exact SHA f038f109; run 44060579083. |
-| Windows installer | VERIFIED | Exact SHA f038f109; PR run 44060579122 and push run 44060569668 passed build/install/smoke/upload. |
-| Security, dependency audit and CodeQL | VERIFIED | Exact SHA f038f109; run 44060579131. |
+| Packaging prerequisites | VERIFIED | Application/test SHA f038f109 run 44060579083; repeated on docs-only HEAD d141d366 run 44061781157. |
+| Windows installer | VERIFIED | Application/test SHA f038f109: PR run 44060579122 and push run 44060569668 passed; repeated on docs-only HEAD d141d366 PR run 44061781055 passed build/install/smoke/checksum/upload. |
+| Security, dependency audit and CodeQL | VERIFIED | Application/test SHA f038f109 run 44060579131; repeated on docs-only HEAD d141d366 run 44061781014. |
 | Release acceptance | BLOCKED | v14 bounded screen pending; full-run integrity, independent reviews, guidelines, GPU and clinical review gates outstanding. |
 
 ## Immediate next actions
