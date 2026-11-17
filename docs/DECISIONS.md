@@ -41,3 +41,9 @@ Keep round inputs/history distinct and preserve original case snapshots, hashes,
 ## Change control
 
 No merge, release, deployment, force-push or main-branch modification without explicit permission. Preserve all historical failures and immutable run records.
+
+
+## Model-screen output integrity
+
+10. A model response whose generation ends with `done_reason=length` and lacks a complete, parseable output envelope is an incomplete/failed response, never a valid contribution. Preserve raw output and telemetry for audit.
+11. Qwen and MedGemma comparative screens must use identical prompts and generation options for a paired comparison. Do not raise output limits blindly to hide repetition; inspect token-cap and repetition evidence, make a controlled change, and rerun the same frozen cases.

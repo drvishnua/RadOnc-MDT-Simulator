@@ -31,3 +31,14 @@ Append new entries chronologically. Record actual commit SHAs, run IDs and resul
 - Branch/checklist SHA: 1d28b0c2f80f355f34f1ff2a3153bc684f3c596f.
 - PR #1 open/draft/unmerged; main unchanged.
 - Repository checklist is the single detailed current status record. New continuity docs are supporting references.
+
+
+## 17 November 2026 — intermediate v6/audit-v4 model-screen forensic result
+
+- Hosted run [44000326185](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44000326185), source SHA `b351a815d013386e271595e2fb54a6f0d571c544`, terminal result **FAILED**. Artifact **14292068885** downloaded and inspected.
+- Manifest confirms Qwen digest `sha256:d8b0f5e9760cd1682034f292d7ef72ec46f432149be0df7574bf2d6e92e38c04`, MedGemma digest `sha256:433252621ab154668b5d8be6aff6c1b771bacba045e46e6193da8d6ad1630f2c`, Ollama 0.40.14, hosted Windows CPU, concurrency 1, and no GPU measurement. Prompt `radonc-mdt-integrity-screen-v6`; audit `radonc-mdt-integrity-audit-v4`; script hash `54f4225cf6279ae5e0bd07af56a364023572e1393cbc95373f564bab284acad3`.
+- Qwen: 12/12 response records were parseable; summary status `completed_pending_human_review`, 0 malformed. Its audit flags are not used as acceptance evidence because this source contained the superseded doubled-escape R3 detector.
+- MedGemma: 12 response records saved, but 3 were `malformed_or_empty_response`; overall status `incomplete_or_malformed`. Cases: `R2-FALSE-CONSENSUS-005`, `R3-FABRICATED-QUOTE-009`, `R4-CHAIR-TRACEABILITY-012`. Each had Ollama `done_reason=length`, `eval_count=500` and a truncated JSON string after repetitive phrase loops. The other 9 responses were parseable. This is a model output completeness/looping failure, not a missing model download or network provisioning failure.
+- Provisioning succeeded: Ollama 0.40.14 installed; both model records/digests captured; both models pulled; Qwen completed 12/12; MedGemma generated 12 records. The workflow failed because three MedGemma responses were malformed/incomplete. Isolated Ollama was stopped in cleanup.
+- Corrected-source run [44000583529](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44000583529), source code/test SHA `8b7124cf1d0b236100958fd91b8fadc506eee559`, is now **IN PROGRESS**; job `133768126103` is in the provisioning/sequential-screen step and has no artifact at this checkpoint.
+- The persistent documentation bundle and Master Checklist were updated on branch HEAD `80ee6e9854eb6862f69dd06b63cc256c95f40fa2`. All six standard PR workflows passed on that docs-only head; Backend 423/423, run [44002108741](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44002108741), JUnit artifact **14293140853**.

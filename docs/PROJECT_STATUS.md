@@ -3,16 +3,16 @@
 **Snapshot:** 17 November 2026  
 **Repository:** drvishnua/RadOnc-MDT-Simulator  
 **Branch:** feature/four-round-mdt-and-performance  
-**Current branch HEAD at snapshot:** 1d28b0c2f80f355f34f1ff2a3153bc684f3c596f (documentation-only checklist refresh)  
+**Current branch HEAD at snapshot:** 80ee6e9854eb6862f69dd06b63cc256c95f40fa2 (continuity-document bundle)  
 **Latest verified code/test SHA:** 8b7124cf1d0b236100958fd91b8fadc506eee559  
 **PR #1:** open, draft, unmerged, targets main.  
 **Main:** 39a356b8eb09399aa2da1b9b9085965999f5105a (unchanged).
 
 ## Overall position
 
-The latest application/test changes are committed and all six standard PR workflows passed on code/test SHA 8b7124c. The subsequent checklist-only commit 1d28b0c also passed all six standard workflows. The backend suite reported 423 passed, 0 failed/errors/skipped; deterministic preflight 7/7. Browser E2E, frontend build, packaging prerequisites, installer and security/CodeQL passed.
+The latest application/test changes are committed at code/test SHA 8b7124c. All six standard PR workflows passed on that SHA and again on documentation-only HEAD 80ee6e9. Backend reported 423 passed, 0 failed/errors/skipped; deterministic preflight 7/7. Browser E2E, frontend build, packaging prerequisites, installer and security/CodeQL passed.
 
-The immediate outstanding task is the corrected prompt-v6 / audit-v4 paired Qwen and MedGemma synthetic screen. An earlier run against intermediate commit b351a81 remains marked in progress without artifacts; its source was superseded by the regex correction at 8b7124c. The corrected-head run 44000583529 is pending in the same concurrency group. No new model output can yet be reviewed.
+The immediate outstanding task is the corrected prompt-v6 / audit-v4 paired Qwen and MedGemma synthetic screen. Intermediate run 44000326185 on b351a81 completed failed; artifact 14292068885 shows Qwen 12/12 parseable and MedGemma 9/12 parseable, with three repeated-output loops truncated at the 500-token limit. Corrected-source run 44000583529 on 8b7124c is now in progress. Its results are not yet available.
 
 ## Completed and verified
 
@@ -21,10 +21,11 @@ The immediate outstanding task is the corrected prompt-v6 / audit-v4 paired Qwen
 - Stabilised the browser Development Monitor E2E with deterministic GitHub API fixtures. Production remains a live, read-only GitHub API integration with visible error handling.
 - Passed exact code/test CI on 8b7124c; the six workflows are listed in the Master Checklist.
 - Updated the single authoritative checklist and preserved previous CI failures as historical records.
+- Added six supporting continuity documents in commit 80ee6e9; all six standard PR workflows passed on that documentation commit.
 
 ## In progress / outstanding
 
-- Complete corrected-head paired Qwen/MedGemma v6/audit-v4 run and inspect both raw JSONL outputs plus manifest.
+- Complete corrected-head paired Qwen/MedGemma v6/audit-v4 run and inspect both raw JSONL outputs plus manifest. Determine whether the three MedGemma 500-token repetition failures reproduce.
 - Resolve historical 45-role run-9 audit failure (343 findings) without altering immutable original records.
 - Complete a fresh 45-role R1–R4 validation and failed-agent/incomplete-data acceptance.
 - Verify RTX 4060 request-time GPU activity and performance; hosted CPU runs are not GPU evidence.
