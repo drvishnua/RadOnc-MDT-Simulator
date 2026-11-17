@@ -10,6 +10,60 @@ This is the single authoritative Master Development and Verification Checklist. 
 
 Continuity records: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_LOG.md, RECOVERY_STATE.md, KNOWN_ISSUES.md.
 
+## Live checkpoint — 17 November 2026, resumed after audit-v7 model screen
+
+**Repository state rechecked before edits:** branch feature/four-round-mdt-and-performance; current head 7867e44bf40ebb639b66224e98bfed41b0a853f3; PR #1 remains open, draft and unmerged, targeting main; main remains 39a356b8eb09399aa2da1b9b9085965999f5105a and is unchanged.
+
+**Current run evidence on exact head 7867e44:**
+- Backend Tests [44025990777](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44025990777): FAILED. Deterministic preflight completed successfully (7/7). Pytest failure is stale R2/R3 prompt-text assertions that still require previous free-text ledger/quote wording after the prompt moved to the new per-case structured schema. This failed CI run remains recorded until a new SHA passes.
+- Frontend Build [44025990825](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44025990825): success.
+- Browser E2E [44025990870](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44025990870): success.
+- Packaging prerequisites [44025990955](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44025990955): success.
+- Security and Dependency Audit [44025990802](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44025990802): success.
+- Windows Installer [44025990852](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44025990852): success.
+- Push model screen [44025984358](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44025984358): SKIPPED because the preceding commit did not carry the required [model-integrity-screen] marker. It is not a model inference run.
+
+**New implementation on the development branch:** prompt v9 / audit v8 adds a case-specific Ollama JSON schema. For R2, every saved source ID and exact text are server-bound in required fields, while the model classifies its position, option and prerequisite. Shared information sufficiency and shared treatment propositions are separate fields. For R3, source ID and exact saved text are schema-locked; the model must explicitly classify the claimed quote as present/absent and evidence as supported/not-evidence. A separate deterministic audit checks source attribution, option/prerequisite preservation, false consensus, identifier inventory and absent-quote rejection. The corpus and sampler settings remain unchanged. Schema implementation is not model verification.
+
+### Master Development and Verification Checklist — Current Status
+
+| Workstream | Status | Evidence / outstanding boundary |
+|---|---|---|
+| R1–R4 architecture and persisted data flow | IN PROGRESS | Existing four-round architecture; fresh 45-role end-to-end acceptance outstanding |
+| R1 independent assessments and unknown/staging safeguards | IN PROGRESS | Deterministic safeguards exist; historical unsupported-stage findings remain open |
+| R2 saved-source order, source identity and conditionality | IN PROGRESS | v9 per-case schema locks exact IDs/text; paired model adherence retest pending |
+| R3 adversarial provenance and quote verification | IN PROGRESS | v9 schema locks source/text and separates quote classification from evidence status; paired model retest pending |
+| R4 Chair synthesis from actual saved R1–R3 contributions | IN PROGRESS | Deterministic Chair reconciliation exists; fresh full live run not performed |
+| Clinical safety, TNM/staging and missing data | IN PROGRESS | No zero-hallucination or clinical-validity claim; qualified human review outstanding |
+| Case integrity, contradictions, hashes and audit history | VERIFIED | Historical immutable-source/audit checks remain recorded; full-run acceptance still unresolved |
+| Provenance and evidence retrieval | IN PROGRESS | Source references are bounded/audited; current guideline retrieval and verification not integrated |
+| Chair consensus, dissent and traceability | IN PROGRESS | Position labels are not treated as votes; proposition-level consensus requires source evidence |
+| Missing/failed-agent handling | IN PROGRESS | Deterministic paths covered historically; fresh full live failure-injection test outstanding |
+| Backend tests | FAILED | Run 44025990777 on 7867e44; 7/7 deterministic preflight passed, pytest failed on obsolete prompt wording expectations |
+| Frontend build | VERIFIED | Run 44025990825 on 7867e44 passed |
+| Browser E2E | VERIFIED | Run 44025990870 on 7867e44 passed |
+| API validation | IN PROGRESS | Mission Control/read-only APIs have bounded tests; full API and live pipeline validation outstanding |
+| Mission Control phase 1 and 2 | VERIFIED | Read-only recent-run overview and role metadata drill-down previously browser-verified |
+| Development Monitor dashboard | VERIFIED | Read-only GitHub branch/PR/Actions monitor previously browser-verified; it does not dispatch jobs |
+| Ollama context handling | VERIFIED | Historical 6,144/8,192 allocation probes only; not proof that live R3 never truncates |
+| Ollama performance and concurrency | IN PROGRESS | Concurrency 1 retained; current comparative latency/throughput measurements incomplete |
+| RTX 4060 request-time GPU inference | NOT STARTED | Requires real inference on target PC with request-time nvidia-smi and Ollama offload evidence |
+| Hosted synthetic model-integrity screening v9 | NOT STARTED | Current push was skipped without trigger marker; next commit will carry the screening marker |
+| Qwen/MedGemma audit-v7 model adherence | FAILED | Qwen and MedGemma each failed multiple R2/R3 provenance checks in paired hosted screen 44018644704; neither model is accepted |
+| Historical full 45-role acceptance | FAILED | Run-9 audit recorded 343 integrity findings; original saved data retained |
+| MedGemma HAI-DEF terms acknowledgement | VERIFIED | User's personal acknowledgement was provided; this is not an independent legal opinion |
+| MedGemma v9 paired retest | NOT STARTED | Next marked push will run Qwen baseline and MedGemma sequentially under previously attested HAI-DEF scope |
+| Independent qualified clinical review | NOT STARTED | No signed or attributable clinical review artefact |
+| Current guideline retrieval and verification | NOT STARTED | No checked, versioned authoritative guideline source set |
+| Packaging prerequisites | VERIFIED | Run 44025990955 on 7867e44 passed |
+| Windows Installer build and smoke test | VERIFIED | Run 44025990852 on 7867e44 passed; optional Ollama/model bootstrap is a separate gate |
+| Security and dependency audit | VERIFIED | Run 44025990802 on 7867e44 passed |
+| Release acceptance | BLOCKED | Clinical, live-model adherence, full-run, GPU and evidence gates remain open |
+
+**Immediate next steps:** finish schema-aware fake Ollama fixtures and negative regression tests; update this checklist with their commit SHA; commit on the development branch with [model-integrity-screen], [medgemma] and [hai-def-terms-accepted] markers so Actions trigger automatically. Then require exact-SHA Backend Tests and paired Qwen/MedGemma v9 artefacts before interpreting model behaviour. No main-branch changes, merge, force-push, sampler changes or clinical claims are authorised.
+
+---
+
 ## Current position
 
 - Cloud/device boundary: GitHub development, hosted CI, packaging and CPU screens do not require the user's PC online. Actual RTX 4060 request-time verification requires the target PC powered on with local inference.

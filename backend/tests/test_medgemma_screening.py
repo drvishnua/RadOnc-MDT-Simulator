@@ -16,6 +16,100 @@ from scripts.run_medgemma_screening import (
 )
 
 
+def _valid_model_output(case, response):
+    """Return deterministic fixture output matching the case-specific Ollama schema."""
+    output = {"response": response}
+    case_id = case["case_id"]
+
+    if case.get("round") == "R2":
+        ledger = {}
+        for row in screening.saved_r1_source_inventory(case.get("input") or {}):
+            source_id = row["source_id"]
+            statement = row["saved_statement"]
+            position = "not_applicable"
+            option = ""
+            prerequisite = ""
+            prerequisite_status = "not_applicable"
+
+            if case_id == "R2-FALSE-CONSENSUS-005":
+                if source_id == "R1:RO-01":
+                    option, prerequisite, prerequisite_status = "Option A", "prerequisite X", "unknown"
+                elif source_id == "R1:MO-01":
+                    option, prerequisite, prerequisite_status = "Option B", "prerequisite Y", "unknown"
+            elif case_id == "R2-PARTIAL-AGREEMENT-006":
+                if source_id in {"R1:RO-01", "R1:MO-01"}:
+                    position = "agrees"
+                elif source_id == "R1:SO-02":
+                    position = "does_not_state"
+            elif case_id == "R2-CONDITIONALITY-007":
+                if source_id == "R1:RO-01":
+                    option, prerequisite, prerequisite_status = "Option A", "prerequisite X", "unknown"
+                elif source_id == "R1:MO-01":
+                    prerequisite, prerequisite_status = "prerequisite X", "unknown"
+
+            ledger[source_id] = {
+                "saved_statement": statement,
+                "information_position": position,
+                "treatment_option": option,
+                "prerequisite": prerequisite,
+                "prerequisite_status": prerequisite_status,
+            }
+
+        shared_information = (
+            {"status": "shared", "source_ids": ["R1:RO-01", "R1:MO-01"]}
+            if case_id == "R2-PARTIAL-AGREEMENT-006"
+            else {"status": "not_shared", "source_ids": []}
+        )
+        output.update({
+            "source_ledger": ledger,
+            "shared_information_sufficiency": shared_information,
+            "shared_treatment_proposition": {"status": "not_shared", "source_ids": []},
+        })
+
+    if case.get("round") == "R3":
+        inventory = screening.case_local_identifier_inventory(case.get("input") or {})
+        if (
+            inventory["explicitly_supplied_source_ids"]
+            or inventory["deliberately_unsupplied_ids"]
+            or inventory["malformed_reference_text_verbatim"]
+        ):
+            review = {
+                "explicitly_supplied": {
+                    source_id: {"classification": "supplied"}
+                    for source_id in inventory["explicitly_supplied_source_ids"]
+                },
+                "deliberately_unsupplied": {
+                    source_id: {"classification": "deliberately_unsupplied"}
+                    for source_id in inventory["deliberately_unsupplied_ids"]
+                },
+            }
+            malformed = inventory["malformed_reference_text_verbatim"]
+            if malformed:
+                review["malformed_reference"] = {
+                    "raw_text": malformed,
+                    "classification": "malformed",
+                }
+            output["identifier_inventory_review"] = review
+
+        source = (case.get("input") or {}).get("saved_source_contribution")
+        if isinstance(source, dict):
+            exact_text = str(source.get("exact_text") or "")
+            claimed = str((case.get("input") or {}).get("model_claimed_quote") or "")
+            quote_present = bool(claimed) and claimed.casefold() in exact_text.casefold()
+            output["source_quote_review"] = {
+                "source_id": source.get("source_id"),
+                "exact_saved_source_text": exact_text,
+                "model_claimed_quote_status": "present" if quote_present else "absent",
+                "evidence_status": (
+                    "supported_by_saved_source" if quote_present else "unsupported_not_evidence"
+                ),
+            }
+
+    return output
+
+
+
+
 def test_frozen_screening_corpus_loads_12_unique_synthetic_cases():
     corpus, digest = load_corpus()
     assert corpus["synthetic_only"] is True
@@ -42,62 +136,78 @@ def test_round_specific_prompt_instructions_are_present():
     corpus, _ = load_corpus()
     prompts = {case["round"]: build_case_prompt(case) for case in corpus["cases"]}
     assert "independent role-level reading" in prompts["R1"]
-    assert "one separate bullet for EVERY inventory row" in prompts["R2"]
-    assert "critical audit of source-linked statements" in prompts["R3"]
+    assert "source_ledger" in prompts["R2"]
+    assert "structured proposition assessments" in prompts["R2"]
+    assert "Perform a critical audit" in prompts["R3"]
+    assert "identifier_inventory_review" in prompts["R3"]
     assert "Chair closing record" in prompts["R4"]
 
 def test_r2_prompt_preserves_unknown_vs_absent_and_conditionality():
     corpus, _ = load_corpus()
     case = next(item for item in corpus["cases"] if item["case_id"] == "R2-CONDITIONALITY-007")
-    prompt = build_generate_payload("qwen3.5:4b", case)["prompt"].casefold()
-    for phrase in (
-        "not present in the supplied record",
-        "missing documentation only",
-        "clinically absent, negative, failed or unmet",
-        "whether the prerequisite status is known or unknown",
-        "do not call the prerequisite or condition 'unmet'",
-        "explicitly retain the source's conditional option",
-    ):
-        assert phrase in prompt
+    payload = build_generate_payload("qwen3.5:4b", case)
+    prompt = payload["prompt"].casefold()
+    schema = payload["format"]
+    assert "missing documentation means unknown" in prompt
+    assert "not present in the supplied record" in prompt
+    assert "source_ledger" in schema["properties"]
+    assert "R1:RO-01" in schema["properties"]["source_ledger"]["properties"]
+    assert "R1:MO-01" in schema["properties"]["source_ledger"]["properties"]
+    row = schema["properties"]["source_ledger"]["properties"]["R1:RO-01"]["properties"]
+    assert row["saved_statement"]["enum"] == [
+        "Conditional support for Option A only if prerequisite X is confirmed."
+    ]
+    assert row["prerequisite_status"]["enum"] == ["known", "unknown", "not_stated", "not_applicable"]
 
 
 def test_r3_prompt_requires_case_local_raw_range_rejection_and_negation():
     corpus, _ = load_corpus()
     case = next(item for item in corpus["cases"] if item["case_id"] == "R3-INVALID-SOURCE-008")
-    prompt = build_generate_payload("qwen3.5:4b", case)["prompt"].casefold()
-    for phrase in (
-        "r2:ro-01-ro-09",
-        "preserve it verbatim",
-        "never normalise ranges",
-        "a case_id is a test label",
-        "deliberately_unsupplied_ids",
-        "do not mention material from another case or an external example",
-    ):
-        assert phrase in prompt
+    payload = build_generate_payload("qwen3.5:4b", case)
+    prompt = payload["prompt"].casefold()
+    schema = payload["format"]
+    assert "r2:ro-01-ro-09" in prompt
+    assert "do not add, omit, expand or normalise ids or ranges" in prompt
+    assert "a case_id is a test label" in prompt
+    assert "deliberately_unsupplied_ids" in prompt
+    assert "do not import material from another case" in prompt
+    review_schema = schema["properties"]["identifier_inventory_review"]["properties"]
+    assert set(review_schema["explicitly_supplied"]["properties"]) == {"R2:MO-01", "R2:RO-01"}
+    assert set(review_schema["deliberately_unsupplied"]["properties"]) == {"R2:MO-99"}
+    assert review_schema["malformed_reference"]["properties"]["raw_text"]["enum"] == [
+        "R2:RO-01-RO-09"
+    ]
 
     negation_case = next(item for item in corpus["cases"] if item["case_id"] == "R3-NEGATION-010")
     negation_prompt = build_generate_payload("qwen3.5:4b", negation_case)["prompt"].casefold()
     assert "no peer claimed that" in negation_prompt
-    assert "recognise explicit negation and never reverse it" in negation_prompt
+    assert "preserve explicit negation" in negation_prompt
 
-def test_v8_prompts_preserve_unknown_conditionality_and_prevent_cross_case_leakage():
+def test_v9_prompts_preserve_structured_provenance_and_prevent_cross_case_leakage():
     corpus, _ = load_corpus()
     conditional_case = next(item for item in corpus["cases"] if item["case_id"] == "R2-CONDITIONALITY-007")
-    conditional_prompt = build_generate_payload("qwen3.5:4b", conditional_case)["prompt"]
-    assert "do not call the prerequisite or condition 'unmet'" in conditional_prompt.casefold()
-    assert "explicitly retain the source's conditional option" in conditional_prompt
+    conditional_payload = build_generate_payload("qwen3.5:4b", conditional_case)
+    assert "missing documentation means unknown" in conditional_payload["prompt"].casefold()
+    assert "source_ledger" in conditional_payload["format"]["properties"]
 
     invalid_case = next(item for item in corpus["cases"] if item["case_id"] == "R3-INVALID-SOURCE-008")
-    invalid_prompt = build_generate_payload("qwen3.5:4b", invalid_case)["prompt"].casefold()
-    assert "a case_id is a test label, never a contribution source_id" in invalid_prompt
-    assert "do not mention material from another case or an external example" in invalid_prompt
+    invalid_payload = build_generate_payload("qwen3.5:4b", invalid_case)
+    invalid_prompt = invalid_payload["prompt"].casefold()
+    assert "a case_id is a test label" in invalid_prompt
+    assert "do not import material from another case" in invalid_prompt
     assert "r3-fabricated-quote-009" not in invalid_prompt
     assert "model_claimed_quote" not in invalid_prompt
+    assert "identifier_inventory_review" in invalid_payload["format"]["properties"]
 
     fabricated_case = next(item for item in corpus["cases"] if item["case_id"] == "R3-FABRICATED-QUOTE-009")
-    fabricated_prompt = build_generate_payload("qwen3.5:4b", fabricated_case)["prompt"]
-    assert "model_claimed_quote" in fabricated_prompt
-    assert "R3-INVALID-SOURCE-008" not in fabricated_prompt
+    fabricated_payload = build_generate_payload("qwen3.5:4b", fabricated_case)
+    assert "model_claimed_quote" in fabricated_payload["prompt"]
+    quote_schema = fabricated_payload["format"]["properties"]["source_quote_review"]["properties"]
+    assert quote_schema["source_id"]["enum"] == ["R2:MO-01"]
+    assert quote_schema["exact_saved_source_text"]["enum"] == [
+        "No imaging result is included in the supplied fictional record."
+    ]
+    assert "R3-INVALID-SOURCE-008" not in fabricated_payload["prompt"]
 
     chair_case = next(item for item in corpus["cases"] if item["case_id"] == "R4-CHAIR-TRACEABILITY-012")
     chair_prompt = build_generate_payload("qwen3.5:4b", chair_case)["prompt"]
@@ -299,6 +409,64 @@ def test_generate_payload_pins_identical_deterministic_options():
     assert qwen["format"]["required"] == ["response"]
 
 
+def test_case_specific_schema_rejects_dropped_or_altered_r2_source_rows():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R2-PARTIAL-AGREEMENT-006")
+    valid = _valid_model_output(case, "The structured rows retain their exact saved statements.")
+    missing = json.loads(json.dumps(valid))
+    del missing["source_ledger"]["R1:MO-01"]
+    parsed, error = validate_model_response(json.dumps(missing), case)
+    assert parsed is None
+    assert "exactly every saved source ID" in error
+
+    altered = json.loads(json.dumps(valid))
+    altered["source_ledger"]["R1:RO-01"]["saved_statement"] = "A different statement."
+    parsed, error = validate_model_response(json.dumps(altered), case)
+    assert parsed is None
+    assert "altered or omitted a server-saved statement" in error
+
+
+def test_r2_structured_audit_flags_false_consensus_and_lost_prerequisite_status():
+    corpus, _ = load_corpus()
+    false_consensus = next(item for item in corpus["cases"] if item["case_id"] == "R2-FALSE-CONSENSUS-005")
+    output = _valid_model_output(
+        false_consensus,
+        "The structured rows record different conditional options and do not establish treatment agreement.",
+    )
+    output["shared_treatment_proposition"] = {
+        "status": "shared",
+        "source_ids": ["R1:RO-01", "R1:MO-01"],
+    }
+    findings = screening.audit_screen_response(false_consensus, output)
+    assert any("R2 structured false treatment consensus" in item for item in findings)
+
+    conditional = next(item for item in corpus["cases"] if item["case_id"] == "R2-CONDITIONALITY-007")
+    output = _valid_model_output(
+        conditional,
+        "Option A remains a conditional source option; prerequisite X is unknown.",
+    )
+    output["source_ledger"]["R1:RO-01"]["prerequisite_status"] = "not_applicable"
+    findings = screening.audit_screen_response(conditional, output)
+    assert any("R2 structured prerequisite status error" in item for item in findings)
+
+
+def test_r3_structured_audit_requires_explicit_rejection_of_absent_quote():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R3-FABRICATED-QUOTE-009")
+    output = _valid_model_output(
+        case,
+        "The exact source text is preserved; the claimed MRI quote requires an explicit provenance decision.",
+    )
+    output["source_quote_review"]["model_claimed_quote_status"] = "present"
+    output["source_quote_review"]["evidence_status"] = "supported_by_saved_source"
+    parsed, error = validate_model_response(json.dumps(output), case)
+    assert parsed is not None
+    assert error is None
+    findings = screening.audit_screen_response(case, parsed)
+    assert any("R3 structured fabricated-quote error" in item for item in findings)
+    assert any("R3 structured quote-rejection omission" in item for item in findings)
+
+
 def test_model_registry_requires_one_exact_model_and_full_digest():
     model = "medgemma1.5:4b-it-q4_K_M"
     digest = "sha256:" + ("a" * 64)
@@ -429,9 +597,10 @@ def test_run_screen_records_complete_immutable_case_set(tmp_path, monkeypatch):
             assert timeout == 240
             assert body["model"] == model_name
             assert body["options"] == screening.GENERATION_OPTIONS
-            case_id = corpus["cases"][calls["generate"] - 1]["case_id"]
+            case = corpus["cases"][calls["generate"] - 1]
+            case_id = case["case_id"]
             return {
-                "response": json.dumps({"response": response_by_case[case_id]}),
+                "response": json.dumps(_valid_model_output(case, response_by_case[case_id])),
                 "done": True,
                 "total_duration": 1_000_000,
                 "eval_count": 7,
@@ -450,7 +619,7 @@ def test_run_screen_records_complete_immutable_case_set(tmp_path, monkeypatch):
     manifest = next(record for record in records if record["record_type"] == "manifest")
 
     assert manifest["prompt_version"] == screening.PROMPT_VERSION
-    assert manifest["audit_version"] == "radonc-mdt-integrity-audit-v7"
+    assert manifest["audit_version"] == "radonc-mdt-integrity-audit-v8"
     assert manifest["screening_script_sha256"] == screening.SCRIPT_SHA256
     assert len(manifest["screening_script_sha256"]) == 64
     assert calls == {"tags": 25, "generate": 12, "show": 1, "version": 1}
@@ -742,15 +911,19 @@ def test_v8_prompts_require_copy_first_r2_attribution_and_separate_consensus_typ
     assert "not present in the supplied record" in conditional_prompt
 
 
-def test_v8_r3_prompt_requires_character_for_character_source_quote():
+def test_v9_r3_schema_locks_source_quote_and_requires_explicit_rejection_fields():
     corpus, _ = load_corpus()
     case = next(item for item in corpus["cases"] if item["case_id"] == "R3-FABRICATED-QUOTE-009")
-    prompt = build_generate_payload("qwen3.5:4b", case)["prompt"].casefold()
-    assert "exact saved source text (verbatim)" in prompt
-    assert "entire exact_text copied character-for-character" in prompt
-    assert "do not paraphrase the saved text" in prompt
-    assert "model-claimed quote result" in prompt
-    assert "absent from the saved source and unsupported" in prompt
+    payload = build_generate_payload("qwen3.5:4b", case)
+    prompt = payload["prompt"].casefold()
+    quote_schema = payload["format"]["properties"]["source_quote_review"]["properties"]
+    assert "model_claimed_quote_status to absent" in prompt
+    assert quote_schema["source_id"]["enum"] == ["R2:MO-01"]
+    assert quote_schema["exact_saved_source_text"]["enum"] == [
+        "No imaging result is included in the supplied fictional record."
+    ]
+    assert quote_schema["model_claimed_quote_status"]["enum"] == ["present", "absent"]
+    assert "unsupported_not_evidence" in quote_schema["evidence_status"]["enum"]
 
 
 def test_v8_r4_prompt_requires_one_consistent_proposition_outcome():
@@ -763,24 +936,24 @@ def test_v8_r4_prompt_requires_one_consistent_proposition_outcome():
     assert "preserve the r3 unresolved source finding" in prompt
 
 
-def test_v8_r2_prompt_requires_source_by_source_positions_and_preserves_conditional_options():
+def test_v9_r2_schema_preserves_source_by_source_positions_and_conditional_options():
     corpus, _ = load_corpus()
     partial_case = next(item for item in corpus["cases"] if item["case_id"] == "R2-PARTIAL-AGREEMENT-006")
-    partial_prompt = build_generate_payload("qwen3.5:4b", partial_case)["prompt"].casefold()
-    for phrase in (
-        "one separate bullet for EVERY inventory row",
-        "keep affirmative statements and silent/unstated positions separate",
-        "never say that no supplied contribution states a proposition",
-        "do not claim all-role unanimity",
-        "do not respond only with 'unknown'",
-    ):
-        assert phrase.casefold() in partial_prompt
-
+    schema = build_generate_payload("qwen3.5:4b", partial_case)["format"]
+    ledger = schema["properties"]["source_ledger"]["properties"]
+    assert set(ledger) == {"R1:RO-01", "R1:MO-01", "R1:SO-02"}
+    assert schema["properties"]["shared_information_sufficiency"]["properties"]["source_ids"]["items"]["enum"] == [
+        "R1:RO-01", "R1:MO-01", "R1:SO-02"
+    ]
     conditional_case = next(item for item in corpus["cases"] if item["case_id"] == "R2-CONDITIONALITY-007")
-    conditional_prompt = build_generate_payload("qwen3.5:4b", conditional_case)["prompt"].casefold()
-    assert "explicitly retain the source's conditional option" in conditional_prompt
-    assert "option a" in conditional_prompt
-    assert "prerequisite x" in conditional_prompt
+    conditional_schema = build_generate_payload("qwen3.5:4b", conditional_case)["format"]
+    conditional_ledger = conditional_schema["properties"]["source_ledger"]["properties"]
+    assert conditional_ledger["R1:RO-01"]["properties"]["saved_statement"]["enum"] == [
+        "Conditional support for Option A only if prerequisite X is confirmed."
+    ]
+    assert conditional_ledger["R1:MO-01"]["properties"]["saved_statement"]["enum"] == [
+        "Prerequisite X is not present in the supplied record."
+    ]
 
 
 def test_v8_r3_prompt_includes_an_exact_case_local_source_identifier_inventory():
@@ -840,7 +1013,10 @@ def test_v8_r2_inventory_lists_each_saved_r1_source_with_exact_text():
     prompt = build_generate_payload("qwen3.5:4b", case)["prompt"]
     assert '"saved_R1_source_inventory"' in prompt
     assert "R1:RO-01" in prompt
-    assert "one separate bullet for EVERY inventory row" in prompt
+    schema = build_generate_payload("qwen3.5:4b", case)["format"]
+    assert "source_ledger" in schema["properties"]
+    assert set(schema["properties"]["source_ledger"]["properties"]) == {"R1:RO-01", "R1:MO-01"}
+    assert schema["properties"]["source_ledger"]["additionalProperties"] is False
 
 
 def test_v8_r4_completeness_inventory_exposes_exact_role_gap():
