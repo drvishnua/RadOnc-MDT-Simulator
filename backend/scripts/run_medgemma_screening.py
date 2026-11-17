@@ -1380,10 +1380,10 @@ def audit_screen_response(case: dict[str, Any], response: Any) -> list[str]:
             # Do not let a separate phrase silently strengthen it to absent,
             # failed, unmet or confirmed negative.
             prerequisite_strengthening = re.search(
-                r"\\bprerequisite\\s+x\\b.{0,80}\\b(?:is|was|remains)\\s+"
-                r"(?:absent|missing|unmet|failed|negative|ruled out)\\b"
-                r"|\\b(?:absent|missing|unmet|failed|negative|ruled out)\\b"
-                r".{0,80}\\bprerequisite\\s+x\\b",
+                r"\bprerequisite\s+x\b.{0,80}\b(?:is|was|remains)\s+"
+                r"(?:absent|missing|unmet|failed|negative|ruled out)\b"
+                r"|\b(?:absent|missing|unmet|failed|negative|ruled out)\b"
+                r".{0,80}\bprerequisite\s+x\b",
                 folded,
             )
             if prerequisite_strengthening:
