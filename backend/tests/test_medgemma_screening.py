@@ -44,7 +44,7 @@ def test_round_specific_prompt_instructions_are_present():
     assert "independent role-level reading" in prompts["R1"]
     assert "inspect EVERY entry in each saved_R1_contributions object one" in prompts["R2"]
     assert "critical audit of source-linked statements" in prompts["R3"]
-    assert "closing board record" in prompts["R4"]
+    assert "Chair closing record" in prompts["R4"]
 
 def test_r2_prompt_preserves_unknown_vs_absent_and_conditionality():
     corpus, _ = load_corpus()
