@@ -5,8 +5,8 @@ Development branch: feature/four-round-mdt-and-performance
 Latest source implementation commit: 9a4e9f6bac63ef4b471037f5166b21deeb3aab3a (prompt-v15 / audit-v14)  
 Latest regression-test commit: ae6f1f8f44708e98ecd3ffe59e048b4030bbeb48 (prompt-v15 / audit-v14 regression tests)  
 Latest verified application/test SHA: ae6f1f8f44708e98ecd3ffe59e048b4030bbeb48; exact-head verification repeated on documentation-only branch HEAD 10f530d397a3a82785bd86929baa1e91e6ec19b8 (463/463 backend tests; all six standard PR checks passed)  
-Latest model-screen trigger commit: 9583e15671d3d8bdca7f88d383bc0e2fbfb9b60b (v14 / audit-v13)  
-Latest checklist commit before this reconciliation: 10f530d397a3a82785bd86929baa1e91e6ec19b8  
+Latest model-screen trigger commit: 9583e15671d3d8bdca7f88d383bc0e2fbfb9b60b (v14 / audit-v13); v15/audit-v14 not yet triggered  
+Latest checklist commit before this reconciliation: a40ac2964b2c37e666e3f4fc4f4a57a6fdc965ad  
 PR #1: open, draft, unmerged, base main  
 main: 39a356b8eb09399aa2da1b9b9085965999f5105a, unchanged.
 
@@ -14,6 +14,26 @@ This is the single authoritative Master Development and Verification Checklist. 
 
 Continuity files: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_LOG.md, RECOVERY_STATE.md, KNOWN_ISSUES.md.
 
+
+## Current checkpoint — 17 November 2026 — exact-head CI reconciled; v15 screen next
+
+**Current repository state**
+- Branch HEAD before this checklist-only reconciliation: a40ac2964b2c37e666e3f4fc4f4a57a6fdc965ad.
+- PR #1: open, draft, unmerged; base main. Main SHA 39a356b8eb09399aa2da1b9b9085965999f5105a unchanged.
+- Prompt-v15/audit-v14 source: 9a4e9f6bac63ef4b471037f5166b21deeb3aab3a; regression tests: ae6f1f8f44708e98ecd3ffe59e048b4030bbeb48.
+- Model-screen workflow v15/audit-v14 has NOT yet been triggered. Last completed model screen is v14/audit-v13 run 44061072616, which failed for both models.
+
+**All six standard checks passed on exact SHA a40ac2964b2c37e666e3f4fc4f4a57a6fdc965ad**
+- Backend run [44083286208](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44083286208): 463/463 passed; 0 failures/errors/skips/inconclusive; deterministic preflight 7/7. Job 134039086800.
+- Frontend run [44083286292](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44083286292): success.
+- Browser E2E run [44083286320](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44083286320): success.
+- Security/dependency run [44083286648](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44083286648): success.
+- Packaging prerequisites [44083286163](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44083286163): success.
+- Windows installer [44083286286](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44083286286): success; job 134039090991 completed package build, installer installation/smoke test, checksum and artifact upload. Artifact 14328805373 (RadOnc-MDT-Simulator-Windows-x64, 14,882,190 bytes). Hosted first-run Ollama/model bootstrap job 134040005934 was skipped; this is not model execution evidence.
+- This is software/build verification only; not model acceptance, clinical validation, GPU verification or release approval.
+
+**Next controlled action**
+- After this checklist-only commit's standard CI is green, create a separate commit touching only the model-screen workflow (or another explicitly allowed push-path file), with the three required marker tokens in its commit message: model-integrity-screen, medgemma, hai-def-terms-accepted. This uses the user's prior personal HAI-DEF acceptance attestation and preserves the sequential Qwen-first gate. Inspect all immutable artefacts and all 24 outputs; if Qwen fails/truncates, MedGemma must remain NOT_REQUESTED.
 
 ## Current checkpoint — 17 November 2026 — prompt-v15/audit-v14 ready for bounded screen
 
@@ -159,7 +179,7 @@ Continuity files: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_
 | Hosted v12/audit-v12 screen | FAILED | Run 44055332966; Qwen 11 parseable / 1 truncated; MedGemma NOT_REQUESTED. |
 | Hosted v13/audit-v12 screen | FAILED | Run 44057996924; Qwen 2 findings; MedGemma 1 malformed and 5 findings; raw artifact retained. |
 | Hosted v14/audit-v13 screen | FAILED | Run 44061072616; artifact 14320435156; Qwen 1 finding; MedGemma 8 findings; both failed bounded acceptance; CPU-only. |
-| Prompt-v15/audit-v14 implementation and regression tests | VERIFIED | Source commit 9a4e9f6; test commit ae6f1f8; exact branch-head CI 10f530d passed (463 backend tests; all six standard checks). |\n| Prompt-v15/audit-v14 bounded screen | NOT STARTED | Ready for one marker-qualified trigger; v14/audit-v13 remains failed for both models. Sequential Qwen-first gate must be preserved. |\n| Current full 45-role R1–R4 validation | NOT STARTED | No fresh complete 45-role model run accepted. |
+| Prompt-v15/audit-v14 implementation and regression tests | VERIFIED | Source commit 9a4e9f6; test commit ae6f1f8; exact-head CI on 10f530d passed (463 backend tests; all six standard checks). |\n| Prompt-v15/audit-v14 bounded screen | NOT STARTED | Ready for one marker-qualified trigger; v14/audit-v13 remains failed for both models. Sequential Qwen-first gate must be preserved. |\n| Current full 45-role R1–R4 validation | NOT STARTED | No fresh complete 45-role model run accepted. |
 | Historical full 45-role run-9 acceptance | FAILED | Historical audit reported 343 integrity findings; original records retained. |
 | MedGemma HAI-DEF acceptance | VERIFIED | User acceptance retained; current v14 run's pre-provision gate passed. |
 | Independent blinded model-output review | NOT STARTED | v10–v13 outputs preserved; independent blinded review not completed. |
