@@ -31,9 +31,9 @@ CORPUS_PATH = (
     / "fixtures"
     / "medgemma_model_integrity_screening_v1.json"
 )
-PROMPT_VERSION = "radonc-mdt-integrity-screen-v13"
-AUDIT_VERSION = "radonc-mdt-integrity-audit-v12"
-# Paired v13/audit-v12 retest: structured R2 fields precede bounded explanation; 700-token output ceiling.
+PROMPT_VERSION = "radonc-mdt-integrity-screen-v14"
+AUDIT_VERSION = "radonc-mdt-integrity-audit-v13"
+# Paired v14/audit-v13 retest: source-derived proposition/status normalization and stricter R2 narrative audit.
 DEFAULT_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/")
 GENERATION_OPTIONS = {
     "temperature": 0,
@@ -520,8 +520,9 @@ def build_case_prompt(case: dict[str, Any]) -> str:
         "in the schema. Never alter locked source IDs or saved text. Do not include hidden reasoning "
         "or extra fields.\n"
         + (
-            "For R2, the response field must be one factual sentence of at most 30 words; "
-            "do not put analysis or reasoning in that field.\n"
+            "For R2, the response field must be one non-empty factual sentence of at most 30 words; "
+            "name each source supporting a shared information proposition, distinguish that from treatment consensus, "
+            "and preserve any conditional option and unknown prerequisite. Do not put analysis or reasoning in that field.\n"
             if case["round"] == "R2"
             else ""
         )
@@ -768,9 +769,67 @@ def _normalize_r2_source_labels(
                     "unique exact label in this source's saved statement",
                 )
 
+        # The case's explicit prerequisite status is server-supplied metadata.
+        # Where a saved source explicitly names a prerequisite, an absent
+        # documentation status must remain unknown, not not_applicable.
+        has_saved_prerequisite = bool(prerequisite_pattern.search(saved_statement))
+        supplied_status = (case.get("input") or {}).get("supplied_prerequisite_status")
+        if (
+            has_saved_prerequisite
+            and supplied_status == "unknown"
+            and source_row.get("prerequisite_status") == "not_applicable"
+        ):
+            apply_source_bound_value(
+                source_id,
+                source_row,
+                "prerequisite_status",
+                "not_applicable",
+                "unknown",
+                "case-supplied prerequisite status is unknown and this saved statement names the prerequisite",
+            )
+
+    # Derive this narrow proposition only from exact, affirmative saved-source
+    # wording. Preserve the model's raw response separately and log any repair.
+    proposition_normalizations: list[dict[str, Any]] = []
+    affirming_source_ids = [
+        row["source_id"]
+        for row in rows
+        if re.search(
+            r"\\bagrees that additional information is required\\b",
+            row["saved_statement"],
+            re.IGNORECASE,
+        )
+        and not re.search(
+            r"\\b(?:does not|doesn't|did not|didn't)\\s+agree\\b",
+            row["saved_statement"],
+            re.IGNORECASE,
+        )
+    ]
+    information = parsed["shared_information_sufficiency"]
+    if len(affirming_source_ids) >= 2 and (
+        information.get("status") == "not_shared"
+        and not information.get("source_ids")
+    ):
+        previous = {
+            "status": information.get("status"),
+            "source_ids": list(information.get("source_ids") or []),
+        }
+        information["status"] = "shared"
+        information["source_ids"] = affirming_source_ids
+        proposition_normalizations.append({
+            "field": "shared_information_sufficiency",
+            "model_value": previous,
+            "server_value": {
+                "status": "shared",
+                "source_ids": affirming_source_ids,
+            },
+            "basis": "at least two exact saved R1 statements explicitly say they agree that additional information is required",
+        })
+
     return {
         "source_order": source_ids,
         "field_normalizations": normalizations,
+        "proposition_normalizations": proposition_normalizations,
         "source_order_basis": "original saved R1 contribution order",
     }
 
@@ -1291,6 +1350,31 @@ def audit_screen_response(case: dict[str, Any], response: Any) -> list[str]:
             findings.append(
                 "R2 structured silent-source misattribution: a source that is silent was included as affirming."
             )
+
+        if len(affirming_sources) >= 2:
+            narrative_ids = [source_id for source_id in affirming_sources if source_id.casefold() in folded]
+            narrative_denies_agreement = bool(re.search(
+                r"\\b(?:no|not any)\\s+(?:shared|common)\\s+(?:information|information-sufficiency)\\s+(?:position|proposition|agreement)\\b"
+                r"|\\bonly one source\\b",
+                folded,
+            ))
+            if len(narrative_ids) != len(affirming_sources) or narrative_denies_agreement:
+                findings.append(
+                    "R2 narrative partial-agreement error: the saved sources explicitly share the information-sufficiency proposition, but the response omitted source attribution or denied that limited agreement."
+                )
+
+        if case_id == "R2-CONDITIONALITY-007":
+            has_option = bool(re.search(r"\\boption\\s+a\\b", folded))
+            has_prerequisite = bool(re.search(r"\\bprerequisite\\s+x\\b", folded))
+            has_conditionality = bool(re.search(r"\\b(?:conditional|only if|subject to|contingent)\\b", folded))
+            has_unknown_status = bool(re.search(
+                r"\\b(?:unknown|unverified|not present in the supplied record|not documented)\\b",
+                folded,
+            ))
+            if not all((has_option, has_prerequisite, has_conditionality, has_unknown_status)):
+                findings.append(
+                    "R2 narrative conditionality omission: state Option A remains conditional on prerequisite X and X remains unknown/unverified."
+                )
 
         treatment = structured["shared_treatment_proposition"]
         distinct_options = {option for option, _ in option_rows.values() if option}
