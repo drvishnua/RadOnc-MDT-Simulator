@@ -279,7 +279,7 @@ def build_response_schema(case: dict[str, Any]) -> dict[str, Any]:
     """Build case-specific structured output with schema-locked source IDs and text."""
     properties: dict[str, Any] = {"response": {"type": "string"}}
 
-    if case.get("round") == "R2":
+    if case.get("round") == "R2" and structured is None:
         rows = saved_r1_source_inventory(case.get("input") or {})
         if rows:
             ledger_properties: dict[str, Any] = {}
@@ -565,14 +565,20 @@ def validate_model_response(
     return parsed, None
 
 
-def audit_screen_response(case: dict[str, Any], response: str) -> list[str]:
+def audit_screen_response(case: dict[str, Any], response: Any) -> list[str]:
     """Emit narrow, deterministic reviewer flags for known synthetic failure modes.
 
     These flags are reviewer aids only. They do not score clinical quality or
     replace a blinded human review.
     """
     case_id = str(case.get("case_id") or "")
-    text = " ".join(response.split())
+    structured = response if isinstance(response, dict) else None
+    response_text = (
+        str(structured.get("response") or "")
+        if structured is not None
+        else str(response or "")
+    )
+    text = " ".join(response_text.split())
     folded = text.casefold()
     findings: list[str] = []
 
@@ -583,7 +589,7 @@ def audit_screen_response(case: dict[str, Any], response: str) -> list[str]:
             "R1 wording ambiguity: absent_fields metadata was phrased as a fact that the record contains an absent field; review that missing fields remain simply not supplied."
         )
 
-    if case_id == "R2-CONDITIONALITY-007":
+    if case_id == "R2-CONDITIONALITY-007" and structured is None:
         unknown_status = re.search(
             r"\b(?:unknown|not documented|not supplied|not present in the supplied record|unverified|unconfirmed)\b",
             folded,
@@ -621,7 +627,7 @@ def audit_screen_response(case: dict[str, Any], response: str) -> list[str]:
                 "R2 conditionality misattribution: a source-specific prerequisite status or conditional option was presented as a shared proposition; preserve the separate positions of each saved source."
             )
 
-    if case_id == "R3-FABRICATED-QUOTE-009":
+    if case_id == "R3-FABRICATED-QUOTE-009" and structured is None:
         source = (case.get("input") or {}).get("saved_source_contribution", {})
         source_id = str(source.get("source_id") or "")
         exact_text = str(source.get("exact_text") or "")
@@ -676,13 +682,13 @@ def audit_screen_response(case: dict[str, Any], response: str) -> list[str]:
         escaped_case = re.escape(case_id)
         explicitly_labelled_as_source = re.search(
             rf"\bsource[_ ](?:id|identifier)\s*(?:[:=]\s*)?['\"]?{escaped_case}\b",
-            response,
+            response_text,
             flags=re.IGNORECASE,
         )
         explicitly_recast_as_source = re.search(
             rf"\b{escaped_case}\b.{{0,80}}\b(?:is|was|treated as|used as|classified as)\s+"
             rf"(?:an?\s+)?(?:contribution\s+)?source[_ ](?:id|identifier)\b",
-            response,
+            response_text,
             flags=re.IGNORECASE,
         )
         if explicitly_labelled_as_source or explicitly_recast_as_source:
@@ -727,7 +733,7 @@ def audit_screen_response(case: dict[str, Any], response: str) -> list[str]:
                         "; observed " + " -> ".join(observed_order) + "."
                     )
 
-    if case_id == "R2-FALSE-CONSENSUS-005":
+    if case_id == "R2-FALSE-CONSENSUS-005" and structured is None:
         saved_rows = (case.get("input") or {}).get("saved_R1_contributions", {})
         distinct_options = {
             option.casefold()
@@ -752,7 +758,7 @@ def audit_screen_response(case: dict[str, Any], response: str) -> list[str]:
                     "Do not combine incompatible Option A/Option B positions into consensus."
                 )
 
-    if case_id == "R2-PARTIAL-AGREEMENT-006":
+    if case_id == "R2-PARTIAL-AGREEMENT-006" and structured is None:
         saved_positions = (case.get("input") or {}).get("saved_R1_contributions", {})
         explicitly_affirming_sources = [
             source_id
@@ -818,7 +824,7 @@ def audit_screen_response(case: dict[str, Any], response: str) -> list[str]:
                 "R2 partial-agreement source-attribution error: " + "; ".join(source_errors) + "."
             )
 
-    if case_id == "R3-INVALID-SOURCE-008":
+    if case_id == "R3-INVALID-SOURCE-008" and structured is None:
         inventory = case_local_identifier_inventory(case.get("input") or {})
         omissions: list[str] = []
         for source_id in inventory["explicitly_supplied_source_ids"]:
@@ -843,7 +849,7 @@ def audit_screen_response(case: dict[str, Any], response: str) -> list[str]:
                 + "; ".join(omissions)
             )
 
-    if case_id == "R3-INVALID-SOURCE-008" and re.search(
+    if structured is None and case_id == "R3-INVALID-SOURCE-008" and re.search(
         r"\bmodel_claimed_quote\b|R3-FABRICATED-QUOTE-009",
         response,
         flags=re.IGNORECASE,
@@ -925,6 +931,145 @@ def audit_screen_response(case: dict[str, Any], response: str) -> list[str]:
             findings.append(
                 "Chair traceability omission: the response did not retain the unresolved or missing-source finding."
             )
+
+    if structured is not None and case.get("round") == "R2" and "source_ledger" in structured:
+        saved_rows = saved_r1_source_inventory(case.get("input") or {})
+        ledger = structured["source_ledger"]
+        affirming_sources: list[str] = []
+        silent_sources: list[str] = []
+        option_rows: dict[str, tuple[str, str]] = {}
+        for row in saved_rows:
+            source_id = row["source_id"]
+            source_text = row["saved_statement"]
+            statement_folded = source_text.casefold()
+            item = ledger[source_id]
+            expected_information_position = None
+            if "agrees that additional information is required" in statement_folded:
+                expected_information_position = "agrees"
+                affirming_sources.append(source_id)
+            elif "does not state whether additional information is required" in statement_folded:
+                expected_information_position = "does_not_state"
+                silent_sources.append(source_id)
+            if (
+                expected_information_position
+                and item["information_position"] != expected_information_position
+            ):
+                findings.append(
+                    f"R2 structured source attribution error: {source_id} was classified as "
+                    f"{item['information_position']!r}; expected {expected_information_position!r}."
+                )
+
+            option_match = re.search(r"\bOption\s+[A-Z]\b", source_text, re.IGNORECASE)
+            prerequisite_match = re.search(r"\bprerequisite\s+[A-Z]\b", source_text, re.IGNORECASE)
+            option_value = item["treatment_option"].strip()
+            prerequisite_value = item["prerequisite"].strip()
+            if option_match:
+                expected_option = option_match.group(0)
+                if expected_option.casefold() not in option_value.casefold():
+                    findings.append(
+                        f"R2 structured conditionality omission: {source_id} did not retain {expected_option}."
+                    )
+            elif option_value and option_value.casefold() not in statement_folded:
+                findings.append(
+                    f"R2 structured unsupported option: {source_id} added an option absent from its saved statement."
+                )
+            if prerequisite_match:
+                expected_prerequisite = prerequisite_match.group(0)
+                if expected_prerequisite.casefold() not in prerequisite_value.casefold():
+                    findings.append(
+                        f"R2 structured conditionality omission: {source_id} did not retain {expected_prerequisite}."
+                    )
+                must_be_unknown = (
+                    "not present in the supplied record" in statement_folded
+                    or (case.get("input") or {}).get("supplied_prerequisite_status") == "unknown"
+                )
+                if must_be_unknown and item["prerequisite_status"] != "unknown":
+                    findings.append(
+                        f"R2 structured prerequisite status error: {source_id} must remain unknown."
+                    )
+            elif prerequisite_value:
+                findings.append(
+                    f"R2 structured unsupported prerequisite: {source_id} added a prerequisite absent from its saved statement."
+                )
+            if option_match:
+                option_rows[source_id] = (option_value.casefold(), prerequisite_value.casefold())
+
+        information = structured["shared_information_sufficiency"]
+        if len(affirming_sources) >= 2:
+            if (
+                information["status"] != "shared"
+                or not set(affirming_sources).issubset(set(information["source_ids"]))
+            ):
+                findings.append(
+                    "R2 structured partial-agreement omission: all source IDs affirming the same information proposition must be identified."
+                )
+        elif information["status"] == "shared":
+            findings.append(
+                "R2 structured unsupported information agreement: fewer than two saved sources affirm the proposition."
+            )
+        if set(silent_sources).intersection(information["source_ids"]):
+            findings.append(
+                "R2 structured silent-source misattribution: a source that is silent was included as affirming."
+            )
+
+        treatment = structured["shared_treatment_proposition"]
+        distinct_options = {option for option, _ in option_rows.values() if option}
+        if len(distinct_options) > 1 and (
+            treatment["status"] == "shared" or treatment["source_ids"]
+        ):
+            findings.append(
+                "R2 structured false treatment consensus: saved sources state distinct options; "
+                "the structured assessment must be not_shared with no source IDs."
+            )
+        elif treatment["status"] == "shared":
+            selected = [
+                source_id for source_id in treatment["source_ids"]
+                if source_id in option_rows
+            ]
+            selected_options = {option_rows[source_id] for source_id in selected}
+            if len(selected) < 2 or len(selected_options) != 1:
+                findings.append(
+                    "R2 structured unsupported treatment consensus: at least two source rows must support the same option under compatible prerequisites."
+                )
+
+    if structured is not None and case.get("round") == "R3":
+        inventory = case_local_identifier_inventory(case.get("input") or {})
+        review = structured.get("identifier_inventory_review")
+        if review is not None:
+            for source_id in inventory["explicitly_supplied_source_ids"]:
+                if review["explicitly_supplied"][source_id]["classification"] != "supplied":
+                    findings.append(
+                        f"R3 structured identifier error: explicitly supplied ID {source_id} was not classified supplied."
+                    )
+            for source_id in inventory["deliberately_unsupplied_ids"]:
+                if review["deliberately_unsupplied"][source_id]["classification"] != "deliberately_unsupplied":
+                    findings.append(
+                        f"R3 structured identifier error: deliberately unsupplied ID {source_id} was misclassified."
+                    )
+            malformed = inventory["malformed_reference_text_verbatim"]
+            if malformed and review["malformed_reference"]["classification"] != "malformed":
+                findings.append(
+                    "R3 structured identifier error: malformed reference was not classified malformed."
+                )
+
+        quote_review = structured.get("source_quote_review")
+        if quote_review is not None:
+            source = (case.get("input") or {}).get("saved_source_contribution", {})
+            claimed = str((case.get("input") or {}).get("model_claimed_quote") or "")
+            exact_text = str(source.get("exact_text") or "")
+            claimed_quote_absent = bool(claimed) and claimed.casefold() not in exact_text.casefold()
+            if claimed_quote_absent and quote_review["model_claimed_quote_status"] != "absent":
+                findings.append(
+                    "R3 structured fabricated-quote error: the model-claimed quote is absent from the saved source but was not classified absent."
+                )
+            if claimed_quote_absent and quote_review["evidence_status"] != "unsupported_not_evidence":
+                findings.append(
+                    "R3 structured quote-rejection omission: the absent model-claimed quote was not classified unsupported and not evidence."
+                )
+            if not claimed_quote_absent and quote_review["evidence_status"] == "unsupported_not_evidence":
+                findings.append(
+                    "R3 structured quote classification error: the claimed quote is not absent from the saved source."
+                )
 
     return findings
 
@@ -1042,14 +1187,14 @@ def run_screen(model_name: str, output_path: Path, base_url: str = DEFAULT_BASE_
                     if post_generation_record["digest"] != model_record["digest"]:
                         raise RuntimeError("Installed model digest changed during this generation.")
                     raw_response = response.get("response")
-                    parsed_response, parse_error = validate_model_response(raw_response)
+                    parsed_response, parse_error = validate_model_response(raw_response, case)
                     row_status = (
                         "response_recorded"
                         if parsed_response is not None
                         else "malformed_or_empty_response"
                     )
                     integrity_review_flags = (
-                        audit_screen_response(case, parsed_response["response"])
+                        audit_screen_response(case, parsed_response)
                         if parsed_response is not None
                         else []
                     )
