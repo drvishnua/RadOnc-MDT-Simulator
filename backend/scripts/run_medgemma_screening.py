@@ -32,7 +32,7 @@ CORPUS_PATH = (
     / "medgemma_model_integrity_screening_v1.json"
 )
 PROMPT_VERSION = "radonc-mdt-integrity-screen-v8"
-AUDIT_VERSION = "radonc-mdt-integrity-audit-v6"
+AUDIT_VERSION = "radonc-mdt-integrity-audit-v7"
 DEFAULT_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/")
 GENERATION_OPTIONS = {
     "temperature": 0,
@@ -514,6 +514,68 @@ def audit_screen_response(case: dict[str, Any], response: str) -> list[str]:
             findings.append(
                 f"Identifier-boundary error: case_id {case_id} was explicitly labelled or recast as a contribution source identifier."
             )
+
+    if case.get("round") == "R2":
+        saved_rows = (case.get("input") or {}).get("saved_R1_contributions", {})
+        if isinstance(saved_rows, dict) and saved_rows:
+            missing_source_rows: list[str] = []
+            missing_verbatim_rows: list[str] = []
+            source_positions: list[tuple[int, str]] = []
+            for source_id, saved_statement in saved_rows.items():
+                source_index = folded.find(str(source_id).casefold())
+                if source_index < 0:
+                    missing_source_rows.append(str(source_id))
+                    continue
+                source_positions.append((source_index, str(source_id)))
+                if (
+                    not isinstance(saved_statement, str)
+                    or saved_statement.casefold() not in folded
+                ):
+                    missing_verbatim_rows.append(str(source_id))
+            if missing_source_rows or missing_verbatim_rows:
+                details: list[str] = []
+                if missing_source_rows:
+                    details.append("missing source row(s): " + ", ".join(missing_source_rows))
+                if missing_verbatim_rows:
+                    details.append("exact saved statement not reproduced for: " + ", ".join(missing_verbatim_rows))
+                findings.append(
+                    "R2 source-ledger omission: " + "; ".join(details) +
+                    ". Every saved source ID and its exact statement must be represented."
+                )
+            if not missing_source_rows and len(source_positions) == len(saved_rows):
+                observed_order = [source_id for _, source_id in sorted(source_positions)]
+                expected_order = [str(source_id) for source_id in saved_rows]
+                if observed_order != expected_order:
+                    findings.append(
+                        "R2 source-ledger order error: source rows were not presented in the original saved contribution order; "
+                        "expected " + " -> ".join(expected_order) +
+                        "; observed " + " -> ".join(observed_order) + "."
+                    )
+
+    if case_id == "R2-FALSE-CONSENSUS-005":
+        saved_rows = (case.get("input") or {}).get("saved_R1_contributions", {})
+        distinct_options = {
+            option.casefold()
+            for statement in saved_rows.values()
+            for option in re.findall(r"\bOption\s+[A-Z]\b", str(statement))
+        } if isinstance(saved_rows, dict) else set()
+        if len(distinct_options) >= 2:
+            positive_shared_treatment_label = re.search(
+                r"\bshared\s+treatment\s+proposition\b",
+                folded,
+            )
+            explicit_no_shared_treatment = re.search(
+                r"\bno\s+shared\s+treatment\s+proposition\b"
+                r"|\bshared\s+treatment\s+proposition\b.{0,100}"
+                r"\b(?:not\s+established|not\s+agreed|none\s+is\s+established)\b",
+                folded,
+            )
+            if positive_shared_treatment_label and not explicit_no_shared_treatment:
+                findings.append(
+                    "R2 false treatment consensus: the saved sources state distinct conditional options "
+                    "but the response labels an option as a shared treatment proposition. "
+                    "Do not combine incompatible Option A/Option B positions into consensus."
+                )
 
     if case_id == "R2-PARTIAL-AGREEMENT-006":
         saved_positions = (case.get("input") or {}).get("saved_R1_contributions", {})

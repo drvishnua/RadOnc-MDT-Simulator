@@ -519,6 +519,67 @@ def test_run_screen_stops_before_generation_when_digest_changes(tmp_path, monkey
     assert summary["status"] == "incomplete_or_malformed"
 
 
+def test_audit_v7_flags_shared_treatment_label_for_distinct_conditional_options():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R2-FALSE-CONSENSUS-005")
+    medgemma_response = (
+        'R1:RO-01 "Option A is discussable only if prerequisite X is verified." '
+        "Shared information-sufficiency proposition. "
+        'R1:MO-01 "Option B is discussable only if prerequisite Y is verified." '
+        "Shared treatment proposition"
+    )
+    findings = screening.audit_screen_response(case, medgemma_response)
+    assert any("R2 false treatment consensus" in item for item in findings)
+
+
+def test_audit_v7_accepts_distinct_options_with_no_shared_treatment_proposition():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R2-FALSE-CONSENSUS-005")
+    qwen_response = (
+        'R1:RO-01 "Option A is discussable only if prerequisite X is verified." '
+        'R1:MO-01 "Option B is discussable only if prerequisite Y is verified." '
+        "Shared treatment proposition: No shared treatment proposition is established by the supplied contributions."
+    )
+    assert screening.audit_screen_response(case, qwen_response) == []
+
+
+def test_audit_v7_flags_missing_r2_source_rows_and_verbatim_statements():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R2-CONDITIONALITY-007")
+    incomplete = (
+        'R1:RO-01 states "Conditional support for Option A only if prerequisite X is confirmed." '
+        "The option remains conditional."
+    )
+    findings = screening.audit_screen_response(case, incomplete)
+    assert any("R2 source-ledger omission" in item for item in findings)
+    assert any("R1:MO-01" in item for item in findings)
+
+
+def test_audit_v7_flags_reordered_r2_source_ledger_rows():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R2-PARTIAL-AGREEMENT-006")
+    reordered = (
+        'R1:MO-01: "Agrees that additional information is required; makes no treatment-option position." '
+        'R1:RO-01: "Agrees that additional information is required; makes no treatment-option position." '
+        'R1:SO-02: "Does not state whether additional information is required."'
+    )
+    findings = screening.audit_screen_response(case, reordered)
+    assert any("R2 source-ledger order error" in item for item in findings)
+
+
+def test_audit_v7_accepts_r2_source_ledger_in_original_order():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R2-PARTIAL-AGREEMENT-006")
+    ordered = (
+        'R1:RO-01: "Agrees that additional information is required; makes no treatment-option position." '
+        'R1:MO-01: "Agrees that additional information is required; makes no treatment-option position." '
+        'R1:SO-02: "Does not state whether additional information is required." '
+        "Shared information-sufficiency proposition: R1:RO-01 and R1:MO-01 agree. "
+        "No shared treatment proposition is established by the supplied contributions."
+    )
+    assert screening.audit_screen_response(case, ordered) == []
+
+
 def test_run_screen_preserves_raw_response_when_digest_changes_after_generation(
     tmp_path, monkeypatch
 ):
