@@ -132,3 +132,24 @@ Append new entries chronologically. Record actual commit SHAs, run IDs and resul
 - Backend 44011927961: 429 passed, 0 failed, 0 errors, 0 skipped; deterministic preflight 7/7. JUnit artifact 14297420668; preflight artifact 14296618112.
 - Frontend 44011928009, Browser E2E 44011927977, Packaging Prerequisites 44011928041, Installer 44011928059, Security/Dependency/CodeQL 44011928078 all passed. Push Installer 44011921759 passed.
 - PR #1 is open/draft/unmerged. Main remains 39a356b8eb09399aa2da1b9b9085965999f5105a.
+
+
+## 17 November 2026 — audit-v6 result, prompt-v7/v8 changes and backend correction
+
+### Completed audit-v6 / prompt-v6 screen
+
+- Run 44011921822 completed SUCCESS on source af88bc4; artifact 14297362905 inspected.
+- Qwen and MedGemma each returned 12/12 parseable responses; all 24 ended done_reason=stop. Qwen had 0 audit-v6 flags. MedGemma had 4: R2 source attribution inversion; R2 single-source conditional position represented as shared; R3 exact saved quote not reproduced; R4 positive agreement claim contradicted by no-agreement synthesis.
+- Manifest: prompt v6, audit v6, Ollama 0.40.14, hosted Windows CPU only, concurrency 1, GPU NOT_PERFORMED. Qwen digest sha256:d8b0f5e9760cd1682034f292d7ef72ec46f432149be0df7574bf2d6e92e38c04; MedGemma digest sha256:433252621ab154668b5d8be6aff6c1b771bacba045e46e6193da8d6ad1630f2c. Corpus SHA-256 5fe333969035e403366272f6d3012809059d0be7ce1ce06efb16b6c6493fdeb3.
+- Both JSONL manifests record identical generation options: temperature 0, seed 73, num_ctx 4096, top_k 20, top_p 0.95, frequency_penalty 0, presence_penalty 1.5, repeat_last_n 64, repeat_penalty 1.1, num_predict 500. Ollama logs showed 24 request entries with matching effective top_k/top_p/frequency/presence/repeat parameters.
+- Both summaries remain PENDING_HUMAN_REVIEW; automatic quality score null, clinical_accuracy_evaluated false and GPU measurement NOT_PERFORMED.
+
+### Prompt-v7 failure and prompt-v8 correction
+
+- Commit 4f1d923 introduced prompt v7 with stronger copy-first R2 attribution, exact R3 quote reproduction and a single R4 outcome. Backend run 44015312495 FAILED: 424 passed, 8 failed. The replacement inadvertently removed established prompt phrases asserted by existing safety regression tests and used a "choosing/choose" phrase mismatch. The hosted model screen 44015305202 is still IN PROGRESS; its output is provisional and not v8 acceptance.
+- Commit 6fb1712 introduced prompt v8 and restored the earlier safety phrases while retaining the stronger instructions. Backend initially passed 431/432; the sole remaining failure was a hyphenated versus unhyphenated assertion phrase.
+- Test-only correction a936993 aligned the assertion with the preserved prompt wording. No prompt or generation option was changed by this test-only commit.
+- Exact-head Backend [44016402450](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44016402450) passed **432/432**, 0 failures/errors/skipped; deterministic preflight **7/7**. JUnit artifact **14299256259**, preflight **14298842437**.
+- Exact-head Frontend [44016402376](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44016402376), Packaging Prerequisites [44016402420](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44016402420), and Security/Dependency/CodeQL [44016402580](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44016402580) passed.
+- Browser E2E [44016402392], PR Windows Installer [44016402426], and Push Installer [44016396209] are IN PROGRESS at this checkpoint.
+- Prompt-v7 screen [44015305202], source 4f1d923, remains IN PROGRESS and holds concurrency 1. Prompt-v8 screen [44016121962], source 6fb1712, is PENDING behind it. The a936993 test-only change does not modify the v8 prompt script.

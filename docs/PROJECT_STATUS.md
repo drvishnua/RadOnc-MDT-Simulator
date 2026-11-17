@@ -3,45 +3,39 @@
 **Snapshot:** 17 November 2026  
 **Repository:** drvishnua/RadOnc-MDT-Simulator  
 **Branch:** feature/four-round-mdt-and-performance  
-**Latest application/test SHA:** af88bc45e907480eabed35624b6bc194ed51c8c5  
+**Latest application/test SHA:** a936993f43be349c0843123941e62cf137199ff7  
 **PR #1:** open, draft, unmerged, targets main.  
 **Main:** 39a356b8eb09399aa2da1b9b9085965999f5105a (unchanged).
 
-## Overall position
+## Execution environment
 
-GitHub development, hosted CI, Windows packaging and hosted CPU model screening do not require the user's PC online. Only real local RTX 4060 request-time verification requires the target Windows PC powered on and running local Ollama inference. ChatGPT app connectivity is separate.
+GitHub development, CI, packaging and hosted CPU model screening run in the cloud and do not require the user's PC online. Local RTX 4060 request-time verification is separate and requires the Windows PC powered on with local Ollama inference running. ChatGPT app network is needed only for chat communication.
 
-## Latest code and software verification
+## Latest confirmed model result — audit-v6 / prompt-v6
 
-Commit af88bc4 advances the deterministic screening reviewer to audit-v6. It narrows the shared-R2-proposition detector to require explicit positive wording and adds a regression for the correct negated statement "No shared proposition on a treatment option exists." Audit-v5 code and its false-positive history are retained.
+Run 44011921822, artifact 14297362905, source af88bc4:
+- Qwen 12/12 parseable, 0 deterministic flags.
+- MedGemma 12/12 parseable, 4 deterministic flags: R2 partial-agreement source-attribution inversion; R2 single-source conditional option presented as shared proposition; R3 exact-source quotation omitted; R4 contradictory Chair agreement/no-agreement claims.
+- All 24 outputs ended with done_reason=stop; no token-cap truncations. Sampler options matched across models, including top_k=20, top_p=0.95, presence_penalty=1.5, repeat_last_n=64, repeat_penalty=1.1 and num_predict=500.
+- Hosted Windows CPU only; GPU measurement NOT_PERFORMED. Both summaries say PENDING_HUMAN_REVIEW, automatic quality score null and clinical accuracy unevaluated. This does not validate clinical accuracy or establish universal repetition robustness.
 
-Exact-head PR CI on af88bc4 passed: Backend **429/429**, deterministic preflight **7/7**, Frontend, Browser E2E, Packaging Prerequisites, Windows Installer and Security/Dependency/CodeQL. Push Installer passed. PR #1 remains draft/unmerged; main is unchanged.
+## Current model-screen development
 
-## Latest paired model evidence
-
-**Run 44006972494** (d2e85a9, artifact 14296070216), prompt v6/audit v4:
-- Qwen 12/12 parseable; 0 audit-v4 flags.
-- MedGemma 12/12 parseable; 2 audit-v4 flags and additional manual R2/R4 semantic defects.
-- Both models used identical effective sampler settings; all 24 responses ended with done_reason=stop. This was one bounded hosted CPU sample, not a universal repetition fix or model-quality acceptance.
-
-**Run 44010717466** (e877600, artifact 14297710993), prompt v6/audit v5:
-- Qwen 12/12 parseable; 1 audit-v5 flag. Raw response inspection shows the valid negated "No shared proposition on a treatment option exists" wording was falsely flagged by the broad audit-v5 matcher.
-- MedGemma 12/12 parseable; 4 audit-v5 flags: R2 source attribution inversion, R2 single-source/shared-prerequisite misattribution, R3 quote-review omission and R4 Chair agreement/no-agreement contradiction.
-- Both models had 12/12 done_reason=stop outputs; no token-cap truncation in this run.
-- This run's output is retained as raw evidence, but its audit-v5 flag counts are superseded and must not be reported as audit-v6 findings.
-
-## Current audit-v6 model run
-
-Corrected audit-v6 run **44011921822** is IN PROGRESS on source af88bc4, hosted Windows CPU, concurrency 1. HAI-DEF terms gate passed. The combined provisioning/sequential screening step is active; no final artifact/result is available yet. Its purpose is to re-evaluate the same paired models under audit-v6, including both positive misattribution and correct-negation regression behaviour.
+- Prompt-v7 commit 4f1d923 introduced stronger source-bound R2/R3/R4 rules but accidentally dropped existing asserted safety wording. Its Backend CI failed 8/432. Its hosted model screen 44015305202 is still IN PROGRESS on the v7 prompt. Treat any output as provisional raw evidence, not current acceptance.
+- Prompt-v8 implementation commit 6fb1712 restores those safeguards and strengthens exact R2 source-row copying, separates shared information agreement from shared treatment propositions, requires exact verbatim R3 source quotation, and constrains R4 to one consistent proposition outcome.
+- The first v8 Backend run on 6fb1712 passed 431/432; the sole failure was a test hyphenation mismatch. Test-only correction a936993 changed that assertion to match the prompt wording.
+- Exact-head Backend on a936993 passed **432/432**, deterministic preflight **7/7**. Frontend, Packaging Prerequisites and Security/Dependency/CodeQL passed. Browser E2E, PR Installer and Push Installer remain IN PROGRESS at this checkpoint.
+- Prompt-v8 hosted screen 44016121962 (source 6fb1712, identical prompt/script to current a936993; later a936 commit changes only a test assertion) is PENDING behind the older v7 model screen 44015305202 in the concurrency-1 group.
 
 ## Outstanding
 
-- Inspect run 44011921822 manifest, JSONL files and logs after completion. Verify exact hashes, model digests, sampler parity, 12/12 outputs/model, completion reasons and all raw responses.
-- Obtain independent human review of both model outputs; MedGemma is not promoted.
-- Resolve historical 45-role run-9 audit failure (343 findings) without modifying original saved records.
-- Complete a fresh 45-role R1–R4 validation and missing/failed-agent acceptance.
-- Verify RTX 4060 request-time GPU activity locally; hosted CPU screens are not GPU evidence.
-- Retrieve and verify current authoritative guideline sources and claim/reference links.
+- Inspect v7 screen 44015305202 and preserve its artifact; do not accept its output as v8 evidence.
+- Inspect v8 screen 44016121962 after it starts/completes: manifest/script/corpus hashes, model digests, sampler parity, 12/12 responses/model, completion reasons, flags and every raw response.
+- Obtain independent human review; MedGemma is not promoted.
+- Resolve the historical 45-role run-9 audit failure (343 findings) without modifying original saved records.
+- Complete fresh 45-role R1–R4 acceptance and missing/failed-agent validation.
+- Verify RTX 4060 request-time GPU activity locally.
+- Retrieve and verify current authoritative guidelines and claim/reference links.
 - Obtain independent qualified clinical review. No zero-hallucination or clinical-validity claim is permitted.
 - Release remains BLOCKED.
 

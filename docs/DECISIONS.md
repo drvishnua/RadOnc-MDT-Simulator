@@ -69,3 +69,10 @@ No merge, release, deployment, force-push or main-branch modification without ex
 ## Cloud execution and local hardware
 
 19. GitHub-hosted code changes, CI, packaging and hosted CPU screens do not require the user's PC online. RTX 4060 request-time proof is a separate local test requiring the target Windows machine powered on and real local inference underway.
+
+## Prompt-v8 copy-first source attribution
+
+20. R2 screening must copy each saved source row verbatim with its exact source ID in original input order. Keep information-sufficiency agreement separate from treatment-option agreement; only classify a shared treatment proposition when at least two source IDs explicitly support the same proposition under compatible prerequisites.
+21. R3 quote review must copy the entire exact_text verbatim before classifying the model-claimed quote as present or absent. A paraphrase is not a source quotation.
+22. R4 Chair synthesis must select one proposition outcome and ensure the rest of the synthesis is consistent with that outcome. A source statement denying treatment agreement cannot coexist with an unqualified Chair claim that the same contributions establish agreement.
+23. These prompt changes do not alter generation sampler settings, output cap or production model selection. Prompt version is separately recorded to keep model outputs comparable and auditable.
