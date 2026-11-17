@@ -153,3 +153,22 @@ Append new entries chronologically. Record actual commit SHAs, run IDs and resul
 - Exact-head Frontend [44016402376](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44016402376), Packaging Prerequisites [44016402420](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44016402420), and Security/Dependency/CodeQL [44016402580](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44016402580) passed.
 - Browser E2E [44016402392], PR Windows Installer [44016402426], and Push Installer [44016396209] are IN PROGRESS at this checkpoint.
 - Prompt-v7 screen [44015305202], source 4f1d923, remains IN PROGRESS and holds concurrency 1. Prompt-v8 screen [44016121962], source 6fb1712, is PENDING behind it. The a936993 test-only change does not modify the v8 prompt script.
+
+
+## 17 November 2026 — prompt-v8 result and audit-v7 reviewer expansion
+
+### Prompt-v8 / audit-v6 paired result
+
+- Run 44016121962 completed SUCCESS, artifact 14298999206, source 6fb1712. Manifest: prompt v8, audit v6, Ollama 0.40.14, hosted Windows CPU, GPU NOT_PERFORMED, corpus SHA-256 5fe333969035e403366272f6d3012809059d0be7ce1ce06efb16b6c6493fdeb3.
+- Qwen and MedGemma each returned 12/12 parseable responses. Qwen had 3 audit flags (R2 conditionality, R3 identifier inventory, R3 quote rejection). MedGemma had 3 (R2 partial source ledger, R2 conditionality, R3 quote rejection). Manual review found Qwen R2 rows in the wrong order and MedGemma falsely labels distinct conditional options as shared treatment in R2-FALSE-CONSENSUS-005.
+- Both models passed the R4 Chair traceability case with a consistent no-treatment-proposition conclusion. Bounded synthetic observation only.
+- All 24 responses had done_reason=stop; no token truncations. Both model digests and sampler options matched: temp0 seed73 num_ctx4096 top_k20 top_p0.95 frequency0 presence1.5 repeat_last_n64 repeat_penalty1.1 num_predict500.
+- Summaries pending independent human review; automatic quality score null; clinical accuracy not evaluated; GPU NOT_PERFORMED.
+
+### Audit-v7 deterministic expansion
+
+- Commit 91b7283 advances audit to v7 and adds checks for R2 exact saved-row coverage/order and false consensus across distinct conditional options. Prompt v8 and sampler unchanged.
+- Backend 44018652084 FAILED 434/437. Artifact 14300630019 shows two previous safe-response fixtures omitted exact saved source text and one manifest assertion expected audit-v6. No inference performed in this backend run.
+- Test-only commit de95004 fixes those fixture/assertion mismatches without changing audit logic.
+- Corrected Backend 44018911878 and other standard CI are pending/in progress; packaging prerequisites passed.
+- Audit-v7 model screen 44018644704, source 91b7283, is active on hosted Windows CPU; final artifact not yet available.

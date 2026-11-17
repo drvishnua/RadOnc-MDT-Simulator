@@ -1,56 +1,51 @@
 # RadOnc MDT Simulator — Recovery State
 
-**Last checkpoint:** 17 November 2026  
-**Repository:** drvishnua/RadOnc-MDT-Simulator  
-**Development branch:** feature/four-round-mdt-and-performance  
-**Latest application/test SHA:** a936993f43be349c0843123941e62cf137199ff7  
-**PR #1:** open, draft, unmerged, base main.  
-**Main SHA:** 39a356b8eb09399aa2da1b9b9085965999f5105a (unchanged).
+Last checkpoint: 17 November 2026  
+Repository: drvishnua/RadOnc-MDT-Simulator  
+Development branch: feature/four-round-mdt-and-performance  
+Latest application/test SHA: de95004d1c169f3ffa6c52ccf412d84d33055234  
+PR #1: open, draft, unmerged, base main.  
+Main SHA: 39a356b8eb09399aa2da1b9b9085965999f5105a (unchanged).
 
 ## Recovery instruction
 
-Resume from prompt-v8 hosted model-screen workflow **44016121962** after the older prompt-v7 workflow **44015305202** releases the concurrency-1 group. Do not start competing inference. The code/test fix on a936993 changes one assertion only; the prompt-v8 script remains the same as the 6fb1712 screen source.
+Resume from audit-v7 paired model screen 44018644704, source 91b7283, and corrected Backend CI 44018911878 on test-only follow-on de95004. Do not start competing inference; concurrency 1.
 
 ## Exact workflow state
 
 | Workflow | Source SHA | Run ID | State | Interpretation |
 |---|---|---|---|---|
-| Completed audit-v6/prompt-v6 screen | af88bc45e907480eabed35624b6bc194ed51c8c5 | 44011921822 | COMPLETED/SUCCESS | Artifact 14297362905. Qwen 12/12, 0 flags; MedGemma 12/12, 4 semantic flags (R2 x2, R3, R4). Both summaries pending human review. |
-| Prompt-v7 code/test CI | 4f1d923c0c2b6a5b51df926993018bed1d84a349 | Backend 44015312495 | FAILED | 424/432, 8 failed due removed prior prompt assertions and phrase mismatch. |
-| Prompt-v7 hosted model screen | 4f1d923c0c2b6a5b51df926993018bed1d84a349 | 44015305202 | IN PROGRESS | Provisional v7 output only; no artifact/result yet. |
-| Prompt-v8 initial CI | 6fb1712f9644e772c7b25c56bde067f7bfef5ab2 | Backend 44016130343 | FAILED | 431/432; one Chair assertion hyphenation mismatch. Other PR checks and installer passed. |
-| Prompt-v8 final test-only fix | a936993f43be349c0843123941e62cf137199ff7 | Backend 44016402450 | COMPLETED/SUCCESS | 432/432; preflight 7/7. This commit changes only one test assertion, not the screening script or prompt. |
-| Prompt-v8 hosted model screen | 6fb1712f9644e772c7b25c56bde067f7bfef5ab2 | 44016121962 | PENDING | Queued behind v7 run 44015305202 in concurrency-1 group. |
-| Latest PR standard CI | a936993f43be349c0843123941e62cf137199ff7 | Backend 44016402450; Frontend 44016402376; Packaging 44016402420; Browser E2E 44016402392; Windows Installer 44016402426; Security/CodeQL 44016402580 | PARTIAL | Backend 432/432, Frontend, Packaging and Security passed; Browser E2E and Installer remain active. |
-| Push Installer | a936993f43be349c0843123941e62cf137199ff7 | 44016396209 | IN PROGRESS | Hosted installer workflow active. |
+| Prompt-v8/audit-v6 paired model screen | 6fb1712f9644e772c7b25c56bde067f7bfef5ab2 | 44016121962 | COMPLETED/SUCCESS | Artifact 14298999206. Qwen 12/12 with 3 flags; MedGemma 12/12 with 3 flags plus manual false shared-option finding. |
+| Audit-v7 code/test commit | 91b72837aff9bcfaccf84a7cb1cfb29d9a3d5a7e | Backend 44018652084 | FAILED | 434/437; stale exact-source fixtures and audit-version assertion; artifact 14300630019. |
+| Audit-v7 paired model screen | 91b72837aff9bcfaccf84a7cb1cfb29d9a3d5a7e | 44018644704 | IN PROGRESS | Prompt v8 plus audit v7, hosted Windows CPU; no final artifact. |
+| Audit-v7 test-only correction | de95004d1c169f3ffa6c52ccf412d84d33055234 | — | COMMITTED | Safe conditional response now cites exact RO-01/MO-01 source rows; manifest assertion updated. |
+| Corrected standard PR CI | de95004d1c169f3ffa6c52ccf412d84d33055234 | Backend 44018911878; Frontend 44018911680; Browser E2E 44018911682; Packaging 44018911677; Installer 44018911757; Security/CodeQL 44018911699 | IN PROGRESS | Packaging prerequisites passed; others running. |
+| Push Installer | de95004d1c169f3ffa6c52ccf412d84d33055234 | 44018905591 | IN PROGRESS | Hosted installer run active. |
 
-## Completed audit-v6/prompt-v6 model result — 44011921822
+## Completed prompt-v8/audit-v6 result — 44016121962
 
-- Artifact 14297362905, Ollama 0.40.14, hosted Windows CPU, concurrency 1, GPU NOT_PERFORMED.
-- Qwen 12/12 parseable, 0 deterministic flags. MedGemma 12/12 parseable, 4 flags on R2 source inversion, R2 shared conditional proposition, R3 source quote omission and R4 Chair contradiction.
-- All 24 outputs had done_reason=stop; no truncations. Matching options: temperature 0, seed 73, num_ctx4096, top_k20, top_p0.95, frequency0, presence1.5, repeat_last_n64, repeat_penalty1.1, num_predict500.
-- No automatic quality score; clinical accuracy not evaluated; both outputs pending independent human review.
+- Artifact 14298999206; prompt v8/audit v6; Ollama 0.40.14; hosted Windows CPU, concurrency 1, GPU NOT_PERFORMED.
+- Both models: 12/12 parseable, zero failed/malformed, done_reason=stop for all; no token-cap truncations.
+- Qwen: 3 flags — conditionality omission, R3 inventory omission, R3 quote rejection omission. Manual review found R2 source order deviated from saved order.
+- MedGemma: 3 flags — partial R2 source-ledger/attribution omission, conditionality omission, R3 quote rejection omission. Manual review found false shared treatment in distinct-option case.
+- Both R4 Chair traceability responses consistent; one bounded case only.
+- Sampler parity confirmed: temperature0 seed73 num_ctx4096 top_k20 top_p0.95 frequency0 presence1.5 repeat_last_n64 repeat_penalty1.1 num_predict500. No model promotion; human review pending.
 
-## Prompt-v8 content
+## Audit-v7
 
-Prompt v8 retains copy-first R2 attribution and separately names information-sufficiency versus treatment-option propositions; requires exact source quotation in R3; and requires one mutually consistent Chair proposition outcome in R4. It keeps previously tested safety phrases. Generation sampler and 500-token cap are unchanged.
+Commit 91b7283 adds deterministic checks for exact R2 row coverage, order and false consensus across distinct conditional options. Initial backend run failed 434/437 due stale safe-response fixtures and audit-version expectation. Test-only correction de95004 fixes them without changing reviewer logic.
 
-## Immediate next operation
+## Immediate next actions
 
-1. Poll v7 model run 44015305202 and preserve its artifact as v7 history only.
-2. When v7 releases concurrency, inspect prompt-v8 run 44016121962 artifact and manifest.
-3. Verify exact prompt/audit versions, script/corpus hashes, model digests and equal sampler options.
-4. Count 12 complete responses/model; check done_reason/eval_count and all audit-v6 flags.
-5. Inspect all raw outputs, especially R2-PARTIAL-AGREEMENT-006, R2-CONDITIONALITY-007, R3-FABRICATED-QUOTE-009 and R4-CHAIR-TRACEABILITY-012. Confirm Qwen safe-negation remains unflagged; determine whether MedGemma defects improve.
-6. Finish a936993 Browser E2E, PR installer and push installer CI; update records after terminal results.
-7. Keep human review pending; do not promote MedGemma.
+1. Verify Backend 44018911878 and retrieve JUnit/preflight artifacts.
+2. Poll audit-v7 paired screen 44018644704 and inspect manifest, script/corpus hashes, model digests/options, all 12 outputs/model, done_reason, flags and raw response.
+3. Confirm detector catches MedGemma incompatible-option shared label, MedGemma incomplete R2 ledger, Qwen out-of-order rows and exact statement omissions without flagging correct original-order rows.
+4. Finish all standard CI and push installer for de95004.
+5. Update all continuity files and Master Checklist after artifact and exact-head CI verification.
+6. Keep independent review pending; no clinical validation or promotion.
 
 ## Other outstanding gates
 
-- Historical run-9 integrity failure: 343 entries; original records immutable.
-- Current full 45-role R1–R4 acceptance: NOT STARTED.
-- Missing/failed-agent full-run acceptance: IN PROGRESS.
-- RTX 4060 request-time inference: NOT STARTED.
-- Guideline retrieval and claim linkage: NOT STARTED.
-- Independent qualified clinical review: NOT STARTED.
-- Release acceptance: BLOCKED.
+Historical run-9 integrity failure: 343 findings, original data immutable. Current 45-role acceptance NOT STARTED. Full missing/failed-agent acceptance IN PROGRESS. RTX 4060 proof NOT STARTED. Guideline retrieval NOT STARTED. Independent qualified clinical review NOT STARTED. Release BLOCKED.
+
+Cloud GitHub work does not require the user's PC online; local RTX 4060 validation does.

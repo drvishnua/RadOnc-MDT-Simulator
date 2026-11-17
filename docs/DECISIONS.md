@@ -76,3 +76,9 @@ No merge, release, deployment, force-push or main-branch modification without ex
 21. R3 quote review must copy the entire exact_text verbatim before classifying the model-claimed quote as present or absent. A paraphrase is not a source quotation.
 22. R4 Chair synthesis must select one proposition outcome and ensure the rest of the synthesis is consistent with that outcome. A source statement denying treatment agreement cannot coexist with an unqualified Chair claim that the same contributions establish agreement.
 23. These prompt changes do not alter generation sampler settings, output cap or production model selection. Prompt version is separately recorded to keep model outputs comparable and auditable.
+
+## Audit-v7 R2 source-ledger and incompatible-option checks
+
+24. R2 deterministic review must require all saved_R1_contributions source IDs and their exact saved statements to appear in the response in the original saved order.
+25. When saved sources state different conditional treatment options under different prerequisites, a positive shared-treatment-proposition label is invalid. Require evidence of the same substantive proposition and compatible prerequisites before consensus.
+26. Record prompt_version and audit_version independently. Do not reinterpret prompt-v8/audit-v6 results as if reviewed by audit-v7; audit-v7 requires its own run artifact.
