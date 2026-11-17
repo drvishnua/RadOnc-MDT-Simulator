@@ -33,6 +33,7 @@ CORPUS_PATH = (
 )
 PROMPT_VERSION = "radonc-mdt-integrity-screen-v12"
 AUDIT_VERSION = "radonc-mdt-integrity-audit-v11"
+# Paired v12/audit-v11 retest: source-bound R2 empty-label and nested R3 JSON checks.
 DEFAULT_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/")
 GENERATION_OPTIONS = {
     "temperature": 0,
