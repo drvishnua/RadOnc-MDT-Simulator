@@ -108,3 +108,27 @@ Append new entries chronologically. Record actual commit SHAs, run IDs and resul
 
 - GitHub cloud development and hosted model screening do not depend on the user's PC being online. The ChatGPT app's offline banner affects message sending only.
 - RTX 4060 request-time inference proof is separate and requires the target Windows PC to be on and running real local Ollama inference during telemetry collection.
+
+
+## 17 November 2026 — audit-v5 raw screen inspected; audit-v6 screen active
+
+### Audit-v5 paired screen 44010717466
+
+- Run 44010717466 completed SUCCESS on source e877600c8f860013d45c8f2eb1976b9b81d34484; artifact 14297710993 downloaded and inspected.
+- Manifest confirms prompt v6, audit v5, Ollama 0.40.14, hosted Windows CPU only, concurrency 1, GPU NOT_PERFORMED, corpus SHA-256 5fe333969035e403366272f6d3012809059d0be7ce1ce06efb16b6c6493fdeb3, Qwen digest sha256:d8b0f5e9760cd1682034f292d7ef72ec46f432149be0df7574bf2d6e92e38c04 and MedGemma digest sha256:433252621ab154668b5d8be6aff6c1b771bacba045e46e6193da8d6ad1630f2c.
+- Qwen: 12/12 parseable; audit-v5 summary recorded 1 flag. Raw R2-CONDITIONALITY-007 response explicitly said "No shared proposition on a treatment option exists"; audit-v5 nevertheless flagged it due the broad proximity rule. This flag is a confirmed audit false positive.
+- MedGemma: 12/12 parseable; audit-v5 summary recorded 4 flags. Raw review confirmed R2-PARTIAL-AGREEMENT-006 source attribution inversion; R2-CONDITIONALITY-007 falsely elevates a source-specific conditional option into a shared proposition; R3-FABRICATED-QUOTE-009 omits the exact saved source text and does not explicitly reject the quote; R4-CHAIR-TRACEABILITY-012 asserts agreement and later states no treatment proposition was agreed.
+- All 24 responses ended done_reason=stop. No token-limit truncations in this run. Summaries remain PENDING_HUMAN_REVIEW; automatic quality score null; clinical accuracy not evaluated. This is raw model evidence, not audit-v6 acceptance.
+- The raw MedGemma R2 false-positive/true-positive pattern motivated a narrower positive-only audit-v6 shared-position rule.
+
+### Audit-v6 active run
+
+- Workflow 44011921822, source af88bc45e907480eabed35624b6bc194ed51c8c5, is IN PROGRESS. Job 133803226696 is in the combined isolated Ollama provision/sequential screen step; HAI-DEF terms gate passed.
+- No final artifact/result is available yet. Do not start a competing inference run; concurrency remains 1.
+
+### Audit-v6 exact-head software CI
+
+- Commit af88bc4 advances audit version to radonc-mdt-integrity-audit-v6. It requires explicit positive wording for a purported shared proposition and tests that the correct negated wording is not flagged.
+- Backend 44011927961: 429 passed, 0 failed, 0 errors, 0 skipped; deterministic preflight 7/7. JUnit artifact 14297420668; preflight artifact 14296618112.
+- Frontend 44011928009, Browser E2E 44011927977, Packaging Prerequisites 44011928041, Installer 44011928059, Security/Dependency/CodeQL 44011928078 all passed. Push Installer 44011921759 passed.
+- PR #1 is open/draft/unmerged. Main remains 39a356b8eb09399aa2da1b9b9085965999f5105a.

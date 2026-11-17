@@ -61,3 +61,11 @@ No merge, release, deployment, force-push or main-branch modification without ex
 
 15. Repository changes, GitHub Actions CI, Windows hosted builds and the synthetic Ollama model-screen workflow execute on GitHub-hosted cloud runners. Do not require the user's laptop/desktop to remain online for these cloud operations.
 16. RTX 4060 request-time GPU verification is a separate local-hardware acceptance task. It requires the target Windows PC to be powered on and a real local Ollama inference request to be running while GPU/process telemetry is collected. Do not confuse this requirement with hosted development or with the ChatGPT app's own network connection.
+
+## Audit-v6 explicit-positive shared-position rule
+
+18. The audit distinguishes an explicit positive claim that a source-specific prerequisite/option is a shared R2 proposition from an explicit negation that no shared treatment proposition exists. Require positive construction wording for the former and retain a regression for the latter. Do not interpret audit-v5 flags as audit-v6 findings; record audit version beside every screening result.
+
+## Cloud execution and local hardware
+
+19. GitHub-hosted code changes, CI, packaging and hosted CPU screens do not require the user's PC online. RTX 4060 request-time proof is a separate local test requiring the target Windows machine powered on and real local inference underway.
