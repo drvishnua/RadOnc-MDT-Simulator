@@ -42,3 +42,22 @@ Append new entries chronologically. Record actual commit SHAs, run IDs and resul
 - Provisioning succeeded: Ollama 0.40.14 installed; both model records/digests captured; both models pulled; Qwen completed 12/12; MedGemma generated 12 records. The workflow failed because three MedGemma responses were malformed/incomplete. Isolated Ollama was stopped in cleanup.
 - Corrected-source run [44000583529](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44000583529), source code/test SHA `8b7124cf1d0b236100958fd91b8fadc506eee559`, is now **IN PROGRESS**; job `133768126103` is in the provisioning/sequential-screen step and has no artifact at this checkpoint.
 - The persistent documentation bundle and Master Checklist were updated on branch HEAD `80ee6e9854eb6862f69dd06b63cc256c95f40fa2`. All six standard PR workflows passed on that docs-only head; Backend 423/423, run [44002108741](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44002108741), JUnit artifact **14293140853**.
+
+
+## 17 November 2026 — corrected-source model screen and repetition-control experiment
+
+### Corrected-source paired run 44000583529
+
+- Source code/test SHA: 8b7124cf1d0b236100958fd91b8fadc506eee559. Run 44000583529 completed FAILED; artifact 14293084055 was downloaded and inspected.
+- Manifest: Ollama 0.40.14; hosted Windows CPU; concurrency 1; GPU measurement NOT_PERFORMED; prompt v6; audit v4; frozen corpus SHA-256 5fe333969035e403366272f6d3012809059d0be7ce1ce06efb16b6c6493fdeb3. Qwen digest sha256:d8b0f5e9760cd1682034f292d7ef72ec46f432149be0df7574bf2d6e92e38c04; MedGemma digest sha256:433252621ab154668b5d8be6aff6c1b771bacba045e46e6193da8d6ad1630f2c.
+- Qwen: 12/12 response records parseable; 0 deterministic flags; status completed pending human review. MedGemma: 12 records saved, 9/12 parseable, 3 malformed/incomplete; summary incomplete_or_malformed. Cases: R2-FALSE-CONSENSUS-005, R3-FABRICATED-QUOTE-009, R4-CHAIR-TRACEABILITY-012. Each had done_reason=length and eval_count=500 after repeated question/source/synthesis text. No model-quality pass.
+- Ollama server log showed repeat_penalty=1.000 (disabled) and repeat_last_n=64. Repetition was the observed cause of output truncation; do not simply raise the output cap.
+
+### Corrective experiment commit c0fbb2a
+
+- Commit c0fbb2ac4a586d5effa51ea8bcc4af623137008f changes backend/scripts/run_medgemma_screening.py and backend/tests/test_medgemma_screening.py only.
+- Both models receive identical repeat_last_n=64 and repeat_penalty=1.1; num_predict=500, temperature, seed and context remain unchanged. Regression asserts the identical shared options and fixed output cap.
+- Ollama reference consulted: https://docs.ollama.com/modelfile. This is a controlled mitigation test, not proof that repetition is fixed.
+- Exact-head PR CI passed: Backend 423/423, preflight 7/7; Frontend, Browser E2E, Packaging Prerequisites, Windows Installer and Security/Dependency/CodeQL all passed. Runs: 44004936087, 44004936006, 44004935981, 44004936065, 44004935939, 44004935954. Backend JUnit artifact 14294230423; Browser E2E artifact 14293343125. All five browser success markers were present.
+- Push Installer 44004930010 passed.
+- Marker-qualified paired screen 44004929958, job 133777841510, is IN PROGRESS. HAI-DEF terms gate passed; provisioning/sequential inference is active; no final artifact/result is available yet. Hosted CPU only, concurrency 1.

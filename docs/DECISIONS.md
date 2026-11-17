@@ -47,3 +47,7 @@ No merge, release, deployment, force-push or main-branch modification without ex
 
 10. A model response whose generation ends with `done_reason=length` and lacks a complete, parseable output envelope is an incomplete/failed response, never a valid contribution. Preserve raw output and telemetry for audit.
 11. Qwen and MedGemma comparative screens must use identical prompts and generation options for a paired comparison. Do not raise output limits blindly to hide repetition; inspect token-cap and repetition evidence, make a controlled change, and rerun the same frozen cases.
+
+## Controlled model-screen repetition experiment
+
+12. After two paired prompt-v6/audit-v4 screens showed MedGemma repeating phrases/passages until done_reason=length at the unchanged 500-token cap, the next paired experiment explicitly sets Ollama repeat_last_n=64 and repeat_penalty=1.1 for BOTH Qwen and MedGemma. The output cap remains num_predict=500; do not hide loops by blindly raising it. This is a controlled test setting, not evidence that repetition is fixed or that either model is promoted. Inspect both models' raw outputs, options and completion telemetry before deciding whether to retain or revise it. Parameter reference: https://docs.ollama.com/modelfile (Ollama documents repeat_penalty 1.0 as disabled and 1.1 as an example).

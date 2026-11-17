@@ -3,40 +3,36 @@
 **Snapshot:** 17 November 2026  
 **Repository:** drvishnua/RadOnc-MDT-Simulator  
 **Branch:** feature/four-round-mdt-and-performance  
-**Current branch HEAD at snapshot:** 80ee6e9854eb6862f69dd06b63cc256c95f40fa2 (continuity-document bundle)  
-**Latest verified code/test SHA:** 8b7124cf1d0b236100958fd91b8fadc506eee559  
+**Latest application/test SHA:** c0fbb2ac4a586d5effa51ea8bcc4af623137008f  
 **PR #1:** open, draft, unmerged, targets main.  
 **Main:** 39a356b8eb09399aa2da1b9b9085965999f5105a (unchanged).
 
 ## Overall position
 
-The latest application/test changes are committed at code/test SHA 8b7124c. All six standard PR workflows passed on that SHA and again on documentation-only HEAD 80ee6e9. Backend reported 423 passed, 0 failed/errors/skipped; deterministic preflight 7/7. Browser E2E, frontend build, packaging prerequisites, installer and security/CodeQL passed.
+The latest code/test commit applies a controlled repetition-mitigation experiment to the paired synthetic Qwen/MedGemma screen. It explicitly sets Ollama repeat_last_n=64 and repeat_penalty=1.1 for both models, while keeping num_predict=500, prompt v6, audit v4 and concurrency 1 unchanged. This responds to two runs in which MedGemma repeated questions or source text until the 500-token cap truncated JSON.
 
-The immediate outstanding task is the corrected prompt-v6 / audit-v4 paired Qwen and MedGemma synthetic screen. Intermediate run 44000326185 on b351a81 completed failed; artifact 14292068885 shows Qwen 12/12 parseable and MedGemma 9/12 parseable, with three repeated-output loops truncated at the 500-token limit. Corrected-source run 44000583529 on 8b7124c is now in progress. Its results are not yet available.
+Exact-head standard PR CI on c0fbb2a passed: Backend 423/423, deterministic preflight 7/7, Frontend, Browser E2E, Packaging Prerequisites, Windows Installer and Security/Dependency/CodeQL. Run IDs are in the Master Checklist and Execution Log.
+
+The new marker-triggered paired model screen, workflow 44004929958, is IN PROGRESS on this commit. Its result is not yet available. The HAI-DEF terms gate passed before provisioning.
 
 ## Completed and verified
 
-- Corrected prompt v6 test phrase case matching.
-- Corrected R3 source-ID misclassification detection to bind status wording to the exact source ID; added a regression for a nearby malformed range.
-- Stabilised the browser Development Monitor E2E with deterministic GitHub API fixtures. Production remains a live, read-only GitHub API integration with visible error handling.
-- Passed exact code/test CI on 8b7124c; the six workflows are listed in the Master Checklist.
-- Updated the single authoritative checklist and preserved previous CI failures as historical records.
-- Added six supporting continuity documents in commit 80ee6e9; all six standard PR workflows passed on that documentation commit.
+- Prompt-v6 assertion correction and R3 exact-source-ID detector correction.
+- Browser Development Monitor E2E uses deterministic public GitHub API fixtures; production UI still performs live read-only GitHub requests and retains error handling.
+- Exact-head test asserts identical prompts/options for Qwen and MedGemma, repetition penalty 1.1 and unchanged output cap 500.
+- Standard CI on c0fbb2a: Backend 423/423, preflight 7/7; frontend, real-browser E2E, packaging prerequisites, installer and security/CodeQL passed.
+- Previous corrected-source paired screen 44000583529 and its raw artifact were downloaded and inspected. Qwen returned 12/12 parseable responses; MedGemma returned 9/12 parseable. Three MedGemma cases repeated content until done_reason=length, eval_count=500 and incomplete JSON. This is a failed/incomplete run, not a model-quality pass.
 
 ## In progress / outstanding
 
-- Complete corrected-head paired Qwen/MedGemma v6/audit-v4 run and inspect both raw JSONL outputs plus manifest. Determine whether the three MedGemma 500-token repetition failures reproduce.
-- Resolve historical 45-role run-9 audit failure (343 findings) without altering immutable original records.
-- Complete a fresh 45-role R1–R4 validation and failed-agent/incomplete-data acceptance.
-- Verify RTX 4060 request-time GPU activity and performance; hosted CPU runs are not GPU evidence.
-- Integrate retrieved, current guideline evidence with validated claim/reference links.
+- Inspect new paired run 44004929958 and its manifest/raw JSONL when uploaded. Confirm recorded generation options, 12/12 output completeness, repetition behaviour, integrity flags and raw text.
+- Resolve historical 45-role run-9 audit failure (343 findings) without modifying original saved records.
+- Complete fresh 45-role R1–R4 validation and missing/failed-agent acceptance.
+- Verify RTX 4060 request-time GPU activity/performance; hosted CPU runs are not GPU evidence.
+- Retrieve and verify current authoritative guideline sources and claim/reference links.
 - Obtain independent qualified clinical review. No zero-hallucination or clinical-validity claim is permitted.
 - Release remains blocked.
 
 ## Source of truth
 
-Use [MASTER_DEVELOPMENT_CHECKLIST.md](MASTER_DEVELOPMENT_CHECKLIST.md) for the current detailed status, exact CI references, status enums and evidence limits. This file is a concise orientation summary, not a second verification checklist.
-
-## Continuity
-
-See [RECOVERY_STATE.md](RECOVERY_STATE.md) for the exact resume point, active/queued workflow IDs and next operation. See [KNOWN_ISSUES.md](KNOWN_ISSUES.md) for open failures and limitations.
+Use MASTER_DEVELOPMENT_CHECKLIST.md for the single authoritative detailed status/evidence table. Use TASK_CHECKLIST.md for next actions, DECISIONS.md for durable decisions, EXECUTION_LOG.md for chronological events, RECOVERY_STATE.md for the exact resume point, and KNOWN_ISSUES.md for unresolved defects.
