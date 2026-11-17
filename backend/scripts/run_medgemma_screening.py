@@ -529,10 +529,17 @@ def audit_screen_response(case: dict[str, Any], response: str) -> list[str]:
             r"\b(?:agrees?|agreed|states?|stated|affirms?|affirmed|supports?|supported|confirms?|confirmed)\b"
             r".{0,160}\badditional information is required\b"
         )
+        negative_claim = re.compile(
+            r"\b(?:does not|doesn't|did not|didn't)\s+state\b"
+            r".{0,160}\badditional information is required\b"
+        )
+        def affirmatively_attributes_required_information(context: str) -> bool:
+            return bool(affirmative_claim.search(context) and not negative_claim.search(context))
+
         source_errors: list[str] = []
         for source_id in explicitly_affirming_sources:
             context = source_position_context(source_id)
-            if not context or not affirmative_claim.search(context):
+            if not context or not affirmatively_attributes_required_information(context):
                 source_errors.append(
                     f"{source_id} was not attributed its explicit position that additional information is required"
                 )
@@ -543,7 +550,7 @@ def audit_screen_response(case: dict[str, Any], response: str) -> list[str]:
         ]
         for source_id in silent_sources:
             context = source_position_context(str(source_id))
-            if affirmative_claim.search(context):
+            if affirmatively_attributes_required_information(context):
                 source_errors.append(
                     f"{source_id} was incorrectly attributed agreement that additional information is required despite being silent"
                 )
