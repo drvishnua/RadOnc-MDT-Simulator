@@ -632,6 +632,103 @@ def test_r2_structured_information_assessment_rejects_source_ids_when_not_shared
     )
 
 
+def test_r2_source_bound_normalization_restores_unknown_prerequisite_status():
+    corpus, _ = load_corpus()
+    case = next(
+        item for item in corpus["cases"]
+        if item["case_id"] == "R2-CONDITIONALITY-007"
+    )
+    output = _valid_model_output(
+        case,
+        "R1:RO-01 conditionally supports Option A if prerequisite X is confirmed; "
+        "R1:MO-01 says X is not present in the supplied record, so its status remains unknown.",
+    )
+    output["source_ledger"]["R1:MO-01"]["prerequisite_status"] = "not_applicable"
+    parsed, error = validate_model_response(json.dumps(output), case)
+    assert error is None
+    assert parsed["source_ledger"]["R1:MO-01"]["prerequisite_status"] == "unknown"
+    assert any(
+        item["source_id"] == "R1:MO-01"
+        and item["field"] == "prerequisite_status"
+        and item["model_value"] == "not_applicable"
+        and item["server_value"] == "unknown"
+        for item in parsed["server_derived"]["field_normalizations"]
+    )
+    assert not screening.audit_screen_response(case, parsed)
+
+
+def test_r2_source_bound_normalization_derives_shared_information_from_exact_sources():
+    corpus, _ = load_corpus()
+    case = next(
+        item for item in corpus["cases"]
+        if item["case_id"] == "R2-PARTIAL-AGREEMENT-006"
+    )
+    output = _valid_model_output(
+        case,
+        "R1:RO-01 and R1:MO-01 agree that additional information is required; "
+        "no treatment option is selected.",
+    )
+    output["shared_information_sufficiency"] = {
+        "status": "not_shared",
+        "source_ids": [],
+    }
+    parsed, error = validate_model_response(json.dumps(output), case)
+    assert error is None
+    assert parsed["shared_information_sufficiency"] == {
+        "status": "shared",
+        "source_ids": ["R1:RO-01", "R1:MO-01"],
+    }
+    assert parsed["server_derived"]["proposition_normalizations"] == [{
+        "field": "shared_information_sufficiency",
+        "model_value": {"status": "not_shared", "source_ids": []},
+        "server_value": {
+            "status": "shared",
+            "source_ids": ["R1:RO-01", "R1:MO-01"],
+        },
+        "basis": (
+            "at least two exact saved R1 statements explicitly say they agree "
+            "that additional information is required"
+        ),
+    }]
+    assert not screening.audit_screen_response(case, parsed)
+
+    # The same structured repair must not conceal an explicitly contradictory
+    # model narrative; raw narrative remains auditable and fails separately.
+    output["response"] = (
+        "No shared information sufficiency exists because only one source agrees."
+    )
+    parsed, error = validate_model_response(json.dumps(output), case)
+    assert error is None
+    findings = screening.audit_screen_response(case, parsed)
+    assert any("R2 narrative partial-agreement error" in item for item in findings)
+
+
+def test_r2_narrative_conditionality_requires_option_prerequisite_and_unknown_status():
+    corpus, _ = load_corpus()
+    case = next(
+        item for item in corpus["cases"]
+        if item["case_id"] == "R2-CONDITIONALITY-007"
+    )
+    incomplete = _valid_model_output(
+        case,
+        "No shared treatment proposition exists.",
+    )
+    assert any(
+        "R2 narrative conditionality omission" in item
+        for item in screening.audit_screen_response(case, incomplete)
+    )
+
+    complete = _valid_model_output(
+        case,
+        "R1:RO-01 conditionally supports Option A only if prerequisite X is confirmed; "
+        "R1:MO-01 says X is not present in the supplied record, so its status remains unknown.",
+    )
+    assert not any(
+        "R2 narrative conditionality omission" in item
+        for item in screening.audit_screen_response(case, complete)
+    )
+
+
 def test_r2_structured_audit_flags_false_consensus_and_lost_prerequisite_status():
     corpus, _ = load_corpus()
     false_consensus = next(item for item in corpus["cases"] if item["case_id"] == "R2-FALSE-CONSENSUS-005")
@@ -841,8 +938,8 @@ def test_run_screen_records_complete_immutable_case_set(tmp_path, monkeypatch):
     summary = next(record for record in records if record["record_type"] == "summary")
     manifest = next(record for record in records if record["record_type"] == "manifest")
 
-    assert manifest["prompt_version"] == "radonc-mdt-integrity-screen-v13"
-    assert manifest["audit_version"] == "radonc-mdt-integrity-audit-v12"
+    assert manifest["prompt_version"] == "radonc-mdt-integrity-screen-v14"
+    assert manifest["audit_version"] == "radonc-mdt-integrity-audit-v13"
     assert manifest["screening_script_sha256"] == screening.SCRIPT_SHA256
     assert len(manifest["screening_script_sha256"]) == 64
     assert calls == {"tags": 25, "generate": 12, "show": 1, "version": 1}
