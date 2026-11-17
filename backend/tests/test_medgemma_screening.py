@@ -241,8 +241,9 @@ def test_deterministic_audit_accepts_unknown_prerequisite_with_conditional_optio
     corpus, _ = load_corpus()
     case = next(item for item in corpus["cases"] if item["case_id"] == "R2-CONDITIONALITY-007")
     safe = (
-        "Prerequisite X is not present in the supplied record; its status remains unknown. "
-        "Option A remains conditional pending confirmation of prerequisite X."
+        'R1:RO-01: "Conditional support for Option A only if prerequisite X is confirmed." '
+        'R1:MO-01: "Prerequisite X is not present in the supplied record." '
+        "Option A remains conditional pending confirmation; prerequisite X remains unverified."
     )
     assert screening.audit_screen_response(case, safe) == []
 
@@ -451,7 +452,7 @@ def test_run_screen_records_complete_immutable_case_set(tmp_path, monkeypatch):
     manifest = next(record for record in records if record["record_type"] == "manifest")
 
     assert manifest["prompt_version"] == screening.PROMPT_VERSION
-    assert manifest["audit_version"] == "radonc-mdt-integrity-audit-v6"
+    assert manifest["audit_version"] == "radonc-mdt-integrity-audit-v7"
     assert manifest["screening_script_sha256"] == screening.SCRIPT_SHA256
     assert len(manifest["screening_script_sha256"]) == 64
     assert calls == {"tags": 25, "generate": 12, "show": 1, "version": 1}
