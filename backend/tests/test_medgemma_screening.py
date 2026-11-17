@@ -138,6 +138,8 @@ def test_round_specific_prompt_instructions_are_present():
     assert "independent role-level reading" in prompts["R1"]
     assert "source_ledger" in prompts["R2"]
     assert "structured proposition assessments" in prompts["R2"]
+    assert "independent propositions" in prompts["R2"]
+    assert "synthetic input is not a reason to refuse" in prompts["R1"]
     assert "Perform a critical audit" in prompts["R3"]
     assert "identifier_inventory_review" in prompts["R3"]
     assert "Chair closing record" in prompts["R4"]
@@ -637,8 +639,8 @@ def test_run_screen_records_complete_immutable_case_set(tmp_path, monkeypatch):
     summary = next(record for record in records if record["record_type"] == "summary")
     manifest = next(record for record in records if record["record_type"] == "manifest")
 
-    assert manifest["prompt_version"] == "radonc-mdt-integrity-screen-v10"
-    assert manifest["audit_version"] == "radonc-mdt-integrity-audit-v9"
+    assert manifest["prompt_version"] == "radonc-mdt-integrity-screen-v11"
+    assert manifest["audit_version"] == "radonc-mdt-integrity-audit-v10"
     assert manifest["screening_script_sha256"] == screening.SCRIPT_SHA256
     assert len(manifest["screening_script_sha256"]) == 64
     assert calls == {"tags": 25, "generate": 12, "show": 1, "version": 1}
@@ -1209,3 +1211,113 @@ def test_r2_short_label_mismatch_is_not_normalized_or_silently_accepted():
     )
     findings = screening.audit_screen_response(case, parsed)
     assert any("R2 structured conditionality omission" in finding for finding in findings)
+
+
+
+def test_r2_prompt_separates_information_sufficiency_from_treatment_consensus():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R2-PARTIAL-AGREEMENT-006")
+    prompt = build_generate_payload("qwen3.5:4b", case)["prompt"].casefold()
+    assert "two independent propositions" in prompt
+    assert "even when no source states a treatment option" in prompt
+    assert "never make information agreement depend on treatment agreement" in prompt
+
+
+def test_r2_normalizes_conditional_support_enum_only_to_same_saved_option():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R2-CONDITIONALITY-007")
+    output = _valid_model_output(
+        case,
+        "RO-01 conditionally supports Option A; MO-01 states prerequisite X is not present.",
+    )
+    output["source_ledger"]["R1:RO-01"]["treatment_option"] = "conditional_support_for_A"
+    output["source_ledger"]["R1:MO-01"]["treatment_option"] = "none"
+    parsed, error = validate_model_response(json.dumps(output), case)
+    assert error is None and parsed is not None
+    assert parsed["source_ledger"]["R1:RO-01"]["treatment_option"] == "Option A"
+    assert parsed["source_ledger"]["R1:MO-01"]["treatment_option"] == ""
+    assert parsed["server_derived"]["field_normalizations"] == [
+        {
+            "source_id": "R1:RO-01",
+            "field": "treatment_option",
+            "model_value": "conditional_support_for_A",
+            "server_value": "Option A",
+            "basis": "unique exact label in this source's saved statement",
+        },
+        {
+            "source_id": "R1:MO-01",
+            "field": "treatment_option",
+            "model_value": "none",
+            "server_value": "",
+            "basis": "explicit no-option sentinel; this saved statement contains no option label",
+        },
+    ]
+    assert not any("unsupported option" in item for item in screening.audit_screen_response(case, parsed))
+
+
+def test_r2_does_not_normalize_conditional_option_to_a_different_saved_option():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R2-CONDITIONALITY-007")
+    output = _valid_model_output(case, "Option B is not supported by the saved sources.")
+    output["source_ledger"]["R1:RO-01"]["treatment_option"] = "conditional_support_for_B"
+    parsed, error = validate_model_response(json.dumps(output), case)
+    assert error is None and parsed is not None
+    assert parsed["source_ledger"]["R1:RO-01"]["treatment_option"] == "conditional_support_for_B"
+    assert not any(
+        item["field"] == "treatment_option"
+        for item in parsed["server_derived"]["field_normalizations"]
+    )
+    assert any(
+        "R2 structured conditionality omission" in item
+        for item in screening.audit_screen_response(case, parsed)
+    )
+
+
+def test_r4_audit_flags_medgemma_case_json_echo_as_missing_chair_synthesis():
+    corpus, _ = load_corpus()
+    for case_id in ("R4-MISSING-AGENT-011", "R4-CHAIR-TRACEABILITY-012"):
+        case = next(item for item in corpus["cases"] if item["case_id"] == case_id)
+        echo = {
+            "case_id": case_id,
+            "round": "R4",
+            "scenario_category": case["category"],
+            "chair_role_completeness_inventory": screening.chair_role_completeness_inventory(case["input"]),
+            "saved_R1_source_inventory": [],
+            "synthetic_input": case["input"],
+        }
+        findings = screening.audit_screen_response(case, json.dumps(echo))
+        assert any("R4 Chair synthesis omission" in item for item in findings)
+
+
+def test_r4_audit_does_not_flag_a_real_structured_chair_synthesis_as_echo():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R4-CHAIR-TRACEABILITY-012")
+    valid = {
+        "case_id": case["case_id"],
+        "round": "R4",
+        "scenario_category": case["category"],
+        "chair_role_completeness_inventory": {},
+        "saved_R1_source_inventory": [],
+        "chair_cross_round_synthesis": {
+            "proposition_outcome": "NO TREATMENT PROPOSITION AGREED",
+            "summary": "No treatment proposition was agreed; the missing-source finding remains unresolved.",
+        },
+    }
+    findings = screening.audit_screen_response(case, json.dumps(valid))
+    assert not any("R4 Chair synthesis omission" in item for item in findings)
+
+
+def test_r3_prompt_distinguishes_model_claimed_quote_from_locked_saved_text():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R3-FABRICATED-QUOTE-009")
+    prompt = build_generate_payload("medgemma1.5:4b-it-q4_K_M", case)["prompt"].casefold()
+    assert "compare the separate model_claimed_quote value itself" in prompt
+    assert "do not mark the claim present merely because exact_saved_source_text appears" in prompt
+
+
+def test_prompt_explicitly_says_synthetic_input_is_not_a_reason_to_refuse():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R1-UNKNOWN-STAGE-001")
+    prompt = build_generate_payload("medgemma1.5:4b-it-q4_K_M", case)["prompt"].casefold()
+    assert "synthetic input is not a reason to refuse" in prompt
+    assert "no clinical judgement or treatment recommendation is requested" in prompt
