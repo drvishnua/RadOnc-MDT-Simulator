@@ -31,8 +31,8 @@ CORPUS_PATH = (
     / "fixtures"
     / "medgemma_model_integrity_screening_v1.json"
 )
-PROMPT_VERSION = "radonc-mdt-integrity-screen-v8"
-AUDIT_VERSION = "radonc-mdt-integrity-audit-v7"
+PROMPT_VERSION = "radonc-mdt-integrity-screen-v9"
+AUDIT_VERSION = "radonc-mdt-integrity-audit-v8"
 DEFAULT_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/")
 GENERATION_OPTIONS = {
     "temperature": 0,
@@ -266,6 +266,178 @@ def saved_r1_source_inventory(case_input: dict[str, Any]) -> list[dict[str, str]
     ]
 
 
+def _closed_object_schema(properties: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "type": "object",
+        "properties": properties,
+        "required": list(properties),
+        "additionalProperties": False,
+    }
+
+
+def build_response_schema(case: dict[str, Any]) -> dict[str, Any]:
+    """Build case-specific structured output with schema-locked source IDs and text."""
+    properties: dict[str, Any] = {"response": {"type": "string"}}
+
+    if case.get("round") == "R2":
+        rows = saved_r1_source_inventory(case.get("input") or {})
+        if rows:
+            ledger_properties: dict[str, Any] = {}
+            for row in rows:
+                ledger_properties[row["source_id"]] = _closed_object_schema({
+                    "saved_statement": {
+                        "type": "string",
+                        "enum": [row["saved_statement"]],
+                    },
+                    "information_position": {
+                        "type": "string",
+                        "enum": ["agrees", "does_not_state", "not_applicable", "other"],
+                    },
+                    "treatment_option": {"type": "string"},
+                    "prerequisite": {"type": "string"},
+                    "prerequisite_status": {
+                        "type": "string",
+                        "enum": ["known", "unknown", "not_stated", "not_applicable"],
+                    },
+                })
+            source_ids = [row["source_id"] for row in rows]
+            properties["source_ledger"] = _closed_object_schema(ledger_properties)
+            for field_name in ("shared_information_sufficiency", "shared_treatment_proposition"):
+                properties[field_name] = _closed_object_schema({
+                    "status": {
+                        "type": "string",
+                        "enum": ["shared", "not_shared", "insufficient"],
+                    },
+                    "source_ids": {
+                        "type": "array",
+                        "items": {"type": "string", "enum": source_ids},
+                        "uniqueItems": True,
+                    },
+                })
+
+    if case.get("round") == "R3":
+        inventory = case_local_identifier_inventory(case.get("input") or {})
+        if (
+            inventory["explicitly_supplied_source_ids"]
+            or inventory["deliberately_unsupplied_ids"]
+            or inventory["malformed_reference_text_verbatim"]
+        ):
+            supplied = {
+                source_id: _closed_object_schema({
+                    "classification": {"type": "string", "enum": ["supplied"]},
+                })
+                for source_id in inventory["explicitly_supplied_source_ids"]
+            }
+            unsupplied = {
+                source_id: _closed_object_schema({
+                    "classification": {
+                        "type": "string",
+                        "enum": ["deliberately_unsupplied"],
+                    },
+                })
+                for source_id in inventory["deliberately_unsupplied_ids"]
+            }
+            identifier_properties: dict[str, Any] = {
+                "explicitly_supplied": _closed_object_schema(supplied),
+                "deliberately_unsupplied": _closed_object_schema(unsupplied),
+            }
+            malformed = inventory["malformed_reference_text_verbatim"]
+            if malformed:
+                identifier_properties["malformed_reference"] = _closed_object_schema({
+                    "raw_text": {"type": "string", "enum": [malformed]},
+                    "classification": {"type": "string", "enum": ["malformed"]},
+                })
+            properties["identifier_inventory_review"] = _closed_object_schema(
+                identifier_properties
+            )
+
+        saved_source = (case.get("input") or {}).get("saved_source_contribution")
+        if isinstance(saved_source, dict):
+            source_id = saved_source.get("source_id")
+            exact_text = saved_source.get("exact_text")
+            if isinstance(source_id, str) and isinstance(exact_text, str):
+                properties["source_quote_review"] = _closed_object_schema({
+                    "source_id": {"type": "string", "enum": [source_id]},
+                    "exact_saved_source_text": {"type": "string", "enum": [exact_text]},
+                    "model_claimed_quote_status": {
+                        "type": "string",
+                        "enum": ["present", "absent"],
+                    },
+                    "evidence_status": {
+                        "type": "string",
+                        "enum": ["supported_by_saved_source", "unsupported_not_evidence"],
+                    },
+                })
+    return _closed_object_schema(properties)
+
+
+def _validate_case_specific_fields(
+    parsed: dict[str, Any], case: dict[str, Any] | None
+) -> str | None:
+    if case is None:
+        return None
+    schema = build_response_schema(case)
+    if set(parsed) != set(schema["required"]):
+        return "Response fields do not match the exact case-specific structured schema."
+
+    if case.get("round") == "R2" and "source_ledger" in schema["properties"]:
+        rows = saved_r1_source_inventory(case.get("input") or {})
+        ledger = parsed.get("source_ledger")
+        expected_ids = {row["source_id"] for row in rows}
+        if not isinstance(ledger, dict) or set(ledger) != expected_ids:
+            return "R2 source_ledger does not contain exactly every saved source ID."
+        for row in rows:
+            item = ledger.get(row["source_id"])
+            if not isinstance(item, dict) or item.get("saved_statement") != row["saved_statement"]:
+                return "R2 source_ledger altered or omitted a server-saved statement."
+            if not all(isinstance(item.get(key), str) for key in (
+                "information_position", "treatment_option", "prerequisite", "prerequisite_status"
+            )):
+                return "R2 source_ledger contains a missing or non-string classification field."
+        for field_name in ("shared_information_sufficiency", "shared_treatment_proposition"):
+            value = parsed.get(field_name)
+            if (
+                not isinstance(value, dict)
+                or value.get("status") not in {"shared", "not_shared", "insufficient"}
+                or not isinstance(value.get("source_ids"), list)
+                or any(source_id not in expected_ids for source_id in value["source_ids"])
+            ):
+                return "R2 proposition assessment is missing or has invalid source IDs."
+
+    if case.get("round") == "R3":
+        inventory = case_local_identifier_inventory(case.get("input") or {})
+        if "identifier_inventory_review" in schema["properties"]:
+            review = parsed.get("identifier_inventory_review")
+            if not isinstance(review, dict):
+                return "R3 identifier_inventory_review is missing."
+            if set(review) != set(schema["properties"]["identifier_inventory_review"]["properties"]):
+                return "R3 identifier_inventory_review omitted or added an inventory section."
+            for section, ids in (
+                ("explicitly_supplied", inventory["explicitly_supplied_source_ids"]),
+                ("deliberately_unsupplied", inventory["deliberately_unsupplied_ids"]),
+            ):
+                value = review.get(section)
+                if not isinstance(value, dict) or set(value) != set(ids):
+                    return "R3 identifier inventory does not match the exact server-supplied IDs."
+            malformed = inventory["malformed_reference_text_verbatim"]
+            if malformed:
+                value = review.get("malformed_reference")
+                if not isinstance(value, dict) or value.get("raw_text") != malformed:
+                    return "R3 malformed reference text does not match the exact server-supplied value."
+
+        if "source_quote_review" in schema["properties"]:
+            saved_source = case["input"]["saved_source_contribution"]
+            value = parsed.get("source_quote_review")
+            if not isinstance(value, dict):
+                return "R3 source_quote_review is missing."
+            if (
+                value.get("source_id") != saved_source.get("source_id")
+                or value.get("exact_saved_source_text") != saved_source.get("exact_text")
+            ):
+                return "R3 source_quote_review altered the exact server-bound source ID or text."
+    return None
+
+
 def chair_role_completeness_inventory(case_input: dict[str, Any]) -> dict[str, Any]:
     """Expose only saved role-completeness fields supplied by this synthetic case."""
     keys = (
@@ -319,8 +491,11 @@ def build_case_prompt(case: dict[str, Any]) -> str:
         "Do not give treatment advice, doses, prescriptions or clinical directives. "
         "Do not cite external sources or invent evidence. Identify unsupported information "
         "as unknown or unverified. If the input is insufficient, say so. "
-        "Return one JSON object with exactly one string field named response. "
-        "Do not include hidden reasoning or any additional fields.\n"
+        "Return the exact JSON fields required by the case-specific response schema. "
+        "For R2, complete every source_ledger row and both structured proposition assessments. "
+        "For R3, complete each identifier_inventory_review and source_quote_review field present "
+        "in the schema. Never alter locked source IDs or saved text. Do not include hidden reasoning "
+        "or extra fields.\n"
         "SCREENING INPUT:\n"
         + json.dumps(prompt_payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     )
@@ -352,12 +527,7 @@ def build_generate_payload(model_name: str, case: dict[str, Any]) -> dict[str, A
             "that your answer is verified or hallucination-free."
         ),
         "prompt": build_case_prompt(case),
-        "format": {
-            "type": "object",
-            "properties": {"response": {"type": "string"}},
-            "required": ["response"],
-            "additionalProperties": False,
-        },
+        "format": build_response_schema(case),
         "stream": False,
         "think": False,
         "keep_alive": "5m",
@@ -375,18 +545,23 @@ def extract_raw_model_response(payload: Any) -> str | None:
     return raw if isinstance(raw, str) else None
 
 
-def validate_model_response(raw_response: Any) -> tuple[dict[str, str] | None, str | None]:
-    """Validate the exact output envelope; parsing arbitrary JSON is not sufficient."""
+def validate_model_response(
+    raw_response: Any, case: dict[str, Any] | None = None
+) -> tuple[dict[str, Any] | None, str | None]:
+    """Validate exact case-specific structured output; JSON parsing alone is insufficient."""
     if not isinstance(raw_response, str) or not raw_response.strip():
         return None, "Model response field was missing, empty or not a string."
     try:
         parsed = json.loads(raw_response)
     except json.JSONDecodeError as exc:
         return None, f"{type(exc).__name__}: {exc}"
-    if not isinstance(parsed, dict) or set(parsed) != {"response"}:
-        return None, "Response must be one object with exactly the response string field."
-    if not isinstance(parsed["response"], str) or not parsed["response"].strip():
+    if not isinstance(parsed, dict):
+        return None, "Response must be one JSON object."
+    if not isinstance(parsed.get("response"), str) or not parsed["response"].strip():
         return None, "Response field must contain a non-empty string."
+    case_error = _validate_case_specific_fields(parsed, case)
+    if case_error:
+        return None, case_error
     return parsed, None
 
 
