@@ -2,7 +2,7 @@
 
 Repository: drvishnua/RadOnc-MDT-Simulator  
 Development branch: feature/four-round-mdt-and-performance  
-Current branch/PR head: 23bf75b5b7d7e4c5ebc2531f4cdc9919aebd1d2d  
+Current branch/PR head before this checklist refresh: 23bf384e487f5f85c80a598a16e0de18463d6f31  
 Latest application-code implementation: 65ac2d5a602d31fce0b79e4079b0d203447edcae  
 PR #1: open, draft, unmerged; base main  
 main: 39a356b8eb09399aa2da1b9b9085965999f5105a, unchanged  
@@ -16,14 +16,14 @@ Continuity files: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_
 
 ## Current checkpoint — v16/audit-v15 code regression suite green; dependency security finding remains open
 
-**Latest exact-head CI — PR head 23bf75b5b7d7e4c5ebc2531f4cdc9919aebd1d2d**
-- Backend run 44138584038: success. 2026-11-17T17:35:21.6680370Z - Checks: 7 passed, 0 failed, 0 inconclusive; 2026-11-17T17:35:33.1094654Z - Testcases: 471 total; 471 passed; 0 failed; 0 errors; 0 skipped; 0 inconclusive; 2026-11-17T17:35:33.1095899Z - Diagnostic errors: 0
-- Frontend build run 44138583416: success.
-- Patient registry and saved MDT dashboard browser E2E run 44138583350: success.
-- Packaging prerequisites run 44138583378: success.
-- Windows installer run 44138583341: success. Job results: Build and smoke-test Windows x64 installer=success; Clean-hosted Windows first-run Ollama/model bootstrap=skipped. Artifact(s): 14352932715 RadOnc-MDT-Simulator-Windows-x64 14881222 bytes.
-- Security/dependency run 44138583438: workflow FAILED solely because npm audit reported four high findings for picomatch 4.0.7. Full-history secret scan passed; JavaScript/TypeScript CodeQL passed; Python CodeQL passed.
-- All six standard PR workflows are complete on this exact head: five success, one failure. These are software/build/package checks only; they do not establish live model acceptance, clinical accuracy, GPU inference or release approval.
+**Latest exact-head CI — PR head 23bf384e487f5f85c80a598a16e0de18463d6f31**
+- Backend run 44139377473: success; 471/471 tests passed; deterministic preflight 7/7; compilation passed.
+- Frontend build run 44139377463: success.
+- Patient registry and saved MDT dashboard browser E2E run 44139377662: IN PROGRESS at checklist refresh.
+- Packaging prerequisites run 44139377471: success.
+- Windows installer run 44139377483: IN PROGRESS at checklist refresh.
+- Security/dependency run 44139377659: npm audit FAILED on four high findings for picomatch 4.0.7; full-history secret scan passed; both CodeQL jobs IN PROGRESS at checklist refresh.
+- At checklist refresh: backend, frontend, packaging prerequisites passed; security audit failed; E2E, installer and CodeQL still running. This is a docs-only commit; these are software/build checks only, not model or clinical validation.
 
 **Security finding — exact dependency path**
 - npm audit log: picomatch 4.0.7 at node_modules/picomatch; fdir and tinyglobby depend on it; Vite depends on fdir/tinyglobby/picomatch. Lockfile contains one picomatch occurrence, marked dev=true; Vite/fdir/tinyglobby are build-tool dependencies. This is not a production runtime dependency, but the full dependency audit remains a required security gate and is FAILED.
@@ -62,9 +62,9 @@ Continuity files: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_
 | Provenance and guideline/evidence retrieval | IN PROGRESS | Exact source text/IDs in screening harness; guideline retrieval and source-linked evidence in app not complete. |
 | Chair consensus, dissent and traceability | FAILED | v15 partial-agreement contradiction and R4 source-echo failures pending live retest. |
 | Missing/failed-agent handling | FAILED | v15 MedGemma omitted counts/role ID; new count-only guard regression-tested but not live-model verified. |
-| Backend CI — PR head 23bf75b | VERIFIED | Run 44138584038: 471/471 passed; deterministic preflight 7/7; compilation passed. |
-| Frontend build — PR head 23bf75b | VERIFIED | Run 44138583416 passed. |
-| Patient registry/dashboard browser E2E — PR head 23bf75b | VERIFIED | Run 44138583350 passed. This is not full 45-role clinical simulation. |
+| Backend CI — PR head 23bf384 | VERIFIED | Run 44139377473: 471/471 passed; deterministic preflight 7/7; compilation passed. |
+| Frontend build — PR head 23bf384 | VERIFIED | Run 44139377463 passed. |
+| Patient registry/dashboard browser E2E — PR head 23bf384 | IN PROGRESS | Run 44139377662 running at checklist refresh. This is not full 45-role clinical simulation. |
 | Mission Control development-process monitor | IN PROGRESS | Backend Mission Control tests pass; dedicated browser E2E/operational acceptance for complete live development monitor not established. |
 | Ollama context handling | IN PROGRESS | Historical 6,144/8,192 allocation only; long-run context truncation not proven fixed. |
 | Ollama performance and concurrency | IN PROGRESS | Hosted screening concurrency 1; comparable local RTX 4060 timings incomplete. |
@@ -78,11 +78,11 @@ Continuity files: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_
 | Independent blinded model-output review | NOT STARTED | Required independent review not completed. |
 | Guideline retrieval and verification | NOT STARTED | No currently retrieved authoritative evidence set linked to simulator conclusions. |
 | Independent qualified clinical review | NOT STARTED | No attributable clinical review artifact. |
-| Packaging prerequisites — PR head 23bf75b | VERIFIED | Run 44138583378 passed. |
-| Windows installer — PR head 23bf75b | VERIFIED | Run 44138583341 passed build/install smoke/checksum/upload. Artifact(s) recorded above. Clean-hosted first-run Ollama/model bootstrap remains NOT VERIFIED if skipped by workflow. |
-| Full-history secret scan — PR head 23bf75b | VERIFIED | Run 44138583438 passed. |
-| CodeQL static analysis — PR head 23bf75b | VERIFIED | Python and JavaScript/TypeScript jobs passed in run 44138583438. |
-| Dependency audit — PR head 23bf75b | FAILED | Run 44138583438: four high findings via picomatch 4.0.7, GHSA-fc5q-39xc-vjpf / CVE-2026-112366; full audit still fails despite dev-only scope. No downgrade or override applied. |
+| Packaging prerequisites — PR head 23bf384 | VERIFIED | Run 44139377471 passed. |
+| Windows installer — PR head 23bf384 | IN PROGRESS | Run 44139377483 running at checklist refresh. Clean-hosted first-run Ollama/model bootstrap remains NOT VERIFIED if skipped by workflow. |
+| Full-history secret scan — PR head 23bf384 | VERIFIED | Run 44139377659 passed. |
+| CodeQL static analysis — PR head 23bf384 | IN PROGRESS | Python and JavaScript/TypeScript jobs running in run 44139377659 at checklist refresh. |
+| Dependency audit — PR head 23bf384 | FAILED | Run 44139377659: four high findings via picomatch 4.0.7, GHSA-fc5q-39xc-vjpf / CVE-2026-112366; full audit still fails despite dev-only scope. No downgrade or override applied. |
 | Release acceptance | BLOCKED | v15 model screen failed; v16 live screen pending; npm audit fails; full 45-role run, GPU telemetry, authoritative evidence and independent clinical review outstanding. |
 
 **Next controlled action:** wait for an official patched picomatch release, or separately approve a controlled local patch experiment with pinned source, full picomatch upstream test suite, RadOnc frontend build/E2E and complete npm audit. Do not alter dependency audit severity/omission settings to manufacture a green gate. After the security gate is genuinely clean, trigger v16/audit-v15 separately and inspect immutable Qwen/MedGemma artefacts. Full 45-role, GPU and independent clinical validation remain separate gates.
