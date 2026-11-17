@@ -82,3 +82,12 @@ No merge, release, deployment, force-push or main-branch modification without ex
 24. R2 deterministic review must require all saved_R1_contributions source IDs and their exact saved statements to appear in the response in the original saved order.
 25. When saved sources state different conditional treatment options under different prerequisites, a positive shared-treatment-proposition label is invalid. Require evidence of the same substantive proposition and compatible prerequisites before consensus.
 26. Record prompt_version and audit_version independently. Do not reinterpret prompt-v8/audit-v6 results as if reviewed by audit-v7; audit-v7 requires its own run artifact.
+
+
+## Structured-output source locks — 17 November 2026
+
+27. Synthetic model-integrity screen prompt v9/audit v8 requires server-locked exact source IDs and saved statements in structured output. R2 also has a required source_order array; original saved row order is checked deterministically and is not delegated to JSON object-key order.
+28. R2 information-sufficiency agreement and treatment-proposition agreement are separate structured propositions. Distinct options or incompatible prerequisites cannot be reported as a shared treatment proposition.
+29. R3 exact source ID/text, identifier inventory classification, claimed-quote presence and evidence status are separate structured fields. An absent quote must be classified absent and unsupported/not evidence.
+30. The schema and deterministic audit improve software-integrity controls; they do not establish model adherence or clinical validity. Model results remain pending until raw outputs and manifests are inspected and independently reviewed.
+31. Marker-qualified paired screening is push-triggered only when the workflow path filter matches the changed file. Include the screening test file in that filter so a test-only screening commit cannot silently skip the paired run.

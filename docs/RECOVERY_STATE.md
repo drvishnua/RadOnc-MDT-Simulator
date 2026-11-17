@@ -1,4 +1,44 @@
 # RadOnc MDT Simulator — Recovery State
+Last checkpoint: 17 November 2026
+
+Repository: drvishnua/RadOnc-MDT-Simulator  
+Development branch: feature/four-round-mdt-and-performance  
+Latest application/test SHA: 9e781525fbf6ac07cf2f6a19d035b82b888f305a  
+PR #1: open, draft, unmerged, base main  
+Main SHA: 39a356b8eb09399aa2da1b9b9085965999f5105a (unchanged)
+
+## Resume here
+Paired Qwen/MedGemma prompt-v9/audit-v8 workflow 44031253593 is IN_PROGRESS on exact SHA 9e78152. Do not start another model screen; workflow concurrency is one and cancel-in-progress is false. No artifact is available at this checkpoint. Poll the same run, then inspect manifest, corpus/script hashes, exact model digests, sampler parity, all 12 raw outputs/model, done_reason/truncation, deterministic findings and logs.
+
+## Exact completed CI on 9e78152
+| Workflow | Run ID | Result |
+|---|---:|---|
+| Backend Tests | 44031259073 | SUCCESS; 440 passed, 0 failed/errors/skipped; JUnit 14305701393 |
+| Frontend Build | 44031258961 | SUCCESS |
+| Browser E2E | 44031258943 | SUCCESS |
+| Packaging Prerequisites | 44031258941 | SUCCESS |
+| Security/Dependency Audit | 44031259043 | SUCCESS |
+| PR Windows Installer | 44031258958 | SUCCESS |
+| Push Windows Installer | 44031253605 | SUCCESS |
+| Paired model screen | 44031253593 | IN_PROGRESS; no artifact yet |
+
+## What changed
+- Prompt v9 / audit v8 schema-locks exact R2 and R3 provenance fields.
+- R2 requires source_order array equal to original saved contribution order; all source IDs and exact statements are locked in source_ledger. Treatment and information-sufficiency propositions are separate.
+- R3 source ID/text, identifier-inventory classifications, claimed-quote presence and evidence status are separate required structured fields.
+- Deterministic audit checks model classifications after JSON validation.
+- Workflow push filter includes backend/tests/test_medgemma_screening.py, preventing marker-qualified test changes from silently skipping model screen.
+- Corpus and generation/sampler settings unchanged. Concurrency remains 1.
+
+## Historical failures retained
+- Backend 44030147641 on 5b4f601 failed two outdated v8 prompt assertions; corrected by tests/schema follow-on.
+- Backend 44025990777 and intermediate runs remain failed historical attempts.
+- Audit-v7 paired model screen 44018644704/artifact 14300845455: Qwen 5 flags; MedGemma 6 flags. Both passed one R4 no-treatment-proposition bounded case but failed R2/R3 checks. These defects remain open pending v9 results and independent review.
+- Historical 45-role run-9 has 343 integrity findings; originals remain unchanged.
+
+## Remaining gates
+Fresh full 45-role R1–R4 acceptance NOT STARTED; full missing/failed-agent acceptance IN PROGRESS; RTX 4060 request-time verification NOT STARTED; current authoritative guideline retrieval NOT STARTED; independent qualified clinical review NOT STARTED; release BLOCKED. Hosted CPU inference is not GPU evidence. No zero-hallucination or clinical-validity claim.
+# RadOnc MDT Simulator — Recovery State
 
 Last checkpoint: 17 November 2026  
 Repository: drvishnua/RadOnc-MDT-Simulator  

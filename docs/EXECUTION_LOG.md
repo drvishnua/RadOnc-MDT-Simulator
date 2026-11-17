@@ -192,3 +192,29 @@ Append new entries chronologically. Record actual commit SHAs, run IDs and resul
 - Exact-head Backend [44020149041](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44020149041): **437 passed, 0 failed, 0 errors, 0 skipped**. JUnit artifact **14300457106**, preflight artifact **14300053331**.
 - Frontend [44020148873](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44020148873), Browser E2E [44020148938](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44020148938), Packaging Prerequisites [44020149274](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44020149274), Windows Installer [44020148842](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44020148842), Security/Dependency/CodeQL [44020148777](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44020148777), and Push Installer [44020142573](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44020142573) passed.
 - PR #1 remains open/draft/unmerged; main unchanged.
+
+
+## 17 November 2026 — schema-v9/audit-v8 correction and verification checkpoint
+
+### Root-cause findings from Backend CI on 5b4f601
+- Backend run 44030147641 failed. The failure diagnostics showed two outdated tests still expected v8 free-text wording after the harness moved to structured JSON output.
+- One cross-case test incorrectly required the generic R3 instruction not to mention the field name model_claimed_quote; the instruction is generic across R3, while the test must ensure another case's fabricated quote value is not injected into the current case.
+- A second test still asserted old prose such as "original input order" and "copy that row's exact saved_statement verbatim". These were replaced with schema assertions.
+- The new test fixture builder was updated to return case-specific structured outputs. Negative tests cover omitted/altered source rows, false consensus, lost prerequisite status, absent-quote rejection and original source order.
+
+### Additional order-integrity control and auto-trigger repair
+- Commit 9e781525fbf6ac07cf2f6a19d035b82b888f305a changed backend/scripts/run_medgemma_screening.py, backend/tests/test_medgemma_screening.py and .github/workflows/model-integrity-screening.yml.
+- Added a required R2 source_order array in the case-specific JSON schema. Validator compares its exact value with the saved source inventory order. A negative regression swaps the sequence and requires rejection.
+- The workflow push path filter now includes backend/tests/test_medgemma_screening.py. The preceding marker-only commit 5b4f601 had not triggered the screen because the changed test path was absent from the filter.
+- Commit 9e78152 included [model-integrity-screen], [medgemma] and [hai-def-terms-accepted] markers; GitHub automatically started paired screen run 44031253593.
+
+### Exact-SHA verification on 9e78152
+- Backend run 44031259073 SUCCESS. JUnit artifact 14305701393: 440 passed, 0 failed, 0 errors, 0 skipped. Deterministic preflight artifact 14305581484.
+- Frontend 44031258961 SUCCESS.
+- Browser E2E 44031258943 SUCCESS.
+- Packaging prerequisites 44031258941 SUCCESS.
+- Security/dependency audit 44031259043 SUCCESS.
+- PR Windows installer 44031258958 SUCCESS.
+- Push Windows installer 44031253605 SUCCESS.
+- Paired Qwen/MedGemma model screen 44031253593 remains IN_PROGRESS at this checkpoint. No artifacts/result inspected yet. Hosted CPU only; GPU NOT_PERFORMED.
+- Previous failed Backend CI runs 44025990777, 44030147641 and other intermediate audit-v8 attempts remain historical failures; exact later success does not erase them.

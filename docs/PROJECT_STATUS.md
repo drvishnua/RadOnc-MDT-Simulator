@@ -1,3 +1,48 @@
+# RadOnc MDT Simulator — Current Project Status
+Snapshot: 17 November 2026
+
+Repository: drvishnua/RadOnc-MDT-Simulator  
+Development branch: feature/four-round-mdt-and-performance  
+Latest application/test commit: 9e781525fbf6ac07cf2f6a19d035b82b888f305a  
+PR #1: open, draft, unmerged, base main  
+Main SHA: 39a356b8eb09399aa2da1b9b9085965999f5105a (unchanged)
+
+## Current verified state
+
+### Structured model-screening change
+- Prompt version: radonc-mdt-integrity-screen-v9.
+- Audit version: radonc-mdt-integrity-audit-v8.
+- R2 output uses a required source_order array and a source_ledger keyed by each exact saved source ID. Saved text is schema-locked. The model classifies information position, treatment option, prerequisite and prerequisite status; shared information sufficiency and shared treatment are separate propositions.
+- R3 uses schema-locked source identifiers/text and separate fields for claimed-quote presence and whether it is supported evidence. Identifier inventory and exact malformed raw references are explicitly classified.
+- Deterministic validation checks complete source coverage, exact saved text, original row order, conditionality, prerequisite status, false consensus, identifier inventory and explicit rejection of an absent quote.
+- The test workflow path filter now includes backend/tests/test_medgemma_screening.py. A marker-qualified commit on this branch has triggered the paired workflow automatically.
+- Frozen corpus and sampler options were not changed.
+
+### Exact-SHA CI — commit 9e78152
+- Backend Tests run 44031259073: SUCCESS. JUnit artifact 14305701393 confirms 440 tests, 0 failures, 0 errors, 0 skipped. Deterministic preflight artifact 14305581484.
+- Frontend Build 44031258961: SUCCESS.
+- Browser E2E 44031258943: SUCCESS.
+- Packaging Prerequisites 44031258941: SUCCESS.
+- Security and Dependency Audit 44031259043: SUCCESS.
+- PR Windows Installer 44031258958: SUCCESS.
+- Push Windows Installer 44031253605: SUCCESS.
+
+### Paired model screen
+- Workflow 44031253593 is IN PROGRESS on exact SHA 9e781525fbf6ac07cf2f6a19d035b82b888f305a.
+- The HAI-DEF pre-provision acceptance gate succeeded. The hosted workflow is configured to run Qwen and MedGemma sequentially on isolated Windows CPU.
+- No result artifact is available yet. Model adherence must remain IN PROGRESS; do not infer a pass or failure before the saved raw output and manifest are inspected.
+- Hosted CPU only. GPU measurement is NOT_PERFORMED. This run does not require the user's computer to be online.
+
+## Outstanding high-priority gates
+- Historical 45-role run-9 integrity failure: 343 findings, originals preserved.
+- Fresh full 45-role R1–R4 acceptance and missing/failed-agent acceptance.
+- Human review of model outputs; remediation if R2/R3 defects persist.
+- RTX 4060 request-time GPU/offload verification on the local Windows PC during real inference.
+- Current authoritative guideline retrieval and proposition-level source linkage.
+- Independent qualified clinical review.
+- Release remains BLOCKED. No zero-hallucination or clinical-validity claim.
+
+The detailed status/evidence table is docs/MASTER_DEVELOPMENT_CHECKLIST.md. Recovery instructions are in docs/RECOVERY_STATE.md.
 # RadOnc MDT Simulator — Project Status
 
 Snapshot: 17 November 2026  
