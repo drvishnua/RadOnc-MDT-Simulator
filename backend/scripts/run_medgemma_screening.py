@@ -565,93 +565,179 @@ def extract_raw_model_response(payload: Any) -> str | None:
 def _normalize_r2_source_labels(
     parsed: dict[str, Any], case: dict[str, Any]
 ) -> dict[str, Any]:
-    """Derive authoritative R2 order and normalize only exact source-bound short labels.
+    """Derive R2 order and repair only unambiguous omissions from exact saved text.
 
-    A model may abbreviate a uniquely supplied label (for example, "A" for
-    "Option A"). The abbreviation is expanded only when that exact label occurs
-    once in that same saved source statement. This never transfers labels across
-    sources or repairs a mismatched option/prerequisite.
+    Never transfer labels between sources or overwrite a conflicting model value.
+    Every server-derived repair is recorded with its exact source and basis.
     """
     rows = saved_r1_source_inventory(case.get("input") or {})
     source_ids = [row["source_id"] for row in rows]
     ledger = parsed["source_ledger"]
     normalizations: list[dict[str, str]] = []
 
-    fields = (
-        (
-            "treatment_option",
-            re.compile(r"\bOption\s+([A-Z])\b", re.IGNORECASE),
-            re.compile(
-                r"(?:(?:conditional[_\s]+support[_\s]+for[_\s]+)|"
-                r"(?:support[_\s]+for[_\s]+)|(?:Option[_\s]+)?)?([A-Z])",
-                re.IGNORECASE,
-            ),
-        ),
-        (
-            "prerequisite",
-            re.compile(r"\bprerequisite\s+([A-Z])\b", re.IGNORECASE),
-            re.compile(r"(?:prerequisite\s+)?([A-Z])", re.IGNORECASE),
-        ),
-    )
+    def apply_source_bound_value(
+        source_id: str,
+        source_row: dict[str, Any],
+        field_name: str,
+        model_value: str,
+        server_value: str,
+        basis: str,
+    ) -> None:
+        source_row[field_name] = server_value
+        normalizations.append({
+            "source_id": source_id,
+            "field": field_name,
+            "model_value": model_value,
+            "server_value": server_value,
+            "basis": basis,
+        })
+
+    option_pattern = re.compile(r"\bOption\s+([A-Z])\b", re.IGNORECASE)
+    prerequisite_pattern = re.compile(r"\bprerequisite\s+([A-Z])\b", re.IGNORECASE)
+    option_empty_sentinels = {
+        "", "none", "none_identified", "not_applicable", "not_shared",
+        "no_option", "no_treatment_option",
+    }
+    prerequisite_empty_sentinels = {
+        "", "unknown", "none", "not_applicable", "not stated", "not specified",
+        "no prerequisite", "no_prerequisite",
+    }
+
     for row in rows:
         source_id = row["source_id"]
         saved_statement = row["saved_statement"]
         source_row = ledger[source_id]
-        for field_name, source_pattern, candidate_pattern in fields:
+
+        # Exact, source-local statements can resolve only the narrow information
+        # classifications used by this screen. Conflicting/other values survive
+        # unchanged for the audit to flag.
+        current_position = source_row.get("information_position")
+        expected_position = None
+        if re.search(
+            r"\bdoes not state whether additional information is required\b",
+            saved_statement,
+            re.IGNORECASE,
+        ):
+            expected_position = "does_not_state"
+        elif (
+            re.search(
+                r"\bagrees that additional information is required\b",
+                saved_statement,
+                re.IGNORECASE,
+            )
+            and not re.search(
+                r"\b(?:does not|doesn't|did not|didn't)\s+agree\b",
+                saved_statement,
+                re.IGNORECASE,
+            )
+        ):
+            expected_position = "agrees"
+        if expected_position and current_position in {"", "not_applicable"}:
+            apply_source_bound_value(
+                source_id,
+                source_row,
+                "information_position",
+                str(current_position),
+                expected_position,
+                "exact unambiguous information-position wording in this saved source statement",
+            )
+
+        for field_name, source_pattern, empty_sentinels, description in (
+            (
+                "treatment_option",
+                option_pattern,
+                option_empty_sentinels,
+                "unique explicit option label in this exact saved statement",
+            ),
+            (
+                "prerequisite",
+                prerequisite_pattern,
+                prerequisite_empty_sentinels,
+                "unique explicit prerequisite label in this exact saved statement",
+            ),
+        ):
             candidate = source_row.get(field_name)
-            if not isinstance(candidate, str) or not candidate.strip():
+            if not isinstance(candidate, str):
                 continue
             source_matches = list(source_pattern.finditer(saved_statement))
+            candidate_folded = candidate.strip().casefold()
+
+            # If the source explicitly contains one unique label and the model
+            # leaves the field blank or uses a no-value sentinel, fill that field
+            # from this source only. Do not infer status or remove conditionality.
+            if len(source_matches) == 1 and candidate_folded in empty_sentinels:
+                canonical_value = source_matches[0].group(0)
+                apply_source_bound_value(
+                    source_id,
+                    source_row,
+                    field_name,
+                    candidate,
+                    canonical_value,
+                    description,
+                )
+                continue
+
+            # Empty fields with no matching source label remain empty. The
+            # existing sentinel cleanup is retained for statements with no label.
+            if not candidate.strip():
+                continue
             if (
                 field_name == "treatment_option"
                 and not source_matches
-                and candidate.strip().casefold() in {
-                    "none", "none_identified", "not_applicable", "not_shared",
-                    "no_option", "no_treatment_option",
-                }
+                and candidate_folded in option_empty_sentinels
             ):
-                source_row[field_name] = ""
-                normalizations.append({
-                    "source_id": source_id,
-                    "field": field_name,
-                    "model_value": candidate,
-                    "server_value": "",
-                    "basis": "explicit no-option sentinel; this saved statement contains no option label",
-                })
+                apply_source_bound_value(
+                    source_id,
+                    source_row,
+                    field_name,
+                    candidate,
+                    "",
+                    "explicit no-option sentinel; this saved statement contains no option label",
+                )
                 continue
             if (
                 field_name == "prerequisite"
                 and not source_matches
                 and not re.search(r"\bprerequisite\b", saved_statement, re.IGNORECASE)
-                and candidate.strip().casefold() in {
-                    "unknown", "none", "not_applicable", "not stated", "not specified",
-                    "no prerequisite", "no_prerequisite",
-                }
+                and candidate_folded in prerequisite_empty_sentinels
             ):
-                source_row[field_name] = ""
-                normalizations.append({
-                    "source_id": source_id,
-                    "field": field_name,
-                    "model_value": candidate,
-                    "server_value": "",
-                    "basis": "no prerequisite is stated in this exact saved statement",
-                })
+                apply_source_bound_value(
+                    source_id,
+                    source_row,
+                    field_name,
+                    candidate,
+                    "",
+                    "no prerequisite is stated in this exact saved statement",
+                )
                 if source_row.get("prerequisite_status") != "not_applicable":
-                    normalizations.append({
-                        "source_id": source_id,
-                        "field": "prerequisite_status",
-                        "model_value": str(source_row.get("prerequisite_status", "")),
-                        "server_value": "not_applicable",
-                        "basis": "no prerequisite is stated in this exact saved statement",
-                    })
-                    source_row["prerequisite_status"] = "not_applicable"
+                    previous_status = str(source_row.get("prerequisite_status", ""))
+                    apply_source_bound_value(
+                        source_id,
+                        source_row,
+                        "prerequisite_status",
+                        previous_status,
+                        "not_applicable",
+                        "no prerequisite is stated in this exact saved statement",
+                    )
                 continue
+
+            # A non-empty shorthand is canonicalised only when it uniquely
+            # matches the one exact label in the same saved source statement.
             candidate_for_match = candidate.strip().replace("_", " ")
             candidate_for_match = re.sub(
                 r"\s*\((?:conditional|contingent)\)\s*$",
                 "",
                 candidate_for_match,
                 flags=re.IGNORECASE,
+            )
+            candidate_pattern = (
+                re.compile(
+                    r"(?:(?:conditional[\s_]+support[\s_]+for[\s_]+)|"
+                    r"(?:support[\s_]+for[\s_]+)|(?:Option[\s_]+)?)?([A-Z])",
+                    re.IGNORECASE,
+                )
+                if field_name == "treatment_option"
+                else re.compile(r"(?:prerequisite\s+)?([A-Z])", re.IGNORECASE)
             )
             candidate_match = candidate_pattern.fullmatch(candidate_for_match)
             if len(source_matches) != 1 or candidate_match is None:
@@ -661,21 +747,20 @@ def _normalize_r2_source_labels(
                 continue
             canonical_value = source_match.group(0)
             if candidate != canonical_value:
-                source_row[field_name] = canonical_value
-                normalizations.append({
-                    "source_id": source_id,
-                    "field": field_name,
-                    "model_value": candidate,
-                    "server_value": canonical_value,
-                    "basis": "unique exact label in this source's saved statement",
-                })
+                apply_source_bound_value(
+                    source_id,
+                    source_row,
+                    field_name,
+                    candidate,
+                    canonical_value,
+                    "unique exact label in this source's saved statement",
+                )
 
     return {
         "source_order": source_ids,
         "field_normalizations": normalizations,
         "source_order_basis": "original saved R1 contribution order",
     }
-
 
 def validate_model_response(
     raw_response: Any, case: dict[str, Any] | None = None
@@ -1165,10 +1250,12 @@ def audit_screen_response(case: dict[str, Any], response: Any) -> list[str]:
                 option_rows[source_id] = (option_value.casefold(), prerequisite_value.casefold())
 
         information = structured["shared_information_sufficiency"]
+        information_ids = set(information["source_ids"])
+        affirming_set = set(affirming_sources)
         if len(affirming_sources) >= 2:
             if (
                 information["status"] != "shared"
-                or not set(affirming_sources).issubset(set(information["source_ids"]))
+                or not affirming_set.issubset(information_ids)
             ):
                 findings.append(
                     "R2 structured partial-agreement omission: all source IDs affirming the same information proposition must be identified."
@@ -1177,7 +1264,18 @@ def audit_screen_response(case: dict[str, Any], response: Any) -> list[str]:
             findings.append(
                 "R2 structured unsupported information agreement: fewer than two saved sources affirm the proposition."
             )
-        if set(silent_sources).intersection(information["source_ids"]):
+        if information_ids and information["status"] != "shared":
+            findings.append(
+                "R2 structured information-source contradiction: source IDs were supplied even though the proposition status is not_shared/insufficient."
+            )
+        unsupported_information_ids = information_ids - affirming_set
+        if unsupported_information_ids:
+            findings.append(
+                "R2 structured information-source misattribution: source IDs without an exact saved affirmative statement were included: "
+                + ", ".join(sorted(unsupported_information_ids))
+                + "."
+            )
+        if set(silent_sources).intersection(information_ids):
             findings.append(
                 "R2 structured silent-source misattribution: a source that is silent was included as affirming."
             )
