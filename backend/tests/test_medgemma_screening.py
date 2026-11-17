@@ -430,7 +430,7 @@ def test_r2_schema_prioritises_structured_fields_and_bounds_free_text():
     assert schema["required"] == list(schema["properties"])
 
     prompt = build_case_prompt(case)
-    assert "response field must be one factual sentence of at most 30 words" in prompt
+    assert "response field must be one non-empty factual sentence of at most 30 words" in prompt
     assert "do not put analysis or reasoning in that field" in prompt
 
 
