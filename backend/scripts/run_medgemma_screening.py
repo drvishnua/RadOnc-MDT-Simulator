@@ -1366,7 +1366,7 @@ def audit_screen_response(case: dict[str, Any], response: Any) -> list[str]:
         if case_id == "R2-CONDITIONALITY-007":
             has_option = bool(re.search(r"\boption\s+a\b", folded))
             has_prerequisite = bool(re.search(r"\bprerequisite\s+x\b", folded))
-            has_conditionality = bool(re.search(r"\b(?:conditional|only if|subject to|contingent)\b", folded))
+            has_conditionality = bool(re.search(r"\b(?:conditional|conditionally|only if|subject to|contingent)\b", folded))
             has_unknown_status = bool(re.search(
                 r"\b(?:unknown|unverified|not present in the supplied record|not documented)\b",
                 folded,
