@@ -101,9 +101,17 @@ def test_unaccepted_medgemma_push_is_rejected_before_ollama_provisioning():
     assert "No model was provisioned." in terms_step
 
 
-def test_combined_manifest_pins_prompt_audit_and_screening_script_digest():
+def test_combined_manifest_derives_and_cross_checks_versions_from_raw_model_manifests():
     workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
 
-    assert 'prompt_version = "radonc-mdt-integrity-screen-v4"' in workflow
+    assert 'prompt_version = "PENDING_FROM_MODEL_OUTPUT"' in workflow
     assert 'audit_version = "radonc-mdt-integrity-audit-v3"' in workflow
     assert 'script_sha256 = (Get-FileHash -LiteralPath "backend/scripts/run_medgemma_screening.py" -Algorithm SHA256).Hash.ToLowerInvariant()' in workflow
+    assert "function Get-ModelScreenOutputManifest" in workflow
+    assert '$qwenRunManifest = Get-ModelScreenOutputManifest -Path $qwenOutput' in workflow
+    assert '$manifest.screening.prompt_version = [string]$qwenRunManifest.prompt_version' in workflow
+    assert '$manifest.screening.audit_version = [string]$qwenRunManifest.audit_version' in workflow
+    assert '$medgemmaRunManifest = Get-ModelScreenOutputManifest -Path $medOutput' in workflow
+    assert 'foreach ($field in @("prompt_version", "audit_version", "screening_script_sha256"))' in workflow
+    assert "Qwen and MedGemma JSONL manifest mismatch" in workflow
+    assert 'prompt_version = "radonc-mdt-integrity-screen-v4"' not in workflow

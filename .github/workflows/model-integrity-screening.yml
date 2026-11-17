@@ -105,7 +105,7 @@ jobs:
               workflow_url = "https://github.com/$($env:GITHUB_REPOSITORY)/actions/runs/$runId"
             }
             screening = [ordered]@{
-              prompt_version = "radonc-mdt-integrity-screen-v4"
+              prompt_version = "PENDING_FROM_MODEL_OUTPUT"
               audit_version = "radonc-mdt-integrity-audit-v3"
               script_sha256 = (Get-FileHash -LiteralPath "backend/scripts/run_medgemma_screening.py" -Algorithm SHA256).Hash.ToLowerInvariant()
             }
@@ -133,6 +133,27 @@ jobs:
             )
           }
           $manifest | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
+
+          function Get-ModelScreenOutputManifest {
+            param([Parameter(Mandatory)][string]$Path)
+            if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+              throw "Model-screen JSONL is missing; its prompt/audit provenance cannot be verified: $Path"
+            }
+            $firstLine = Get-Content -LiteralPath $Path -TotalCount 1
+            if ([string]::IsNullOrWhiteSpace([string]$firstLine)) {
+              throw "Model-screen JSONL has no manifest record: $Path"
+            }
+            $record = $firstLine | ConvertFrom-Json -ErrorAction Stop
+            if ($record.record_type -ne "manifest") {
+              throw "The first JSONL record is not a manifest: $Path"
+            }
+            foreach ($field in @("prompt_version", "audit_version", "screening_script_sha256")) {
+              if ([string]::IsNullOrWhiteSpace([string]$record.$field)) {
+                throw "Model-screen JSONL manifest is missing $field: $Path"
+              }
+            }
+            return $record
+          }
 
           $ollamaStarted = $false
           try {
@@ -184,6 +205,17 @@ jobs:
               throw "Qwen screening failed or was incomplete (exit code $LASTEXITCODE)."
             }
             $manifest.execution.qwen_status = "COMPLETED_PENDING_HUMAN_REVIEW"
+            $qwenRunManifest = Get-ModelScreenOutputManifest -Path $qwenOutput
+            $workflowScriptHash = (Get-FileHash -LiteralPath "backend/scripts/run_medgemma_screening.py" -Algorithm SHA256).Hash.ToLowerInvariant()
+            if ($qwenRunManifest.screening_script_sha256 -ne $workflowScriptHash) {
+              throw "Qwen JSONL screening-script digest does not match the checked-out script."
+            }
+            $manifest.screening.prompt_version = [string]$qwenRunManifest.prompt_version
+            $manifest.screening.audit_version = [string]$qwenRunManifest.audit_version
+            if ($manifest.screening.script_sha256 -ne $qwenRunManifest.screening_script_sha256) {
+              throw "Combined manifest screening-script digest does not match the Qwen JSONL manifest."
+            }
+            $manifest | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
             Write-Host "MODEL_SCREEN_QWEN_COMPLETED_PENDING_HUMAN_REVIEW"
 
             $includeMed = ($env:MEDGEMMA_REQUESTED -eq "true")
@@ -207,6 +239,12 @@ jobs:
                 throw "MedGemma screening failed or was incomplete (exit code $LASTEXITCODE)."
               }
               $manifest.execution.medgemma_status = "COMPLETED_PENDING_HUMAN_REVIEW"
+              $medgemmaRunManifest = Get-ModelScreenOutputManifest -Path $medOutput
+              foreach ($field in @("prompt_version", "audit_version", "screening_script_sha256")) {
+                if ([string]$medgemmaRunManifest.$field -ne [string]$qwenRunManifest.$field) {
+                  throw "Qwen and MedGemma JSONL manifest mismatch for $field."
+                }
+              }
               Write-Host "MODEL_SCREEN_MEDGEMMA_COMPLETED_PENDING_HUMAN_REVIEW"
             } else {
               $manifest.execution.medgemma_status = "SKIPPED_NOT_REQUESTED"
