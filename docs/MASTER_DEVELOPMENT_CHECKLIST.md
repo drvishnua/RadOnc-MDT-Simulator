@@ -8,6 +8,8 @@
 
 This is the single authoritative Master Development and Verification Checklist. Older dated checkpoints and their tables remain below as historical evidence and are explicitly superseded by the one **Current status** table.
 
+**Continuity records:** [PROJECT_STATUS.md](PROJECT_STATUS.md) · [TASK_CHECKLIST.md](TASK_CHECKLIST.md) · [DECISIONS.md](DECISIONS.md) · [EXECUTION_LOG.md](EXECUTION_LOG.md) · [RECOVERY_STATE.md](RECOVERY_STATE.md) · [KNOWN_ISSUES.md](KNOWN_ISSUES.md). These are supporting records; this Master Checklist remains the sole authoritative verification-status table.
+
 ## Current position
 
 - **Current application/test revision:** `8b7124cf1d0b236100958fd91b8fadc506eee559`. The R3 audit now associates a misclassification label with the exact source identifier instead of searching a broad surrounding text window. A regression verifies that a separate malformed range does not make a nearby supplied `R2:MO-01` invalid. The v6 R2 prompt assertion now compares case-insensitively.
