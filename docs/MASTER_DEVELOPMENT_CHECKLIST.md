@@ -4,7 +4,7 @@ Repository: drvishnua/RadOnc-MDT-Simulator
 Development branch: feature/four-round-mdt-and-performance  
 Latest application/test commit: aa6dac613288d948f3c952f5b5c9de80fc5448a2  
 Latest model-screen trigger commit: eb75b076459a4f5da62758b631c59ca2fef1232f  
-Latest documentation/checklist checkpoint reviewed: 984f259944b0341b8f0ce70bc665da5ccc5e34b7  
+Latest documentation/checklist checkpoint reviewed: 57e6beb4b6a433de60ca5137b08627e8c4448fd5  
 PR #1: open, draft, unmerged, base main  
 main: 39a356b8eb09399aa2da1b9b9085965999f5105a, unchanged.
 
@@ -76,7 +76,8 @@ Continuity files: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_
 - First v12 test attempt failed one new normalization regression due to over-escaped regex. Failure was inspected and corrected; exact-SHA backend run 44045273632 passed 453 tests, 0 failed/errors/skipped. Earlier failed run 44045174509 remains preserved.
 - Trigger commit eb75b076459a4f5da62758b631c59ca2fef1232f contains [model-integrity-screen], [medgemma] and [hai-def-terms-accepted]. Screening run 44045424408 passed its HAI-DEF pre-provision gate and is IN PROGRESS in the combined Ollama provisioning/inference step; no v12 outputs/artifact yet.
 - On exact trigger SHA eb75b076, Backend 44045430442, Frontend 44045430218, Browser E2E 44045430256, Security/Dependency/CodeQL 44045430170 and Packaging Prerequisites 44045430220 passed; PR Windows Installer 44045430183 and push Windows Installer 44045424397 remained IN PROGRESS at latest check.
-- Checklist reconciliation commit 984f259944b0341b8f0ce70bc665da5ccc5e34b7 is documentation-only. Its six new PR checks 44045682142 (Backend), 44045682255 (Frontend), 44045682137 (Browser E2E), 44045682129 (Security/CodeQL), 44045682155 (Packaging Prerequisites) and 44045682163 (Windows Installer) were IN PROGRESS or queued at latest check.
+- Checklist reconciliation commit 984f259944b0341b8f0ce70bc665da5ccc5e34b7 is documentation-only. Its Backend 44045682142, Frontend 44045682255 and Packaging Prerequisites 44045682155 passed; Browser E2E 44045682137, Security/CodeQL 44045682129 and Windows Installer 44045682163 were cancelled when the next docs commit superseded that head.
+- Current documentation-only branch head 57e6beb4b6a433de60ca5137b08627e8c4448fd5: Backend 44045771155 passed 453/453; Frontend 44045771203, Browser E2E 44045771259, Security/CodeQL 44045771201 and Packaging Prerequisites 44045771220 were IN PROGRESS; Windows Installer 44045771149 was queued. PR #1 remains open/draft/unmerged against main; main SHA remains 39a356b8eb09399aa2da1b9b9085965999f5105a.
 
 ### Master Development and Verification Checklist — Current Status
 
@@ -93,7 +94,7 @@ Continuity files: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_
 | Provenance and guideline/evidence retrieval | IN PROGRESS | Screening manifests and source-bound transformations recorded; current guideline retrieval and claim linkage not integrated. |
 | Chair consensus, dissent and traceability | IN PROGRESS | Deterministic safeguards and audit tests pass; live model adherence and full 45-role review outstanding. |
 | Missing/failed-agent handling | IN PROGRESS | Missing-agent synthetic case outputs inspected; full 45-role failure-injection acceptance outstanding. |
-| Backend tests | VERIFIED | 453 passed, 0 failed, 0 errors, 0 skipped; exact-SHA run 44045273632 on aa6dac613288d948f3c952f5b5c9de80fc5448a2; JUnit artifact 14311247409 and deterministic preflight artifact 14311386191. No model inference or clinical accuracy evaluation in this test run. |
+| Backend tests | VERIFIED | 453 passed, 0 failed, 0 errors, 0 skipped on aa6dac run 44045273632; repeated on current docs-only head 57e6 run 44045771155 with 453/453. JUnit artifact 14311247409 and deterministic preflight artifact 14311386191 from the aa6dac run. No model inference or clinical accuracy evaluation in these test runs. |
 | Frontend build | VERIFIED | Run 44040195520 on exact SHA 57d6064. |
 | Browser E2E | VERIFIED | Run 44040195519 on exact SHA 57d6064. |
 | Dashboard and read-only API validation | VERIFIED | Mission Control and Developer Monitor previously browser-verified; broader production API testing remains IN PROGRESS. |
