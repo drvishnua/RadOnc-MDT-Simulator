@@ -1200,6 +1200,43 @@ def audit_screen_response(case: dict[str, Any], response: Any) -> list[str]:
                     "R3 structured quote classification error: the claimed quote is not absent from the saved source."
                 )
 
+    if case_id == "R3-INVALID-SOURCE-008":
+        # The prose/JSON response must not contradict the separately validated
+        # structured inventory. A supplied ID cannot be relabelled as unsupplied
+        # or malformed in the response string.
+        try:
+            narrative_payload = json.loads(response_text)
+        except (TypeError, json.JSONDecodeError):
+            narrative_payload = None
+        if isinstance(narrative_payload, list):
+            supplied_ids = set(
+                case_local_identifier_inventory(case.get("input") or {})[
+                    "explicitly_supplied_source_ids"
+                ]
+            )
+            invalid_statuses = {
+                "deliberately_unsupplied", "unsupplied", "malformed",
+                "invalid", "malformed_reference_text_verbatim",
+            }
+            for item in narrative_payload:
+                if not isinstance(item, dict):
+                    continue
+                source_id = item.get("source_id")
+                status = item.get("status")
+                if source_id in supplied_ids and isinstance(status, str) and status.casefold() in invalid_statuses:
+                    findings.append(
+                        f"R3 narrative identifier contradiction: explicitly supplied ID {source_id} was described as {status!r}."
+                    )
+        refusal = re.search(
+            r"\b(?:audit|review|classify)\b.{0,80}\b(?:cannot|can't|could not)\b"
+            r"|\b(?:cannot|can't|unable to)\b.{0,80}\b(?:audit|review|classify)\b",
+            folded,
+        )
+        if refusal:
+            findings.append(
+                "R3 audit refusal: the response says the supplied synthetic identifier inventory cannot be audited despite the exact inventory being provided."
+            )
+
     return findings
 
 def load_corpus(path: Path = CORPUS_PATH) -> tuple[dict, str]:

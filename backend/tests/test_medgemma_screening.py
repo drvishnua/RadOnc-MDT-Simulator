@@ -139,7 +139,7 @@ def test_round_specific_prompt_instructions_are_present():
     assert "source_ledger" in prompts["R2"]
     assert "structured proposition assessments" in prompts["R2"]
     assert "independent propositions" in prompts["R2"]
-    assert "synthetic input is not a reason to refuse" in prompts["R1"]
+    assert "synthetic input is not a reason to refuse" in prompts["R1"].casefold()
     assert "Perform a critical audit" in prompts["R3"]
     assert "identifier_inventory_review" in prompts["R3"]
     assert "Chair closing record" in prompts["R4"]
@@ -1251,6 +1251,13 @@ def test_r2_normalizes_conditional_support_enum_only_to_same_saved_option():
             "server_value": "",
             "basis": "explicit no-option sentinel; this saved statement contains no option label",
         },
+        {
+            "source_id": "R1:MO-01",
+            "field": "prerequisite",
+            "model_value": "prerequisite X",
+            "server_value": "Prerequisite X",
+            "basis": "unique exact label in this source's saved statement",
+        },
     ]
     assert not any("unsupported option" in item for item in screening.audit_screen_response(case, parsed))
 
@@ -1305,6 +1312,32 @@ def test_r4_audit_does_not_flag_a_real_structured_chair_synthesis_as_echo():
     }
     findings = screening.audit_screen_response(case, json.dumps(valid))
     assert not any("R4 Chair synthesis omission" in item for item in findings)
+
+
+
+
+
+def test_r3_audit_flags_narrative_identifier_labels_that_conflict_with_structured_inventory():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R3-INVALID-SOURCE-008")
+    response = json.dumps([
+        {"source_id": "R2:MO-01", "status": "deliberately_unsupplied"},
+        {"source_id": "R2:RO-01", "status": "malformed_reference_text_verbatim"},
+    ])
+    output = _valid_model_output(case, response)
+    findings = screening.audit_screen_response(case, output)
+    assert sum("R3 narrative identifier contradiction" in item for item in findings) == 2
+
+
+def test_r3_audit_flags_refusal_to_audit_a_supplied_synthetic_inventory():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R3-INVALID-SOURCE-008")
+    output = _valid_model_output(
+        case,
+        "The critical audit cannot be performed using the supplied source IDs.",
+    )
+    findings = screening.audit_screen_response(case, output)
+    assert any("R3 audit refusal" in item for item in findings)
 
 
 def test_r3_prompt_distinguishes_model_claimed_quote_from_locked_saved_text():
