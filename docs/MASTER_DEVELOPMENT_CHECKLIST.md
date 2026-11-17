@@ -3,7 +3,7 @@
 Repository: drvishnua/RadOnc-MDT-Simulator  
 Development branch: feature/four-round-mdt-and-performance  
 Latest application/test commit: 57d6064087c63ccb94eeec43aa670891fe3792c8  
-Latest documentation/workflow checkpoint: d65534e837c141f88e7268b29e7b2b75f7bec2e0  
+Latest documentation/checklist checkpoint reviewed: da07b1d0ae2f9fb6cec61c1ff3988646967cde6e  
 PR #1: open, draft, unmerged, base main  
 main: 39a356b8eb09399aa2da1b9b9085965999f5105a, unchanged.
 
@@ -59,6 +59,7 @@ Continuity files: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_
 - Exact-SHA push Windows Installer 44040185771: VERIFIED; build/install/smoke/upload passed.
 - Model screening push run 44040185706: SKIPPED as expected because code commit 57d6064 did not include a model-screen marker.
 - Documentation checkpoint d65534e837c141f88e7268b29e7b2b75f7bec2e0 did not change application code. All six PR checks on that exact head passed: Backend 44040716001; Frontend 44040715987; Browser E2E 44040716041; Windows Packaging Prerequisites 44040716022; Windows Installer 44040716081; Security/Dependency/CodeQL 44040715993.
+- Latest checklist reconciliation commit da07b1d0ae2f9fb6cec61c1ff3988646967cde6e also changes documentation only. On that exact SHA, Backend 44041146885, Frontend 44041146868 and Windows Packaging Prerequisites 44041147002 passed; Browser E2E 44041146870, Security/Dependency/CodeQL 44041146896 and Windows Installer 44041146854 were IN PROGRESS at the latest check. Do not claim six of six on da07.
 - The documentation-only marker commit f1cf9e0a5579122277c2eec241250fb5db1c6156 did NOT start the screen because docs are excluded by the workflow push-path filter. No v11 model run was assumed.
 - Workflow-file trigger commit 07548081f2b41ee1ed9db652e78156e2b65cc9be matched the push-path filter and started Synthetic Model Integrity Screening **44040631649** on that exact SHA.
 - The HAI-DEF pre-provision gate completed successfully. At the latest live check (17 November 2026, 13:14 IST), the combined isolated Ollama provisioning/inference step remained IN PROGRESS. GitHub exposed no artifact or confirmed generation count; Qwen completion and MedGemma pull/execution are therefore NOT YET VERIFIED.
