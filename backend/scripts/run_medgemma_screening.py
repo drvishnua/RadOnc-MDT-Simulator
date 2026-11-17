@@ -129,8 +129,9 @@ def round_instruction(round_label: str) -> str:
         ),
         "R2": (
             "Analyse only the supplied saved R1 contributions. The case-specific JSON schema "
-            "contains a required source_ledger property for every exact saved source ID. Each "
-            "saved_statement field is schema-locked to the exact server text; do not alter it. "
+            "contains an exact source_order array and a required source_ledger property for every "
+            "saved source ID. The source_order array must match the original input order exactly. "
+            "Each saved_statement field is schema-locked to the exact server text; do not alter it. "
             "For each row, classify information_position, treatment_option, prerequisite and "
             "prerequisite_status. A statement agreeing that more information is required is not "
             "a treatment-option position. A silent statement must remain silent. Keep every "
@@ -273,6 +274,11 @@ def build_response_schema(case: dict[str, Any]) -> dict[str, Any]:
                     },
                 })
             source_ids = [row["source_id"] for row in rows]
+            properties["source_order"] = {
+                "type": "array",
+                "items": {"type": "string", "enum": source_ids},
+                "uniqueItems": True,
+            }
             properties["source_ledger"] = _closed_object_schema(ledger_properties)
             for field_name in ("shared_information_sufficiency", "shared_treatment_proposition"):
                 properties[field_name] = _closed_object_schema({
@@ -354,8 +360,11 @@ def _validate_case_specific_fields(
 
     if case.get("round") == "R2" and "source_ledger" in schema["properties"]:
         rows = saved_r1_source_inventory(case.get("input") or {})
+        source_ids = [row["source_id"] for row in rows]
+        if parsed.get("source_order") != source_ids:
+            return "R2 source_order did not preserve the original saved contribution order."
         ledger = parsed.get("source_ledger")
-        expected_ids = {row["source_id"] for row in rows}
+        expected_ids = set(source_ids)
         if not isinstance(ledger, dict) or set(ledger) != expected_ids:
             return "R2 source_ledger does not contain exactly every saved source ID."
         for row in rows:
@@ -485,7 +494,8 @@ def build_case_prompt(case: dict[str, Any]) -> str:
         "Do not cite external sources or invent evidence. Identify unsupported information "
         "as unknown or unverified. If the input is insufficient, say so. "
         "Return the exact JSON fields required by the case-specific response schema. "
-        "For R2, complete every source_ledger row and both structured proposition assessments. "
+        "For R2, reproduce source_order exactly as the original saved row order, complete every "
+        "source_ledger row and both structured proposition assessments. "
         "For R3, complete each identifier_inventory_review and source_quote_review field present "
         "in the schema. Never alter locked source IDs or saved text. Do not include hidden reasoning "
         "or extra fields.\n"

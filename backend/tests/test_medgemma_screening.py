@@ -61,6 +61,7 @@ def _valid_model_output(case, response):
             else {"status": "not_shared", "source_ids": []}
         )
         output.update({
+            "source_order": [row["source_id"] for row in screening.saved_r1_source_inventory(case.get("input") or {})],
             "source_ledger": ledger,
             "shared_information_sufficiency": shared_information,
             "shared_treatment_proposition": {"status": "not_shared", "source_ids": []},
@@ -196,7 +197,8 @@ def test_v9_prompts_preserve_structured_provenance_and_prevent_cross_case_leakag
     assert "a case_id is a test label" in invalid_prompt
     assert "do not import material from another case" in invalid_prompt
     assert "r3-fabricated-quote-009" not in invalid_prompt
-    assert "model_claimed_quote" not in invalid_prompt
+    assert "mri confirms that no distant disease is present." not in invalid_prompt
+    assert "source_quote_review" not in invalid_payload["format"]["properties"]
     assert "identifier_inventory_review" in invalid_payload["format"]["properties"]
 
     fabricated_case = next(item for item in corpus["cases"] if item["case_id"] == "R3-FABRICATED-QUOTE-009")
@@ -424,6 +426,12 @@ def test_case_specific_schema_rejects_dropped_or_altered_r2_source_rows():
     parsed, error = validate_model_response(json.dumps(altered), case)
     assert parsed is None
     assert "altered or omitted a server-saved statement" in error
+
+    reordered = json.loads(json.dumps(valid))
+    reordered["source_order"] = list(reversed(reordered["source_order"]))
+    parsed, error = validate_model_response(json.dumps(reordered), case)
+    assert parsed is None
+    assert "original saved contribution order" in error
 
 
 def test_r2_structured_audit_flags_false_consensus_and_lost_prerequisite_status():
@@ -893,21 +901,29 @@ def test_r3_separate_malformed_range_does_not_reclassify_nearby_supplied_source_
     assert not any("R3 quote-review omission" in item for item in findings)
 
 
-def test_v8_prompts_require_copy_first_r2_attribution_and_separate_consensus_types():
+def test_v9_r2_structured_schema_preserves_order_attribution_and_consensus_types():
     corpus, _ = load_corpus()
     partial_case = next(item for item in corpus["cases"] if item["case_id"] == "R2-PARTIAL-AGREEMENT-006")
-    partial_prompt = build_generate_payload("qwen3.5:4b", partial_case)["prompt"].casefold()
-    assert "original input order" in partial_prompt
-    assert "copy that row's exact saved_statement verbatim" in partial_prompt
-    assert "do not swap source ids" in partial_prompt
-    assert "a row stating 'does not state whether additional information is required' is silent" in partial_prompt
-    assert "shared information-sufficiency proposition" in partial_prompt
-    assert "shared treatment proposition" in partial_prompt
-    assert "no shared treatment proposition is established by the supplied contributions" in partial_prompt
+    partial_payload = build_generate_payload("qwen3.5:4b", partial_case)
+    partial_schema = partial_payload["format"]["properties"]
+    source_ids = ["R1:RO-01", "R1:MO-01", "R1:SO-02"]
+    assert partial_schema["source_order"]["items"]["enum"] == source_ids
+    assert list(partial_schema["source_ledger"]["properties"]) == source_ids
+    assert partial_schema["source_ledger"]["required"] == source_ids
+    assert "shared_information_sufficiency" in partial_schema
+    assert "shared_treatment_proposition" in partial_schema
 
     conditional_case = next(item for item in corpus["cases"] if item["case_id"] == "R2-CONDITIONALITY-007")
-    conditional_prompt = build_generate_payload("qwen3.5:4b", conditional_case)["prompt"].casefold()
-    assert "at least two source ids explicitly support the same treatment option" in conditional_prompt
+    conditional_payload = build_generate_payload("qwen3.5:4b", conditional_case)
+    conditional_prompt = conditional_payload["prompt"].casefold()
+    conditional_schema = conditional_payload["format"]["properties"]["source_ledger"]["properties"]
+    assert conditional_schema["R1:RO-01"]["properties"]["saved_statement"]["enum"] == [
+        "Conditional support for Option A only if prerequisite X is confirmed."
+    ]
+    assert conditional_schema["R1:MO-01"]["properties"]["saved_statement"]["enum"] == [
+        "Prerequisite X is not present in the supplied record."
+    ]
+    assert "at least two sources explicitly support the same" in conditional_prompt
     assert "not present in the supplied record" in conditional_prompt
 
 

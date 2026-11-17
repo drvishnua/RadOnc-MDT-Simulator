@@ -24,6 +24,7 @@ on:
       - ".github/workflows/model-integrity-screening.yml"
       - "backend/scripts/run_medgemma_screening.py"
       - "backend/tests/fixtures/medgemma_model_integrity_screening_v1.json"
+      - "backend/tests/test_medgemma_screening.py"
       - "backend/tests/test_medgemma_screening_workflow.py"
       - "packaging/windows/Ensure-RadOnc-AIEngine.ps1"
 
