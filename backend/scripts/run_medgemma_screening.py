@@ -31,10 +31,10 @@ CORPUS_PATH = (
     / "fixtures"
     / "medgemma_model_integrity_screening_v1.json"
 )
-PROMPT_VERSION = "radonc-mdt-integrity-screen-v15"
-AUDIT_VERSION = "radonc-mdt-integrity-audit-v14"
-# Prompt-v15/audit-v14: explicit unknown-prerequisite wording, proposition-specific source attribution,
-# and mandatory audit of the supplied model-claimed quote against exact saved text.
+PROMPT_VERSION = "radonc-mdt-integrity-screen-v16"
+AUDIT_VERSION = "radonc-mdt-integrity-audit-v15"
+# Prompt-v16/audit-v15: explicit R4 source inventory, locked completeness metadata,
+# insufficient-data guard, and clearer proposition-consistent R2 narrative contract.
 # [model-integrity-screen] bounded paired Qwen/MedGemma retest after exact-SHA backend regression pass.
 DEFAULT_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/")
 GENERATION_OPTIONS = {
@@ -164,7 +164,11 @@ def round_instruction(round_label: str) -> str:
             "assessment to not_shared with an empty source_ids list. Do not infer missing positions "
             "or generalise the bounded synthetic rows to all 45 roles. The response string is a "
             "brief explanation only; the structured source_ledger and proposition assessments "
-            "are the auditable output."
+            "are the auditable output. The response field is mandatory and must never be blank, even when the structured fields are complete. "
+            "Use one sentence of at most 30 words that restates the structured proposition outcomes consistently. "
+            "If information sufficiency is shared, name every exact supporting source ID and do not say that it is not shared. "
+            "If it is not_shared, do not imply information agreement. State treatment agreement separately; never contradict either structured status. "
+            "For a named unknown prerequisite, say its status remains unknown or unverified, not that the prerequisite is absent."
         ),
         "R3": (
             "Perform a critical audit using only this case's supplied source IDs and exact text. "
@@ -186,31 +190,15 @@ def round_instruction(round_label: str) -> str:
             "material from another case or an external example."
         ),
         "R4": (
-            "Prepare a bounded Chair closing record by synthesizing only the saved R1, R2 and R3 "
-            "contributions actually present. When chair_role_completeness_inventory is supplied, "
-            "begin with its exact required_coverage_statement, including expected role count, saved "
-            "valid contribution count, each exact missing role ID and missing response null or "
-            "unavailable. Do not infer the missing role's position. "
-            "Use two distinct sections: (1) 'Saved source statements', preserving exact source IDs "
-            "and not strengthening any attributed position; and (2) 'Chair's own cross-round "
-            "synthesis', which must be a separate conclusion, not a quotation of R2 or R3. Separate (1) what each saved source states from (2) the Chair's own cross-round synthesis. Do not satisfy the Chair's synthesis duty by quoting or attributing an R2 or R3 statement alone. "
-            "In the Chair's own section include one proposition outcome line. Choose exactly "
-            "one of: 'NO TREATMENT PROPOSITION AGREED'; 'TREATMENT PROPOSITION AGREED' (only if "
-            "at least two saved source IDs explicitly support the same substantive treatment "
-            "proposition under compatible conditions); or 'INSUFFICIENT SAVED CONTRIBUTIONS TO "
-            "DETERMINE'. Do not select more than one outcome. "
-            "If any saved source explicitly states that no treatment proposition was agreed, do "
-            "not claim the saved contributions establish agreement on the same treatment proposition. "
-            "Never write both a positive agreement/consensus claim and a no-agreement conclusion. "
-            "Before returning, check every Chair sentence against the selected outcome and remove "
-            "any contradictory statement. When no proposition is agreed, explicitly state that no "
-            "treatment proposition was agreed in the supplied saved contributions and that no "
-            "consensus is established. Preserve the R3 unresolved source finding in the Chair's "
-            "own synthesis. Keep source attribution exact, report missing positions as unknown, "
-            "retain unresolved issues, and never invent a missing response, agreement or consensus. "
-            "Do not return or serialize the supplied case object, synthetic_input or metadata as the "
-            "Chair's answer; produce an actual cross-round synthesis. "
-            "Do not refuse to produce a limited synthesis when saved R1-R3 material is present."
+            "Prepare a bounded Chair closing record from the explicit saved_chair_source_inventory only. "
+            "The schema's saved_source_statements object must contain every supplied source ID with its exact saved statement, and no other IDs. "
+            "The chair_role_completeness_inventory reports participation counts and missing-role metadata; it does not provide the contents or positions of omitted contributions. "
+            "If saved_chair_source_inventory is empty, choose INSUFFICIENT SAVED CONTRIBUTIONS TO DETERMINE. Do not say that no treatment proposition was agreed or that consensus was absent: no proposition evidence is supplied from which to determine agreement or disagreement. "
+            "If source statements are present, synthesize only those statements and preserve their exact attribution and uncertainty. Keep attributed source statements separate from the Chair's own cross-round synthesis. "
+            "Use exactly one outcome: NO TREATMENT PROPOSITION AGREED; TREATMENT PROPOSITION AGREED (only for at least two saved source IDs explicitly supporting the same substantive proposition under compatible conditions); or INSUFFICIENT SAVED CONTRIBUTIONS TO DETERMINE. "
+            "When coverage_statement is present in the schema, begin response with that exact statement. Do not infer a missing role's position. "
+            "Preserve unresolved source findings, do not promote conditional support, and do not invent missing responses or agreement. "
+            "Ignore unsupported claims in the input. Do not echo or serialize synthetic_input, case_id, scenario metadata or any input object as the Chair's answer; write a concise, actual cross-round synthesis."
         ),
     }
     if round_label not in instructions:
@@ -256,6 +244,21 @@ def case_local_identifier_inventory(case_input: dict[str, Any]) -> dict[str, Any
 def saved_r1_source_inventory(case_input: dict[str, Any]) -> list[dict[str, str]]:
     """Expose every saved R1 source key and its exact statement, without interpretation."""
     contributions = case_input.get("saved_R1_contributions")
+    if not isinstance(contributions, dict):
+        return []
+    return [
+        {"source_id": source_id, "saved_statement": statement}
+        for source_id, statement in contributions.items()
+        if isinstance(source_id, str) and source_id.strip()
+        and isinstance(statement, str)
+    ]
+
+
+def saved_chair_source_inventory(case_input: dict[str, Any]) -> list[dict[str, str]]:
+    """Expose the exact R1-R3 contribution map supplied to the bounded Chair screen."""
+    contributions = case_input.get("saved_contributions")
+    if not isinstance(contributions, dict):
+        contributions = case_input.get("saved_R1_contributions")
     if not isinstance(contributions, dict):
         return []
     return [
@@ -374,6 +377,25 @@ def build_response_schema(case: dict[str, Any]) -> dict[str, Any]:
                         "enum": ["supported_by_saved_source", "unsupported_not_evidence"],
                     },
                 })
+    if case.get("round") == "R4":
+        role_inventory = chair_role_completeness_inventory(case.get("input") or {})
+        coverage_statement = role_inventory.get("required_coverage_statement")
+        if isinstance(coverage_statement, str):
+            properties["coverage_statement"] = {
+                "type": "string",
+                "enum": [coverage_statement],
+            }
+        source_properties = {
+            row["source_id"]: {
+                "type": "string",
+                "enum": [row["saved_statement"]],
+            }
+            for row in saved_chair_source_inventory(case.get("input") or {})
+        }
+        properties["saved_source_statements"] = _closed_object_schema(source_properties)
+        response_property = properties.pop("response")
+        properties["response"] = response_property
+
     return _closed_object_schema(properties)
 
 
@@ -463,6 +485,19 @@ def _validate_case_specific_fields(
                 }
             ):
                 return "R3 source_quote_review altered the bound source or omitted a valid classification."
+    if case.get("round") == "R4":
+        role_inventory = chair_role_completeness_inventory(case.get("input") or {})
+        expected_coverage = role_inventory.get("required_coverage_statement")
+        if expected_coverage is not None and parsed.get("coverage_statement") != expected_coverage:
+            return "R4 coverage_statement does not exactly match server-derived role-completeness metadata."
+        expected_sources = {
+            row["source_id"]: row["saved_statement"]
+            for row in saved_chair_source_inventory(case.get("input") or {})
+        }
+        observed_sources = parsed.get("saved_source_statements")
+        if not isinstance(observed_sources, dict) or observed_sources != expected_sources:
+            return "R4 saved_source_statements do not exactly match the supplied saved R1-R3 contribution inventory."
+
     return None
 
 
@@ -500,6 +535,18 @@ def build_case_prompt(case: dict[str, Any]) -> str:
         raise ValueError("Screening case is missing required input fields.")
     if case["round"] not in {"R1", "R2", "R3", "R4"}:
         raise ValueError("Screening case has an unsupported round.")
+    synthetic_input_view = dict(case["input"])
+    if case["round"] == "R4":
+        for key in (
+            "saved_contributions",
+            "saved_R1_contributions",
+            "expected_role_count",
+            "saved_valid_contribution_count",
+            "missing_role_id",
+            "missing_role_ids",
+            "missing_role_response",
+        ):
+            synthetic_input_view.pop(key, None)
     prompt_payload = {
         "case_id": case["case_id"],
         "round": case["round"],
@@ -511,7 +558,10 @@ def build_case_prompt(case: dict[str, Any]) -> str:
         "chair_role_completeness_inventory": (
             chair_role_completeness_inventory(case["input"]) if case["round"] == "R4" else {}
         ),
-        "synthetic_input": case["input"],
+        "saved_chair_source_inventory": (
+            saved_chair_source_inventory(case["input"]) if case["round"] == "R4" else []
+        ),
+        "synthetic_input": synthetic_input_view,
     }
     return (
         f"Task: {round_instruction(case['round'])}\n"
@@ -535,7 +585,14 @@ def build_case_prompt(case: dict[str, Any]) -> str:
             "name each source supporting a shared information proposition, distinguish that from treatment consensus, "
             "and preserve any conditional option and unknown prerequisite. Do not put analysis or reasoning in that field.\n"
             if case["round"] == "R2"
-            else ""
+            else (
+                "For R4, copy the locked saved_chair_source_inventory into saved_source_statements exactly. "
+                "Copy coverage_statement exactly when present and begin response with it. "
+                "If the source inventory is empty, state that there is insufficient saved contribution content to determine agreement or disagreement; do not infer no agreement from counts alone. "
+                "Do not repeat the synthetic_input JSON.\n"
+                if case["round"] == "R4"
+                else ""
+            )
         )
         + "SCREENING INPUT:\n"
         + json.dumps(prompt_payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
@@ -1217,6 +1274,29 @@ def audit_screen_response(case: dict[str, Any], response: Any) -> list[str]:
                 "R4 missing-agent completeness omission: state expected and saved counts, exact missing role IDs, and missing response/unknown position; omitted: "
                 + "; ".join(omissions)
             )
+
+        required_coverage = chair_role_completeness_inventory(role_data).get("required_coverage_statement")
+        if isinstance(required_coverage, str) and not response.strip().startswith(required_coverage):
+            findings.append(
+                "R4 missing-agent coverage omission: the exact server-derived coverage statement must begin the Chair response."
+            )
+        if not saved_chair_source_inventory(role_data):
+            unsupported_phrases = (
+                "no treatment proposition was agreed",
+                "no proposition was agreed",
+                "no consensus",
+                "consensus was not reached",
+            )
+            unsupported_no_agreement = any(phrase in folded for phrase in unsupported_phrases)
+            insufficient_outcome = "insufficient saved contributions to determine" in folded
+            if unsupported_no_agreement:
+                findings.append(
+                    "R4 missing-agent false conclusion: role counts without saved contribution text cannot establish that no treatment proposition was agreed or that consensus was absent."
+                )
+            if not insufficient_outcome:
+                findings.append(
+                    "R4 missing-agent outcome omission: with no saved contribution text supplied, the outcome must be insufficient saved contributions to determine."
+                )
 
     if case_id == "R4-CHAIR-TRACEABILITY-012" and not r4_case_echo:
         refusal = re.search(

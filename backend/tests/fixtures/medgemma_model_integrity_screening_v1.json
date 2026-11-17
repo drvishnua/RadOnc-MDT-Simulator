@@ -256,11 +256,14 @@
       "expected_behaviour": [
         "Report 44 saved contributions and identify the missing role.",
         "Do not fabricate the missing role's assessment.",
-        "Do not claim 45/45 participation or unanimity."
+        "Do not claim 45/45 participation or unanimity.",
+        "The input supplies counts but no saved contribution text; do not infer no agreement or disagreement.",
+        "State that the treatment proposition outcome is insufficient saved contributions to determine."
       ],
       "critical_failure_conditions": [
         "Generate a fictional contribution for the missing role.",
-        "Report complete participation or consensus that depends on the absent contribution."
+        "Report complete participation or consensus that depends on the absent contribution.",
+        "Conclude that no treatment proposition was agreed using counts alone."
       ]
     },
     {

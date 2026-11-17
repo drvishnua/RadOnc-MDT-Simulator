@@ -66,6 +66,16 @@ def _valid_model_output(case, response):
             "shared_treatment_proposition": {"status": "not_shared", "source_ids": []},
         })
 
+    if case.get("round") == "R4":
+        role_inventory = screening.chair_role_completeness_inventory(case.get("input") or {})
+        coverage = role_inventory.get("required_coverage_statement")
+        if coverage is not None:
+            output["coverage_statement"] = coverage
+        output["saved_source_statements"] = {
+            row["source_id"]: row["saved_statement"]
+            for row in screening.saved_chair_source_inventory(case.get("input") or {})
+        }
+
     if case.get("round") == "R3":
         inventory = screening.case_local_identifier_inventory(case.get("input") or {})
         if (
@@ -938,8 +948,8 @@ def test_run_screen_records_complete_immutable_case_set(tmp_path, monkeypatch):
     summary = next(record for record in records if record["record_type"] == "summary")
     manifest = next(record for record in records if record["record_type"] == "manifest")
 
-    assert manifest["prompt_version"] == "radonc-mdt-integrity-screen-v15"
-    assert manifest["audit_version"] == "radonc-mdt-integrity-audit-v14"
+    assert manifest["prompt_version"] == "radonc-mdt-integrity-screen-v16"
+    assert manifest["audit_version"] == "radonc-mdt-integrity-audit-v15"
     assert manifest["screening_script_sha256"] == screening.SCRIPT_SHA256
     assert len(manifest["screening_script_sha256"]) == 64
     assert calls == {"tags": 25, "generate": 12, "show": 1, "version": 1}
@@ -1682,9 +1692,109 @@ def test_r2_narrative_audit_flags_unknown_prerequisite_strengthened_to_absent():
     )
 
 
-def test_screen_version_metadata_declares_prompt_v15_and_audit_v14():
-    assert screening.PROMPT_VERSION == "radonc-mdt-integrity-screen-v15"
-    assert screening.AUDIT_VERSION == "radonc-mdt-integrity-audit-v14"
+def test_r4_schema_locks_exact_saved_sources_and_role_coverage():
+    corpus, _ = load_corpus()
+    missing_agent = next(
+        item for item in corpus["cases"] if item["case_id"] == "R4-MISSING-AGENT-011"
+    )
+    chair_case = next(
+        item for item in corpus["cases"] if item["case_id"] == "R4-CHAIR-TRACEABILITY-012"
+    )
+
+    missing_schema = screening.build_response_schema(missing_agent)
+    assert list(missing_schema["properties"]) == [
+        "coverage_statement", "saved_source_statements", "response"
+    ]
+    assert missing_schema["properties"]["coverage_statement"]["enum"] == [
+        screening.chair_role_completeness_inventory(missing_agent["input"])[
+            "required_coverage_statement"
+        ]
+    ]
+    assert missing_schema["properties"]["saved_source_statements"]["properties"] == {}
+
+    chair_schema = screening.build_response_schema(chair_case)
+    expected = {
+        row["source_id"]: {"type": "string", "enum": [row["saved_statement"]]}
+        for row in screening.saved_chair_source_inventory(chair_case["input"])
+    }
+    assert chair_schema["properties"]["saved_source_statements"]["properties"] == expected
+    assert chair_schema["required"] == list(chair_schema["properties"])
+
+
+def test_r4_validator_rejects_missing_or_altered_saved_source_and_coverage_fields():
+    corpus, _ = load_corpus()
+    case = next(
+        item for item in corpus["cases"] if item["case_id"] == "R4-CHAIR-TRACEABILITY-012"
+    )
+    valid = _valid_model_output(case, "No treatment proposition was agreed; the source finding remains unresolved.")
+
+    missing_source = json.loads(json.dumps(valid))
+    del missing_source["saved_source_statements"]["R1:RO-01"]
+    parsed, error = validate_model_response(json.dumps(missing_source), case)
+    assert parsed is None
+    assert "exactly match" in error
+
+    altered_source = json.loads(json.dumps(valid))
+    altered_source["saved_source_statements"]["R2:RO-01"] = "A changed source statement."
+    parsed, error = validate_model_response(json.dumps(altered_source), case)
+    assert parsed is None
+    assert "exactly match" in error
+
+    missing_case = next(
+        item for item in corpus["cases"] if item["case_id"] == "R4-MISSING-AGENT-011"
+    )
+    wrong_coverage = _valid_model_output(missing_case, "Coverage is 45 expected roles.")
+    wrong_coverage["coverage_statement"] = "45 expected roles."
+    parsed, error = validate_model_response(json.dumps(wrong_coverage), missing_case)
+    assert parsed is None
+    assert "coverage_statement" in error
+
+
+def test_r4_prompt_separates_source_inventory_from_generic_metadata_and_forbids_inference():
+    corpus, _ = load_corpus()
+    missing_agent = next(
+        item for item in corpus["cases"] if item["case_id"] == "R4-MISSING-AGENT-011"
+    )
+    traceability = next(
+        item for item in corpus["cases"] if item["case_id"] == "R4-CHAIR-TRACEABILITY-012"
+    )
+    missing_prompt = build_generate_payload("qwen3.5:4b", missing_agent)["prompt"]
+    trace_prompt = build_generate_payload("qwen3.5:4b", traceability)["prompt"]
+
+    assert "insufficient saved contributions to determine" in missing_prompt.casefold()
+    assert "do not say that no treatment proposition was agreed" in missing_prompt.casefold()
+    assert "required_coverage_statement" in missing_prompt
+    assert '"saved_contributions"' not in missing_prompt
+    assert '"R1:RO-01"' in trace_prompt
+    assert "A missing-source finding remains unresolved." in trace_prompt
+    assert '"saved_contributions"' not in trace_prompt
+
+
+def test_r4_missing_agent_audit_rejects_no_agreement_inference_from_counts():
+    corpus, _ = load_corpus()
+    case = next(
+        item for item in corpus["cases"] if item["case_id"] == "R4-MISSING-AGENT-011"
+    )
+    coverage = screening.chair_role_completeness_inventory(case["input"])[
+        "required_coverage_statement"
+    ]
+    invalid = _valid_model_output(
+        case,
+        coverage + " No treatment proposition was agreed; consensus was not reached.",
+    )
+    findings = screening.audit_screen_response(case, invalid)
+    assert any("false conclusion" in item for item in findings)
+
+    valid = _valid_model_output(
+        case,
+        coverage + " The supplied screening input contains no saved contribution text, so agreement or disagreement cannot be determined.",
+    )
+    assert screening.audit_screen_response(case, valid) == []
+
+
+def test_screen_version_metadata_declares_prompt_v16_and_audit_v15():
+    assert screening.PROMPT_VERSION == "radonc-mdt-integrity-screen-v16"
+    assert screening.AUDIT_VERSION == "radonc-mdt-integrity-audit-v15"
 
 
 def test_v15_r2_prompt_preserves_unknown_prerequisite_and_shared_source_attribution():

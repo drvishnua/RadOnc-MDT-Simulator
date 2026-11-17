@@ -1,6 +1,6 @@
 name: Synthetic Model Integrity Screening
-# [model-integrity-screen] v15/audit-v14 retest from CI-green 785a094; exact Qwen manifest version gate before any MedGemma pull; concurrency 1, hosted CPU only.
-# [model-integrity-screen] v15/audit-v14 bounded retest: R2 unknown-prerequisite certainty and R3 supplied-quote refusal audit; sequential Qwen-first, then MedGemma only after Qwen succeeds and HAI-DEF terms are attested.
+# [model-integrity-screen] v16/audit-v15 retest from CI-green 785a094; exact Qwen manifest version gate before any MedGemma pull; concurrency 1, hosted CPU only.
+# [model-integrity-screen] v16/audit-v15 bounded retest: R2 unknown-prerequisite certainty and R3 supplied-quote refusal audit; sequential Qwen-first, then MedGemma only after Qwen succeeds and HAI-DEF terms are attested.
 # [model-integrity-screen] v11/audit-v10 retest after R2 proposition separation, R3 narrative consistency and R4 echo audit; sequential Qwen then MedGemma only after Qwen gate.
 # [model-integrity-screen] R2 contract retest after server-derived source ordering and source-bound short-label normalization; sequential Qwen then MedGemma only after the Qwen gate passes.
 # [model-integrity-screen] Qwen v3 12-case retest after v2 supplied-source-ID, case-ID boundary, and bounded-Chair audit findings; CPU-only; no MedGemma.
@@ -215,8 +215,8 @@ jobs:
             if ($qwenRunManifest.screening_script_sha256 -ne $workflowScriptHash) {
               throw "Qwen JSONL screening-script digest does not match the checked-out script."
             }
-            $expectedPromptVersion = "radonc-mdt-integrity-screen-v15"
-            $expectedAuditVersion = "radonc-mdt-integrity-audit-v14"
+            $expectedPromptVersion = "radonc-mdt-integrity-screen-v16"
+            $expectedAuditVersion = "radonc-mdt-integrity-audit-v15"
             if (
               $qwenRunManifest.prompt_version -ne $expectedPromptVersion -or
               $qwenRunManifest.audit_version -ne $expectedAuditVersion
@@ -229,7 +229,7 @@ jobs:
                 observed_audit_version = [string]$qwenRunManifest.audit_version
               }
               $manifest | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
-              throw "Qwen output version mismatch; expected prompt-v15/audit-v14. MedGemma remains NOT_REQUESTED."
+              throw "Qwen output version mismatch; expected prompt-v16/audit-v15. MedGemma remains NOT_REQUESTED."
             }
             $manifest.screening.prompt_version = [string]$qwenRunManifest.prompt_version
             $manifest.screening.audit_version = [string]$qwenRunManifest.audit_version
