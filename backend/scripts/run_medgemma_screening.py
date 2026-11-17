@@ -621,7 +621,7 @@ def _normalize_r2_source_labels(
             if (
                 field_name == "prerequisite"
                 and not source_matches
-                and not re.search(r"\\bprerequisite\\b", saved_statement, re.IGNORECASE)
+                and not re.search(r"\bprerequisite\b", saved_statement, re.IGNORECASE)
                 and candidate.strip().casefold() in {
                     "unknown", "none", "not_applicable", "not stated", "not specified",
                     "no prerequisite", "no_prerequisite",
@@ -647,7 +647,7 @@ def _normalize_r2_source_labels(
                 continue
             candidate_for_match = candidate.strip().replace("_", " ")
             candidate_for_match = re.sub(
-                r"\\s*\\((?:conditional|contingent)\\)\\s*$",
+                r"\s*\((?:conditional|contingent)\)\s*$",
                 "",
                 candidate_for_match,
                 flags=re.IGNORECASE,
