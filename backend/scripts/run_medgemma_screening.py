@@ -31,8 +31,8 @@ CORPUS_PATH = (
     / "fixtures"
     / "medgemma_model_integrity_screening_v1.json"
 )
-PROMPT_VERSION = "radonc-mdt-integrity-screen-v11"
-AUDIT_VERSION = "radonc-mdt-integrity-audit-v10"
+PROMPT_VERSION = "radonc-mdt-integrity-screen-v12"
+AUDIT_VERSION = "radonc-mdt-integrity-audit-v11"
 DEFAULT_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/")
 GENERATION_OPTIONS = {
     "temperature": 0,
@@ -133,10 +133,16 @@ def round_instruction(round_label: str) -> str:
             "authoritative sequence from the original saved R1 contribution order after validation. "
             "Each saved_statement field is schema-locked to the exact server text; do not alter it. "
             "For each row, classify information_position, treatment_option, prerequisite and "
-            "prerequisite_status. A statement agreeing that more information is required is not "
-            "a treatment-option position. A silent statement must remain silent. Keep every "
-            "conditional option attached to its own prerequisite; missing documentation means "
-            "unknown, not clinically absent, negative, failed or unmet. "
+            "prerequisite_status. Copy only exact option/prerequisite labels from that same saved "
+            "statement (for example, 'Option A' and 'prerequisite X'); do not use underscores, "
+            "suffixes or labels borrowed from another source. If no option or prerequisite label "
+            "appears in a saved statement, use an empty string for that field, not 'unknown', "
+            "'not_applicable' or 'not_shared'. Set prerequisite_status to not_applicable when "
+            "the saved statement contains no prerequisite; use unknown only when a named "
+            "prerequisite exists but its status is not supplied. A statement agreeing that more "
+            "information is required is not a treatment-option position. A silent statement must "
+            "remain silent. Keep every conditional option attached to its own prerequisite; missing "
+            "documentation means unknown, not clinically absent, negative, failed or unmet. "
             "Treat information sufficiency and treatment selection as two independent propositions. "
             "If at least two saved rows explicitly agree that more information is required, set "
             "shared_information_sufficiency to shared and include every affirming source ID, even "
@@ -599,7 +605,7 @@ def _normalize_r2_source_labels(
                 field_name == "treatment_option"
                 and not source_matches
                 and candidate.strip().casefold() in {
-                    "none", "none_identified", "not_applicable",
+                    "none", "none_identified", "not_applicable", "not_shared",
                     "no_option", "no_treatment_option",
                 }
             ):
@@ -612,7 +618,41 @@ def _normalize_r2_source_labels(
                     "basis": "explicit no-option sentinel; this saved statement contains no option label",
                 })
                 continue
-            candidate_match = candidate_pattern.fullmatch(candidate.strip())
+            if (
+                field_name == "prerequisite"
+                and not source_matches
+                and not re.search(r"\\bprerequisite\\b", saved_statement, re.IGNORECASE)
+                and candidate.strip().casefold() in {
+                    "unknown", "none", "not_applicable", "not stated", "not specified",
+                    "no prerequisite", "no_prerequisite",
+                }
+            ):
+                source_row[field_name] = ""
+                normalizations.append({
+                    "source_id": source_id,
+                    "field": field_name,
+                    "model_value": candidate,
+                    "server_value": "",
+                    "basis": "no prerequisite is stated in this exact saved statement",
+                })
+                if source_row.get("prerequisite_status") != "not_applicable":
+                    normalizations.append({
+                        "source_id": source_id,
+                        "field": "prerequisite_status",
+                        "model_value": str(source_row.get("prerequisite_status", "")),
+                        "server_value": "not_applicable",
+                        "basis": "no prerequisite is stated in this exact saved statement",
+                    })
+                    source_row["prerequisite_status"] = "not_applicable"
+                continue
+            candidate_for_match = candidate.strip().replace("_", " ")
+            candidate_for_match = re.sub(
+                r"\\s*\\((?:conditional|contingent)\\)\\s*$",
+                "",
+                candidate_for_match,
+                flags=re.IGNORECASE,
+            )
+            candidate_match = candidate_pattern.fullmatch(candidate_for_match)
             if len(source_matches) != 1 or candidate_match is None:
                 continue
             source_match = source_matches[0]
@@ -1208,16 +1248,16 @@ def audit_screen_response(case: dict[str, Any], response: Any) -> list[str]:
             narrative_payload = json.loads(response_text)
         except (TypeError, json.JSONDecodeError):
             narrative_payload = None
+        supplied_ids = set(
+            case_local_identifier_inventory(case.get("input") or {})[
+                "explicitly_supplied_source_ids"
+            ]
+        )
+        invalid_statuses = {
+            "deliberately_unsupplied", "unsupplied", "malformed",
+            "invalid", "malformed_reference_text_verbatim",
+        }
         if isinstance(narrative_payload, list):
-            supplied_ids = set(
-                case_local_identifier_inventory(case.get("input") or {})[
-                    "explicitly_supplied_source_ids"
-                ]
-            )
-            invalid_statuses = {
-                "deliberately_unsupplied", "unsupplied", "malformed",
-                "invalid", "malformed_reference_text_verbatim",
-            }
             for item in narrative_payload:
                 if not isinstance(item, dict):
                     continue
@@ -1227,6 +1267,27 @@ def audit_screen_response(case: dict[str, Any], response: Any) -> list[str]:
                     findings.append(
                         f"R3 narrative identifier contradiction: explicitly supplied ID {source_id} was described as {status!r}."
                     )
+        elif isinstance(narrative_payload, dict):
+            nested_inventory = narrative_payload.get("identifier_inventory_review")
+            if isinstance(nested_inventory, dict):
+                nested_unsupplied = nested_inventory.get("deliberately_unsupplied_ids", [])
+                if isinstance(nested_unsupplied, list):
+                    contradictions = sorted(supplied_ids.intersection(
+                        value for value in nested_unsupplied if isinstance(value, str)
+                    ))
+                    for source_id in contradictions:
+                        findings.append(
+                            f"R3 narrative identifier contradiction: explicitly supplied ID {source_id} was listed as deliberately unsupplied in the response JSON."
+                        )
+                nested_malformed = nested_inventory.get("malformed_source_ids", [])
+                if isinstance(nested_malformed, list):
+                    contradictions = sorted(supplied_ids.intersection(
+                        value for value in nested_malformed if isinstance(value, str)
+                    ))
+                    for source_id in contradictions:
+                        findings.append(
+                            f"R3 narrative identifier contradiction: explicitly supplied ID {source_id} was listed as malformed in the response JSON."
+                        )
         refusal = re.search(
             r"\b(?:audit|review|classify)\b.{0,80}\b(?:cannot|can't|could not)\b"
             r"|\b(?:cannot|can't|unable to)\b.{0,80}\b(?:audit|review|classify)\b",
