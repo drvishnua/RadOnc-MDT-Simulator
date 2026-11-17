@@ -2,9 +2,10 @@
 
 Repository: drvishnua/RadOnc-MDT-Simulator  
 Development branch: feature/four-round-mdt-and-performance  
-Latest application/test commit: aa6dac613288d948f3c952f5b5c9de80fc5448a2  
-Latest model-screen trigger commit: eb75b076459a4f5da62758b631c59ca2fef1232f  
-Latest documentation/checklist checkpoint reviewed: 57e6beb4b6a433de60ca5137b08627e8c4448fd5  
+Latest source implementation commit: da62187a2fe104c68e0336a2190d0916478849b0  
+Latest regression-test commit: 8d7a62e2e60db031ac3a1cab71701278699b26f4 (457/457 backend tests passed)  
+Latest model-screen trigger and audit-version commit: 97e632d51ec49a58824f1841e05d54e7e13ebd93 (v12 prompt / audit-v12)  
+Latest checklist checkpoint reviewed before this reconciliation: db41564a2c46f75e11f54ad3bae2e87f2eb34b87  
 PR #1: open, draft, unmerged, base main  
 main: 39a356b8eb09399aa2da1b9b9085965999f5105a, unchanged.
 
@@ -12,7 +13,123 @@ This is the single authoritative Master Development and Verification Checklist. 
 
 Continuity files: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_LOG.md, RECOVERY_STATE.md, KNOWN_ISSUES.md.
 
-## Current checkpoint — v11/audit-v10 model results reviewed; v12/audit-v11 retest triggered
+
+## Current checkpoint — 17 November 2026 — v12/audit-v11 inspected; source-bound audit-v12 retest running
+
+**Repository state before this checklist reconciliation**
+- Development branch head / model-screen trigger: 97e632d51ec49a58824f1841e05d54e7e13ebd93.
+- PR #1: open, draft, unmerged, base main; head branch is the development branch.
+- main: 39a356b8eb09399aa2da1b9b9085965999f5105a; unchanged.
+- The checklist file was read from the development branch before this update. This reconciliation changes only this checklist; it does not change application source.
+
+### v12 / audit-v11 bounded model screen — completed; not accepted
+
+- Workflow 44045424408, run #55, completed SUCCESS on trigger SHA eb75b076459a4f5da62758b631c59ca2fef1232f.
+- Evidence artifact: 14312436697, 7,479,679 bytes; archive SHA-256 f1445173f0349843a6718e2de3bb6e2472cd45a136f402d74530307cb724c877.
+- The archive was downloaded and inspected: manifest, 24 case responses, summaries, Ollama logs and pull diagnostics. The immutable artifact is retained separately.
+- Prompt: radonc-mdt-integrity-screen-v12; audit: radonc-mdt-integrity-audit-v11; frozen 12-case corpus SHA-256 5fe333969035e403366272f6d3012809059d0be7ce1ce06efb16b6c6493fdeb3.
+- Ollama 0.40.14; concurrency 1; num_ctx=4096; num_predict=500; temperature 0; seed 73.
+- HAI-DEF pre-provision terms gate passed; MedGemma pull exit code 0. Both model digests remained stable before/after all 24 generations.
+- Qwen digest: sha256:d8b0f5e9760cd1682034f292d7ef72ec46f432149be0df7574bf2d6e92e38c04.
+- MedGemma digest: sha256:433252621ab154668b5d8be6aff6c1b771bacba045e46e6193da8d6ad1630f2c.
+- Sum of per-case Ollama total_duration: Qwen approximately 493.99 seconds; MedGemma approximately 374.15 seconds.
+
+**Qwen 3.5 4B**
+- 12/12 responses recorded; 0 malformed/failed; 3 flagged cases; 6 deterministic integrity findings.
+- R2 false-consensus: structured source ledger omitted Option A and Option B labels; narrative kept the options distinct and did not claim treatment consensus.
+- R2 partial agreement: narrative correctly limited agreement to information sufficiency and kept treatment proposition not_shared; structured information_position was incorrectly not_applicable for both affirming sources and the silent source.
+- R2 conditionality: Option A label omitted from the structured ledger; prerequisite X remained unknown and conditionality was retained in narrative/source text.
+- R3 invalid-source inventory and fabricated-quote rejection produced no deterministic flags.
+- Both R4 cases produced no deterministic flags, including missing-agent completeness and an independent Chair synthesis.
+- Manual review note: the R1 contradiction response did not reproduce both conflicting source statements. No source was selected as correct, but the expected contradiction display was incomplete.
+
+**MedGemma 1.5 4B**
+- 12/12 responses recorded; 0 malformed/failed; 5 flagged cases; 11 deterministic integrity findings.
+- R2 false-consensus: Option A and Option B omitted from the structured source ledger.
+- R2 partial agreement: all three source information_position values were not_applicable; the shared information-sufficiency proposition and its two source IDs were omitted.
+- R2 conditionality: Option A and prerequisite X labels were omitted from structured fields. The model narrative declined the synthetic classification task despite the exact saved source inventory being present.
+- R3 invalid-source inventory and fabricated-quote rejection produced no deterministic flags.
+- R4 missing-agent response omitted the 45 expected / 44 saved counts, missing role ID and null response status.
+- R4 Chair response echoed the supplied case JSON instead of producing a cross-round synthesis.
+- Manual review note: the R1 contradiction response did not reproduce both conflicting source statements.
+
+**Acceptance boundary**
+- Both summaries explicitly report PENDING_HUMAN_REVIEW; automatic quality score is null; clinical_accuracy_evaluated=false.
+- The bounded automated integrity screen is FAILED for acceptance for both models because deterministic findings remain. Raw responses are retained; neither model is promoted.
+- The hosted runner was CPU-only. gpu_measurement=NOT_PERFORMED; this is not RTX 4060 inference evidence.
+- This screen is synthetic software-integrity testing, not clinical validation and not proof of zero hallucinations.
+
+### Corrective implementation — source-bound audit-v12
+
+The v12 output showed that the normalizer skipped blank values even when the exact saved R1 statement contained one unambiguous option/prerequisite label. It also did not normalize exact information-position wording. The resulting deterministic flags were avoidable normalization omissions, not evidence that the saved source text was absent.
+
+- Implementation commit da62187a2fe104c68e0336a2190d0916478849b0: fills only blank/no-value-sentinel R2 fields from a unique label in that same exact saved statement; maps only explicit “agrees that additional information is required” / “does not state whether additional information is required” wording; records each repair in server_derived.field_normalizations.
+- The repair does not transfer labels between sources, overwrite conflicting non-empty model values, infer a label when the source is ambiguous, change prerequisite status, or convert conditional support into unconditional support.
+- Test commit 8d7a62e2e60db031ac3a1cab71701278699b26f4: four additional regressions cover blank option/prerequisite repair, exact information-position mapping, preservation of conflicting/ambiguous values, and contradiction between not_shared status and non-empty source IDs.
+- Exact-SHA Backend run 44054909164: 457 passed, 0 failed, 0 errors, 0 skipped; 1 warning. Deterministic preflight: 7/7 passed.
+- On exact SHA 8d7a62e2e60db031ac3a1cab71701278699b26f4, the other five standard PR checks also passed: Frontend 44054909181; Browser E2E 44054909219; Security/Dependency 44054909179; Windows Installer 44054909171; Packaging Prerequisites 44054909267. The installer job's install/smoke-test and artifact-upload steps passed. These are previous-head results, not current-head results.
+
+### Current audit-v12 bounded retest — IN PROGRESS
+
+- Commit 97e632d51ec49a58824f1841e05d54e7e13ebd93 advances the audit version to radonc-mdt-integrity-audit-v12 and carries the required model-screen marker plus the previously accepted HAI-DEF terms attestation marker.
+- Workflow 44055332966, run #58, was automatically triggered by that development-branch commit.
+- Job 133943114818: hosted CPU screen, concurrency 1. HAI-DEF terms gate completed successfully; the combined provisioning/sequential-inference step is running. Qwen runs first; MedGemma is gated behind successful Qwen completion.
+- No artifact or v12/audit-v12 model result is available yet. Do not infer pass/fail before inspecting the immutable output artifact.
+- Six standard PR workflows on exact SHA 97e632d51ec49a58824f1841e05d54e7e13ebd93 were IN PROGRESS at this checkpoint: Backend 44055342849; Frontend 44055342852; Browser E2E 44055342843; Packaging Prerequisites 44055342862; Windows Installer 44055342927; Security/Dependency 44055342846.
+
+### Master Checklist — Current Status
+
+| Workstream | Status | Evidence / current boundary |
+|---|---|---|
+| R1–R4 architecture and persisted data flow | IN PROGRESS | Four-round pipeline exists; current full 45-role end-to-end acceptance outstanding. |
+| R1 independent assessments and unknown/staging safeguards | IN PROGRESS | v12 synthetic unknown-stage/status outputs did not invent values; R1 contradiction display was incomplete for both models; independent review remains outstanding. |
+| R2 saved-source identity, exact text and row ordering | VERIFIED | Screening harness validates exact saved IDs/text and derives source order server-side. |
+| R2 option/prerequisite normalization and proposition-level consensus | IN PROGRESS | v12/audit-v11 exposed blank source fields; source-bound audit-v12 correction and four regressions committed; new live retest pending. |
+| R3 adversarial provenance and fabricated-quote review | IN PROGRESS | Both models passed the bounded invalid-ID and fabricated-quote cases in v12/audit-v11; broader narrative review and full-run validation remain outstanding. |
+| R4 Chair synthesis from actual saved R1–R3 | IN PROGRESS | Qwen passed both bounded R4 cases; MedGemma still failed missing-agent completeness and Chair input-echo detection in v12/audit-v11. |
+| Clinical safety, staging and unknown data | IN PROGRESS | No clinical accuracy or zero-hallucination claim; independent qualified review outstanding. |
+| Case integrity, contradiction preservation and audit history | IN PROGRESS | Synthetic corpus/artifacts and raw model outputs preserved; historical full run #9 findings remain unresolved. |
+| Provenance and guideline/evidence retrieval | IN PROGRESS | Saved-source normalization is provenance-logged; live guideline retrieval and claim linkage are not integrated. |
+| Chair consensus, dissent and traceability | IN PROGRESS | Deterministic controls/tests exist; model adherence, dissent preservation and full 45-role traceability remain unaccepted. |
+| Missing/failed-agent handling | IN PROGRESS | Qwen bounded case passed; MedGemma missed completeness fields; full 45-role failure-injection acceptance outstanding. |
+| Backend tests | IN PROGRESS | 457/457 passed on 8d7a62e (run 44054909164); exact-head rerun on 97e632d is running (44055342849). |
+| Frontend build | IN PROGRESS | Prior head 8d7a62e passed (44054909181); current exact-head run 44055342852 is running. |
+| Browser E2E | IN PROGRESS | Prior head 8d7a62e passed (44054909219); current exact-head run 44055342843 is running. |
+| Dashboard and read-only API validation | IN PROGRESS | Mission Control / Developer Monitor bounded browser checks remain verified; current E2E cycle is running. |
+| Mission Control phase 1 and phase 2 | VERIFIED | Read-only persisted-run overview and metadata-only role drill-down tested. |
+| Development Monitor dashboard | VERIFIED | Read-only branch/PR/Actions monitoring tested; no dispatch authority. |
+| Ollama context handling | VERIFIED | Historical 6,144/8,192 allocation probes only; long-output integrity is not proven by those probes. |
+| Ollama performance and concurrency | IN PROGRESS | Concurrency 1 retained; CPU screen durations recorded; local comparison/per-request telemetry incomplete. |
+| RTX 4060 request-time GPU inference | NOT STARTED | Requires real local Ollama inference with request-time nvidia-smi and offload evidence. |
+| Hosted Qwen/MedGemma v9 screen | FAILED | Run 44031253593; artifact preserved. |
+| Hosted Qwen/MedGemma v10/audit-v9 screen | FAILED | Run 44037072649; both models completed 12/12, but bounded integrity findings remained. |
+| Hosted Qwen/MedGemma v11/audit-v10 screen | FAILED | Run 44040631649; Qwen 4 findings, MedGemma 18; raw output preserved. |
+| Hosted Qwen/MedGemma v12/audit-v11 screen | FAILED | Run 44045424408; Qwen 3 flagged cases/6 findings, MedGemma 5 flagged cases/11 findings. Both outputs pending human review; bounded acceptance failed. CPU-only; GPU not performed. |
+| Hosted Qwen/MedGemma v12/audit-v12 screen | IN PROGRESS | Run 44055332966 on trigger SHA 97e632d; HAI-DEF gate passed; inference step active; artifact not yet published. CPU-only; concurrency 1. |
+| Current full 45-role R1–R4 validation | NOT STARTED | No fresh complete 45-role model execution accepted. |
+| Historical full 45-role run-9 acceptance | FAILED | Historical saved run audit reported 343 integrity findings; originals preserved. |
+| MedGemma HAI-DEF acceptance gate | VERIFIED | User acceptance retained; current audit-v12 run's pre-provision gate passed. |
+| Independent blinded model-output review | NOT STARTED | v12 raw outputs preserved; independent blinded review not yet completed. |
+| Guideline retrieval and verification | NOT STARTED | No current authoritative source set retrieved and linked to claims. |
+| Independent qualified clinical review | NOT STARTED | No signed/attributable clinical review artifact. |
+| Packaging prerequisites | IN PROGRESS | Prior exact head passed (44054909267); current exact-head run 44055342862 is running. |
+| Windows installer | IN PROGRESS | Prior exact head passed build/install/smoke/upload (44054909171); current exact-head run 44055342927 is running. |
+| Security, dependency audit and CodeQL | IN PROGRESS | Prior exact head passed (44054909179); current exact-head run 44055342846 is running. |
+| Release acceptance | BLOCKED | v12 bounded screen failed; audit-v12 retest, full-run integrity, blinded/clinical review, guideline evidence and GPU gates remain outstanding. |
+
+## Historical next actions from the v11 checkpoint — superseded by current priorities
+
+1. Inspect workflow 44055332966 and its artifact as soon as it completes. Verify exact trigger SHA, prompt/audit versions, corpus hash, digests, all 24 responses, normalization provenance, flags, completion reasons, and Qwen-before-MedGemma gate.
+2. Review whether source-bound repairs resolve Qwen/MedGemma R2 omissions without rewriting conflicting values, losing conditionality, or fabricating consensus. Preserve any remaining R2/R4 failures.
+3. Verify all six standard workflows against exact SHA 97e632d; do not treat the 8d7a62e results as current-head completion.
+4. Arrange independent blinded review of the preserved v10–v12 outputs. Do not promote a model based on deterministic screening alone.
+5. Only after bounded acceptance and review, prepare a fresh full 45-role R1–R4 validation with failed-agent injection and saved-output/Chair reconciliation.
+6. Complete local RTX 4060 request-time telemetry, authoritative guideline retrieval and independent qualified clinical review.
+
+**Cloud/device boundary:** GitHub repository work, CI, packaging and hosted CPU screens do not require the user's PC to be online. Only local RTX 4060 request-time inference verification requires the local device powered on. Hosted CPU results do not prove GPU inference or clinical validity.
+
+
+## Historical checkpoint — v11/audit-v10 and initial v12/audit-v11 planning (superseded by the current checkpoint above)
 
 ### v10 / audit-v9 model screen — workflow 44037072649
 
@@ -79,7 +196,7 @@ Continuity files: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_
 - Checklist reconciliation commit 984f259944b0341b8f0ce70bc665da5ccc5e34b7 is documentation-only. Its Backend 44045682142, Frontend 44045682255 and Packaging Prerequisites 44045682155 passed; Browser E2E 44045682137, Security/CodeQL 44045682129 and Windows Installer 44045682163 were cancelled when the next docs commit superseded that head.
 - Current documentation-only branch head 57e6beb4b6a433de60ca5137b08627e8c4448fd5: Backend 44045771155 passed 453/453; Frontend 44045771203, Browser E2E 44045771259, Security/CodeQL 44045771201 and Packaging Prerequisites 44045771220 were IN PROGRESS; Windows Installer 44045771149 was queued. PR #1 remains open/draft/unmerged against main; main SHA remains 39a356b8eb09399aa2da1b9b9085965999f5105a.
 
-### Master Development and Verification Checklist — Current Status
+### Historical v11 status table — superseded by the current checklist above
 
 | Workstream | Status | Evidence / boundary |
 |---|---|---|
