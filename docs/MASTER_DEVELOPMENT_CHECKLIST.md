@@ -23,7 +23,7 @@ Continuity files: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_
 - Trigger execution is NOT YET VERIFIED: the available GitHub run lookup returns only pull-request-triggered runs, and no run ID for this push-triggered workflow has yet been surfaced. Do not claim the model screen started or completed until its run ID/status is retrieved.
 - v14/audit-v13 remains FAILED for both models. v15/audit-v14 screen remains NOT STARTED pending run confirmation. Preserve Qwen-first fail-closed gating and CPU-only limitation.
 
-## Current checkpoint — 17 November 2026 — d836076 exact-head CI green; v15 screen authorised
+## Historical checkpoint — 17 November 2026 — d836076 exact-head CI green; v15 screen authorised
 
 **Current repository state**
 - Verified checkpoint commit: d836076f1f6f7543c6b226957e85249d76548a5b; this commit changes only the master checklist.
@@ -61,7 +61,7 @@ Continuity files: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_
 **Next controlled action**
 - After this checklist-only commit's standard CI is green, create a separate commit touching only the model-screen workflow (or another explicitly allowed push-path file), with the three required marker tokens in its commit message: model-integrity-screen, medgemma, hai-def-terms-accepted. This uses the user's prior personal HAI-DEF acceptance attestation and preserves the sequential Qwen-first gate. Inspect all immutable artefacts and all 24 outputs; if Qwen fails/truncates, MedGemma must remain NOT_REQUESTED.
 
-## Current checkpoint — 17 November 2026 — prompt-v15/audit-v14 ready for bounded screen
+## Historical checkpoint — 17 November 2026 — prompt-v15/audit-v14 ready for bounded screen
 
 **Repository / branch**
 - Development branch HEAD: 10f530d397a3a82785bd86929baa1e91e6ec19b8 (documentation-only checklist commit; no source changes in this commit).
@@ -175,6 +175,40 @@ Continuity files: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_
 - This checklist update will trigger a fresh six-check PR cycle. The next v15 model screen must be a separate explicitly marked commit after the implementation/test head has all required checks green.
 
 ### Master Checklist — Current Status
+
+| Workstream | Status | Evidence / boundary |
+|---|---|---|
+| R1–R4 architecture and persisted data flow | IN PROGRESS | Four-round pipeline exists; fresh full 45-role R1–R4 acceptance remains outstanding. |
+| R1 independent assessments and unknown/staging safeguards | IN PROGRESS | Existing deterministic safeguards and v15 prompt refinements require fresh live validation; never infer missing stage/N/M or normal findings. |
+| R2 saved-source identity, exact text and row ordering | VERIFIED | Server derives saved R1 order; schema locks source IDs and exact saved statement text. |
+| R2 option/prerequisite normalization and proposition-level consensus | IN PROGRESS | Existing deterministic source-bound normalization; v15 adds explicit unknown-status wording and exact source-ID attribution instruction. Live adherence remains unverified. |
+| R3 adversarial provenance and fabricated-quote review | IN PROGRESS | Audit detects refusal and unsupported quote status; v15 makes the model instruction explicit. Live adherence remains unverified. |
+| R4 Chair synthesis from actual saved R1–R3 | IN PROGRESS | Bounded Qwen Chair case passed; MedGemma echo/completeness failures remain; full 45-role saved-source reconciliation unaccepted. |
+| Clinical safety, staging and unknown data | IN PROGRESS | No clinical-validity, guideline-concordance or zero-hallucination claim; independent review outstanding. |
+| Case integrity, contradiction preservation and audit history | IN PROGRESS | Raw screen artifacts and historical 45-role records retained; historical findings unresolved. |
+| Provenance and guideline/evidence retrieval | IN PROGRESS | Exact source text and IDs are bound; verified guideline retrieval/claim linkage not integrated. |
+| Chair consensus, dissent and traceability | IN PROGRESS | Deterministic controls exist; full 45-role source-level acceptance outstanding. |
+| Missing/failed-agent handling | IN PROGRESS | MedGemma missed R4 missing-agent completeness in run 44095336849; full failure-injection acceptance outstanding. |
+| Backend tests | IN PROGRESS | Parent 609a0dca backend check 44095398308 passed; new prompt/version/workflow regressions awaiting CI on this remediation commit. |
+| Frontend build | IN PROGRESS | Parent 609a0dca frontend check 44095398267 passed; exact remediation-head CI pending. |
+| Browser E2E | IN PROGRESS | Parent 609a0dca browser check 44095398302 passed; exact remediation-head CI pending. |
+| Dashboard/API and Development Monitor | IN PROGRESS | Existing bounded checks previously passed; no new frontend changes, but exact remediation-head CI pending. |
+| Ollama context handling | VERIFIED | Historical 6,144/8,192 allocation only; long-run truncation is not proven fixed. |
+| Ollama performance and concurrency | IN PROGRESS | Concurrency remains 1; comparable current local timings incomplete. |
+| RTX 4060 request-time GPU inference | NOT STARTED | Requires real local inference with request-time nvidia-smi/Ollama offload evidence. |
+| Hosted v9–v14 model screens | FAILED | Earlier bounded screens retain their recorded integrity failures. |
+| v15/audit-v14 prompt, audit metadata and regression tests | IN PROGRESS | This remediation adds actual R2/R3 prompt-v15 instructions, v15/audit-v14 constants and tests; exact-head CI pending. |
+| v15/audit-v14 screening attempt — run 44095336849 | FAILED | Execution succeeded but artifact manifest says v14/audit-v13; Qwen 2 findings, MedGemma 9 findings; not accepted as v15/audit-v14. Artifact 14335580025 retained. |
+| Qwen expected-version gate before MedGemma | IN PROGRESS | Exact v15/audit-v14 manifest check added after Qwen script-hash validation; test added; exact-head CI pending. |
+| Fresh full 45-role R1–R4 validation | NOT STARTED | No current complete run accepted. |
+| MedGemma HAI-DEF acceptance | VERIFIED | User's prior explicit acceptance retained; screen run records terms attested. |
+| Independent blinded model-output review | NOT STARTED | Required independent review not completed. |
+| Guideline retrieval and verification | NOT STARTED | No current authoritative evidence set linked to simulator conclusions. |
+| Independent qualified clinical review | NOT STARTED | No signed/attributable clinical review artifact. |
+| Packaging prerequisites | IN PROGRESS | Parent 609a0dca check 44095398339 passed; exact remediation-head CI pending. |
+| Windows installer | IN PROGRESS | Parent 609a0dca check 44095398272 passed; hosted Ollama bootstrap was skipped; exact remediation-head CI pending. |
+| Security, dependency audit and CodeQL | IN PROGRESS | Parent 609a0dca check 44095398355 passed; exact remediation-head CI pending. |
+| Release acceptance | BLOCKED | Misversioned screen failed; corrected v15 prompt/version guard and CI retest pending; full-run, independent review, guideline, GPU and clinical gates remain outstanding. |
 
 | Workstream | Status | Evidence / boundary |
 |---|---|---|

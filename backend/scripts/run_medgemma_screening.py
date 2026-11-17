@@ -31,9 +31,10 @@ CORPUS_PATH = (
     / "fixtures"
     / "medgemma_model_integrity_screening_v1.json"
 )
-PROMPT_VERSION = "radonc-mdt-integrity-screen-v14"
-AUDIT_VERSION = "radonc-mdt-integrity-audit-v13"
-# Paired v14/audit-v13 retest: source-derived proposition/status normalization and stricter R2 narrative audit.
+PROMPT_VERSION = "radonc-mdt-integrity-screen-v15"
+AUDIT_VERSION = "radonc-mdt-integrity-audit-v14"
+# Prompt-v15/audit-v14: explicit unknown-prerequisite wording, proposition-specific source attribution,
+# and mandatory audit of the supplied model-claimed quote against exact saved text.
 # [model-integrity-screen] bounded paired Qwen/MedGemma retest after exact-SHA backend regression pass.
 DEFAULT_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/")
 GENERATION_OPTIONS = {
@@ -145,11 +146,17 @@ def round_instruction(round_label: str) -> str:
             "information is required is not a treatment-option position. A silent statement must "
             "remain silent. Keep every conditional option attached to its own prerequisite; missing "
             "documentation means unknown, not clinically absent, negative, failed or unmet. "
+            "When a named prerequisite is unknown or not documented, describe only that documentation "
+            "status; never call the prerequisite itself absent, missing, unmet, failed, negative or ruled out. "
+            "Do not use wording that turns an unknown status into a clinical finding. "
             "Treat information sufficiency and treatment selection as two independent propositions. "
             "If at least two saved rows explicitly agree that more information is required, set "
             "shared_information_sufficiency to shared and include every affirming source ID, even "
             "when no source states a treatment option and shared_treatment_proposition is not_shared. "
             "Never make information agreement depend on treatment agreement. "
+            "When stating that information sufficiency is shared, name every exact saved source ID "
+            "that explicitly agrees; do not omit or substitute those source identifiers. "
+            "Do not describe this limited information-sufficiency agreement as treatment consensus. "
             "Report shared information sufficiency only for at least two agreeing source rows. "
             "Report shared treatment only when at least two sources explicitly support the same "
             "option or sequence under compatible prerequisites. Distinct options are not consensus. "
@@ -170,6 +177,9 @@ def round_instruction(round_label: str) -> str:
             "model_claimed_quote_status to absent AND evidence_status to unsupported_not_evidence. "
             "Compare the separate model_claimed_quote value itself against the saved text; do not "
             "mark the claim present merely because exact_saved_source_text appears in the prompt. "
+            "Do not refuse this quote audit because the case is synthetic; this is a bounded text comparison, "
+            "not a request for clinical judgement. If the supplied claimed quote is absent from the exact "
+            "saved source text, say that it is absent from that source and is unsupported, not evidence. "
             "Copying or recognising the saved text alone is not an explicit rejection of the claim. "
             "Never treat missing imaging/report text as a negative result. Do not alter the locked "
             "source_id or exact_saved_source_text. Preserve explicit negation and do not import "

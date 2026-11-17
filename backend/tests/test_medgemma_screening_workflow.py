@@ -48,6 +48,20 @@ def test_qwen_baseline_is_first_and_medgemma_requires_explicit_terms_attestation
     assert "medgemma1.5:4b-it-q4_K_M" in workflow
 
 
+def test_qwen_exact_prompt_and_audit_versions_are_required_before_medgemma():
+    workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
+    qwen_manifest = workflow.index('$qwenRunManifest = Get-ModelScreenOutputManifest -Path $qwenOutput')
+    expected_prompt = workflow.index('$expectedPromptVersion = "radonc-mdt-integrity-screen-v15"')
+    expected_audit = workflow.index('$expectedAuditVersion = "radonc-mdt-integrity-audit-v14"')
+    version_failure = workflow.index('$manifest.execution.qwen_status = "FAILED_VERSION_GATE"')
+    medgemma_gate = workflow.index('$includeMed = ($env:MEDGEMMA_REQUESTED -eq "true")')
+
+    assert qwen_manifest < expected_prompt < expected_audit < version_failure < medgemma_gate
+    assert "Qwen output version mismatch; expected prompt-v15/audit-v14" in workflow
+    assert "MedGemma remains NOT_REQUESTED." in workflow
+    assert '$manifest.execution.medgemma_status = "NOT_REQUESTED"' in workflow
+
+
 def test_medgemma_pull_persists_state_and_http_failure_diagnostics():
     workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
     pull_start = workflow.index('MODEL_SCREEN_MEDGEMMA_PULL_STARTED')

@@ -1682,6 +1682,36 @@ def test_r2_narrative_audit_flags_unknown_prerequisite_strengthened_to_absent():
     )
 
 
+def test_screen_version_metadata_declares_prompt_v15_and_audit_v14():
+    assert screening.PROMPT_VERSION == "radonc-mdt-integrity-screen-v15"
+    assert screening.AUDIT_VERSION == "radonc-mdt-integrity-audit-v14"
+
+
+def test_v15_r2_prompt_preserves_unknown_prerequisite_and_shared_source_attribution():
+    corpus, _ = load_corpus()
+    case = next(
+        item for item in corpus["cases"]
+        if item["case_id"] == "R2-CONDITIONALITY-007"
+    )
+    prompt = build_generate_payload("qwen3.5:4b", case)["prompt"].casefold()
+    assert "describe only that documentation status" in prompt
+    assert "never call the prerequisite itself absent, missing, unmet, failed, negative or ruled out" in prompt
+    assert "name every exact saved source id" in prompt
+    assert "do not describe this limited information-sufficiency agreement as treatment consensus" in prompt
+
+
+def test_v15_r3_prompt_requires_quote_comparison_and_forbids_synthetic_refusal():
+    corpus, _ = load_corpus()
+    case = next(
+        item for item in corpus["cases"]
+        if item["case_id"] == "R3-FABRICATED-QUOTE-009"
+    )
+    prompt = build_generate_payload("qwen3.5:4b", case)["prompt"].casefold()
+    assert "do not refuse this quote audit because the case is synthetic" in prompt
+    assert "compare the separate model_claimed_quote value itself against the saved text" in prompt
+    assert "say that it is absent from that source and is unsupported, not evidence" in prompt
+
+
 def test_r3_audit_flags_refusal_to_compare_supplied_fabricated_quote():
     corpus, _ = load_corpus()
     case = next(

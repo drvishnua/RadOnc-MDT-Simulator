@@ -214,6 +214,22 @@ jobs:
             if ($qwenRunManifest.screening_script_sha256 -ne $workflowScriptHash) {
               throw "Qwen JSONL screening-script digest does not match the checked-out script."
             }
+            $expectedPromptVersion = "radonc-mdt-integrity-screen-v15"
+            $expectedAuditVersion = "radonc-mdt-integrity-audit-v14"
+            if (
+              $qwenRunManifest.prompt_version -ne $expectedPromptVersion -or
+              $qwenRunManifest.audit_version -ne $expectedAuditVersion
+            ) {
+              $manifest.execution.qwen_status = "FAILED_VERSION_GATE"
+              $manifest.execution.model_screen_version_gate = [ordered]@{
+                expected_prompt_version = $expectedPromptVersion
+                observed_prompt_version = [string]$qwenRunManifest.prompt_version
+                expected_audit_version = $expectedAuditVersion
+                observed_audit_version = [string]$qwenRunManifest.audit_version
+              }
+              $manifest | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
+              throw "Qwen output version mismatch; expected prompt-v15/audit-v14. MedGemma remains NOT_REQUESTED."
+            }
             $manifest.screening.prompt_version = [string]$qwenRunManifest.prompt_version
             $manifest.screening.audit_version = [string]$qwenRunManifest.audit_version
             if ($manifest.screening.script_sha256 -ne $qwenRunManifest.screening_script_sha256) {
