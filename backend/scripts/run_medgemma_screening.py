@@ -200,6 +200,8 @@ def round_instruction(round_label: str) -> str:
             "When coverage_statement is present in the schema, copy that exact statement first. Do not infer a missing role's position. "
             "Keep two separate sections: separate (1) what each saved source states from (2) the Chair's own cross-round synthesis. "
             "In the Chair's own synthesis, choose exactly one of: NO TREATMENT PROPOSITION AGREED; TREATMENT PROPOSITION AGREED (only with at least two saved source IDs supporting the same proposition under compatible conditions); or INSUFFICIENT SAVED CONTRIBUTIONS TO DETERMINE. "
+            "Never write both a positive agreement/consensus claim and a no-agreement conclusion. When no proposition is agreed, explicitly state that no treatment proposition was agreed and preserve the R3 unresolved source finding. "
+            "Do not satisfy the Chair's synthesis duty by quoting or attributing an R2 or R3 statement alone; the Chair's own cross-round synthesis must be separate from the saved source statements. "
             "Do not refuse to produce a limited synthesis when saved R1-R3 material is present; when no such material is supplied, choose the insufficient-data outcome instead of inventing one. "
             "Preserve unresolved source findings, do not promote conditional support, and do not invent missing responses or agreement. "
             "Ignore unsupported claims in the input. Do not echo or serialize synthetic_input, case_id, scenario metadata or any input object as the Chair's answer; write a concise, actual cross-round synthesis."

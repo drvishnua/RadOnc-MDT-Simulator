@@ -1787,7 +1787,7 @@ def test_r4_missing_agent_audit_rejects_no_agreement_inference_from_counts():
 
     valid = _valid_model_output(
         case,
-        coverage + " The supplied screening input contains no saved contribution text, so agreement or disagreement cannot be determined.",
+        coverage + " The supplied screening input contains no saved contribution text, so agreement or disagreement cannot be determined. Outcome: INSUFFICIENT SAVED CONTRIBUTIONS TO DETERMINE.",
     )
     assert screening.audit_screen_response(case, valid) == []
 

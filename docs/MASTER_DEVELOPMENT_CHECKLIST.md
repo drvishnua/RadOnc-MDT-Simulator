@@ -2,7 +2,7 @@
 
 Repository: drvishnua/RadOnc-MDT-Simulator  
 Development branch: feature/four-round-mdt-and-performance  
-Latest corrective code commit: 1fa4e58fc100e911a819709fe02b85d4b043aadc  
+Latest corrective code commit: 2e1cb5b2c3770e770c2c2609731490f73a0172ce  
 PR #1: open, draft, unmerged; base main  
 main: 39a356b8eb09399aa2da1b9b9085965999f5105a, unchanged  
 Latest completed model-screen marker: 011dda99dc8de4783a10448a12c02dc24a346660  
@@ -15,7 +15,7 @@ This is the single authoritative Master Development and Verification Checklist. 
 
 Continuity files: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_LOG.md, RECOVERY_STATE.md, KNOWN_ISSUES.md.
 
-## Current checkpoint — v15/audit-v14 failed; v16/audit-v15 first CI attempt failed; focused corrections underway
+## Current checkpoint — v15/audit-v14 failed; v16/audit-v15 CI corrections underway; dependency security gate blocked
 
 **Pre-correction baseline — branch head 036b0c458a651d53009ea9574b291c5c9e883e61**
 - Backend tests: run [44113858636](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44113858636) — success.
@@ -49,7 +49,7 @@ Continuity files: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_
 | Provenance and guideline/evidence retrieval | IN PROGRESS | Exact source text/IDs are bound in R2/R3; verified guideline retrieval/claim linkage not integrated. |
 | Chair consensus, dissent and traceability | FAILED | R2 partial-agreement narrative conflicts with structured/source positions; MedGemma R4 source echo failure remains. |
 | Missing/failed-agent handling | FAILED | MedGemma omitted expected/saved counts and exact missing role; counts-only input also exposed a missing deterministic guard against unsupported no-agreement inference. |
-| Backend CI — corrective commit 1fa4e58 | FAILED | Run 44135512890: 465 passed, 6 failed, 1 warning. Deterministic preflight 7/7 passed and compilation passed. Failure details: outdated R4 prompt assertions, one audit test used dict.strip instead of the response string, and the mocked R4 missing-agent response did not meet the new exact coverage contract. Artifact 14350314749. |
+| Backend CI — corrective commit 1fa4e58 | FAILED | Run 44135512890: 465 passed, 6 failed, 1 warning. Deterministic preflight 7/7 passed and compilation passed. Failure details retained; artifact 14350314749. |
 | Frontend build | VERIFIED | Exact SHA 036b0c4: run 44113858480 passed. |
 | Browser E2E | VERIFIED | Exact SHA 036b0c4: run 44113858833 passed. |
 | Dashboard/API and Development Monitor | VERIFIED | Exact SHA 036b0c4 browser workflow 44113858833 passed; this is dashboard/registry E2E, not full clinical simulation. |
@@ -58,7 +58,7 @@ Continuity files: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_
 | RTX 4060 request-time GPU inference | NOT STARTED | Requires real local inference with request-time nvidia-smi and Ollama offload evidence. |
 | Hosted v9–v14 model screens | FAILED | Earlier bounded screens retain their recorded integrity failures. |
 | Hosted v15/audit-v14 screen — run 44113146755 | FAILED | Qwen 2 findings; MedGemma 5 findings including one malformed/empty response; artifact retained. |
-| v16/audit-v15 corrective prompt/schema/audit regression work | IN PROGRESS | Initial code commit 1fa4e58 implemented source-bound R4 inventory and counts-only guard; first backend CI failed with 6 test failures. Focused corrections are being prepared. No v16 live retest. |
+| Backend CI — corrective commit 2e1cb5b | FAILED | Run 44136065499: 468 passed, 3 failed, 1 warning. Deterministic preflight 7/7 passed; compilation passed. Remaining failures: two R4 prompt assertions for agreement contradiction and separate Chair synthesis wording; missing-agent valid fixture lacked the explicit insufficient-data outcome. |
 | Qwen expected-version gate before MedGemma | VERIFIED | v15 run's exact prompt/audit version gate passed before MedGemma pull; next screen must gate v16/audit-v15. |
 | Fresh full 45-role R1–R4 validation | NOT STARTED | No current complete run accepted. |
 | MedGemma HAI-DEF acceptance | VERIFIED | Prior user attestation retained; run 44113146755 records terms gate true. |
@@ -67,10 +67,15 @@ Continuity files: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_
 | Independent qualified clinical review | NOT STARTED | No attributable clinical review artifact. |
 | Packaging prerequisites | VERIFIED | Exact SHA 036b0c4: run 44113858860 passed. |
 | Windows installer | VERIFIED | Exact SHA 036b0c4: run 44113858372 passed; this installer workflow is not model execution evidence. |
-| Security, dependency audit and CodeQL | VERIFIED | Exact SHA 036b0c4: run 44113858315 passed. |
-| Release acceptance | BLOCKED | Live model screen failed; corrective regression/CI, new bounded model screen, full 45-role validation, GPU, evidence and independent clinical review gates remain outstanding. |
+| Security/dependency CI — corrective commit 2e1cb5b | FAILED | Run 44136065375: full-history secret scan and both CodeQL jobs passed; npm audit failed on four high findings attributed to picomatch 4.0.7, GHSA-fc5q-39xc-vjpf / CVE-2026-112366. Upstream advisory says all versions through 4.0.7 affected and lists no patched version. Do not force-downgrade Vite; awaiting verified upstream fix. |
+| Release acceptance | BLOCKED | Live model screen failed; backend CI failed, npm audit has four high findings, and new bounded screen, full 45-role validation, GPU, evidence and independent clinical review gates remain outstanding. |
 
 **Next controlled action:** correct the six backend test failures without relaxing the R4 safety contract; then verify all six PR workflows on the exact resulting development-branch head. Only after exact-head CI passes, use a separate marker commit for one sequential Qwen-first/MedGemma-second v16/audit-v15 hosted CPU screen. Preserve run 44113146755 and artifact 14343725249; never reinterpret its failure as a pass.
+
+
+**Security advisory evidence:** GitHub Advisory Database GHSA-fc5q-39xc-vjpf / CVE-2026-112366 reports picomatch through 4.0.7 affected by high-severity ReDoS, published 19 October 2026. The advisory lists no patched version. Upstream issue 234 remains open; no local forced downgrade or unverifiable override has been applied. References: https://github.com/advisories/GHSA-fc5q-39xc-vjpf and https://nvd.nist.gov/vuln/detail/CVE-2026-112366.
+
+**Next controlled action:** fix the three remaining R4 regression failures on the development branch; keep the picomatch security gate FAILED/BLOCKED until a verified patch and passing npm audit are available. Then require all six PR workflows green on the exact head before a separate v16/audit-v15 screen-trigger commit.
 
 ## Historical checkpoint — 17 November 2026 — d836076 exact-head CI green; v15 screen authorised
 
