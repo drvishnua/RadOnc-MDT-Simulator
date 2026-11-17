@@ -822,7 +822,7 @@ def test_run_screen_records_complete_immutable_case_set(tmp_path, monkeypatch):
     manifest = next(record for record in records if record["record_type"] == "manifest")
 
     assert manifest["prompt_version"] == "radonc-mdt-integrity-screen-v12"
-    assert manifest["audit_version"] == "radonc-mdt-integrity-audit-v11"
+    assert manifest["audit_version"] == "radonc-mdt-integrity-audit-v12"
     assert manifest["screening_script_sha256"] == screening.SCRIPT_SHA256
     assert len(manifest["screening_script_sha256"]) == 64
     assert calls == {"tags": 25, "generate": 12, "show": 1, "version": 1}
