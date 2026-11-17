@@ -3,7 +3,7 @@
 Repository: drvishnua/RadOnc-MDT-Simulator  
 Development branch: feature/four-round-mdt-and-performance  
 Latest application/test commit: 9e781525fbf6ac07cf2f6a19d035b82b888f305a  
-Documentation checkpoint commit: pending this update  
+Documentation checkpoint commit: 72382002f648a859b09963cb49807826ac2ded09  
 PR #1: open, draft, unmerged, base main  
 main: 39a356b8eb09399aa2da1b9b9085965999f5105a, unchanged.
 
@@ -15,7 +15,7 @@ Continuity files: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_
 
 Commit 9e781525fbf6ac07cf2f6a19d035b82b888f305a adds a case-specific structured output contract and required R2 source_order array. Server-supplied source IDs and exact source statements are schema-locked. A deterministic validator checks exact source coverage, row order, source attribution, conditional options/prerequisites, proposition-level consensus, R3 identifier inventory and explicit absent-quote rejection. The screening corpus and sampler parameters were not changed.
 
-The auto-trigger path filter now includes backend/tests/test_medgemma_screening.py. Marker-qualified push commit 9e78152 automatically started model workflow 44031253593. Its HAI-DEF pre-provision gate completed successfully. The isolated hosted CPU screen remains IN_PROGRESS; no model result/artifact is available yet.
+The auto-trigger path filter now includes backend/tests/test_medgemma_screening.py. Marker-qualified push commit 9e78152 automatically started model workflow 44031253593. Its HAI-DEF pre-provision gate completed successfully. The hosted CPU screen FAILED bounded acceptance; immutable artifact 14304964550 (SHA-256 6a2907ade0fe2b1ce5e1c73f071d939e00a86cfe857cb875691d0ab2ebf5049f) was downloaded and inspected. Qwen recorded 12/12 responses, but 2 R2 responses were rejected because source_order did not match original saved row order; one R2 case produced four conditionality flags because values `A`/`X` did not match the validator's literal `Option A`/`prerequisite X` substring requirements. This contract requires review, not waiver of the flags. MedGemma was NOT_REQUESTED because the Qwen gate failed. Hosted CPU only; GPU NOT_PERFORMED.
 
 ### Exact-SHA CI evidence — 9e78152
 
@@ -26,7 +26,7 @@ The auto-trigger path filter now includes backend/tests/test_medgemma_screening.
 - Security and Dependency Audit 44031259043: VERIFIED.
 - PR Windows Installer 44031258958: VERIFIED.
 - Push Windows Installer 44031253605: VERIFIED.
-- Paired Qwen/MedGemma model screen 44031253593: IN PROGRESS, no final artifact yet; hosted CPU only, GPU NOT_PERFORMED.
+- Paired Qwen/MedGemma model screen 44031253593: FAILED; job 133863472221; artifact 14304964550; manifest `incomplete_or_malformed`, Qwen `FAILED_OR_INCOMPLETE`, MedGemma `NOT_REQUESTED`; 12 Qwen responses, 2 malformed, 4 integrity flags across 1 case; CPU-only, GPU NOT_PERFORMED.
 
 ### Master Development and Verification Checklist — Current Status
 
@@ -34,8 +34,8 @@ The auto-trigger path filter now includes backend/tests/test_medgemma_screening.
 |---|---|---|
 | R1–R4 architecture and persisted data flow | IN PROGRESS | Four-round pipeline exists; fresh full 45-role end-to-end acceptance outstanding. |
 | R1 independent assessments and unknown/staging safeguards | IN PROGRESS | Deterministic safeguards exist; historical unsupported-stage findings remain open. |
-| R2 saved-source identity, exact text and row order | VERIFIED | Schema v9 locks source IDs/text; required source_order validator and negative reorder regression; backend suite passes. |
-| R2 conditionality and proposition-level consensus | VERIFIED | Structured per-source option/prerequisite/status; separate information-sufficiency/treatment agreement and incompatible-option checks; model adherence awaits paired screen. |
+| R2 saved-source identity, exact text and row order | IN PROGRESS | Schema v9 locks IDs/text and validator correctly rejects wrong order; live Qwen returned wrong order in two cases. Replace model-generated redundant order with server-owned deterministic order only after regression tests prove exact source coverage and order remain enforced. |
+| R2 conditionality and proposition-level consensus | FAILED | Four live flags in R2-FALSE-CONSENSUS-005: model emitted `A`/`X` where validator substring checks require `Option A`/`prerequisite X`. Review source-bound normalization and preserve unknown/conditional semantics; do not suppress findings. |
 | R3 adversarial provenance and fabricated-quote review | VERIFIED | Schema v9 locks source/text and separates quote-present/absent from evidence status; deterministic check and regressions pass; model adherence awaits paired screen. |
 | R4 Chair synthesis from actual saved R1–R3 | IN PROGRESS | Existing deterministic Chair safeguards; fresh full live Chair acceptance outstanding. |
 | Clinical safety, staging and unknown data | IN PROGRESS | No zero-hallucination or clinical-validity claim; independent qualified review outstanding. |
@@ -52,7 +52,7 @@ The auto-trigger path filter now includes backend/tests/test_medgemma_screening.
 | Ollama context handling | VERIFIED | Historical 6,144/8,192 allocation probes only; does not prove live long-output integrity. |
 | Ollama performance and concurrency | IN PROGRESS | Concurrency 1 retained; current comparative latency and throughput evidence incomplete. |
 | RTX 4060 request-time GPU inference | NOT STARTED | Local Windows PC must run real Ollama inference with request-time nvidia-smi/offload evidence. |
-| Hosted Qwen/MedGemma v9 screen | IN PROGRESS | Run 44031253593 on exact SHA 9e78152; no artifact/result yet; CPU-only. |
+| Hosted Qwen/MedGemma v9 screen | FAILED | Run 44031253593 on exact SHA 9e78152; artifact 14304964550 inspected. Qwen 12/12 responses, 2 malformed R2 order cases, 4 conditionality flags in one R2 case; MedGemma NOT_REQUESTED after Qwen gate failure; CPU-only. |
 | Qwen/MedGemma audit-v7 model adherence | FAILED | Prior screen 44018644704/artifact 14300845455: Qwen 5 flags, MedGemma 6 flags, primarily R2/R3; do not promote either model based on prior bounded R4 success. |
 | Current full 45-role R1–R4 validation | NOT STARTED | No fresh complete model execution accepted. |
 | Historical full 45-role run-9 acceptance | FAILED | Audit found 343 integrity findings; originals preserved. |
@@ -67,12 +67,12 @@ The auto-trigger path filter now includes backend/tests/test_medgemma_screening.
 
 ## Immediate next actions
 
-1. Poll the existing paired screen 44031253593; do not start another inference run.
-2. Once complete, inspect its immutable manifest, model digests, sampler parameters, script/corpus hashes, 12 outputs/model, done_reason, token truncation and all deterministic findings.
-3. Compare Qwen and MedGemma R2 source_order, source ledger, position/condition fields and proposition consensus. Inspect R3 identifier inventory and absent-quote/evidence-status fields.
-4. Preserve all raw outputs and record whether each model passes, fails or remains incomplete. No automatic promotion. Arrange independent review.
-5. Only after bounded R2/R3 acceptance, plan a fresh 45-role R1–R4 run and missing/failed-agent tests.
-6. Complete local RTX 4060 inference telemetry, authoritative guideline retrieval and independent clinical review.
+1. Preserve failed workflow 44031253593 and artifact 14304964550 unchanged; do not rerun or promote either model based on this result.
+2. Add a deterministic server-owned R2 source_order field (or equivalent schema constraint) so the model cannot reorder it; add regressions proving order is derived from the original saved contribution order and all source ledger keys/text remain exact.
+3. Review the four conditionality flags against the raw structured ledger. If normalizing `A` to `Option A` and `X` to `prerequisite X`, do so only with source-derived, exact, unambiguous normalization and tests for wrong options, wrong prerequisites, unknown status and incompatible conditions.
+4. Inspect all 12 Qwen outputs and the manifest/hash/done_reason data; arrange independent blinded review. MedGemma has not run and must remain a separate explicitly authorized sequential screen after the Qwen gate is repaired.
+5. After the code/test fix, run backend tests, frontend build, browser E2E, packaging and security CI on the exact application SHA; then trigger one marker-qualified hosted screen at concurrency 1 and inspect its complete artifact.
+6. Only after bounded R2/R3 acceptance, plan fresh 45-role R1–R4 validation and missing/failed-agent tests. Complete local RTX 4060 request-time telemetry, authoritative guideline retrieval and independent qualified clinical review.
 
 **Cloud/device boundary:** GitHub development, CI, installer and hosted CPU model screens do not require the user's PC online. Only local RTX 4060 request-time inference proof requires it powered on.
 
