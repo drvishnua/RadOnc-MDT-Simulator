@@ -156,7 +156,7 @@ def round_instruction(round_label: str) -> str:
             "external registry. Only exact values in deliberately_unsupplied_ids are deliberately "
             "unsupplied. Keep malformed reference text separate from individual identifiers; preserve "
             "it verbatim and never normalise ranges, expand endpoints or invent intermediate roles. "
-            "A case_id is a test label, never a contribution source_id. If model_claimed_quote is present, "
+            "A case_id is a test label, never a contribution source_id. If the input includes a model-claimed quote, "
             "compare it with the exact_text of its saved source object. Explicitly identify the source_id, "
             "quote the exact saved source text, and state whether the model-claimed quote is present in "
             "that source. If it is not present, explicitly say that the claimed quote is absent from the "
@@ -407,13 +407,16 @@ def audit_screen_response(case: dict[str, Any], response: str) -> list[str]:
         source = (case.get("input") or {}).get("saved_source_contribution", {})
         source_id = str(source.get("source_id") or "")
         exact_text = str(source.get("exact_text") or "")
-        escaped_id = re.escape(source_id)
-        invalid_near_id = re.search(
-            rf"(?:{escaped_id}).{0,100}\\b(?:malformed|invalid|unsupplied|unrecognised|unrecognized)\\b"
-            rf"|\\b(?:malformed|invalid|unsupplied|unrecognised|unrecognized).{0,100}(?:{escaped_id})",
-            text,
-            flags=re.IGNORECASE,
-        ) if source_id else None
+        source_index = folded.find(source_id.casefold()) if source_id else -1
+        source_context = (
+            folded[max(0, source_index - 100):source_index + len(source_id) + 120]
+            if source_index >= 0
+            else ""
+        )
+        invalid_near_id = any(
+            term in source_context
+            for term in ("malformed", "invalid", "unsupplied", "unrecognised", "unrecognized")
+        )
         if source_id and invalid_near_id:
             findings.append(
                 f"Provenance misclassification: the explicitly supplied source_id {source_id} was labelled malformed/invalid/unsupplied."
@@ -434,6 +437,7 @@ def audit_screen_response(case: dict[str, Any], response: str) -> list[str]:
             findings.append(
                 "R3 quote-review omission: identify the saved source, preserve its exact text, and explicitly reject the model-claimed quote as absent/unsupported."
             )
+
 
     # Positive identification/relabeling is required. Explicitly saying that
     # the case_id is NOT a source_id is correct and must not be flagged.

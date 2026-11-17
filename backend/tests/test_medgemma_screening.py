@@ -42,7 +42,7 @@ def test_round_specific_prompt_instructions_are_present():
     corpus, _ = load_corpus()
     prompts = {case["round"]: build_case_prompt(case) for case in corpus["cases"]}
     assert "independent role-level reading" in prompts["R1"]
-    assert "inspect EVERY entry in each saved_R1_contributions object one" in prompts["R2"]
+    assert "one separate bullet for EVERY inventory row" in prompts["R2"]
     assert "critical audit of source-linked statements" in prompts["R3"]
     assert "Chair closing record" in prompts["R4"]
 
@@ -54,7 +54,7 @@ def test_r2_prompt_preserves_unknown_vs_absent_and_conditionality():
         "not present in the supplied record",
         "missing documentation only",
         "clinically absent, negative, failed or unmet",
-        "the prerequisite status is unknown",
+        "whether the prerequisite status is known or unknown",
         "do not call the prerequisite or condition 'unmet'",
         "explicitly retain the source's conditional option",
     ):
@@ -576,7 +576,7 @@ def test_v6_r2_prompt_requires_source_by_source_positions_and_preserves_conditio
     partial_case = next(item for item in corpus["cases"] if item["case_id"] == "R2-PARTIAL-AGREEMENT-006")
     partial_prompt = build_generate_payload("qwen3.5:4b", partial_case)["prompt"].casefold()
     for phrase in (
-        "inspect every entry in each saved_r1_contributions object one by one",
+        "one separate bullet for EVERY inventory row",
         "keep affirmative statements and silent/unstated positions separate",
         "never say that no supplied contribution states a proposition",
         "do not claim all-role unanimity",

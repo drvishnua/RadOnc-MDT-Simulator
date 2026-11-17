@@ -149,7 +149,7 @@ jobs:
             }
             foreach ($field in @("prompt_version", "audit_version", "screening_script_sha256")) {
               if ([string]::IsNullOrWhiteSpace([string]$record.$field)) {
-                throw "Model-screen JSONL manifest is missing $field: $Path"
+                throw "Model-screen JSONL manifest is missing ${field}: $Path"
               }
             }
             return $record

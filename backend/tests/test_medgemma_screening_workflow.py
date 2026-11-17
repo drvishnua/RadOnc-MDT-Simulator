@@ -114,4 +114,5 @@ def test_combined_manifest_derives_and_cross_checks_versions_from_raw_model_mani
     assert '$medgemmaRunManifest = Get-ModelScreenOutputManifest -Path $medOutput' in workflow
     assert 'foreach ($field in @("prompt_version", "audit_version", "screening_script_sha256"))' in workflow
     assert "Qwen and MedGemma JSONL manifest mismatch" in workflow
+    assert 'throw "Model-screen JSONL manifest is missing ${field}: $Path"' in workflow
     assert 'prompt_version = "radonc-mdt-integrity-screen-v4"' not in workflow
