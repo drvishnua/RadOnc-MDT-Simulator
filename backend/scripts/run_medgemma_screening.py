@@ -795,12 +795,12 @@ def _normalize_r2_source_labels(
         row["source_id"]
         for row in rows
         if re.search(
-            r"\\bagrees that additional information is required\\b",
+            r"\bagrees that additional information is required\b",
             row["saved_statement"],
             re.IGNORECASE,
         )
         and not re.search(
-            r"\\b(?:does not|doesn't|did not|didn't)\\s+agree\\b",
+            r"\b(?:does not|doesn't|did not|didn't)\s+agree\b",
             row["saved_statement"],
             re.IGNORECASE,
         )
@@ -1354,8 +1354,8 @@ def audit_screen_response(case: dict[str, Any], response: Any) -> list[str]:
         if len(affirming_sources) >= 2:
             narrative_ids = [source_id for source_id in affirming_sources if source_id.casefold() in folded]
             narrative_denies_agreement = bool(re.search(
-                r"\\b(?:no|not any)\\s+(?:shared|common)\\s+(?:information|information-sufficiency)\\s+(?:position|proposition|agreement)\\b"
-                r"|\\bonly one source\\b",
+                r"\b(?:no|not any)\s+(?:shared|common)\s+(?:information|information-sufficiency)\s+(?:position|proposition|agreement)\b"
+                r"|\bonly one source\b",
                 folded,
             ))
             if len(narrative_ids) != len(affirming_sources) or narrative_denies_agreement:
@@ -1364,11 +1364,11 @@ def audit_screen_response(case: dict[str, Any], response: Any) -> list[str]:
                 )
 
         if case_id == "R2-CONDITIONALITY-007":
-            has_option = bool(re.search(r"\\boption\\s+a\\b", folded))
-            has_prerequisite = bool(re.search(r"\\bprerequisite\\s+x\\b", folded))
-            has_conditionality = bool(re.search(r"\\b(?:conditional|only if|subject to|contingent)\\b", folded))
+            has_option = bool(re.search(r"\boption\s+a\b", folded))
+            has_prerequisite = bool(re.search(r"\bprerequisite\s+x\b", folded))
+            has_conditionality = bool(re.search(r"\b(?:conditional|only if|subject to|contingent)\b", folded))
             has_unknown_status = bool(re.search(
-                r"\\b(?:unknown|unverified|not present in the supplied record|not documented)\\b",
+                r"\b(?:unknown|unverified|not present in the supplied record|not documented)\b",
                 folded,
             ))
             if not all((has_option, has_prerequisite, has_conditionality, has_unknown_status)):
