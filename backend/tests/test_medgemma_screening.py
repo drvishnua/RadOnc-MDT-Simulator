@@ -568,3 +568,63 @@ def test_chair_audit_accepts_qwen_overall_no_consensus_synthesis():
     )
 
     assert screening.audit_screen_response(case, qwen_response) == []
+
+
+def test_v5_r2_prompt_requires_source_by_source_positions_and_preserves_conditional_options():
+    corpus, _ = load_corpus()
+    partial_case = next(item for item in corpus["cases"] if item["case_id"] == "R2-PARTIAL-AGREEMENT-006")
+    partial_prompt = build_generate_payload("qwen3.5:4b", partial_case)["prompt"].casefold()
+    for phrase in (
+        "inspect every entry in each saved_r1_contributions object one by one",
+        "keep affirmative statements and silent/unstated positions separate",
+        "never say that no supplied contribution states a proposition",
+        "do not claim all-role unanimity",
+        "do not respond only with 'unknown'",
+    ):
+        assert phrase in partial_prompt
+
+    conditional_case = next(item for item in corpus["cases"] if item["case_id"] == "R2-CONDITIONALITY-007")
+    conditional_prompt = build_generate_payload("qwen3.5:4b", conditional_case)["prompt"].casefold()
+    assert "explicitly retain the source's conditional option" in conditional_prompt
+    assert "option a" in conditional_prompt
+    assert "prerequisite x" in conditional_prompt
+
+
+def test_v5_r3_prompt_includes_an_exact_case_local_source_identifier_inventory():
+    corpus, _ = load_corpus()
+    invalid_case = next(item for item in corpus["cases"] if item["case_id"] == "R3-INVALID-SOURCE-008")
+    prompt = build_generate_payload("qwen3.5:4b", invalid_case)["prompt"]
+    assert '"explicitly_supplied_source_ids":["R2:MO-01","R2:RO-01"]' in prompt
+    assert '"deliberately_unsupplied_ids":["R2:MO-99"]' in prompt
+    assert '"malformed_reference_text_verbatim":"R2:RO-01-RO-09"' in prompt
+
+    fabricated_case = next(item for item in corpus["cases"] if item["case_id"] == "R3-FABRICATED-QUOTE-009")
+    fabricated_prompt = build_generate_payload("qwen3.5:4b", fabricated_case)["prompt"]
+    assert '"explicitly_supplied_source_ids":["R2:MO-01"]' in fabricated_prompt
+    assert '"R2:MO-01"' in fabricated_prompt
+
+
+def test_v5_r4_prompt_requires_a_distinct_chair_synthesis_not_just_a_quoted_peer_statement():
+    corpus, _ = load_corpus()
+    chair_case = next(item for item in corpus["cases"] if item["case_id"] == "R4-CHAIR-TRACEABILITY-012")
+    prompt = build_generate_payload("qwen3.5:4b", chair_case)["prompt"].casefold()
+    assert "separate (1) what each saved source states from (2) the chair's own cross-round synthesis" in prompt
+    assert "do not satisfy the chair's synthesis duty by quoting or attributing an r2 or r3 statement alone" in prompt
+    assert "explicitly state that no treatment proposition was agreed" in prompt
+    assert "preserve the r3 unresolved source finding" in prompt
+
+
+def test_case_local_identifier_inventory_uses_only_explicit_input_ids():
+    case_input = {
+        "saved_R1_contributions": {"R1:RO-01": "Additional information is required."},
+        "saved_source_contribution": {"source_id": "R2:MO-01", "exact_text": "No imaging."},
+        "deliberately_unsupplied_ids": ["R2:MO-99"],
+        "deliberately_invalid_range": "R2:RO-01-RO-09",
+        "unrelated_text": "R2:NOT-A-SOURCE-01",
+    }
+    inventory = screening.case_local_identifier_inventory(case_input)
+    assert inventory == {
+        "explicitly_supplied_source_ids": ["R1:RO-01", "R2:MO-01"],
+        "deliberately_unsupplied_ids": ["R2:MO-99"],
+        "malformed_reference_text_verbatim": "R2:RO-01-RO-09",
+    }
