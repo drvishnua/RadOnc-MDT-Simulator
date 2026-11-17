@@ -2,7 +2,7 @@
 
 Repository: drvishnua/RadOnc-MDT-Simulator  
 Development branch: feature/four-round-mdt-and-performance  
-Current branch head before this checklist-only update: b26de934a0c7134cd80368b9dcae3fabfa567aad  
+Current branch head: ffac5043b7bc986996ba9f4ae20c852e1ca38d9f (documentation-only commit; latest application-code implementation remains 65ac2d5a602d31fce0b79e4079b0d203447edcae)  
 Latest application-code implementation: 65ac2d5a602d31fce0b79e4079b0d203447edcae  
 PR #1: open, draft, unmerged; base main  
 main: 39a356b8eb09399aa2da1b9b9085965999f5105a, unchanged  
@@ -12,16 +12,17 @@ Latest environment evidence: GitHub-hosted Windows CPU, concurrency 1; GPU measu
 
 This top section is the single authoritative current checklist. The earlier dated snapshots below are retained as historical evidence and must not override this status.
 
-## Latest exact-head CI — b26de934a0c7134cd80368b9dcae3fabfa567aad
+## Latest exact-head CI — ffac5043b7bc986996ba9f4ae20c852e1ca38d9f
 
-- Backend run 44139659389: SUCCESS; 471/471 tests passed, 0 failures/errors/skips/inconclusive; deterministic preflight 7/7; diagnostic errors 0.
-- Frontend build run 44139659408: SUCCESS.
-- Patient registry and saved MDT dashboard browser E2E run 44139659759: SUCCESS.
-- Windows packaging prerequisites run 44139659413: SUCCESS.
-- Windows installer run 44139659377: SUCCESS; installer artifact 14354056580, 14,883,008 bytes. Clean-hosted first-run Ollama/model bootstrap job 134239629910: SKIPPED.
-- Security/dependency run 44139659481: WORKFLOW FAILED solely because npm audit reported four high findings for picomatch 4.0.7. Python dependency audit reported no known vulnerabilities; Node audit failed.
-- Full-history secret scan and Python/JavaScript CodeQL both SUCCESS.
-- Six standard workflows: five SUCCESS, one FAILED. This is software/build verification only, not model acceptance, GPU verification, clinical validation or release approval.
+All six PR workflows associated with this exact documentation-only commit have completed:
+- Backend run 44142134948: SUCCESS; 471/471 tests passed, deterministic preflight 7/7, diagnostic errors 0.
+- Frontend build run 44142134991: SUCCESS.
+- Patient registry and saved MDT dashboard browser E2E run 44142134881: SUCCESS; isolated real-browser acceptance completed.
+- Windows packaging prerequisites run 44142134831: SUCCESS.
+- Windows installer run 44142134823: SUCCESS; installer build, install/smoke test, checksum and artifact upload all passed. Clean-hosted first-run Ollama/model bootstrap job: SKIPPED.
+- Security/dependency run 44142134877: WORKFLOW FAILED because the frontend lockfile audit step failed. Python dependency audit: SUCCESS; full-history secret scan: SUCCESS; Python CodeQL: SUCCESS; JavaScript/TypeScript CodeQL: SUCCESS.
+- Overall: five workflows SUCCESS, one workflow FAILED. The security failure remains a release gate. This is software/build verification only, not model acceptance, GPU verification, clinical validation or release approval.
+- PR #1 remains open/draft/unmerged; development branch head is ffac5043b7bc986996ba9f4ae20c852e1ca38d9f; main remains 39a356b8eb09399aa2da1b9b9085965999f5105a and was not modified.
 
 ## Dependency-security investigation — CVE-2026-112366
 
@@ -46,7 +47,7 @@ This top section is the single authoritative current checklist. The earlier date
 |---|---|---|
 | R1–R4 architecture and persisted data flow | IN PROGRESS | Four-round pipeline exists; full live 45-role R1–R4 acceptance outstanding. |
 | R1 independent assessments and unknown/staging safeguards | IN PROGRESS | Deterministic safeguards/regressions exist; broad model adherence not established. |
-| R2 saved-source identity, exact text and row ordering | VERIFIED | Backend 471/471 on implementation SHA 65ac2d5 and exact-head run 44139659389. |
+| R2 saved-source identity, exact text and row ordering | VERIFIED | Backend 471/471 on implementation SHA 65ac2d5 and exact-head run 44142134948. |
 | R2 option/prerequisite normalization and proposition-level consensus | FAILED | v15 run 44113146755 exposed model narrative/position contradictions and MedGemma source-ID misattribution; v16 live retest not run. |
 | R3 adversarial provenance and fabricated-quote review | IN PROGRESS | Source-bound audit regressions pass; broad model adherence not established. |
 | R4 Chair synthesis from actual saved R1–R3 | FAILED | v15 MedGemma echoed input; both models overclaimed missing-agent consensus from counts-only evidence; v16 live retest not run. |
@@ -55,9 +56,9 @@ This top section is the single authoritative current checklist. The earlier date
 | Provenance and guideline/evidence retrieval | IN PROGRESS | Screening harness has source text/IDs; in-app guideline retrieval and linked evidence incomplete. |
 | Chair consensus, dissent and traceability | FAILED | v15 partial-agreement contradiction and R4 source-echo failures await live retest. |
 | Missing/failed-agent handling | FAILED | v15 MedGemma omitted counts/role identity; deterministic guard is regression-tested, not live-model verified. |
-| Backend tests — exact head b26de934 | VERIFIED | Run 44139659389: 471/471 passed; preflight 7/7; diagnostic errors 0. |
-| Frontend build — exact head b26de934 | VERIFIED | Run 44139659408 passed. |
-| Patient registry and saved MDT dashboard browser E2E — exact head b26de934 | VERIFIED | Run 44139659759 passed; not full 45-role clinical simulation. |
+| Backend tests — exact head ffac504 | VERIFIED | Run 44139659389: 471/471 passed; preflight 7/7; diagnostic errors 0. |
+| Frontend build — exact head ffac504 | VERIFIED | Run 44142134991 passed. |
+| Patient registry and saved MDT dashboard browser E2E — exact head ffac504 | VERIFIED | Run 44142134881 passed; not full 45-role clinical simulation. |
 | Mission Control development-process monitor | IN PROGRESS | Backend tests pass; complete operational/browser acceptance of live development monitor not established. |
 | Ollama context handling | IN PROGRESS | Historical 6,144/8,192 allocation only; long-run context truncation not proven fixed. |
 | Ollama performance and concurrency | IN PROGRESS | Hosted screening concurrency 1; comparable local RTX 4060 timings incomplete. |
@@ -71,11 +72,11 @@ This top section is the single authoritative current checklist. The earlier date
 | Independent blinded model-output review | NOT STARTED | Required independent review not completed. |
 | Guideline retrieval and verification | NOT STARTED | No current authoritative evidence set retrieved and linked to simulator conclusions. |
 | Independent qualified clinical review | NOT STARTED | No attributable clinical review artifact. |
-| Packaging prerequisites — exact head b26de934 | VERIFIED | Run 44139659413 passed. |
-| Windows installer — exact head b26de934 | VERIFIED | Run 44139659377 passed installer build/smoke/checksum/upload; artifact 14354056580. Clean-hosted first-run Ollama/model bootstrap was SKIPPED. |
-| Full-history secret scan — exact head b26de934 | VERIFIED | Run 44139659481 passed. |
-| CodeQL — exact head b26de934 | VERIFIED | Python and JavaScript/TypeScript jobs passed in run 44139659481. |
-| Dependency audit — exact head b26de934 | FAILED | Run 44139659481: four high picomatch 4.0.7 findings, GHSA-fc5q-39xc-vjpf / CVE-2026-112366. Python audit had no known vulnerabilities; no override/downgrade/suppression applied. |
+| Packaging prerequisites — exact head ffac504 | VERIFIED | Run 44142134831 passed. |
+| Windows installer — exact head ffac504 | VERIFIED | Run 44142134823 passed installer build/install-smoke/checksum/upload. Clean-hosted first-run Ollama/model bootstrap was SKIPPED. |
+| Full-history secret scan — exact head ffac504 | VERIFIED | Run 44142134877 passed. |
+| CodeQL — exact head ffac504 | VERIFIED | Python and JavaScript/TypeScript jobs passed in run 44142134877. |
+| Dependency audit — exact head ffac504 | FAILED | Run 44142134877: frontend lockfile audit failed; Python dependency audit passed. The outstanding picomatch 4.0.7 finding remains GHSA-fc5q-39xc-vjpf / CVE-2026-112366. No override/downgrade/suppression applied. |
 | Release acceptance | BLOCKED | Dependency audit failed; v15 model screen failed; v16 screen held; full 45-role run, GPU telemetry, evidence verification and independent clinical review outstanding. |
 
 ## Next controlled actions
@@ -141,7 +142,7 @@ Continuity files: PROJECT_STATUS.md, TASK_CHECKLIST.md, DECISIONS.md, EXECUTION_
 |---|---|---|
 | R1–R4 architecture and persisted data flow | IN PROGRESS | Four-round pipeline exists; full live 45-role R1–R4 acceptance outstanding. |
 | R1 independent assessments and unknown/staging safeguards | IN PROGRESS | Deterministic safeguards and regression suite; broad model adherence not established. |
-| R2 saved-source identity, exact text and row ordering | VERIFIED | Backend tests 471/471 on implementation SHA 65ac2d5 and docs-only PR head 23bf75b pass. |
+| R2 saved-source identity, exact text and row ordering | VERIFIED | Backend tests 471/471 on implementation SHA 65ac2d5 and docs-only PR head ffac504 pass. |
 | R2 option/prerequisite normalization and proposition-level consensus | FAILED | v15 run 44113146755: both models failed narrative/position requirements; MedGemma misattributed structured IDs. v16 live retest not run. |
 | R3 adversarial provenance and fabricated-quote review | IN PROGRESS | Source-bound audit regressions pass; v15 had no flagged R3 cases, broader adherence unverified. |
 | R4 Chair synthesis from actual saved R1–R3 | FAILED | v15 MedGemma echoed input; both models overclaimed missing-agent consensus from counts-only evidence. v16 code regressions pass, model behaviour not retested. |
