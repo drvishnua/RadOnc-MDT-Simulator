@@ -2,26 +2,26 @@
 
 Snapshot: 17 November 2026  
 Branch: feature/four-round-mdt-and-performance  
-Latest application/test SHA: de95004d1c169f3ffa6c52ccf412d84d33055234
+Latest application/test SHA: 90186c26571669fc4ffde166fb593325377d76ee
 
 | ID | Status | Issue | Evidence / impact | Next action |
 |---|---|---|---|---|
-| KI-001 | FAILED | Earlier superseded model screen | Run 44000326185; MedGemma three 500-token truncations. | Preserve artifact. |
-| KI-002 | FAILED | v6/audit-v4 screen | Run 44000583529; three MedGemma truncations. | Preserve raw output. |
-| KI-003 | FAILED | Historical 45-role run-9 integrity | Audit revalidation recorded 343 findings (R1 11, R2 41, R3 271, R4 20). | Original records immutable; fresh acceptance required. |
-| KI-004 | IN PROGRESS | No current full 45-role R1–R4 acceptance | Bounded 12-case screens/tests do not establish full-system behaviour. | Controlled full validation after gates. |
-| KI-005 | NOT STARTED | RTX 4060 request-time inference unproven | Hosted screens CPU-only. | Local inference with nvidia-smi/ollama ps/latency. |
-| KI-006 | NOT STARTED | Guideline retrieval/claim verification | No current verified authoritative guideline corpus. | Retrieve and link exact source references. |
+| KI-001 | FAILED | Early superseded screen | Run 44000326185; three MedGemma outputs truncated at 500 tokens. | Preserve artifact. |
+| KI-002 | FAILED | Earlier v6/audit-v4 screen | Run 44000583529; three MedGemma truncations. | Preserve raw output. |
+| KI-003 | FAILED | Historical 45-role run-9 integrity | Audit revalidation reported 343 findings (R1 11, R2 41, R3 271, R4 20). | Preserve original records; fresh full acceptance needed. |
+| KI-004 | IN PROGRESS | No current full 45-role R1–R4 acceptance | Bounded 12-case screens do not prove full system behaviour. | Controlled fresh full run and audit. |
+| KI-005 | NOT STARTED | RTX 4060 request-time inference unproven | Hosted screens CPU only. | Real local inference while recording nvidia-smi, ollama ps/offload and latency. |
+| KI-006 | NOT STARTED | Guideline retrieval/claim verification | No current verified guideline corpus. | Retrieve and link authoritative sources. |
 | KI-007 | NOT STARTED | Independent qualified clinical review | No review artifact. | Obtain qualified review. |
-| KI-008 | IN PROGRESS | Development Monitor live GitHub API dependency | Production browser uses public API subject to network/rate limits. | Verify live browser operation and stale-state handling. |
-| KI-009 | IN PROGRESS | MedGemma repetition robustness | Recent paired runs 44011921822, 44010717466 and 44016121962 had complete stop outputs; earlier runs truncated. | Continue monitoring; bounded samples only. |
-| KI-010 | IN PROGRESS | Earlier MedGemma HTTP 500 model pull | Run 44004929958 failed; later pulls succeeded; original root cause unknown. | Investigate if reproduced. |
-| KI-011 | VERIFIED | Paired sampler parity | Run 44016121962: matching model digests/options and 24/24 stop completions. | Maintain and reverify. |
-| KI-012 | IN PROGRESS | MedGemma R2/R3 semantic defects | Prompt-v8/audit-v6: missing R2 source rows and conditionality, R3 exact quote rejection, plus false shared treatment proposition found manually. | Audit-v7 run 44018644704 active. |
-| KI-013 | VERIFIED — CODE ONLY | Audit-v6 correct-negation handling | Backend and model output verified on prior commits. | Keep regression. |
-| KI-014 | FAILED — SUPERSEDED | Prompt-v7 removed existing regression-protected phrases | Backend run 44015312495 failed 8 tests. | Preserve historical record; prompt v8 supersedes. |
-| KI-015 | VERIFIED — CODE ONLY | Prompt-v8 hardening | Backend 432/432 and standard CI passed on a936993/a9b946e; model adherence remains incomplete. | Continue screening. |
-| KI-016 | IN PROGRESS | Audit-v7 first Backend failure | Run 44018652084: 434/437 due two stale safe fixtures and one audit-version assertion. | Corrected test-only commit de95004; verify new CI. |
-| KI-017 | IN PROGRESS | Audit-v7 paired model screen | Run 44018644704 on source 91b7283 active. | Inspect artifact after completion. |
+| KI-008 | IN PROGRESS | Development Monitor live GitHub API dependency | Production browser uses public API subject to network/rate limits. | Verify live browser state/stale handling. |
+| KI-009 | IN PROGRESS | MedGemma repetition robustness | Latest paired runs had 12/12 stop outputs; earlier runs truncated. | Continue monitoring; bounded samples only. |
+| KI-010 | IN PROGRESS | Historical MedGemma HTTP 500 pull issue | Run 44004929958 failed during pull; later pulls succeeded. Root cause unknown. | Investigate if reproduced. |
+| KI-011 | VERIFIED | Paired sampler parity | Run 44018644704 shows identical generation options and 24/24 stop outputs. | Preserve settings. |
+| KI-012 | IN PROGRESS | Model semantic defects R2/R3 | Audit-v7 run 44018644704: Qwen 5 flags; MedGemma 6 flags. Both quote rejection omissions; MedGemma false consensus and source ledger omissions. | Further prompt/model work and independent review. |
+| KI-013 | VERIFIED — SOFTWARE | Audit-v6 safe-negation detector | Qwen no-shared proposition negative wording no longer falsely flagged. | Retain regression. |
+| KI-014 | FAILED — SUPERSEDED | Prompt-v7 regressed asserted prompt phrases | Backend 44015312495 failed 8 tests. | Preserve history; v8 supersedes. |
+| KI-015 | VERIFIED — BOUNDED CODE | Prompt-v8 R2/R3/R4 hardening | Backend 432/432 on a936993; output adherence remains incomplete. | Keep model acceptance open. |
+| KI-016 | VERIFIED — SOFTWARE | Audit-v7 deterministic reviewer | Backend 437/437 on 90186c2; exact rows/order and incompatible-option consensus checks tested. | Verify continued behaviour in future screens. |
+| KI-017 | IN PROGRESS | R2/R3 model adherence | Latest audit-v7 paired screen has 11 flags across both models; R4 traceability case passed only in this bounded screen. | Address model failures; retain blinded review. |
 
-Cloud GitHub development, CI, packaging and CPU screens do not require the user's PC online. Only actual local RTX 4060 proof requires the target PC running local Ollama inference.
+Cloud GitHub development, CI, packaging and CPU model screens do not require the user's PC online. Local RTX 4060 proof requires the target PC powered on with real Ollama inference running.

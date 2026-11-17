@@ -172,3 +172,23 @@ Append new entries chronologically. Record actual commit SHAs, run IDs and resul
 - Test-only commit de95004 fixes those fixture/assertion mismatches without changing audit logic.
 - Corrected Backend 44018911878 and other standard CI are pending/in progress; packaging prerequisites passed.
 - Audit-v7 model screen 44018644704, source 91b7283, is active on hosted Windows CPU; final artifact not yet available.
+
+
+## 17 November 2026 — audit-v7 model results and verified software CI
+
+### Completed prompt-v8 / audit-v7 model screen
+
+- Run 44018644704 completed SUCCESS, artifact 14300845455, implementation source 91b7283. Manifest: prompt v8, audit v7, script SHA-256 38eb56cef1597d79a361f8c94ffd2a4aca724da3bb0314104a033818e16a3fce, corpus SHA-256 5fe333969035e403366272f6d3012809059d0be7ce1ce06efb16b6c6493fdeb3, Ollama 0.40.14, hosted Windows CPU.
+- Qwen: 12/12 records, 0 failed/malformed; 5 flags across four cases: R2 partial source order, R2 conditionality plus missing source, R3 inventory omission, R3 fabricated-quote rejection omission.
+- MedGemma: 12/12 records, 0 failed/malformed; 6 flags across four cases: R2 distinct-option false consensus, R2 partial source ledger/attribution (two findings), R2 conditionality plus missing rows (two findings), R3 fabricated-quote rejection omission.
+- Both models passed the R4 Chair traceability case without flags and returned no-treatment-proposition conclusions. Bounded observation only.
+- All 24 responses ended done_reason=stop, no cap truncations. Paired settings identical: temperature0, seed73, num_ctx4096, top_k20, top_p0.95, frequency0, presence1.5, repeat_last_n64, repeat_penalty1.1, num_predict500. GPU NOT_PERFORMED.
+- Summaries remain PENDING_HUMAN_REVIEW, automatic quality score null and clinical accuracy unevaluated.
+
+### Audit-v7 CI correction and completion
+
+- Initial Backend run 44018652084 failed 434/437; subsequent run 44018911878 failed 435/437. Failure diagnostics showed the remaining old safe R2 fixture and a mocked full-screen response set did not meet audit-v7's exact saved-row and order contract.
+- Test-only commit 90186c2 aligned those responses with exact saved statements in original order and a valid no-shared-treatment conclusion. Audit rules were not weakened.
+- Exact-head Backend [44020149041](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44020149041): **437 passed, 0 failed, 0 errors, 0 skipped**. JUnit artifact **14300457106**, preflight artifact **14300053331**.
+- Frontend [44020148873](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44020148873), Browser E2E [44020148938](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44020148938), Packaging Prerequisites [44020149274](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44020149274), Windows Installer [44020148842](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44020148842), Security/Dependency/CodeQL [44020148777](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44020148777), and Push Installer [44020142573](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44020142573) passed.
+- PR #1 remains open/draft/unmerged; main unchanged.
