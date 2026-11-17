@@ -571,6 +571,23 @@ def test_chair_audit_accepts_qwen_overall_no_consensus_synthesis():
     assert screening.audit_screen_response(case, qwen_response) == []
 
 
+def test_r3_separate_malformed_range_does_not_reclassify_nearby_supplied_source_id():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R3-FABRICATED-QUOTE-009")
+    response = (
+        "The supplied source ID R2:MO-01 is explicitly supplied. "
+        "The separate malformed raw reference R2:RO-01-RO-09 remains malformed and is not expanded. "
+        "The claimed MRI quote is not present in the saved source R2:MO-01. "
+        "The exact saved source text is: 'No imaging result is included in the supplied fictional record.' "
+        "The MRI claim is unsupported and is not evidence."
+    )
+
+    findings = screening.audit_screen_response(case, response)
+
+    assert not any("Provenance misclassification" in item for item in findings)
+    assert not any("R3 quote-review omission" in item for item in findings)
+
+
 def test_v6_r2_prompt_requires_source_by_source_positions_and_preserves_conditional_options():
     corpus, _ = load_corpus()
     partial_case = next(item for item in corpus["cases"] if item["case_id"] == "R2-PARTIAL-AGREEMENT-006")
@@ -582,7 +599,7 @@ def test_v6_r2_prompt_requires_source_by_source_positions_and_preserves_conditio
         "do not claim all-role unanimity",
         "do not respond only with 'unknown'",
     ):
-        assert phrase in partial_prompt
+        assert phrase.casefold() in partial_prompt
 
     conditional_case = next(item for item in corpus["cases"] if item["case_id"] == "R2-CONDITIONALITY-007")
     conditional_prompt = build_generate_payload("qwen3.5:4b", conditional_case)["prompt"].casefold()

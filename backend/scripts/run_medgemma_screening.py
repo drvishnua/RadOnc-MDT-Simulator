@@ -407,17 +407,30 @@ def audit_screen_response(case: dict[str, Any], response: str) -> list[str]:
         source = (case.get("input") or {}).get("saved_source_contribution", {})
         source_id = str(source.get("source_id") or "")
         exact_text = str(source.get("exact_text") or "")
-        source_index = folded.find(source_id.casefold()) if source_id else -1
-        source_context = (
-            folded[max(0, source_index - 100):source_index + len(source_id) + 120]
-            if source_index >= 0
-            else ""
-        )
-        invalid_near_id = any(
-            term in source_context
-            for term in ("malformed", "invalid", "unsupplied", "unrecognised", "unrecognized")
-        )
-        if source_id and invalid_near_id:
+        # Bind an invalidity label to this exact source identifier. A nearby,
+        # separate malformed range must not contaminate a supplied source ID.
+        escaped_source_id = re.escape(source_id)
+        bad_status = r"(?:malformed|invalid|unsupplied|unrecognised|unrecognized)"
+        identifier_prefix = r"(?:source[_ ](?:id|identifier)|identifier)"
+        identifier_value = (
+            rf"(?:\\b{identifier_prefix}\\s*(?:[:=]\\s*)?['\"]?{escaped_source_id}['\"]?"
+            rf"|\\b{escaped_source_id}\\b)"
+        ) if source_id else ""
+        direct_misclassification = re.search(
+            rf"{identifier_value}\\s+(?:is|was|has been|is marked as|was marked as|"
+            rf"is labelled as|was labelled as|is labeled as|was labeled as|"
+            rf"is classified as|was classified as|is treated as|was treated as)\\s+{bad_status}\\b"
+            rf"|\\b{bad_status}\\s+{identifier_prefix}\\s*(?:[:=]\\s*)?['\"]?{escaped_source_id}\\b",
+            text,
+            flags=re.IGNORECASE,
+        ) if source_id else None
+        failed_validation = re.search(
+            rf"{identifier_value}\\s+(?:cannot|can't|could not)\\s+be\\s+"
+            r"(?:validated|verified|recognised|recognized|accepted)\\b",
+            text,
+            flags=re.IGNORECASE,
+        ) if source_id else None
+        if source_id and (direct_misclassification or failed_validation):
             findings.append(
                 f"Provenance misclassification: the explicitly supplied source_id {source_id} was labelled malformed/invalid/unsupplied."
             )

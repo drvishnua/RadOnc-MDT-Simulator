@@ -427,8 +427,9 @@ async function verifyFourRoundDashboard() {
   console.log("MISSION_CONTROL_ROLE_DRILLDOWN_E2E_OK");
   console.log("Verified in headless Edge: R2 exposes 45 persisted metadata-only role states; R4 exposes only the completed SG-07 Chair.");
 
-  // Assert the separate GitHub development-process panel without using the
-  // clinical Mission Control card selectors or exposing clinical run content.
+  // Assert the separate GitHub development-process panel using the deterministic
+  // public-API fixture injected before React mounts. This tests rendering and
+  // branch/PR/workflow mapping, not live GitHub network availability.
   await waitForExpression(
     "(() => { const panel = [...document.querySelectorAll('section')].find(node => node.getAttribute('aria-label') === 'Development Monitor'); return !!panel && [...panel.querySelectorAll('a')].some(node => (node.href || '').endsWith('/pull/1')) && panel.querySelectorAll('.development-run-card').length >= 2; })()",
     "the read-only GitHub Development Monitor and PR/workflow telemetry",
@@ -464,7 +465,7 @@ async function verifyFourRoundDashboard() {
     throw new Error("Development Monitor did not render verified GitHub branch/PR/workflow metadata: " + JSON.stringify(developmentSnapshot));
   }
   console.log("DEVELOPMENT_MONITOR_BROWSER_E2E_OK");
-  console.log("Verified in headless Edge: PR #1, development branch, current HEAD SHA and linked GitHub Actions runs are visible without clinical case content.");
+  console.log("Verified in headless Edge: PR #1, development branch, current HEAD SHA and linked workflow runs render from deterministic GitHub API fixtures without exposing clinical case content.");
 
   await waitForExpression(
     "document.body.innerText.includes('Four-round MDT workflow')",
@@ -544,6 +545,59 @@ try {
 
   const port = await waitForDevToolsPort();
   await connectToPage(port);
+
+  // Give the Development Monitor stable public GitHub API fixtures before
+  // React mounts. The production UI still uses the live read-only GitHub API;
+  // this browser regression tests its rendering without relying on outbound
+  // network access or shared unauthenticated API rate limits.
+  const githubApiFixture = String.raw`(() => {
+    const realFetch = window.fetch.bind(window);
+    const apiBase = "https://api.github.com/repos/drvishnua/RadOnc-MDT-Simulator";
+    const branch = "feature/four-round-mdt-and-performance";
+    const headSha = "a1".repeat(20);
+    const checkedAt = "2026-11-17T01:44:00Z";
+    const pullRequest = {
+      number: 1,
+      state: "open",
+      draft: true,
+      html_url: "https://github.com/drvishnua/RadOnc-MDT-Simulator/pull/1",
+      updated_at: checkedAt,
+      head: { ref: branch, sha: headSha },
+      base: { ref: "main" }
+    };
+    const runs = {
+      workflow_runs: [
+        {
+          id: 7100001, workflow_id: 101, name: "Backend Tests", run_number: 1188,
+          status: "completed", conclusion: "success", event: "pull_request",
+          head_sha: headSha, created_at: "2026-11-17T01:43:00Z",
+          updated_at: checkedAt,
+          html_url: "https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/7100001"
+        },
+        {
+          id: 7100002, workflow_id: 102,
+          name: "Patient Registry and Four-Round Dashboard Browser E2E", run_number: 400,
+          status: "completed", conclusion: "success", event: "pull_request",
+          head_sha: headSha, created_at: "2026-11-17T01:42:00Z",
+          updated_at: checkedAt,
+          html_url: "https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/7100002"
+        }
+      ]
+    };
+    const jsonResponse = payload => new Response(JSON.stringify(payload), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+    window.fetch = (input, init) => {
+      const url = typeof input === "string" ? input : (input && input.url) || String(input);
+      if (url === apiBase + "/pulls/1") return Promise.resolve(jsonResponse(pullRequest));
+      if (url.startsWith(apiBase + "/actions/runs?")) return Promise.resolve(jsonResponse(runs));
+      return realFetch(input, init);
+    };
+  })();`;
+  await sendCommand("Page.addScriptToEvaluateOnNewDocument", { source: githubApiFixture });
+  await sendCommand("Page.reload", { ignoreCache: true });
+
   await waitForExpression("!!document.querySelector('.app-shell')", "React application mount");
   await waitForExpression(
     "(() => { const label = [...document.querySelectorAll('label')].find(node => (node.innerText || '').trim().startsWith('Registered patient')); return !!label && !!label.querySelector('select'); })()",
