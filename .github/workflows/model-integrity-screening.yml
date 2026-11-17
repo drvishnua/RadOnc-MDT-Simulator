@@ -1,4 +1,5 @@
 name: Synthetic Model Integrity Screening
+# [model-integrity-screen] R2 contract retest after server-derived source ordering and source-bound short-label normalization; sequential Qwen then MedGemma only after the Qwen gate passes.
 # [model-integrity-screen] Qwen v3 12-case retest after v2 supplied-source-ID, case-ID boundary, and bounded-Chair audit findings; CPU-only; no MedGemma.
 # [model-integrity-screen] Retry Qwen baseline after bare-digest and finalizer corrections; push remains Qwen-only.
 # [model-integrity-screen] Qwen v2 prompt retest after unknown-vs-absent, malformed-range, and negation hardening; CPU-only.
