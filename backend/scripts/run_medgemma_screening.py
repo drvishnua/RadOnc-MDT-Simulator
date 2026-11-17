@@ -38,6 +38,11 @@ GENERATION_OPTIONS = {
     "temperature": 0,
     "seed": 73,
     "num_ctx": 4096,
+    # Ollama defaults repeat_penalty to 1.0 (disabled). The first paired
+    # MedGemma screens showed phrase loops ending at the 500-token cap, so
+    # use a mild documented penalty for BOTH models without raising the cap.
+    "repeat_last_n": 64,
+    "repeat_penalty": 1.1,
     "num_predict": 500,
 }
 
