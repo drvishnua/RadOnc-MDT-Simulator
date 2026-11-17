@@ -431,7 +431,7 @@ def test_r2_schema_prioritises_structured_fields_and_bounds_free_text():
 
     prompt = build_case_prompt(case)
     assert "response field must be one non-empty factual sentence of at most 30 words" in prompt
-    assert "do not put analysis or reasoning in that field" in prompt
+    assert "Do not put analysis or reasoning in that field" in prompt
 
 
 def test_case_specific_schema_rejects_dropped_or_altered_r2_source_rows():
