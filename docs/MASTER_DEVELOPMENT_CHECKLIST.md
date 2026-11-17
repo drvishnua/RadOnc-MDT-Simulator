@@ -2,11 +2,11 @@
 
 Repository: drvishnua/RadOnc-MDT-Simulator  
 Development branch: feature/four-round-mdt-and-performance  
-Latest source/prompt implementation commit: c3530019f70ec43fbb2a0f0d896d922d6981b8a0 (prompt-v15/audit-v14 metadata, R2/R3 prompt changes and Qwen version gate)  
-Latest test maintenance: this follow-up corrects stale v14/v13 manifest expectations and the MedGemma initial-state workflow assertion; exact-head CI pending  
-Latest application/test SHA before test maintenance: c3530019f70ec43fbb2a0f0d896d922d6981b8a0; Backend 465 passed / 2 failed; standard checks not all complete  
-Latest model-screen attempt: run 44095336849 completed but failed version integrity (manifest v14/audit13); artifact 14335580025 preserved  
-Latest checklist baseline: this follow-up is based on c3530019f70ec43fbb2a0f0d896d922d6981b8a0  
+Latest prompt/source implementation commit: c3530019f70ec43fbb2a0f0d896d922d6981b8a0 (screen-v15/audit-v14, R2/R3 prompt changes and exact Qwen version gate)  
+Latest test and current checklist commit before this model-screen marker: 785a094bb3e9a8b345eac231a57ea82a9fc963ae  
+Latest exact-head CI: 785a094; backend 467 passed; all six standard PR checks passed (runs 44112201757, 44112201887, 44112201703, 44112201832, 44112202136, 44112201993)  
+Latest valid model-screen attempt: none yet; previous run 44095336849 failed version integrity (artifact manifest v14/audit-v13; artifact 14335580025 preserved)  
+Current checklist is updated in this marker commit; branch parent is 785a094bb3e9a8b345eac231a57ea82a9fc963ae  
 PR #1: open, draft, unmerged, base main  
 main: 39a356b8eb09399aa2da1b9b9085965999f5105a, unchanged.
 
