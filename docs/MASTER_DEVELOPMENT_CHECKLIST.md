@@ -2,7 +2,7 @@
 
 Repository: drvishnua/RadOnc-MDT-Simulator  
 Development branch: feature/four-round-mdt-and-performance  
-Current branch head: ffac5043b7bc986996ba9f4ae20c852e1ca38d9f (documentation-only commit; latest application-code implementation remains 65ac2d5a602d31fce0b79e4079b0d203447edcae)  
+Current branch head: this checklist revision is committed at the development-branch tip; verify the exact SHA from the live branch ref. Latest exact CI-tested documentation baseline: ffac5043b7bc986996ba9f4ae20c852e1ca38d9f (documentation-only); latest application-code implementation remains 65ac2d5a602d31fce0b79e4079b0d203447edcae.  
 Latest application-code implementation: 65ac2d5a602d31fce0b79e4079b0d203447edcae  
 PR #1: open, draft, unmerged; base main  
 main: 39a356b8eb09399aa2da1b9b9085965999f5105a, unchanged  
