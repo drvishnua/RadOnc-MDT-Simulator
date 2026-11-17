@@ -129,8 +129,8 @@ def round_instruction(round_label: str) -> str:
         ),
         "R2": (
             "Analyse only the supplied saved R1 contributions. The case-specific JSON schema "
-            "contains an exact source_order array and a required source_ledger property for every "
-            "saved source ID. The source_order array must match the original input order exactly. "
+            "requires a source_ledger property for every saved source ID. The server derives the "
+            "authoritative sequence from the original saved R1 contribution order after validation. "
             "Each saved_statement field is schema-locked to the exact server text; do not alter it. "
             "For each row, classify information_position, treatment_option, prerequisite and "
             "prerequisite_status. A statement agreeing that more information is required is not "

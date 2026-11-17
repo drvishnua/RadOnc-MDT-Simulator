@@ -917,6 +917,9 @@ def test_v9_r2_structured_schema_preserves_order_attribution_and_consensus_types
     partial_case = next(item for item in corpus["cases"] if item["case_id"] == "R2-PARTIAL-AGREEMENT-006")
     partial_payload = build_generate_payload("qwen3.5:4b", partial_case)
     partial_schema = partial_payload["format"]["properties"]
+    partial_prompt = partial_payload["prompt"].casefold()
+    assert "source_order array" not in partial_prompt
+    assert "server derives the authoritative sequence" in partial_prompt
     source_ids = ["R1:RO-01", "R1:MO-01", "R1:SO-02"]
     assert "source_order" not in partial_schema  # Derived by the server after validation.
     assert list(partial_schema["source_ledger"]["properties"]) == source_ids
