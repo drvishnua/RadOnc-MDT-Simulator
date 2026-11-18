@@ -247,20 +247,6 @@ async function submitCaseValidation() {
   );
 }
 
-async function clickDevelopmentMonitorRefresh() {
-  const clicked = await evaluate(
-    "(() => {" +
-      "const panel = [...document.querySelectorAll('section')].find(node => node.getAttribute('aria-label') === 'Development Monitor');" +
-      "const button = [...(panel?.querySelectorAll('button') || [])].find(node => (node.innerText || '').trim().startsWith('Refresh'));" +
-      "if (!button) throw new Error('Could not find the Development Monitor refresh button.');" +
-      "if (button.disabled) throw new Error('The Development Monitor refresh button is disabled.');" +
-      "button.click();" +
-      "return true;" +
-    "})()"
-  );
-  if (!clicked) throw new Error("Development Monitor refresh button was not activated.");
-}
-
 async function setAllStructuredFieldValues() {
   await evaluate(
     "(() => { const section = document.querySelector('details.structured-fields'); if (!section) throw new Error('Structured case details section is missing.'); section.open = true; return true; })()"
@@ -384,186 +370,15 @@ async function verifyFourRoundDashboard() {
     "the dashboard after restoring the saved four-round run"
   );
 
-  await waitForExpression(
-    "!!document.querySelector('.mission-control-panel') && " +
-      "document.querySelectorAll('.mission-run-card').length > 0",
-    "the read-only Mission Control panel and recent saved runs"
+  const removedMonitorUi = await evaluate(
+    "(() => ({ missionControl: !!document.querySelector('section[aria-label=\"Mission Control\"]'), " +
+      "developmentMonitor: !!document.querySelector('section[aria-label=\"Development Monitor\"]'), " +
+      "monitorPanels: document.querySelectorAll('.mission-control-panel').length }))()"
   );
-  const missionControlSnapshot = await evaluate(
-    "(() => {" +
-      "const shortId = " + json(dashboardRunId.slice(0, 8)) + ";" +
-      "const card = [...document.querySelectorAll('.mission-run-card')].find(node => (node.innerText || '').includes('Run ' + shortId));" +
-      "if (!card) return { found: false, stages: [] };" +
-      "const stages = [...card.querySelectorAll('.mission-round-card')].map(node => (node.innerText || '').replace(/\\s+/g, ' ').trim());" +
-      "return { found: true, stages, hasSnapshot: (card.innerText || '').includes('Snapshot SHA-256') };" +
-    "})()"
-  );
-  if (
-    !missionControlSnapshot.found ||
-    missionControlSnapshot.stages.length !== 4 ||
-    !missionControlSnapshot.stages[0].includes("45/45 complete") ||
-    !missionControlSnapshot.stages[1].includes("45/45 complete") ||
-    !missionControlSnapshot.stages[2].includes("45/45 complete") ||
-    !missionControlSnapshot.stages[3].includes("1/1 complete") ||
-    !missionControlSnapshot.hasSnapshot
-  ) {
-    throw new Error("Mission Control did not render the seeded run's four persisted stage summaries: " + JSON.stringify(missionControlSnapshot));
+  if (removedMonitorUi.missionControl || removedMonitorUi.developmentMonitor || removedMonitorUi.monitorPanels !== 0) {
+    throw new Error("Retired operational monitor UI is still present: " + JSON.stringify(removedMonitorUi));
   }
-  console.log("MISSION_CONTROL_BROWSER_E2E_OK");
-  console.log("Verified in headless Edge: the seeded run appears with R1/R2/R3 45/45 and Chair R4 1/1 completion counts and a case-snapshot hash prefix.");
-
-  const r2Opened = await evaluate(
-    "(() => {" +
-      "const shortId = " + json(dashboardRunId.slice(0, 8)) + ";" +
-      "const run = [...document.querySelectorAll('.mission-run-card')].find(node => (node.innerText || '').includes('Run ' + shortId));" +
-      "const round = run?.querySelectorAll('.mission-round-card')[1];" +
-      "const button = round?.querySelector('.mission-role-toggle');" +
-      "if (button) button.click();" +
-      "return !!button;" +
-    "})()"
-  );
-  if (!r2Opened) throw new Error("Mission Control R2 role expansion button was not found.");
-  await waitForExpression(
-    "!!document.querySelector('.mission-role-detail') && document.querySelectorAll('.mission-role-row').length === 45",
-    "all 45 R2 persisted role rows"
-  );
-  const r2Detail = await evaluate(
-    "(() => {" +
-      "const rows = [...document.querySelectorAll('.mission-role-row')];" +
-      "return { count: rows.length, first: rows[0]?.innerText || '', leaksProse: (document.querySelector('.mission-role-detail')?.innerText || '').includes('provisional conclusion') };" +
-    "})()"
-  );
-  if (r2Detail.count !== 45 || !r2Detail.first.includes("RO-01") || !r2Detail.first.toLowerCase().includes("completed") || r2Detail.leaksProse) {
-    throw new Error("R2 role detail did not show 45 completed metadata-only rows: " + JSON.stringify(r2Detail));
-  }
-
-  const r4Opened = await evaluate(
-    "(() => {" +
-      "const shortId = " + json(dashboardRunId.slice(0, 8)) + ";" +
-      "const run = [...document.querySelectorAll('.mission-run-card')].find(node => (node.innerText || '').includes('Run ' + shortId));" +
-      "const round = run?.querySelectorAll('.mission-round-card')[3];" +
-      "const button = round?.querySelector('.mission-role-toggle');" +
-      "if (button) button.click();" +
-      "return !!button;" +
-    "})()"
-  );
-  if (!r4Opened) throw new Error("Mission Control R4 role expansion button was not found.");
-  await waitForExpression(
-    "document.querySelectorAll('.mission-role-row').length === 1",
-    "the single R4 Chair role row"
-  );
-  const r4Detail = await evaluate(
-    "(() => document.querySelector('.mission-role-row')?.innerText || '')()"
-  );
-  if (!r4Detail.includes("SG-07") || !r4Detail.toLowerCase().includes("completed")) {
-    throw new Error("R4 drill-down did not show the completed Chair role only: " + r4Detail);
-  }
-  console.log("MISSION_CONTROL_ROLE_DRILLDOWN_E2E_OK");
-  console.log("Verified in headless Edge: R2 exposes 45 persisted metadata-only role states; R4 exposes only the completed SG-07 Chair.");
-
-  // Assert the separate GitHub development-process panel using the deterministic
-  // public-API fixture injected before React mounts. This tests rendering and
-  // branch/PR/workflow mapping, not live GitHub network availability.
-  await waitForExpression(
-    "(() => { const panel = [...document.querySelectorAll('section')].find(node => node.getAttribute('aria-label') === 'Development Monitor'); return !!panel && [...panel.querySelectorAll('a')].some(node => (node.href || '').endsWith('/pull/1')) && panel.querySelectorAll('.development-run-card').length >= 2; })()",
-    "the read-only GitHub Development Monitor and PR/workflow telemetry",
-    45_000
-  );
-  const developmentSnapshot = await evaluate(
-    "(() => {" +
-      "const panel = [...document.querySelectorAll('section')].find(node => node.getAttribute('aria-label') === 'Development Monitor');" +
-      "if (!panel) return { found: false };" +
-      "const text = panel.innerText || '';" +
-      "const shaLink = [...panel.querySelectorAll('a')].find(node => (node.href || '').includes('/commit/'));" +
-      "const workflowLinks = [...panel.querySelectorAll('a')].filter(node => (node.href || '').includes('/actions/runs/'));" +
-      "return {" +
-        "found: true," +
-        "hasPr: [...panel.querySelectorAll('a')].some(node => (node.href || '').endsWith('/pull/1'))," +
-        "hasBranch: text.includes('feature/four-round-mdt-and-performance')," +
-        "headSha: shaLink?.textContent?.trim() || ''," +
-        "workflowCards: panel.querySelectorAll('.development-run-card').length - (shaLink ? 1 : 0)," +
-        "workflowLinks: workflowLinks.length," +
-        "hasUnavailableError: !!panel.querySelector('[role=alert]')" +
-      "};" +
-    "})()"
-  );
-  if (
-    !developmentSnapshot.found ||
-    !developmentSnapshot.hasPr ||
-    !developmentSnapshot.hasBranch ||
-    !/^[0-9a-f]{12}$/i.test(developmentSnapshot.headSha) ||
-    developmentSnapshot.workflowCards !== 2 ||
-    developmentSnapshot.workflowLinks !== 2 ||
-    developmentSnapshot.hasUnavailableError
-  ) {
-    throw new Error("Development Monitor did not render verified GitHub branch/PR/workflow metadata: " + JSON.stringify(developmentSnapshot));
-  }
-  const initialMonitorState = await evaluate(
-    "(() => {" +
-      "const panel = [...document.querySelectorAll('section')].find(node => node.getAttribute('aria-label') === 'Development Monitor');" +
-      "const rows = [...(panel?.querySelectorAll('.mission-run-list .development-run-card') || [])].map(node => node.innerText || '');" +
-      "return { currentHeadCount: (panel?.innerText || '').includes('1 / 2'), newestBackend: rows.some(row => row.includes('Run #1188')), staleBackendExcluded: !rows.some(row => row.includes('Run #1187')), hasEarlierCommit: rows.some(row => row.includes('Earlier commit')), hasCurrentCommit: rows.some(row => row.includes('Current branch HEAD')) };" +
-    "})()"
-  );
-  if (
-    !initialMonitorState.currentHeadCount ||
-    !initialMonitorState.newestBackend ||
-    !initialMonitorState.staleBackendExcluded ||
-    !initialMonitorState.hasEarlierCommit ||
-    !initialMonitorState.hasCurrentCommit
-  ) {
-    throw new Error("Development Monitor selected stale or misclassified workflow metadata: " + JSON.stringify(initialMonitorState));
-  }
-
-  await evaluate("window.__RADONC_DEVELOPMENT_MONITOR_FIXTURE__.mode = 'rate-limit'; true");
-  await clickDevelopmentMonitorRefresh();
-  await waitForExpression(
-    "(() => { const panel = [...document.querySelectorAll('section')].find(node => node.getAttribute('aria-label') === 'Development Monitor'); return !!panel?.querySelector('[role=alert]') && (panel.innerText || '').includes('Showing the last retrieved snapshot.'); })()",
-    "the rate-limit warning while retaining the last good Development Monitor snapshot"
-  );
-  const retainedAfterRateLimit = await evaluate(
-    "(() => { const panel = [...document.querySelectorAll('section')].find(node => node.getAttribute('aria-label') === 'Development Monitor'); return { sha: [...panel.querySelectorAll('a')].find(node => (node.href || '').includes('/commit/'))?.textContent?.trim() || '', cards: panel.querySelectorAll('.mission-run-list .development-run-card').length, hasNewestBackend: (panel.innerText || '').includes('Run #1188') }; })()"
-  );
-  if (retainedAfterRateLimit.sha !== "a1a1a1a1a1a1" || retainedAfterRateLimit.cards !== 2 || !retainedAfterRateLimit.hasNewestBackend) {
-    throw new Error("Development Monitor discarded its last good snapshot after HTTP 429: " + JSON.stringify(retainedAfterRateLimit));
-  }
-
-  await evaluate("window.__RADONC_DEVELOPMENT_MONITOR_FIXTURE__.mode = 'forbidden'; true");
-  await clickDevelopmentMonitorRefresh();
-  await waitForExpression(
-    "(() => { const panel = [...document.querySelectorAll('section')].find(node => node.getAttribute('aria-label') === 'Development Monitor'); return !!panel?.querySelector('[role=alert]') && (panel.innerText || '').includes('Showing the last retrieved snapshot.'); })()",
-    "the HTTP 403 warning while retaining the last good Development Monitor snapshot"
-  );
-
-  await evaluate("window.__RADONC_DEVELOPMENT_MONITOR_FIXTURE__.mode = 'incomplete'; true");
-  await clickDevelopmentMonitorRefresh();
-  await waitForExpression(
-    "(() => { const panel = [...document.querySelectorAll('section')].find(node => node.getAttribute('aria-label') === 'Development Monitor'); return (panel?.querySelector('[role=alert]')?.innerText || '').includes('incomplete or inconsistent workflow metadata') && (panel.innerText || '').includes('Showing the last retrieved snapshot.'); })()",
-    "inconsistent GitHub workflow metadata to be rejected without replacing the prior snapshot"
-  );
-
-  await evaluate("window.__RADONC_DEVELOPMENT_MONITOR_FIXTURE__.mode = 'unusable'; true");
-  await clickDevelopmentMonitorRefresh();
-  await waitForExpression(
-    "(() => { const panel = [...document.querySelectorAll('section')].find(node => node.getAttribute('aria-label') === 'Development Monitor'); return (panel?.querySelector('[role=alert]')?.innerText || '').includes('no usable workflow records') && (panel.innerText || '').includes('Showing the last retrieved snapshot.'); })()",
-    "malformed workflow records to be rejected without replacing the prior snapshot"
-  );
-
-  await evaluate("window.__RADONC_DEVELOPMENT_MONITOR_FIXTURE__.mode = 'success'; true");
-  await clickDevelopmentMonitorRefresh();
-  await waitForExpression(
-    "(() => { const panel = [...document.querySelectorAll('section')].find(node => node.getAttribute('aria-label') === 'Development Monitor'); return !panel?.querySelector('[role=alert]') && (panel.innerText || '').includes('Run #1188'); })()",
-    "Development Monitor recovery after GitHub API errors"
-  );
-
-  await evaluate("window.__RADONC_DEVELOPMENT_MONITOR_FIXTURE__.mode = 'empty'; true");
-  await clickDevelopmentMonitorRefresh();
-  await waitForExpression(
-    "(() => { const panel = [...document.querySelectorAll('section')].find(node => node.getAttribute('aria-label') === 'Development Monitor'); return !panel?.querySelector('[role=alert]') && (panel.innerText || '').includes('No workflow runs were returned for this branch.'); })()",
-    "a valid API response with zero workflow runs to render as an explicit empty state"
-  );
-  console.log("DEVELOPMENT_MONITOR_BROWSER_E2E_OK");
-  console.log("Verified in headless Edge: newest-run-per-workflow selection, current-HEAD matching, HTTP 403/429 handling, last-good snapshot retention, incomplete/malformed metadata rejection, recovery after errors and a legitimate empty-state response.");
+  console.log("OPERATIONAL_MONITOR_REMOVAL_E2E_OK");
 
   await waitForExpression(
     "document.body.innerText.includes('Four-round MDT workflow')",
@@ -659,77 +474,6 @@ try {
   const port = await waitForDevToolsPort();
   await connectToPage(port);
 
-  // Give the Development Monitor stable public GitHub API fixtures before
-  // React mounts. The production UI still uses the live read-only GitHub API;
-  // this browser regression tests its rendering without relying on outbound
-  // network access or shared unauthenticated API rate limits.
-  const githubApiFixture = String.raw`(() => {
-    const realFetch = window.fetch.bind(window);
-    const apiBase = "https://api.github.com/repos/drvishnua/RadOnc-MDT-Simulator";
-    const branch = "feature/four-round-mdt-and-performance";
-    const headSha = "a1".repeat(20);
-    const checkedAt = "2026-11-17T01:44:00Z";
-    const pullRequest = {
-      number: 1,
-      state: "open",
-      draft: true,
-      html_url: "https://github.com/drvishnua/RadOnc-MDT-Simulator/pull/1",
-      updated_at: checkedAt,
-      head: { ref: branch, sha: headSha },
-      base: { ref: "main" }
-    };
-    const runs = {
-      total_count: 3,
-      workflow_runs: [
-        {
-          id: 7100001, workflow_id: 101, name: "Backend Tests", run_number: 1188,
-          status: "completed", conclusion: "success", event: "pull_request",
-          head_sha: headSha, created_at: "2026-11-17T01:43:00Z",
-          updated_at: checkedAt,
-          html_url: "https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/7100001"
-        },
-        {
-          id: 7100003, workflow_id: 101, name: "Backend Tests", run_number: 1187,
-          status: "completed", conclusion: "success", event: "pull_request",
-          head_sha: headSha, created_at: "2026-11-17T01:41:00Z",
-          updated_at: "2026-11-17T01:41:00Z",
-          html_url: "https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/7100003"
-        },
-        {
-          id: 7100002, workflow_id: 102,
-          name: "Patient Registry and Four-Round Dashboard Browser E2E", run_number: 400,
-          status: "completed", conclusion: "success", event: "pull_request",
-          head_sha: "b2".repeat(20), created_at: "2026-11-17T01:42:00Z",
-          updated_at: checkedAt,
-          html_url: "https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/7100002"
-        }
-      ]
-    };
-    window.__RADONC_DEVELOPMENT_MONITOR_FIXTURE__ = { mode: "success" };
-    const jsonResponse = (payload, status = 200) => new Response(JSON.stringify(payload), {
-      status,
-      headers: { "Content-Type": "application/json" }
-    });
-    window.fetch = (input, init) => {
-      const url = typeof input === "string" ? input : (input && input.url) || String(input);
-      const mode = window.__RADONC_DEVELOPMENT_MONITOR_FIXTURE__.mode;
-      if (url === apiBase + "/pulls/1") return Promise.resolve(jsonResponse(pullRequest));
-      if (url.startsWith(apiBase + "/actions/runs?")) {
-        if (mode === "rate-limit") return Promise.resolve(jsonResponse({ message: "API rate limit exceeded" }, 429));
-        if (mode === "forbidden") return Promise.resolve(jsonResponse({ message: "API access restricted" }, 403));
-        if (mode === "incomplete") return Promise.resolve(jsonResponse({ total_count: 2, workflow_runs: [] }));
-        if (mode === "unusable") return Promise.resolve(jsonResponse({
-          total_count: 1,
-          workflow_runs: [{ id: 7100004, created_at: checkedAt }]
-        }));
-        if (mode === "empty") return Promise.resolve(jsonResponse({ total_count: 0, workflow_runs: [] }));
-        return Promise.resolve(jsonResponse(runs));
-      }
-      return realFetch(input, init);
-    };
-  })();`;
-  await sendCommand("Page.addScriptToEvaluateOnNewDocument", { source: githubApiFixture });
-  await sendCommand("Page.reload", { ignoreCache: true });
 
   await waitForExpression("!!document.querySelector('.app-shell')", "React application mount");
   await waitForExpression(
