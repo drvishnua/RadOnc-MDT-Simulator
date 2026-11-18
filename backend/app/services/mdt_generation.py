@@ -1839,7 +1839,7 @@ async def generate_debate_contribution(
         ]
         server_register = (
             "SERVER-BOUND CASE OPINION REGISTER (verbatim source excerpts; "
-            "not specialist-authored conclusions, verified facts, or endorsements):\\n"
+            "not specialist-authored conclusions, verified facts, or endorsements):\n"
             + "\n".join(register_lines)
         )
         payload["response_to_other_perspectives"] = (
