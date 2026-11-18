@@ -146,3 +146,39 @@ def test_combined_manifest_derives_and_cross_checks_versions_from_raw_model_mani
     assert "Qwen and MedGemma JSONL manifest mismatch" in workflow
     assert 'throw "Model-screen JSONL manifest is missing ${field}: $Path"' in workflow
     assert 'prompt_version = "radonc-mdt-integrity-screen-v4"' not in workflow
+
+
+
+def test_every_screen_requires_fresh_risk_review_before_python_or_model_provisioning():
+    workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    risk_input = workflow[workflow.index("      fresh_risk_review_accepted:"):workflow.index("      hai_def_terms_accepted:")]
+    risk_start = workflow.index(
+        "- name: Require fresh synthetic risk review before provisioning"
+    )
+    python_setup = workflow.index("- name: Set up Python 3.11")
+    provision_start = workflow.index(
+        "- name: Provision isolated Ollama and run sequential model screens"
+    )
+    risk_step = workflow[risk_start:python_setup]
+
+    assert 'type: boolean' in risk_input
+    assert 'required: true' in risk_input
+    assert 'default: false' in risk_input
+    assert "synthetic-only hosted CPU screening risk" in risk_input
+    assert risk_start < python_setup < provision_start
+    assert "inputs.fresh_risk_review_accepted == true" in risk_step
+    assert "[fresh-synthetic-risk-review-accepted]" in risk_step
+    assert 'if ($env:FRESH_RISK_REVIEW_ACCEPTED -ne "true")' in risk_step
+    assert "No model was provisioned." in risk_step
+
+
+def test_fresh_risk_review_attestation_is_recorded_in_model_screen_manifest():
+    workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    assert "fresh_synthetic_risk_review = [ordered]@{" in workflow
+    assert "accepted = ($env:FRESH_RISK_REVIEW_ACCEPTED -eq " in workflow
+    assert "accepted_by = $env:GITHUB_ACTOR" in workflow
+    assert "trigger_event = $env:GITHUB_EVENT_NAME" in workflow
+    assert "source_sha = $env:GITHUB_SHA" in workflow
+    assert "FRESH_RISK_REVIEW_ACCEPTED:" in workflow
