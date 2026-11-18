@@ -15,7 +15,7 @@
 **Repository:** `drvishnua/RadOnc-MDT-Simulator`  
 **Development branch:** `feature/four-round-mdt-and-performance`  
 **PR #1:** open, draft, unmerged; base `main`.  
-**Current PR head:** `c18fd1f597a247396afcb30909cadc2d812f69b7` (checklist-only descendant of application/test head `65a573affcb6af8ccb98a163e2c17ebb191df2bd`).  
+**Current PR head:** `44dc622a7dd48d1b75af608f67452cce16b6288f` (application/test commit; checklist refresh pending).  
 **Latest application code commit:** `2e46a1bd781c6a5e0e8f5ca2230d36e9cf5cb749` (audit-v16 logic with corrected regex escaping).  
 **Latest backend regression-test commit:** `c1fb981e648b76429bc29403cd2febcf5e4739d0` (three audit-v16 false-negative regressions plus corrected positive R1 contradiction fixture).  
 **Latest frontend provenance-visibility commit:** `afbe6af6ffbc463ad92457e5179545c92b55b398`; E2E selector corrections in `198c8be7dfa203fba51eec99f9a2151738dabc12` and `1e8d3559dc12e7aa1b7599f9bd076b3873f4e88b`.  
@@ -41,7 +41,7 @@
 | Clinical safety, staging and unknown data | IN PROGRESS | Deterministic safeguards exist; no clinical validation, guideline concordance or zero-hallucination guarantee. |
 | Case integrity, contradiction preservation and audit history | IN PROGRESS | Historical raw outputs retained. Three audit-v16 deterministic checks now cover the three manual false negatives recorded from v16/audit-v15. Exact regression tests passed, but there is no live audit-v16 model rerun; raw case and audit history remain preserved. |
 | Provenance and guideline/evidence retrieval | IN PROGRESS | Source-bound controls exist; current guideline retrieval/verification incomplete. |
-| Backend tests — prior source-bound fixture head `1c8a22b` | VERIFIED | Exact-head backend run [44289875570](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44289875570): raw job logs confirm 476/476 pytest rows passed, 0 failed/errors/skips. New R2/R4 regressions are on `65a573a`; exact-head CI is pending. |
+| Backend tests — prior source-bound fixture head `1c8a22b` | VERIFIED | Exact-head backend run [44289875570](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44289875570): raw job logs confirm 476/476 pytest rows passed, 0 failed/errors/skips. New R2/R4 regressions are on `44dc622`; exact-head CI is pending after the test-fixture correction. |
 | Frontend unit/build checks | VERIFIED | Exact source-bound fixture head Frontend Build [44289875433](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44289875433) succeeded. |
 | Patient Registry / four-round Dashboard browser E2E | VERIFIED | Exact source-bound fixture head Browser E2E [44289875520](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44289875520) succeeded. Headless Edge verified the seeded 45-role R1/R2/R3 and R4 report, provenance displays, and patient registry; no model inference was invoked. |
 | R2/R3 provenance warnings and source-opinion visibility in role detail cards | VERIFIED | Frontend commit `afbe6af6ffbc463ad92457e5179545c92b55b398` renders saved `source_reference_integrity_flags`, server-bound R2 `source_opinion_responses`, and R3 `source_opinion_reviews` beside each original role response. The disposable fixture correction `1c8a22b` embeds the exact source excerpt in `case_summary`; browser assertions passed in exact-head run [44289875520](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44289875520). Visibility only; live model correctness and semantic interpretation remain unverified. |
