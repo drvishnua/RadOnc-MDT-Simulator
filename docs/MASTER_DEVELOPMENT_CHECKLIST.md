@@ -5,7 +5,7 @@
 **Repository:** `drvishnua/RadOnc-MDT-Simulator`  
 **Development branch:** `feature/four-round-mdt-and-performance`  
 **PR #1:** open, draft, unmerged; base `main`.  
-**PR head verified immediately before this checklist refresh:** `c1fb981e648b76429bc29403cd2febcf5e4739d0`.  
+**PR head verified immediately before this checklist refresh:** `b59c52d49e888473d751a600a126bfaeb3e17f5b`.  
 **Latest application code commit:** `2e46a1bd781c6a5e0e8f5ca2230d36e9cf5cb749` (audit-v16 logic with corrected regex escaping).  
 **Latest regression-test commit:** `c1fb981e648b76429bc29403cd2febcf5e4739d0` (three audit-v16 false-negative regressions plus corrected positive R1 contradiction fixture).  
 **Main:** `39a356b8eb09399aa2da1b9b9085965999f5105a`; unchanged.  
@@ -55,8 +55,8 @@
 | Python CodeQL | VERIFIED | Exact audit-v16 code-head security run 44267217685: passed. |
 | JavaScript/TypeScript CodeQL | VERIFIED | Exact audit-v16 code-head security run 44267217685: passed. |
 | Python dependency audit | VERIFIED | Exact audit-v16 code-head security run 44267217685: no known vulnerabilities found. |
-| Node dependency audit | FAILED | Latest exact PR-head security workflow [44268129380](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44268129380): npm audit reports four HIGH transitive `picomatch@4.0.7` findings. Python audit, both CodeQL analyses and full-history secret scan passed. The security gate remains failed. |
-| Dependency advisory applicability and risk disposition | IN PROGRESS | The one-run exception was consumed by Qwen run 44263369594. Current GitHub Advisory GHSA-fc5q-39xc-vjpf is now GitHub Reviewed (updated 17 Nov), High, affected through 4.0.7 and has no patched version listed. Snyk still says its advisory was revoked. The npm audit remains FAILED and unsuppressed. No further model run or MedGemma evaluation is authorised until this conflicting evidence has a documented security-owner disposition and fresh explicit approval. |
+| Node dependency audit | FAILED | Latest exact PR-head security workflow [44282879209](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44282879209): npm audit reports four HIGH transitive `picomatch@4.0.7` findings. Python audit, both CodeQL analyses and full-history secret scan passed. The security gate remains failed. |
+| Dependency advisory applicability and risk disposition | IN PROGRESS | The one-run exception was consumed by Qwen run 44263369594. GitHub now marks GHSA-fc5q-39xc-vjpf Reviewed/High, affected through 4.0.7 with no patch listed; Snyk disputes this and has revoked its separate advisory. The repository's package graph shows picomatch only as a Vite transitive dev dependency; the checked Vite config does not define user-controlled glob input, but this is not proof of zero exploitability. npm audit remains FAILED and unsuppressed. No further model run or MedGemma evaluation is authorised before documented security-owner disposition and fresh explicit approval. |
 | Release acceptance | BLOCKED | Temporary one-run development exception does not clear the Node audit. R2/R4 live failures, full 45-role run, GPU, evidence retrieval and independent clinical review remain outstanding. |
 
 ## Latest screen evidence — Qwen v16 / audit-v15, run 44263369594
@@ -102,6 +102,18 @@ All six PR workflows on this exact checklist commit completed. Five succeeded; d
 - Security/dependency audit [44264563041](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44264563041): FAILED at Node npm audit with four HIGH picomatch findings. Python dependency audit, Python and JS/TS CodeQL, and full-history secret scan passed.
 
 These results are software/build verification only. They do not prove model integrity, clinical validity, GPU inference or release readiness.
+## Latest exact PR-head CI — checklist/security reassessment commit `96b5612cacd676f8c8cdd774f7cf586c342f38bd` (18 November 2026)
+
+All six standard PR workflows completed on this exact head. Five succeeded; Security and Dependency Audit failed. This was a documentation-only update; the application and regression-test code remain unchanged from audit-v16 commit `c1fb981`.
+
+- Backend [44282879298](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44282879298): SUCCESS; raw job logs confirm **476/476 pytest records passed**, 0 failed, 0 errors or skips. All three audit-v16 false-negative regressions passed.
+- Frontend Build [44282879191](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44282879191): SUCCESS.
+- Patient Registry / Four-Round Dashboard Browser E2E [44282885742](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44282885742): SUCCESS.
+- Windows Packaging Prerequisites [44282879329](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44282879329): SUCCESS.
+- Windows Installer [44282879123](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44282879123): SUCCESS.
+- Security and Dependency Audit [44282879209](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44282879209): FAILED at Node npm audit with four HIGH picomatch findings. Python dependency audit, both CodeQL analyses and full-history secret scan passed.
+
+No model-screen workflow ran on this documentation-only commit. These CI results do not establish audit-v16 model behaviour, local GPU use, clinical accuracy or guideline concordance.
 ## Latest exact PR-head CI — documentation-only head `b59c52d49e888473d751a600a126bfaeb3e17f5b` (18 November 2026)
 
 This head changes only `docs/MASTER_DEVELOPMENT_CHECKLIST.md`; application code and tests are unchanged from audit-v16 regression commit `c1fb981`. All six standard PR workflows completed: five passed and Security/Dependency Audit failed.
@@ -168,6 +180,8 @@ The screenshot's job ID `134652860736` is from backend workflow 44260641959. Its
 ## Dependency security investigation — 18 November 2026
 
 **Repository lockfile evidence:** `frontend/package-lock.json` resolves `picomatch@4.0.7` as a development dependency; it is reached through `tinyglobby@0.2.17` and `fdir@6.5.0`. It is not listed as a direct application runtime dependency in `frontend/package.json`.
+
+**Current dependency-path check on the development branch:** `frontend/package.json` lists only React and React DOM as direct application dependencies; Vite 7.3.8 and the React Vite plugin are in `devDependencies`. The lockfile marks Vite, `tinyglobby@0.2.17`, `fdir@6.5.0` and `picomatch@4.0.7` as development dependencies. Vite reaches picomatch through its `tinyglobby`/`fdir` dependency graph. The inspected `vite.config.ts` configures the React plugin and loopback API/health proxies; it contains no user-controlled glob patterns. This narrows the observed use to build/development tooling, but does not prove the vulnerable code path is unreachable in every build/development execution and does not satisfy the repository's full-lockfile audit.
 
 **External evidence reviewed:**
 - GitHub Advisory Database: GHSA-fc5q-39xc-vjpf is now marked **GitHub Reviewed** (updated 17 November 2026), severity High (CVSS v4 8.7), affected versions `<=4.0.7`, with **no patched versions listed**. Its description identifies a possible ReDoS through single-branch repeated extglob patterns. [Advisory](https://github.com/advisories/GHSA-fc5q-39xc-vjpf)
