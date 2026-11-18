@@ -1,6 +1,19 @@
-### Follow-up hardening — conflicting completed-row handling
+### Conflicting completed-row hardening — exact CI verified
 
-The first failed-duplicate accounting regression passed on `aee52ca`. A second edge case was then identified: raw completed dictionaries are not necessarily eligible for distinct-role summaries when completed duplicates have conflicting positions. The completed-role set now comes from the existing deterministic `_distinct_role_entries` function. The added regression verifies that two conflicting completed positions plus a failed duplicate are not misclassified as a usable completed role. This follow-up is **IN PROGRESS** until exact-head CI completes.
+The current application/test commit is `fbea522b4f1371d8bb82b202a48c178833c10735`. The change uses the existing `_distinct_role_entries` result to identify usable completed roles. Therefore, a role with conflicting completed duplicate positions is not incorrectly considered usable merely because completed payload dictionaries exist. The original valid-completed-plus-failed-duplicate case remains separately covered.
+
+All seven workflow runs on this exact code SHA completed:
+- Backend Tests [44315991587](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44315991587): SUCCESS; **482/482 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive**; deterministic preflight **7 passed, 0 failed, 0 inconclusive**. The new conflicting-duplicate test passed.
+- Frontend Build [44315991606](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44315991606): SUCCESS.
+- Patient Registry / Four-Round Dashboard Browser E2E [44315991649](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44315991649): SUCCESS.
+- Windows Packaging Prerequisites [44315991625](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44315991625): SUCCESS.
+- Windows Installer PR run [44315991598](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44315991598): SUCCESS; build/install/smoke passed; optional clean-hosted Ollama/model bootstrap skipped. Artifact [14431968545](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44315991598/artifacts/14431968545), SHA-256 `3c6d7cf849b4b8a7535e8fb4603258272c66b0010abda5600ffca4d84feb2e03`.
+- Security and Dependency Audit [44315991614](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44315991614): FAILED only in full Node dependency audit. Python dependency audit, production-only npm audit, JavaScript/TypeScript CodeQL, Python CodeQL and full-history secret scan succeeded. Full npm audit reports four HIGH `picomatch` findings (GHSA-fc5q-39xc-vjpf); keep the full audit gate FAILED.
+- Additional push-triggered Windows Installer run [44315973941](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44315973941): SUCCESS; artifact [14432233440](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44315973941/artifacts/14432233440), SHA-256 `a16e467ab0178005ed2dcb6cc1e87b70c35a3a6105abde3cac0787e7bb402164`.
+
+Both mixed-row regressions passed on this SHA. The deterministic fix is **VERIFIED**. This confirms report-accounting behavior only; it does not establish model quality, clinical accuracy, guideline concordance, live inference, or GPU usage. No model inference or local-device work occurred.
+
+---
 
 ---
 
@@ -33,9 +46,9 @@ All six standard workflows completed on this exact SHA:
 
 No model inference, GPU verification, guideline verification or clinical validation occurred on this checkpoint.
 
-### Chair failed-duplicate contribution accounting — conflicting-completion edge case added; validation pending
+### Chair failed-duplicate contribution accounting — VERIFIED
 
-Code review found that `_round_completion_disclosures` computed `completed_ids` but did not use it when classifying additional unusable rows. A role with both a valid completed contribution and a failed/malformed duplicate could therefore be incorrectly described as having **no usable completed contribution**. The helper now separates these cases: the valid contribution remains eligible, while the extra unusable row is disclosed separately. A focused regression test covers one role with a valid plus failed row and another role with only a failed row. A second regression now ensures conflicting completed duplicates are first excluded by the existing distinct-role logic and cannot make a separate failed row appear to coexist with a usable contribution. The completed-role set now uses `_distinct_role_entries`, rather than raw completed dictionaries. The first regression passed on commit `aee52ca` (481/481); this additional edge-case refinement is **IN PROGRESS** pending exact-head CI. Saved rows and audit history are not rewritten.
+`_round_completion_disclosures` now classifies additional unusable rows against only unambiguous completed roles from `_distinct_role_entries`. Two regressions verify (1) a valid completed row plus failed duplicate is not reported as no usable contribution, and (2) conflicting completed duplicates plus a failed duplicate are not incorrectly treated as usable. Both tests passed on exact code SHA `fbea522` as part of backend run [44315991587](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44315991587), 482/482. Saved rows and audit history are not rewritten.
 
 ---
 
@@ -201,7 +214,7 @@ Historical checkpoints below are immutable evidence and do not override this tab
 | Cross-round minority-history regression | VERIFIED | New test `test_final_chair_boundary_retains_earlier_and_later_minority_histories` passed in backend run 44262841444; it verifies an earlier R1 minority remains visible alongside a different R3 minority. This is a deterministic regression test, not live-model acceptance. |
 | Chair consensus, distinct-role counting, dissent and traceability | FAILED | Deterministic counts exist, but v15 model-level consensus/dissent findings remain unresolved by live retest. |
 | Exact specialist-ID input gate | VERIFIED | Guard in `47dfa9d`; corrected regression in `8cde5dd`; exact regression-test-head backend run 44262841444 passed (473/473 pytest rows, re-counted from job logs). |
-| Chair mixed completed/failed duplicate-row accounting | IN PROGRESS | Initial mixed completed/failed duplicate regression passed on `aee52ca` (481/481). Follow-up now derives usable completed IDs from `_distinct_role_entries`, so conflicting completed duplicates cannot be treated as usable; a second regression was added. Await exact-head CI. |
+| Chair mixed completed/failed duplicate-row accounting | VERIFIED | Exact code SHA `fbea522`; backend run [44315991587](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44315991587) passed 482/482 with both mixed-row regressions; conflicting completed duplicates remain excluded from usable-role status. Deterministic software verification only. |
 | Missing/failed-agent handling | IN PROGRESS | Deterministic Chair report identifies failed/unusable rows by status and reports absent rows against the configured 45-role roster; failed records remain excluded from distinct-role counts. Regression passed in exact-head backend run [44303234900](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44303234900), including failed/absent-role disclosure in the primary Chair conclusion. Entirely absent upstream rows cannot be individually named without a complete roster in the Chair input. |
 | Clinical safety, staging and unknown data | IN PROGRESS | Deterministic safeguards exist; no clinical validation, guideline concordance or zero-hallucination guarantee. |
 | Case integrity, contradiction preservation and audit history | IN PROGRESS | Historical raw outputs retained. Three audit-v16 deterministic checks now cover the three manual false negatives recorded from v16/audit-v15. Exact regression tests passed, but there is no live audit-v16 model rerun; raw case and audit history remain preserved. |
