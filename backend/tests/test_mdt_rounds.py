@@ -437,11 +437,13 @@ def test_r2_and_r3_prompts_require_source_linked_peer_engagement(monkeypatch):
                 source_opinion_responses=[
                     {
                         "source_id": "CASE:case_summary#1",
+                        "position_on_source_opinion": "conditional",
                         "analysis": "A specialist assessment first remains the distinct option, conditional on complete staging.",
                         "comparison": "This differs from a generic no-pathway conclusion in the selected R1 views.",
                     },
                     {
                         "source_id": "CASE:case_summary#2",
+                        "position_on_source_opinion": "conditional",
                         "analysis": "A separate preoperative sequence is conditional on MRI review and documented fitness.",
                         "comparison": "This remains distinct from the specialist assessment option in the selected R1 view.",
                     },

@@ -777,7 +777,10 @@ def build_source_opinion_position_summary(
     """
     source_register = extract_attributed_note_opinions(case_summary)
     if not source_register:
-        return [], []
+        return [
+            "No server-identified attributed case-summary opinions were supplied; "
+            "no per-opinion Round-2 positions can be summarised."
+        ], []
 
     expected_by_id = {
         str(item["source_id"]): str(item["source_excerpt"])

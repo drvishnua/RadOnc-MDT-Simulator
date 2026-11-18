@@ -1051,7 +1051,7 @@ def test_source_opinion_position_summary_excludes_duplicate_unbound_and_missing_
     assert "invalid excerpt binding 1 [MO-01]" in line
     assert "position not reported 1 [SO-01]" in line
     assert any("unregistered source-opinion ID CASE:case_summary#99" in item for item in flags)
-    assert any("no valid position_on_source_opinion" in item for item in flags)
+    assert any("did not report a valid position_on_source_opinion" in item for item in flags)
 
 
 def test_recorded_agreements_quarantine_overbroad_claims_and_unsupplied_sources():
