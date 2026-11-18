@@ -560,14 +560,25 @@ async function verifyFourRoundDashboard() {
     "the persisted Chair report"
   );
 
+  await evaluate(
+    "(() => { const stages = [...document.querySelectorAll('.round-stage')]; " +
+      "for (const index of [1, 2]) { const first = stages[index]?.querySelector('.round-agent-list details'); if (first) first.open = true; } " +
+      "return true; })()"
+  );
   const rendered = await evaluate(
     "(() => {" +
       "const stages = [...document.querySelectorAll('.round-stage')];" +
-      "const headings = stages.map(stage => (stage.querySelector('.round-stage-heading')?.innerText || '').replace(/\\s+/g, ' ').trim());" +
+      "const headings = stages.map(stage => (stage.querySelector('.round-stage-heading')?.innerText || '').replace(/\\\\s+/g, ' ').trim());" +
       "const completed = stages.map(stage => (stage.innerText || '').includes('Stage completed'));" +
       "const roundRoleCount = document.querySelectorAll('.round-agent-list details').length;" +
+      "const r2First = stages[1]?.querySelector('.round-agent-list details')?.innerText || '';" +
+      "const r3First = stages[2]?.querySelector('.round-agent-list details')?.innerText || '';" +
       "const report = document.querySelector('.final-mdt-report')?.innerText || '';" +
-      "return { headings, completed, roundRoleCount, hasInsufficientInformation: report.includes('Consensus status · insufficient information'), " +
+      "return { headings, completed, roundRoleCount, " +
+        "hasR2SourceReferenceWarning: r2First.includes('Source/provenance integrity flags · review required') && r2First.includes('Peer-scope overclaim'), " +
+        "hasServerBoundR2Opinion: r2First.includes('Attributed case-summary opinion responses · source-bound') && r2First.includes('CASE:case_summary#1') && r2First.includes('complete local staging'), " +
+        "hasR3SourceOpinionReview: r3First.includes('R3 source-opinion reviews · representation status only') && r3First.includes('Option A') && r3First.includes('conditions: preserved'), " +
+        "hasInsufficientInformation: report.includes('Consensus status · insufficient information'), " +
         "hasRecordedAgreementLabel: report.includes('Recorded agreements · attributed, not consensus'), " +
         "hasUncertaintySection: report.includes('Major uncertainties'), " +
         "hasEvidenceLimitation: report.includes('Evidence retrieval is not connected') };" +
@@ -577,6 +588,9 @@ async function verifyFourRoundDashboard() {
     rendered.headings.length !== 3 ||
     !rendered.completed.every(Boolean) ||
     rendered.roundRoleCount !== 90 ||
+    !rendered.hasR2SourceReferenceWarning ||
+    !rendered.hasServerBoundR2Opinion ||
+    !rendered.hasR3SourceOpinionReview ||
     !rendered.hasInsufficientInformation ||
     !rendered.hasRecordedAgreementLabel ||
     !rendered.hasUncertaintySection ||

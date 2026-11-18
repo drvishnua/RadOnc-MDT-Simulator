@@ -297,6 +297,25 @@ type RoundAgentResult = {
     remaining_unknowns: string[];
     risk_flags: string[];
     case_data_integrity_flags?: string[];
+    source_reference_integrity_flags?: string[];
+    source_opinion_responses?: {
+      source_id: string;
+      source_excerpt: string;
+      analysis: string;
+      comparison: string;
+    }[];
+    source_opinion_reviews?: {
+      source_id: string;
+      opinion_label?: string;
+      source_excerpt?: string;
+      option_status: string;
+      conditions_status: string;
+      review_basis?: string;
+      evidence_peer_id?: string;
+      evidence_excerpt?: string;
+      evidence_validation_status?: string;
+      challenge?: string;
+    }[];
     confidence: number;
   } | null;
   error_message: string | null;
@@ -2238,6 +2257,41 @@ function App() {
                                         <div className="result-card result-error" role="status">
                                           <strong>Case-data integrity flags · review required</strong>
                                           <ul>{(item.result.case_data_integrity_flags ?? []).map((flag, index) => <li key={index}>{flag}</li>)}</ul>
+                                        </div>
+                                      )}
+                                      {(item.result.source_reference_integrity_flags ?? []).length > 0 && (
+                                        <div className="result-card result-error" role="status">
+                                          <strong>Source/provenance integrity flags · review required</strong>
+                                          <ul>{(item.result.source_reference_integrity_flags ?? []).map((flag, index) => <li key={index}>{flag}</li>)}</ul>
+                                        </div>
+                                      )}
+                                      {(item.result.source_opinion_responses ?? []).length > 0 && (
+                                        <div className="report-section">
+                                          <strong>Attributed case-summary opinion responses · source-bound</strong>
+                                          {(item.result.source_opinion_responses ?? []).map((opinion, index) => (
+                                            <div key={opinion.source_id + "-" + index}>
+                                              <strong>{opinion.source_id}</strong>
+                                              <p><em>Exact saved source excerpt:</em> {opinion.source_excerpt}</p>
+                                              <p><em>Role analysis:</em> {opinion.analysis}</p>
+                                              <p><em>Comparison:</em> {opinion.comparison}</p>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+                                      {(item.result.source_opinion_reviews ?? []).length > 0 && (
+                                        <div className="report-section">
+                                          <strong>R3 source-opinion reviews · representation status only</strong>
+                                          {(item.result.source_opinion_reviews ?? []).map((review, index) => (
+                                            <div key={review.source_id + "-" + index}>
+                                              <strong>{review.source_id}{review.opinion_label ? " · " + review.opinion_label : ""}</strong>
+                                              {review.source_excerpt && <p><em>Exact saved source excerpt:</em> {review.source_excerpt}</p>}
+                                              <p>Option: {review.option_status}; conditions: {review.conditions_status}</p>
+                                              {review.review_basis && <p><em>Review basis:</em> {review.review_basis}</p>}
+                                              {review.evidence_validation_status && <p>Peer evidence validation: {review.evidence_validation_status}</p>}
+                                              {review.evidence_peer_id && review.evidence_excerpt && <p><em>Bound peer excerpt ({review.evidence_peer_id}):</em> {review.evidence_excerpt}</p>}
+                                              {review.challenge && <p><em>Recorded challenge:</em> {review.challenge}</p>}
+                                            </div>
+                                          ))}
                                         </div>
                                       )}
                                       {item.result.agreements.length > 0 && <><strong>Agreements</strong><ul>{item.result.agreements.map((value, index) => <li key={index}>{value}</li>)}</ul></>}

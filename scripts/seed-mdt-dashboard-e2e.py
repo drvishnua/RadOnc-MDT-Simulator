@@ -99,6 +99,33 @@ def main() -> int:
                     risk_flags=[
                         "This is a browser test fixture, not a treatment instruction."
                     ],
+                    source_reference_integrity_flags=(
+                        ["Peer-scope overclaim: the saved narrative generalises beyond the supplied peer records."]
+                        if round_number == 2 and profile["agent_id"] == "RO-01"
+                        else []
+                    ),
+                    source_opinion_responses=(
+                        [{
+                            "source_id": "CASE:case_summary#1",
+                            "source_excerpt": "Fictional source opinion: Option A remains conditional on complete local staging.",
+                            "analysis": "The attributed Option A remains conditional until complete local staging is documented; its prerequisites are not established by this test case.",
+                            "comparison": "This source-reported option is not an endorsement or a finding of suitability.",
+                        }]
+                        if round_number == 2 and profile["agent_id"] == "RO-01"
+                        else []
+                    ),
+                    source_opinion_reviews=(
+                        [{
+                            "source_id": "CASE:case_summary#1",
+                            "opinion_label": "Option A",
+                            "source_excerpt": "Fictional source opinion: Option A remains conditional on complete local staging.",
+                            "option_status": "preserved",
+                            "conditions_status": "preserved",
+                            "review_basis": "The saved R2 text retains the distinct option and its complete local staging prerequisite.",
+                        }]
+                        if round_number == 3 and profile["agent_id"] == "RO-01"
+                        else []
+                    ),
                     confidence=0.2,
                 )
                 run_store.save_round_success(
