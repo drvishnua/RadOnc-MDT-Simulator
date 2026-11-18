@@ -94,9 +94,17 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Install and audit the committed frontend lockfile
+      - name: Install the committed frontend lockfile
         working-directory: frontend
         shell: bash
-        run: |
-          npm ci --ignore-scripts --no-audit --no-fund
-          npm audit --audit-level=high
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Audit production frontend dependencies
+        working-directory: frontend
+        shell: bash
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Audit all frontend dependencies, including build tooling
+        working-directory: frontend
+        shell: bash
+        run: npm audit --audit-level=high
