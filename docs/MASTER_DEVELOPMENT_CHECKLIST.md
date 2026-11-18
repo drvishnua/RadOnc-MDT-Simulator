@@ -7,7 +7,6 @@
 - Application/test head: `0bb85c1446ab16ecef90d89bcbda8f5b8204c197`; current branch head before this checklist refresh: `d658356f7c9d9fbe1bfcb5274ecf04da43784576`. PR #1 remains open/draft/unmerged and `main` is unchanged.
 - `442b4ab28290057f4e2a2a5727905dd54b8186eb`: Chair finalizer now reports failed/unusable role rows and missing role rows against the configured 45-role input, without counting failed records.
 - `5cf470855886c992bdad7011054b7ab0cc7e26b0`: Chair R4 prompt digest carries the saved R2 debate narrative and fuller server-bound source excerpt, analysis and comparison.
-- `442b4ab28290057f4e2a2a5727905dd54b8186eb`: deterministic failed/unusable and absent role-row disclosure in the final Chair report.
 - `458b2522ec3616556694caad1a0d110971c5f70d` and `4225c73e57565a6f57624757eae939163a944803`: append the exact server-bound case-opinion register to saved R2 `response_to_other_perspectives`, explicitly labelled as verbatim source text and not specialist-authored conclusions, verified facts or endorsements; render it with real line breaks.
 - `0efbfe1ca558742b012c06b228a7ca2b7e54531e`: raised the saved contribution narrative bound to 4,200 characters to accommodate at most four bounded source excerpts alongside the model narrative.
 - `2269d80dbcf0b1046bc66ed521721b4db79f0245`, `65a573affcb6af8ccb98a163e2c17ebb191df2bd`, `d838382d7731353d306b73ec2b4ad9064d16d854`, and `0bb85c1446ab16ecef90d89bcbda8f5b8204c197`: regression coverage for missing/failed roles, R4 source retention, and R2 server-bound narrative/source excerpt fidelity. Earlier test-fixture failures were retained in the history and corrected.
@@ -18,7 +17,7 @@ Historical checkpoints below are immutable evidence and do not override this tab
 **Repository:** `drvishnua/RadOnc-MDT-Simulator`  
 **Development branch:** `feature/four-round-mdt-and-performance`  
 **PR #1:** open, draft, unmerged; base `main`.  
-**Current PR head before this checklist refresh:** `d658356f7c9d9fbe1bfcb5274ecf04da43784576` (checklist-only descendant of application/test head `0bb85c1446ab16ecef90d89bcbda8f5b8204c197`).  
+**Current PR head before this checklist refresh:** `8537d018f893908c3037174a88a0889449edbd4f` (checklist-only descendant of application/test head `0bb85c1446ab16ecef90d89bcbda8f5b8204c197`).  
 **Latest application code commit:** `4225c73e57565a6f57624757eae939163a944803` (R2 appends the exact server-bound attributed-opinion register to saved narrative).  
 **Latest backend regression-test commit:** `0bb85c1446ab16ecef90d89bcbda8f5b8204c197` (R2 server-bound opinion narrative regression; backend 479/479 passed).  
 **Latest frontend provenance-visibility commit:** `afbe6af6ffbc463ad92457e5179545c92b55b398`; E2E selector corrections in `198c8be7dfa203fba51eec99f9a2151738dabc12` and `1e8d3559dc12e7aa1b7599f9bd076b3873f4e88b`.  
@@ -71,7 +70,7 @@ Historical checkpoints below are immutable evidence and do not override this tab
 | Python CodeQL | VERIFIED | Exact source-bound fixture head security run 44289876314: passed. |
 | JavaScript/TypeScript CodeQL | VERIFIED | Exact source-bound fixture head security run 44289876314: passed. |
 | Python dependency audit | VERIFIED | Exact source-bound fixture head security run 44289876314: no known vulnerabilities found. |
-| Node dependency audit | FAILED | Latest exact-head Security Audit [44298208989](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44298208989): npm audit reports four HIGH `picomatch` findings. Python audit, both CodeQL analyses and full-history secret scan passed. Python audit, both CodeQL analyses and full-history secret scan passed. The security gate remains failed. |
+| Node dependency audit | FAILED | Latest exact-head Security Audit [44298208989](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44298208989): npm audit reports four HIGH `picomatch` findings. Python audit, both CodeQL analyses and full-history secret scan passed. The security gate remains failed. |
 | Dependency advisory applicability and risk disposition | IN PROGRESS | The one-run exception was consumed by Qwen run 44263369594. GitHub now marks GHSA-fc5q-39xc-vjpf Reviewed/High, affected through 4.0.7 with no patch listed; Snyk disputes this and has revoked its separate advisory. The repository's package graph shows picomatch only as a Vite transitive dev dependency; the checked Vite config does not define user-controlled glob input, but this is not proof of zero exploitability. npm audit remains FAILED and unsuppressed. No further model run or MedGemma evaluation is authorised before documented security-owner disposition and fresh explicit approval. |
 | Release acceptance | BLOCKED | Temporary one-run development exception does not clear the Node audit. R2/R4 live failures, full 45-role run, GPU, evidence retrieval and independent clinical review remain outstanding. |
 
