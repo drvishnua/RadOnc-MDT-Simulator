@@ -227,6 +227,20 @@ async function clickButton(textPrefix) {
   await evaluate(expression);
 }
 
+async function clickDevelopmentMonitorRefresh() {
+  const clicked = await evaluate(
+    "(() => {" +
+      "const panel = [...document.querySelectorAll('section')].find(node => node.getAttribute('aria-label') === 'Development Monitor');" +
+      "const button = [...(panel?.querySelectorAll('button') || [])].find(node => (node.innerText || '').trim().startsWith('Refresh'));" +
+      "if (!button) throw new Error('Could not find the Development Monitor refresh button.');" +
+      "if (button.disabled) throw new Error('The Development Monitor refresh button is disabled.');" +
+      "button.click();" +
+      "return true;" +
+    "})()"
+  );
+  if (!clicked) throw new Error("Development Monitor refresh button was not activated.");
+}
+
 async function setAllStructuredFieldValues() {
   await evaluate(
     "(() => { const section = document.querySelector('details.structured-fields'); if (!section) throw new Error('Structured case details section is missing.'); section.open = true; return true; })()"
@@ -482,7 +496,7 @@ async function verifyFourRoundDashboard() {
   }
 
   await evaluate("window.__RADONC_DEVELOPMENT_MONITOR_FIXTURE__.mode = 'rate-limit'; true");
-  await clickButton("Refresh");
+  await clickDevelopmentMonitorRefresh();
   await waitForExpression(
     "(() => { const panel = [...document.querySelectorAll('section')].find(node => node.getAttribute('aria-label') === 'Development Monitor'); return !!panel?.querySelector('[role=alert]') && (panel.innerText || '').includes('Showing the last retrieved snapshot.'); })()",
     "the rate-limit warning while retaining the last good Development Monitor snapshot"
@@ -495,35 +509,35 @@ async function verifyFourRoundDashboard() {
   }
 
   await evaluate("window.__RADONC_DEVELOPMENT_MONITOR_FIXTURE__.mode = 'forbidden'; true");
-  await clickButton("Refresh");
+  await clickDevelopmentMonitorRefresh();
   await waitForExpression(
     "(() => { const panel = [...document.querySelectorAll('section')].find(node => node.getAttribute('aria-label') === 'Development Monitor'); return !!panel?.querySelector('[role=alert]') && (panel.innerText || '').includes('Showing the last retrieved snapshot.'); })()",
     "the HTTP 403 warning while retaining the last good Development Monitor snapshot"
   );
 
   await evaluate("window.__RADONC_DEVELOPMENT_MONITOR_FIXTURE__.mode = 'incomplete'; true");
-  await clickButton("Refresh");
+  await clickDevelopmentMonitorRefresh();
   await waitForExpression(
     "(() => { const panel = [...document.querySelectorAll('section')].find(node => node.getAttribute('aria-label') === 'Development Monitor'); return (panel?.querySelector('[role=alert]')?.innerText || '').includes('incomplete or inconsistent workflow metadata') && (panel.innerText || '').includes('Showing the last retrieved snapshot.'); })()",
     "inconsistent GitHub workflow metadata to be rejected without replacing the prior snapshot"
   );
 
   await evaluate("window.__RADONC_DEVELOPMENT_MONITOR_FIXTURE__.mode = 'unusable'; true");
-  await clickButton("Refresh");
+  await clickDevelopmentMonitorRefresh();
   await waitForExpression(
     "(() => { const panel = [...document.querySelectorAll('section')].find(node => node.getAttribute('aria-label') === 'Development Monitor'); return (panel?.querySelector('[role=alert]')?.innerText || '').includes('no usable workflow records') && (panel.innerText || '').includes('Showing the last retrieved snapshot.'); })()",
     "malformed workflow records to be rejected without replacing the prior snapshot"
   );
 
   await evaluate("window.__RADONC_DEVELOPMENT_MONITOR_FIXTURE__.mode = 'success'; true");
-  await clickButton("Refresh");
+  await clickDevelopmentMonitorRefresh();
   await waitForExpression(
     "(() => { const panel = [...document.querySelectorAll('section')].find(node => node.getAttribute('aria-label') === 'Development Monitor'); return !panel?.querySelector('[role=alert]') && (panel.innerText || '').includes('Run #1188'); })()",
     "Development Monitor recovery after GitHub API errors"
   );
 
   await evaluate("window.__RADONC_DEVELOPMENT_MONITOR_FIXTURE__.mode = 'empty'; true");
-  await clickButton("Refresh");
+  await clickDevelopmentMonitorRefresh();
   await waitForExpression(
     "(() => { const panel = [...document.querySelectorAll('section')].find(node => node.getAttribute('aria-label') === 'Development Monitor'); return !panel?.querySelector('[role=alert]') && (panel.innerText || '').includes('No workflow runs were returned for this branch.'); })()",
     "a valid API response with zero workflow runs to render as an explicit empty state"
