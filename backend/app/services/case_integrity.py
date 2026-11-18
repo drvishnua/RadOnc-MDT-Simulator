@@ -56,6 +56,51 @@ _LIST_FIELDS = {
 }
 
 
+_SOURCE_LATERALITY_CONFLICT_WARNING = (
+    "The case summary contains opposing laterality statements attributed to distinct sources; "
+    "preserve both statements verbatim and keep the discrepancy unresolved pending human/source "
+    "verification. No source is selected."
+)
+
+
+def _source_laterality_integrity_warnings(case_summary: str) -> list[str]:
+    """Flag explicit opposing laterality statements attributed to distinct sources.
+
+    This is a non-blocking provenance warning. It does not select a source,
+    adjudicate clinical laterality, or modify the original case summary.
+    """
+    if not isinstance(case_summary, str):
+        return []
+    source_pattern = re.compile(r"\\bsource\\s+(?P<label>[A-Za-z0-9_-]+)\\b", re.IGNORECASE)
+    side_pattern = re.compile(r"\\b(left|right|ipsilateral|contralateral|opposite)\\b", re.IGNORECASE)
+    mentions = list(source_pattern.finditer(case_summary))
+    claims: dict[str, set[str]] = {}
+    for index, match in enumerate(mentions):
+        end = mentions[index + 1].start() if index + 1 < len(mentions) else len(case_summary)
+        segment = case_summary[match.end():end]
+        if not re.search(r"\\b(laterality|side|sided)\\b", segment, re.IGNORECASE):
+            continue
+        values = {
+            value.casefold()
+            for value in side_pattern.findall(segment)
+        }
+        if values:
+            claims.setdefault(match.group("label").casefold(), set()).update(values)
+    values = list(claims.values())
+    for index, first in enumerate(values):
+        for second in values[index + 1:]:
+            if (
+                ("left" in first and "right" in second)
+                or ("right" in first and "left" in second)
+                or ("ipsilateral" in first and "contralateral" in second)
+                or ("contralateral" in first and "ipsilateral" in second)
+                or ("opposite" in first and second)
+                or ("opposite" in second and first)
+            ):
+                return [_SOURCE_LATERALITY_CONFLICT_WARNING]
+    return []
+
+
 def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
     """Serialize the immutable snapshot with explicit present/not-reported semantics."""
     snapshot = case.model_dump(exclude_none=True)
@@ -75,6 +120,7 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
     return {
         "case_snapshot": snapshot,
         "field_status": field_status,
+        "source_integrity_warnings": _source_laterality_integrity_warnings(case.case_summary),
         "interpretation_rules": [
             "not_reported means unknown/not supplied; it never means confirmed absent or negative.",
             "The case_summary is user-provided free text. Preserve its wording and do not silently normalise shorthand into confirmed structured diagnoses.",
@@ -83,6 +129,7 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
             "Do not infer age, sex, T/N/M stage, stage group, nodal status, metastatic status, performance status, prior treatment, patient goals or comorbidity negatives.",
             "Separate source facts, clinical interpretations, hypotheses/assumptions and unknowns.",
             "If free text and structured fields differ, explicitly flag the discrepancy; do not silently reconcile it.",
+            "When source-attributed laterality statements conflict, preserve both verbatim, report the discrepancy as unresolved, and do not select either source.",
         ],
     }
 
@@ -702,7 +749,7 @@ def _unsupported_prerequisite_status_matches(
 def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[str, Any]) -> list[str]:
     """Flag generated assertions that lack a corresponding structured source field."""
     text = " ".join(_flatten_strings(generated_payload))
-    flags: list[str] = []
+    flags: list[str] = _source_laterality_integrity_warnings(case.case_summary)
     source_text = case.case_summary.casefold()
 
     # Compare generated stage components with the exact structured value when
@@ -1195,6 +1242,7 @@ def build_case_validation_warnings(case: SyntheticCase) -> list[str]:
     if empty_fields:
         warnings.append("Empty structured lists are not confirmed negatives; these fields are not reported: " + ", ".join(empty_fields) + ". Review the raw case summary before interpreting them.")
     summary = case.case_summary.casefold()
+    warnings.extend(_source_laterality_integrity_warnings(case.case_summary))
 
     # Explicit contradictions are warnings for human reconciliation; neither
     # the structured field nor free text is silently preferred.
