@@ -1,3 +1,16 @@
+### R4 canonical-roster disclosure — implementation committed; exact-head CI pending
+
+The final Chair validator previously knew only the expected role count (45). When a specialist row was entirely absent from its input, it could report a missing-row count but not identify which configured role was missing. The R4 orchestrator already owns the canonical `AGENT_PROFILES` catalogue; it now passes those exact IDs into the final Chair report boundary.
+
+The deterministic completion audit now separates:
+- **Absent configured role IDs:** expected catalogue entries with no row at all.
+- **Failed/malformed configured role rows:** IDs present in input, but without a usable completed contribution (existing status accounting remains in force).
+- **Unexpected IDs:** rows whose IDs are not in the configured roster.
+
+No absent contribution is fabricated, no failed row is relabelled absent, and original persisted rows remain unchanged. Regression covers an absent configured role, a failed configured role, a successful configured role, and an unexpected ID. This is R4 provenance/accounting improvement only; it does not establish model semantic correctness or clinical validity. Exact-head backend CI is pending.
+
+---
+
 ### Exact branch-tip CI refresh — checklist commit 94ad098 — 18 November 2026
 
 **PR head:** `94ad09834024ec79852434ca88d13884d2b037f5` (this checklist-only commit). PR #1 remains open/draft/unmerged and targets `main`; base SHA `39a356b8eb09399aa2da1b9b9085965999f5105a` unchanged. Latest application/test commit remains `5a67ef7a02e8d706e94400db60107937fa6249d4`.
@@ -361,7 +374,7 @@ Historical checkpoints below are immutable evidence and do not override this tab
 | Exact specialist-ID input gate | VERIFIED | Guard in `47dfa9d`; corrected regression in `8cde5dd`; exact regression-test-head backend run 44262841444 passed (473/473 pytest rows, re-counted from job logs). |
 | Saved contribution outer-row/payload identity and round consistency | VERIFIED | Strict R2/R3 prerequisite gate rejects missing/mismatched payload `agent_id` and wrong `round_number`; Chair aggregation excludes and records inconsistent payload metadata. Exact PR-head `76cf678` backend run [44326430804](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44326430804): 484/484 passed; both mismatch regressions passed. Deterministic provenance validation only. |
 | Chair mixed completed/failed duplicate-row accounting | VERIFIED | Exact code SHA `fbea522`; backend run [44315991587](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44315991587) passed 482/482 with both mixed-row regressions; conflicting completed duplicates remain excluded from usable-role status. Deterministic software verification only. |
-| Missing/failed-agent handling | IN PROGRESS | Deterministic Chair report identifies failed/unusable rows by status and reports absent rows against the configured 45-role roster; failed records remain excluded from distinct-role counts. Regression passed in exact-head backend run [44303234900](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44303234900), including failed/absent-role disclosure in the primary Chair conclusion. Entirely absent upstream rows cannot be individually named without a complete roster in the Chair input. |
+| Missing/failed-agent handling | IN PROGRESS | R4 now passes the canonical 45-role `AGENT_PROFILES` IDs into the final Chair boundary. Absent configured IDs are named individually; failed/malformed rows remain a distinct status category; unexpected IDs are separately flagged. Regression added for all three categories; exact-head backend CI pending. This improves accounting, but model-level consensus/dissent remains unresolved. |
 | Clinical safety, staging and unknown data | IN PROGRESS | Deterministic safeguards exist; no clinical validation, guideline concordance or zero-hallucination guarantee. |
 | Case integrity, contradiction preservation and audit history | IN PROGRESS | Historical raw outputs retained. Three audit-v16 deterministic checks now cover the three manual false negatives recorded from v16/audit-v15. Exact regression tests passed, but there is no live audit-v16 model rerun; raw case and audit history remain preserved. |
 | Provenance and guideline/evidence retrieval | IN PROGRESS | Source-bound controls exist; current guideline retrieval/verification incomplete. |

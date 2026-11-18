@@ -1048,6 +1048,48 @@ def test_final_chair_report_keeps_high_volume_source_excerpt_audit_visible():
 
 
 
+
+def test_completion_disclosure_names_absent_configured_ids_without_conflating_failed_or_unexpected_rows():
+    expected_role_ids = {"RO-01", "MO-01", "SO-01"}
+    rows = [
+        {
+            "agent_id": "RO-01",
+            "status": "completed",
+            "assessment": {"position": "insufficient_information"},
+        },
+        {
+            "agent_id": "MO-01",
+            "status": "failed",
+            "assessment": None,
+        },
+        {
+            "agent_id": "XX-99",
+            "status": "completed",
+            "assessment": {"position": "supports"},
+        },
+    ]
+
+    disclosures = _round_completion_disclosures(
+        rows,
+        "assessment",
+        1,
+        expected_role_ids=expected_role_ids,
+    )
+    absent = [item for item in disclosures if "configured role row(s) are absent" in item]
+    failed = [item for item in disclosures if "no usable completed" in item]
+    unexpected = [item for item in disclosures if "unexpected role ID(s)" in item]
+
+    assert len(absent) == 1
+    assert "SO-01" in absent[0]
+    assert "RO-01" not in absent[0]
+    assert "MO-01" not in absent[0]
+    assert len(failed) == 1
+    assert "MO-01" in failed[0]
+    assert len(unexpected) == 1
+    assert "XX-99" in unexpected[0]
+    assert "XX-99" not in absent[0]
+
+
 def test_final_chair_discloses_failed_and_absent_role_inputs_without_counting_them():
     case = SyntheticCase(
         scenario_title="Chair missing-agent disclosure regression",

@@ -47,9 +47,12 @@ EXPECTED_MDT_ROLE_COUNT = 45
 
 
 def _round_completion_disclosures(
-    rows: list[dict], field: str, round_number: int
+    rows: list[dict],
+    field: str,
+    round_number: int,
+    expected_role_ids: set[str] | None = None,
 ) -> list[str]:
-    """Describe missing/failed role rows without treating absent rows as completed."""
+    """Describe absent, failed, and unexpected role rows without conflating them."""
     role_ids = {
         str(row.get("agent_id") or "").strip().upper()
         for row in rows
@@ -81,13 +84,39 @@ def _round_completion_disclosures(
             unidentified_noncompleted += 1
 
     disclosures: list[str] = []
-    if len(role_ids) < EXPECTED_MDT_ROLE_COUNT:
-        disclosures.append(
-            f"Round {round_number}: the Chair input contains {len(role_ids)} distinct identified "
-            f"role rows of {EXPECTED_MDT_ROLE_COUNT} configured roles. At least "
-            f"{EXPECTED_MDT_ROLE_COUNT - len(role_ids)} role row(s) are absent from the supplied "
-            "input; their identities and contribution status cannot be inferred."
-        )
+    if expected_role_ids is None:
+        # Backward-compatible fallback for isolated callers without a roster.
+        if len(role_ids) < EXPECTED_MDT_ROLE_COUNT:
+            disclosures.append(
+                f"Round {round_number}: the Chair input contains {len(role_ids)} distinct identified "
+                f"role rows of {EXPECTED_MDT_ROLE_COUNT} configured roles. At least "
+                f"{EXPECTED_MDT_ROLE_COUNT - len(role_ids)} role row(s) are absent from the supplied "
+                "input; their identities and contribution status cannot be inferred."
+            )
+    else:
+        canonical_expected_ids = {
+            str(role_id).strip().upper()
+            for role_id in expected_role_ids
+            if isinstance(role_id, str) and role_id.strip()
+        }
+        absent_ids = sorted(canonical_expected_ids - role_ids)
+        unexpected_ids = sorted(role_ids - canonical_expected_ids)
+        if absent_ids:
+            shown = ", ".join(absent_ids[:12])
+            suffix = f", and {len(absent_ids) - 12} more" if len(absent_ids) > 12 else ""
+            disclosures.append(
+                f"Round {round_number}: {len(absent_ids)} configured role row(s) are absent "
+                f"from the Chair input: {shown}{suffix}. These roles have no saved row in this "
+                "round; their contribution status cannot be inferred."
+            )
+        if unexpected_ids:
+            shown = ", ".join(unexpected_ids[:12])
+            suffix = f", and {len(unexpected_ids) - 12} more" if len(unexpected_ids) > 12 else ""
+            disclosures.append(
+                f"Round {round_number}: {len(unexpected_ids)} unexpected role ID(s) appear in "
+                f"the Chair input: {shown}{suffix}. They are not part of the configured roster "
+                "and must not be treated as configured specialist contributions."
+            )
     for status, identifiers in sorted(noncompleted_by_status.items()):
         unique_ids = sorted(set(identifiers))
         shown = ", ".join(unique_ids[:12])
@@ -899,6 +928,7 @@ def ensure_chair_report_completeness(
     round1_rows: list[dict],
     round2_rows: list[dict],
     round3_rows: list[dict],
+    expected_role_ids: set[str] | None = None,
 ) -> FinalMDTReport:
     """Rebuild the Chair report from saved records and quarantine unsupported text.
 
@@ -1142,7 +1172,9 @@ def ensure_chair_report_completeness(
             (2, round2_rows, "result"),
             (3, round3_rows, "result"),
         )
-        for disclosure in _round_completion_disclosures(rows, field, round_number)
+        for disclosure in _round_completion_disclosures(
+            rows, field, round_number, expected_role_ids=expected_role_ids
+        )
     ]
     quarantine_flags.extend(completion_disclosures)
     if completion_disclosures:
