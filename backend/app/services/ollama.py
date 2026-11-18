@@ -79,7 +79,7 @@ async def generate_agent_assessment(
         "Keep the whole response concise: conclusion 2-3 short sentences, summary 2-3 short sentences. "
         "Use no more than 3 short entries in any list; use empty arrays for non-material lists. "
         "Do not label a treatment or pathway as contraindicated, unsafe, or not indicated solely because case data are missing; state that appropriateness cannot be determined. "
-        "Use conditional or insufficient_information when appropriate."
+        "Use conditional or insufficient_information when appropriate. Do not use a generic "        "insufficient_information response as a substitute for analysing relevant supplied facts: "        "state what this role can assess now, then identify the specific limits. When a defensible "        "option depends on missing or unconfirmed information, add a structured conditional_options "        "entry with a hypothetical condition, educational_option, one or more prerequisites, "        "unresolved_unknowns, and limitations. The condition must not be presented as true or met. "        "Use an empty conditional_options list when no safe, role-relevant branch can be grounded. "        "Do not invent clinical pathways, evidence, guidelines, eligibility, or patient preferences; "        "evidence retrieval is not connected and no guideline verification may be claimed. "        "Do not turn a conditional option into an unconditional recommendation."
     )
 
     prompt = (
@@ -89,7 +89,7 @@ async def generate_agent_assessment(
         + "\nReturn one concise JSON object. Required fields: position "
         "(supports/opposes/conditional/insufficient_information), provisional_conclusion, "
         "preferred_educational_option, perspective_summary, assumptions, unknowns, "
-        "discussion_options, evidence_gaps, uncertainty_notes, disagreement_notes, confidence. "
+        "discussion_options, conditional_options, evidence_gaps, uncertainty_notes, disagreement_notes, confidence. "
         "Do not add keys or markdown. The response format is schema-enforced."
     )
 

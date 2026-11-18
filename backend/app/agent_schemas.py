@@ -55,6 +55,36 @@ class EvidenceClaim(StrictModel):
 Position = Literal["supports", "opposes", "conditional", "insufficient_information"]
 
 
+class ConditionalEducationalOption(StrictModel):
+    """One explicitly hypothetical pathway with its prerequisites and limitations."""
+
+    condition: str = Field(
+        min_length=8,
+        max_length=500,
+        description="A clearly hypothetical condition; never present it as an established patient fact.",
+    )
+    educational_option: str = Field(
+        min_length=5,
+        max_length=700,
+        description="A role-relevant educational option for discussion, not a treatment instruction.",
+    )
+    prerequisites: list[str] = Field(
+        min_length=1,
+        max_length=6,
+        description="Information, assessments, or prerequisites needed before the option could be considered.",
+    )
+    unresolved_unknowns: list[str] = Field(
+        default_factory=list,
+        max_length=6,
+        description="Decision-relevant variables that remain unknown in the supplied case.",
+    )
+    limitations: list[str] = Field(
+        default_factory=list,
+        max_length=4,
+        description="Boundaries on interpretation; do not imply eligibility, suitability, or guideline verification.",
+    )
+
+
 class AgentDraft(StrictModel):
     """Model-generated content only; identity and safety fields are added by the server."""
 
@@ -65,6 +95,14 @@ class AgentDraft(StrictModel):
     assumptions: list[str] = Field(default_factory=list, max_length=20)
     unknowns: list[str] = Field(default_factory=list, max_length=20)
     discussion_options: list[str] = Field(default_factory=list, max_length=12)
+    conditional_options: list[ConditionalEducationalOption] = Field(
+        default_factory=list,
+        max_length=6,
+        description=(
+            "Optional explicitly hypothetical, role-relevant branches. Use [] when no defensible "
+            "conditional option can be grounded in the supplied case and remit."
+        ),
+    )
     evidence_gaps: list[str] = Field(default_factory=list, max_length=15)
     uncertainty_notes: list[str] = Field(default_factory=list, max_length=15)
     disagreement_notes: list[str] = Field(default_factory=list, max_length=15)
@@ -85,6 +123,14 @@ class AgentAssessment(StrictModel):
     assumptions: list[str] = Field(default_factory=list, max_length=20)
     unknowns: list[str] = Field(default_factory=list, max_length=20)
     discussion_options: list[str] = Field(default_factory=list, max_length=12)
+    conditional_options: list[ConditionalEducationalOption] = Field(
+        default_factory=list,
+        max_length=6,
+        description=(
+            "Structured hypothetical options with explicit conditions, prerequisites, unresolved "
+            "unknowns, and limitations. These are not confirmed patient facts or treatment instructions."
+        ),
+    )
     evidence_claims: list[EvidenceClaim] = Field(default_factory=list, max_length=30)
     evidence_gaps: list[str] = Field(default_factory=list, max_length=15)
     uncertainty_notes: list[str] = Field(default_factory=list, max_length=15)

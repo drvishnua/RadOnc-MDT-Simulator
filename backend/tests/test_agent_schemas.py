@@ -48,6 +48,52 @@ def test_assessment_requires_explicit_position_and_conclusion() -> None:
     assert assessment.evidence_claims[0].sources[0].identifier == "TEST-SOURCE-001"
 
 
+def test_conditional_options_keep_conditions_prerequisites_and_unknowns_separate():
+    payload = _valid_payload()
+    payload["conditional_options"] = [
+        {
+            "condition": "If a documented functional assessment supports further pathway discussion",
+            "educational_option": "Consider the role-relevant pathway as an educational discussion option.",
+            "prerequisites": ["Documented functional assessment", "Review of relevant comorbidity information"],
+            "unresolved_unknowns": ["Current functional status is not supplied."],
+            "limitations": ["Hypothetical only; this does not establish eligibility or a treatment choice."],
+        }
+    ]
+
+    assessment = AgentAssessment.model_validate(payload)
+
+    branch = assessment.conditional_options[0]
+    assert branch.condition.startswith("If ")
+    assert branch.prerequisites == [
+        "Documented functional assessment",
+        "Review of relevant comorbidity information",
+    ]
+    assert branch.unresolved_unknowns == ["Current functional status is not supplied."]
+    assert branch.limitations[0].startswith("Hypothetical only")
+    assert AgentDraft.model_fields["conditional_options"].default == []
+
+
+def test_conditional_option_without_explicit_prerequisites_is_rejected():
+    payload = _valid_payload()
+    payload["conditional_options"] = [
+        {
+            "condition": "If further assessment supports discussion",
+            "educational_option": "Consider an educational pathway discussion.",
+            "prerequisites": [],
+        }
+    ]
+
+    with pytest.raises(ValidationError):
+        AgentAssessment.model_validate(payload)
+
+
+def test_conditional_options_may_be_empty_when_no_defensible_branch_exists():
+    payload = _valid_payload()
+    payload["conditional_options"] = []
+    assessment = AgentAssessment.model_validate(payload)
+    assert assessment.conditional_options == []
+
+
 def test_evidence_claim_without_citation_is_rejected() -> None:
     payload = _valid_payload()
     payload["evidence_claims"] = [
