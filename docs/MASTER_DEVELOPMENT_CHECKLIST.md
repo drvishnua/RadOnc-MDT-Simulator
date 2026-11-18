@@ -4,21 +4,21 @@
 
 ### Latest deterministic R2/R4 patch — 18 November 2026
 
-- Application/test head: `0bb85c1446ab16ecef90d89bcbda8f5b8204c197`; current branch head before this checklist refresh is the same. PR #1 remains open/draft/unmerged and `main` is unchanged.
+- Application/test head: `0bb85c1446ab16ecef90d89bcbda8f5b8204c197`; current branch head before this checklist refresh: `d658356f7c9d9fbe1bfcb5274ecf04da43784576`. PR #1 remains open/draft/unmerged and `main` is unchanged.
 - `442b4ab28290057f4e2a2a5727905dd54b8186eb`: Chair finalizer now reports failed/unusable role rows and missing role rows against the configured 45-role input, without counting failed records.
 - `5cf470855886c992bdad7011054b7ab0cc7e26b0`: Chair R4 prompt digest carries the saved R2 debate narrative and fuller server-bound source excerpt, analysis and comparison.
 - `442b4ab28290057f4e2a2a5727905dd54b8186eb`: deterministic failed/unusable and absent role-row disclosure in the final Chair report.
 - `458b2522ec3616556694caad1a0d110971c5f70d` and `4225c73e57565a6f57624757eae939163a944803`: append the exact server-bound case-opinion register to saved R2 `response_to_other_perspectives`, explicitly labelled as verbatim source text and not specialist-authored conclusions, verified facts or endorsements; render it with real line breaks.
 - `0efbfe1ca558742b012c06b228a7ca2b7e54531e`: raised the saved contribution narrative bound to 4,200 characters to accommodate at most four bounded source excerpts alongside the model narrative.
 - `2269d80dbcf0b1046bc66ed521721b4db79f0245`, `65a573affcb6af8ccb98a163e2c17ebb191df2bd`, `d838382d7731353d306b73ec2b4ad9064d16d854`, and `0bb85c1446ab16ecef90d89bcbda8f5b8204c197`: regression coverage for missing/failed roles, R4 source retention, and R2 server-bound narrative/source excerpt fidelity. Earlier test-fixture failures were retained in the history and corrected.
-- Exact application/test-head CI on `0bb85c1`: Backend [44298209261] SUCCESS, 479/479 pytest passed, 0 failed/errors/skips and deterministic preflight 7/7; Frontend [44298209385] SUCCESS; Browser E2E [44298209018] SUCCESS; Packaging Prerequisites [44298209299] SUCCESS. Security Audit [44298208989] FAILED: four HIGH `picomatch` findings; Python audit, both CodeQL analyses and full-history secret scan passed. Windows Installer [44298209011] was still in progress at checklist update. No live Qwen/MedGemma inference, GPU verification or clinical validation.
+- Exact application/test-head CI on `0bb85c1`: Backend [44298209261] SUCCESS, 479/479 pytest passed, 0 failed/errors/skips and deterministic preflight 7/7; Frontend [44298209385] SUCCESS; Browser E2E [44298209018] SUCCESS; Packaging Prerequisites [44298209299] SUCCESS. Security Audit [44298208989] FAILED: four HIGH `picomatch` findings; Python audit, both CodeQL analyses and full-history secret scan passed. Windows Installer [44298209011] SUCCESS: installer smoke-tested, SHA-256 `f712e0755d15e0c376243c47a943e5c1f58caa504bda73d5da9a16d989c869a6`; artifact [14424638117](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44298209011/artifacts/14424638117), ZIP SHA-256 `e6e4de4d9020b8abda3c18619111ea1710d0d1326898530e077fce5329eba6b2`. Separate clean-hosted Ollama/model bootstrap was SKIPPED. No live Qwen/MedGemma inference, GPU verification or clinical validation.
 
 Historical checkpoints below are immutable evidence and do not override this table.
 
 **Repository:** `drvishnua/RadOnc-MDT-Simulator`  
 **Development branch:** `feature/four-round-mdt-and-performance`  
 **PR #1:** open, draft, unmerged; base `main`.  
-**Current PR head before this checklist refresh:** `0bb85c1446ab16ecef90d89bcbda8f5b8204c197` (application/test head).  
+**Current PR head before this checklist refresh:** `d658356f7c9d9fbe1bfcb5274ecf04da43784576` (checklist-only descendant of application/test head `0bb85c1446ab16ecef90d89bcbda8f5b8204c197`).  
 **Latest application code commit:** `4225c73e57565a6f57624757eae939163a944803` (R2 appends the exact server-bound attributed-opinion register to saved narrative).  
 **Latest backend regression-test commit:** `0bb85c1446ab16ecef90d89bcbda8f5b8204c197` (R2 server-bound opinion narrative regression; backend 479/479 passed).  
 **Latest frontend provenance-visibility commit:** `afbe6af6ffbc463ad92457e5179545c92b55b398`; E2E selector corrections in `198c8be7dfa203fba51eec99f9a2151738dabc12` and `1e8d3559dc12e7aa1b7599f9bd076b3873f4e88b`.  
@@ -66,7 +66,7 @@ Historical checkpoints below are immutable evidence and do not override this tab
 | Guideline retrieval and verification | NOT STARTED | No current verified guideline source set linked to a run. |
 | Independent qualified clinical review | NOT STARTED | No attributable qualified review artefact. |
 | Windows packaging prerequisites | VERIFIED | Exact source-bound fixture head workflow [44289875422](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44289875422) succeeded. |
-| Windows installer build | IN PROGRESS | Exact-head installer workflow [44298209011](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44298209011) is running. Previous source-bound fixture head installer [44289875406](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44289875406) succeeded. Artifact [14420343814](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44289875406/artifacts/14420343814), artifact ZIP SHA-256 `9c1a33e2a48899e1350f7848df07efd2fa8923cba39d16343f22dfef6ef5c055`; installer SHA-256 `66c5d0418581ede3249b9b8eca0bf8098eb97371a940f14473964174fc31d20e`. Installed health/frontend/API/45-role checks passed; silent uninstall preserved the user DB. Separate Ollama/model bootstrap job was SKIPPED; no model inference. |
+| Windows installer build | VERIFIED | Exact R2/R4 patch head installer [44298209011](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44298209011) succeeded. Artifact [14424638117](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44298209011/artifacts/14424638117), ZIP SHA-256 `e6e4de4d9020b8abda3c18619111ea1710d0d1326898530e077fce5329eba6b2`; installer SHA-256 `f712e0755d15e0c376243c47a943e5c1f58caa504bda73d5da9a16d989c869a6`. Installed app smoke test passed. Separate clean-hosted Ollama/model bootstrap was SKIPPED; no model inference. |
 | Full-history secret scan | VERIFIED | Exact source-bound fixture head security run [44289876314](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44289876314): passed. |
 | Python CodeQL | VERIFIED | Exact source-bound fixture head security run 44289876314: passed. |
 | JavaScript/TypeScript CodeQL | VERIFIED | Exact source-bound fixture head security run 44289876314: passed. |
