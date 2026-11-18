@@ -2381,3 +2381,65 @@ The screening runner previously had helper-level tests but lacked no-inference c
 
 
 **Correction verification run:** code commit `0b610381c51dcd8c9cd15010b673d26ac55042c5` triggered fresh PR CI: backend `44362192201`, frontend `44362192339`, browser E2E `44362192239`, packaging prerequisites `44362192219`, installer `44362192494`, security/dependency audit `44362192198`. All were in progress at the last inspection; the security run's full-history secret-scan job had been cancelled during the in-progress snapshot. The checklist-only head is `d77ad3705e81c4f5da9c22c96e62123318f4a2df`; these runs test code commit `0b61038`, not the subsequent documentation-only commit. Recheck run conclusions before changing statuses.
+
+
+## Current verified checkpoint — exact-head CI complete (18 November 2026)
+
+**Repository:** `drvishnua/RadOnc-MDT-Simulator`  
+**Development branch:** `feature/four-round-mdt-and-performance`  
+**PR #1:** open, draft, unmerged; base `main`. Main was not modified.  
+**Exact application/test head:** `208198ba9e7895b24b738a2639c300825bb01743`  
+**Relevant preceding correction:** `2a531b60b4e715d39494b85fd9913229a416c56b`.
+
+### Corrective work since the previous checkpoint
+
+- The R3 narrative identifier audit now treats `malformed_reference_text_verbatim` as an invalid label when a response applies it to an explicitly supplied source ID. The allowlist continues to derive only from that case's own structured inventory; model text cannot expand the supplied-ID set.
+- The laterality-conflict detector's failing test fixture was corrected to express explicit opposing values: Source A records left laterality and Source B records right laterality. The earlier fixture said only “one laterality value” and “the opposite laterality value”, without specifying any detectable side tokens. The production detector was not changed by this test-fixture correction.
+- The prior undefined `supplied_ids` / `invalid_statuses` issue remains corrected by commit `0b610381c51dcd8c9cd15010b673d26ac55042c5`.
+
+### Exact-head CI — all six standard workflows passed on `208198b`
+
+| Workflow | Status | Run / evidence |
+|---|---|---|
+| Backend tests | VERIFIED | Run [44363086602](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44363086602): **489 passed, 0 failed**. Both corrected regression tests passed. Deterministic preflight: **7 passed, 0 failed, 0 inconclusive**. JUnit diagnostics artifact 14455262059; preflight artifact 14455731938. |
+| Frontend build | VERIFIED | Run [44363086534](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44363086534): success. |
+| Patient Registry / Four-Round Dashboard browser E2E | VERIFIED | Run [44363086431](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44363086431): success; browser evidence artifact 14455112324. |
+| Windows packaging prerequisites | VERIFIED | Run [44363086494](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44363086494): success. |
+| Windows installer | VERIFIED | Run [44363086428](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44363086428): package build, installation smoke test, checksum generation and artifact upload all passed. Installer SHA-256: `3101e9f758adc319625a79b9a3d01e302a08f193fa18d758870c817b34c5e8ed`. Artifact 14454852593 (14,900,377 bytes; archive digest `sha256:2b3f93ad21e5cc9f4848d52d353cd44487593c954cc4082f2355295ed1589445`). |
+| Security, dependencies, secret scan and CodeQL | VERIFIED | Run [44363086618](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44363086618): all jobs succeeded. Python `pip-audit`: no known vulnerabilities; Node `npm audit`: 0 vulnerabilities; Python and JavaScript/TypeScript CodeQL and full-history secret scan succeeded. |
+
+These are exact-head engineering/build/security checks. They do not demonstrate clinical accuracy, guideline concordance, a live four-round model run, or GPU inference.
+
+### Master Development and Verification Checklist — current snapshot
+
+| Area | Status | Evidence / boundary |
+|---|---|---|
+| Four-round R1–R4 architecture and saved-round data flow | IN PROGRESS | Current backend tests passed; full current-head 45-role live execution and saved-output audit remain outstanding. |
+| R1 independent assessment and unknown/staging safeguards | IN PROGRESS | Deterministic staging and missing-information checks are in the passing suite; live-model behaviour remains unverified. |
+| R2 debate, agreement/disagreement and peer provenance | IN PROGRESS | Backend provenance and structured-round tests passed; no current full live debate run. |
+| R3 adversarial audit and case-local identifier inventory | VERIFIED | Audit-v17 code and the two targeted R3 tests passed within 489/489 backend tests; no new live model inference. |
+| R4 Chair synthesis from actual saved R1–R3 rows | IN PROGRESS | Deterministic Chair reconciliation tests passed; current full 45-role saved-run reconciliation has not been executed. |
+| Clinical safety, staging and incomplete-case handling | IN PROGRESS | Deterministic guardrails tested; no clinical validation or live-model assurance. |
+| Case integrity and audit-v17 deterministic checks | VERIFIED | Exact-head backend suite passed; historical source records remain unchanged. |
+| Provenance, source allowlists and traceability | IN PROGRESS | Case-local ID audit and provenance regressions passed; live response attribution remains outstanding. |
+| Chair position counts, consensus, dissent and minority positions | IN PROGRESS | Deterministic tests passed; full saved 45-role contribution distribution and final report audit remain outstanding. |
+| Missing, failed and duplicate specialist handling | VERIFIED | Backend regression suite passed; full orchestration behaviour remains to be validated in a live run. |
+| Backend API and test suite | VERIFIED | 489/489 tests passed on exact head; preflight 7/7. |
+| Frontend build | VERIFIED | Exact-head workflow passed. |
+| Patient Registry / Four-Round Dashboard browser E2E | VERIFIED | Exact-head browser workflow passed with artifact 14455112324. |
+| Development Mission Control/monitor coverage | IN PROGRESS | This CI verifies the patient registry and saved MDT dashboard browser path; it does not establish every development-monitor view or metric. |
+| Windows packaging and installer | VERIFIED | Exact-head prerequisite and installer workflows passed, including installation smoke test and SHA-256 artifact. |
+| Dependency audit, CodeQL and full-history secret scan | VERIFIED | Exact-head security workflow passed; both language analyses and dependency/secret checks succeeded. |
+| Authentication, authorisation and broader product security acceptance | IN PROGRESS | CI security checks are not a complete security assessment or release sign-off. |
+| Ollama model identity, effective context and truncation | NOT STARTED | No current request-time context/truncation measurement. |
+| RTX 4060 request-time GPU/offload verification | NOT STARTED | No inference-time GPU telemetry collected. |
+| Current performance/latency and concurrency validation | NOT STARTED | No new controlled performance benchmark; concurrency remains 1. |
+| New Qwen/MedGemma inference | BLOCKED | No new model inference was run. Fresh explicit risk approval and the authorised model-screen workflow gate remain required; CI success alone does not grant this approval. |
+| Live four-round validation and saved artefact audit | BLOCKED | No current-head 45-role run, live report review or current-run audit artefact. |
+| Guideline/evidence retrieval and verification | NOT STARTED | No current authoritative guideline set was retrieved and verified for simulator use. |
+| Independent qualified clinical review | NOT STARTED | Required before any clinical-quality acceptance. |
+| Release acceptance | BLOCKED | Live validation, GPU/performance evidence, evidence retrieval, independent clinical review and broader security/governance gates remain outstanding. |
+
+### Verification boundary
+
+The six standard workflows above belong to the exact branch head `208198ba9e7895b24b738a2639c300825bb01743`. No workflow result from an earlier code head is used to mark these items VERIFIED. No new hosted Ollama/model run was started. No current RTX 4060 inference proof, clinical validation, or guideline verification is claimed.
