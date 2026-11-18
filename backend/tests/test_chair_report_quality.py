@@ -1009,4 +1009,5 @@ def test_chair_synthesis_traces_examples_to_saved_role_records_in_all_three_roun
     assert "Example RO-03" in synthesis
     assert "R3 contribution records" in synthesis
     assert "not exhaustive" in synthesis
-    assert "not verified clinical facts" in synthesis
+    assert "verified clinical facts" in synthesis
+    assert "not an exhaustive summary" in synthesis
