@@ -1056,6 +1056,63 @@ def test_chair_reconciliation_preserves_all_groups_when_round3_top_positions_tie
     assert report.consensus_status == "no_consensus"
 
 
+def test_final_chair_boundary_retains_earlier_and_later_minority_histories():
+    from app.services.chair_report_quality import ensure_chair_report_completeness
+
+    case = SyntheticCase(
+        scenario_title="Synthetic cross-round minority history",
+        case_summary="Fictional case used only to test preservation of cross-round role positions.",
+        known_unknowns=["Local staging is not supplied."],
+    )
+    round1 = _chair_rows("assessment", ["supports"] * 45)
+    round2 = _chair_rows("result", ["supports"] * 45)
+    round3 = _chair_rows("result", ["supports"] * 45)
+
+    # Give every fixture row a stable, unique role ID so the test isolates
+    # cross-round history reconciliation rather than duplicate-ID handling.
+    for rows in (round1, round2, round3):
+        for index, row in enumerate(rows, start=1):
+            row["agent_id"] = f"RO-{index:02d}"
+            row["agent_name"] = f"Role {index}"
+
+    # RO-01 was a Round-1 minority but later converged to the Round-3 modal label.
+    round1[0]["assessment"]["position"] = "conditional"
+    round1[0]["assessment"]["provisional_conclusion"] = (
+        "The educational pathway remains conditional because local staging is not supplied."
+    )
+
+    # RO-02 is a distinct Round-3 minority. Its presence must not hide RO-01's
+    # earlier minority history.
+    round3[1]["result"]["position"] = "conditional"
+    round3[1]["result"]["provisional_conclusion"] = (
+        "A conditional review remains necessary because local staging is not supplied."
+    )
+
+    draft = reconcile_chair_report_draft(
+        "synthetic-cross-round-minority-history",
+        case,
+        round1,
+        round2,
+        round3,
+        _chair_draft(),
+    )
+    report = ensure_chair_report_completeness(
+        draft, case, round1, round2, round3
+    )
+
+    history_by_role = {
+        item.split(" — ", 1)[0]: item
+        for item in report.minority_and_dissenting_views
+        if " — " in item
+    }
+    assert "RO-01" in history_by_role
+    assert "RO-02" in history_by_role
+    assert "Round 1: conditional" in history_by_role["RO-01"]
+    assert "Round 2: supports" in history_by_role["RO-01"]
+    assert "Round 3: supports" in history_by_role["RO-01"]
+    assert "Round 3: conditional" in history_by_role["RO-02"]
+
+
 def test_round_finish_updates_parent_run_timestamp(monkeypatch, tmp_path):
     run_id = _create_complete_round1(monkeypatch, tmp_path)
     run_store.create_round_job(run_id, 2)
