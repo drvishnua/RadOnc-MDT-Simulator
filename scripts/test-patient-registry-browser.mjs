@@ -568,7 +568,7 @@ async function verifyFourRoundDashboard() {
   const rendered = await evaluate(
     "(() => {" +
       "const stages = [...document.querySelectorAll('.round-stage')];" +
-      "const headings = stages.map(stage => (stage.querySelector('.round-stage-heading')?.innerText || '').replace(/\\\\s+/g, ' ').trim());" +
+      "const headings = stages.map(stage => (stage.querySelector('.round-stage-heading')?.innerText || '').replace(/\\s+/g, ' ').trim());" +
       "const completed = stages.map(stage => (stage.innerText || '').includes('Stage completed'));" +
       "const roundRoleCount = document.querySelectorAll('.round-agent-list details').length;" +
       "const r2First = stages[1]?.querySelector('.round-agent-list details')?.innerText || '';" +
