@@ -2522,3 +2522,65 @@ These results verify engineering/build/security checks on the exact application/
 The earlier Node/Python dependency-audit blocker has been resolved for the dependencies assessed by the exact-head security workflow. This is not a blanket security approval. The HAI-DEF terms acceptance and the new per-run synthetic-risk attestation are separate gates.
 
 The workflow supports an authorised marker-based push on the development branch; a manual dispatch is not required for that route. The next model screen must not be triggered until the user explicitly accepts the fresh screening scope. After approval, use the workflow's required per-run risk marker; add the HAI-DEF marker only because MedGemma is also being requested. The sequence remains Qwen first, followed by the MedGemma version/digest-gated path only when Qwen execution and provenance gates pass. All outputs remain pending independent human review. This hosted validation is CPU-only, not local RTX 4060 verification or clinical validation.
+
+
+---
+
+## Current product-redesign checkpoint — user-reported laptop findings (19 November 2026)
+
+**Repository:** `drvishnua/RadOnc-MDT-Simulator`  
+**Development branch:** `feature/four-round-mdt-and-performance`  
+**PR #1:** open, draft, unmerged; base `main`.  
+**Pre-update branch head:** `e614ac07ebafbbf223226e1e2c0a2de4d868b6a1`.  
+**Scope:** user-reported defects from local installer/application use. These are requirements and observations, not yet reproduced engineering findings. No product fixes are claimed in this checkpoint.
+
+### User requirements and acceptance criteria
+
+| Workstream | Status | Required outcome / verification |
+|---|---|---|
+| Remove Mission Control UI | NOT STARTED | Remove Mission Control from the shipped user-facing application and navigation; retain only operational functions genuinely required internally. Verify no user-facing entry points remain. |
+| Remove Development Monitor UI | NOT STARTED | Remove Development Monitor from the shipped application/navigation; verify no user-facing entry points remain. |
+| Investigate unhelpful “cannot be determined / insufficient information” full-run output | NOT STARTED | Forensic review of the actual saved run: identify which supplied case facts each role received, which it used/ignored, missing-data claims, prompt/context truncation, failed/empty responses and Chair synthesis. Improve use of supplied evidence without inventing absent facts or forcing recommendations. |
+| TNM representation equivalence | NOT STARTED | Normalise equivalent forms such as `T1` and `clinical_t_stage=1`, likewise N/M, before contradiction comparison. Add tests for equivalent forms, genuine conflicts, qualifiers, prefixes and unknown values. Do not infer missing stage. |
+| R1 independent specialist assessments | NOT STARTED | Ensure each R1 agent receives only the case input and its own role definition, never other agents' generated R1 responses. Verify orchestration inputs and saved prompt provenance. |
+| Role-specific specialist perspectives | NOT STARTED | Define and test role-specific remit, expertise boundaries, reasoning priorities, questions, risks and contribution format across all 45 roles. Avoid interchangeable generic responses and fabricated specialist credentials. |
+| Natural professional MDT dialogue | NOT STARTED | Improve R2/R3 turn-taking, concise conversational phrasing, direct responses and attribution while preserving exact source provenance, uncertainty, dissent and conditionality. Do not manufacture agreement or disagreement. |
+| Overall UI/UX redesign | NOT STARTED | Deliver a coherent, professional desktop workflow for case intake, specialist assessments, discussion, Chair report, saved runs and settings; usability review required. |
+| Native desktop application window | NOT STARTED | Application opens in its own Windows window, not a normal browser. Evaluate desktop shell options against packaging, backend lifecycle, local data, offline use and maintainability. |
+| First-launch disclaimer dialog | NOT STARTED | Show educational/non-clinical-use disclaimer before first use; require explicit acknowledgement, persist acknowledgement/version safely, and make disclaimer accessible later. |
+| Application logo and icon | NOT STARTED | Add consistent product identity, window icon and installer/start-menu branding; verify assets in packaged build. |
+| Native application menus | NOT STARTED | Provide appropriate File, Edit, View, Case, MDT, Tools and Help/About menus with functioning commands and keyboard/accessibility behaviour. |
+| Ollama server discovery/startup | NOT STARTED | Detect existing Ollama installation and configured endpoint; check server health; start the installed server/service if stopped; wait with bounded timeout and actionable errors. A stopped server must not be treated as an absent model. |
+| Ollama installed-model discovery | NOT STARTED | Query the reachable Ollama server for installed model tags after startup/health check; match required model identity/tag robustly. |
+| Conditional model download | NOT STARTED | Pull the required model only after server startup and model inventory prove it is absent; avoid duplicate downloads and preserve existing models. Show progress, cancellation, disk-space checks and failure recovery. |
+| Desktop installer and lifecycle integration | NOT STARTED | Package desktop shell and backend; reliably start/stop managed processes, preserve user data on upgrade/uninstall, and verify clean install, upgrade and rollback paths. |
+
+### Investigation and implementation order
+
+1. Reproduce and inspect the saved full-run output before changing model prompts; quantify supplied facts, omissions, failures, context limits and role-level outputs.
+2. Correct TNM normalisation with deterministic unit/regression tests.
+3. Correct Ollama lifecycle: installation detection → server health/start → model inventory → conditional pull only if absent.
+4. Enforce R1 isolation and role-specific prompt construction; add tests proving no cross-agent R1 leakage and distinct role instructions.
+5. Improve R2/R3 dialogue style without weakening provenance, clinical safety, uncertainty or dissent.
+6. Remove Mission Control and Development Monitor from the shipped UI.
+7. Select and implement the native desktop shell, first-run disclaimer, branding and menus; integrate installer and backend lifecycle.
+8. Conduct usability, clean-install, upgrade, offline/server-stopped/model-present/model-absent and end-to-end desktop tests.
+9. Only after deterministic checks and review, plan a separately authorised, resumable synthetic live-model validation. Concurrency remains 1 unless measured otherwise.
+
+### Verification and governance boundary
+
+- User has reported that the installer treated Qwen as uninstalled and began downloading while Ollama had not been started. This is a user-observed lifecycle defect; root cause has not yet been established from logs or reproduced.
+- User reports a full run dominated by insufficient-information responses and near-identical R1 outputs. The relevant saved run must be inspected before attributing cause to prompts, model capability, orchestration, context truncation or case completeness.
+- The supplied screenshot shows warnings that compare textual `T1/N0/M0` with structured `clinical_*_stage=1/0/0`. This strongly suggests a representation-normalisation defect; production root cause and safe correction still require code inspection and regression tests.
+- No current fix, commit, CI run, native desktop build, laptop retest or new live model inference is established by this requirements update.
+- Do not start Qwen/MedGemma screening without the separate fresh per-run synthetic-risk approval and required workflow attestations. Product redesign feedback is not that approval.
+- Preserve synthetic-only test data; never use patient-identifiable information in model tests.
+- Do not claim clinical validity, guideline concordance, zero hallucinations, GPU inference or release readiness from software tests.
+
+### Baseline engineering evidence before this requirements update
+
+PR head `e614ac07ebafbbf223226e1e2c0a2de4d868b6a1`, PR #1 open/draft/unmerged, base `main`. Six PR workflows on this exact head completed successfully: backend tests run `44367842014`; frontend build `44367841963`; browser E2E `44367842000`; packaging prerequisites `44367841916`; Windows installer `44367841964`; security/dependency audit `44367841878`. These verify the prior build only, not the new requirements. No changes to `main`.
+
+### Current acceptance status
+
+The above redesign requirements are all outstanding and must remain NOT STARTED until implementation evidence exists. Existing historical VERIFIED statuses elsewhere in this document refer only to their named commits and checks; they do not satisfy these new requirements. Release acceptance remains BLOCKED.
