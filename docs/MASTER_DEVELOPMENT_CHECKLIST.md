@@ -5,9 +5,10 @@
 **Repository:** `drvishnua/RadOnc-MDT-Simulator`  
 **Development branch:** `feature/four-round-mdt-and-performance`  
 **PR #1:** open, draft, unmerged; base `main`.  
-**PR head verified immediately before this checklist refresh:** `b59c52d49e888473d751a600a126bfaeb3e17f5b`.  
+**PR head verified immediately before this checklist refresh:** `1e8d3559dc12e7aa1b7599f9bd076b3873f4e88b`.  
 **Latest application code commit:** `2e46a1bd781c6a5e0e8f5ca2230d36e9cf5cb749` (audit-v16 logic with corrected regex escaping).  
-**Latest regression-test commit:** `c1fb981e648b76429bc29403cd2febcf5e4739d0` (three audit-v16 false-negative regressions plus corrected positive R1 contradiction fixture).  
+**Latest backend regression-test commit:** `c1fb981e648b76429bc29403cd2febcf5e4739d0` (three audit-v16 false-negative regressions plus corrected positive R1 contradiction fixture).  
+**Latest frontend provenance-visibility commit:** `afbe6af6ffbc463ad92457e5179545c92b55b398`; E2E selector corrections in `198c8be7dfa203fba51eec99f9a2151738dabc12` and `1e8d3559dc12e7aa1b7599f9bd076b3873f4e88b`.  
 **Main:** `39a356b8eb09399aa2da1b9b9085965999f5105a`; unchanged.  
 **Current checklist update:** the one authorised Qwen-only v16/audit-v15 synthetic screen completed on push run [44263369594](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44263369594), artifact [14409068927](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44263369594/artifacts/14409068927). Execution succeeded, but 4 cases were automatically flagged with 6 deterministic review flags, plus 3 further manual audit observations. Acceptance remains PENDING_HUMAN_REVIEW; this is not a model pass. The one-run temporary risk acceptance is consumed. Audit-v16 code is CI-verified but has not been live-model screened. No further Qwen or MedGemma run is authorised without fresh explicit risk review and security disposition.
 
@@ -31,7 +32,8 @@
 | Provenance and guideline/evidence retrieval | IN PROGRESS | Source-bound controls exist; current guideline retrieval/verification incomplete. |
 | Backend tests — audit-v16 remediation head `c1fb981` | VERIFIED | Exact-head backend run [44267217866](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44267217866): raw job logs confirm 476/476 pytest rows passed, 0 failed/errors/skips. Three audit-v16 regressions and the 12-case deterministic harness passed. JUnit artifact [14409834554](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44267217866/artifacts/14409834554); preflight [14410892064](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44267217866/artifacts/14410892064). |
 | Frontend unit/build checks | VERIFIED | Exact audit-v16 code-head Frontend Build [44267218284](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44267218284) succeeded. |
-| Patient Registry / four-round Dashboard browser E2E | VERIFIED | Exact audit-v16 code-head Browser E2E [44267217873](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44267217873) succeeded; artifact [14411570079](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44267217873/artifacts/14411570079). |
+| Patient Registry / four-round Dashboard browser E2E | VERIFIED | Exact current PR-head browser E2E [44286353782](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44286353782) succeeded; head `1e8d3559dc12e7aa1b7599f9bd076b3873f4e88b`. It verified patient registry flows and the saved four-round dashboard. |
+| R2/R3 provenance warnings and source-opinion visibility in role detail cards | VERIFIED | Frontend commit `afbe6af6ffbc463ad92457e5179545c92b55b398` renders saved `source_reference_integrity_flags`, server-bound R2 `source_opinion_responses`, and R3 `source_opinion_reviews` beside each original role response. Disposable synthetic browser fixture asserts all three displays; exact current-head Browser E2E [44286353782](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44286353782) passed. This verifies visibility only, not live model correctness or semantic interpretation. |
 | Mission Control / Development Monitor dashboard | VERIFIED | Exact audit-v16 code-head Browser E2E [44267217873](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44267217873) passed; prior dedicated refresh/error-resilience coverage remains in run 44257129743. |
 | Dashboard/API error and last-good-state handling | VERIFIED | Prior browser checks cover 403/429, malformed metadata, recovery and valid empty state. |
 | Ollama context handling and truncation resistance | IN PROGRESS | Long-run effective context behaviour has not been proven fixed. |
@@ -55,7 +57,7 @@
 | Python CodeQL | VERIFIED | Exact audit-v16 code-head security run 44267217685: passed. |
 | JavaScript/TypeScript CodeQL | VERIFIED | Exact audit-v16 code-head security run 44267217685: passed. |
 | Python dependency audit | VERIFIED | Exact audit-v16 code-head security run 44267217685: no known vulnerabilities found. |
-| Node dependency audit | FAILED | Latest exact PR-head security workflow [44282879209](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44282879209): npm audit reports four HIGH transitive `picomatch@4.0.7` findings. Python audit, both CodeQL analyses and full-history secret scan passed. The security gate remains failed. |
+| Node dependency audit | FAILED | Latest exact PR-head security workflow [44286353760](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44286353760): npm audit reports four HIGH transitive `picomatch@4.0.7` findings. Python audit, both CodeQL analyses and full-history secret scan passed. The security gate remains failed. |
 | Dependency advisory applicability and risk disposition | IN PROGRESS | The one-run exception was consumed by Qwen run 44263369594. GitHub now marks GHSA-fc5q-39xc-vjpf Reviewed/High, affected through 4.0.7 with no patch listed; Snyk disputes this and has revoked its separate advisory. The repository's package graph shows picomatch only as a Vite transitive dev dependency; the checked Vite config does not define user-controlled glob input, but this is not proof of zero exploitability. npm audit remains FAILED and unsuppressed. No further model run or MedGemma evaluation is authorised before documented security-owner disposition and fresh explicit approval. |
 | Release acceptance | BLOCKED | Temporary one-run development exception does not clear the Node audit. R2/R4 live failures, full 45-role run, GPU, evidence retrieval and independent clinical review remain outstanding. |
 
@@ -102,6 +104,18 @@ All six PR workflows on this exact checklist commit completed. Five succeeded; d
 - Security/dependency audit [44264563041](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44264563041): FAILED at Node npm audit with four HIGH picomatch findings. Python dependency audit, Python and JS/TS CodeQL, and full-history secret scan passed.
 
 These results are software/build verification only. They do not prove model integrity, clinical validity, GPU inference or release readiness.
+## Latest exact PR-head CI — provenance visibility UI change and browser fixture corrections, head `1e8d3559dc12e7aa1b7599f9bd076b3873f4e88b` (18 November 2026)
+
+PR #1 remains open, draft and unmerged; base `main` remains `39a356b8eb09399aa2da1b9b9085965999f5105a`. All six standard PR workflows completed on this exact head: five succeeded, one failed.
+
+- Backend Tests [44286353780](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44286353780): SUCCESS; raw job-log recount **476/476 pytest records passed**, zero failures, errors or skips. JUnit artifact 14418608884.
+- Frontend Build [44286353769](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44286353769): SUCCESS.
+- Patient Registry / Four-Round Dashboard Browser E2E [44286353782](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44286353782): SUCCESS. Headless Edge verified the new R2 source/provenance warning, exact server-bound R2 attributed-opinion excerpt/analysis, and R3 source-opinion option/conditions status in role detail cards. The same test retained the 45-role R2/R3 and Chair R4 rendering checks, and deleted the disposable patient fixture. No model inference was invoked.
+- Windows Packaging Prerequisites [44286353756](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44286353756): SUCCESS.
+- Windows Installer Build [44286353783](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44286353783): SUCCESS.
+- Security and Dependency Audit [44286353760](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44286353760): FAILED at Node npm audit with four HIGH `picomatch@4.0.7` findings. Python dependency audit, Python/JavaScript CodeQL and full-history secret scan passed.
+
+The browser regression proves that persisted structured warnings and source opinion records are visible to reviewers; it does not prove model responses are accurate, complete or clinically valid. No Qwen or MedGemma screening ran on this change.
 ## Latest exact PR-head CI — checklist/security reassessment commit `96b5612cacd676f8c8cdd774f7cf586c342f38bd` (18 November 2026)
 
 All six standard PR workflows completed on this exact head. Five succeeded; Security and Dependency Audit failed. This was a documentation-only update; the application and regression-test code remain unchanged from audit-v16 commit `c1fb981`.
