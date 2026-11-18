@@ -2378,3 +2378,6 @@ The screening runner previously had helper-level tests but lacked no-inference c
 | Full backend regression suite after correction | IN PROGRESS | Not yet executed on commit 0b61038; do not carry forward the failed run as a pass. |
 
 **Failure diagnosis:** the v17 narrative JSON validation referenced `supplied_ids` and `invalid_statuses` without defining them in that branch. The failure was a deterministic implementation error, not evidence of model inference failure. The case-local inventory helper is now the single source for the allowlist.
+
+
+**Correction verification run:** code commit `0b610381c51dcd8c9cd15010b673d26ac55042c5` triggered fresh PR CI: backend `44362192201`, frontend `44362192339`, browser E2E `44362192239`, packaging prerequisites `44362192219`, installer `44362192494`, security/dependency audit `44362192198`. All were in progress at the last inspection; the security run's full-history secret-scan job had been cancelled during the in-progress snapshot. The checklist-only head is `d77ad3705e81c4f5da9c22c96e62123318f4a2df`; these runs test code commit `0b61038`, not the subsequent documentation-only commit. Recheck run conclusions before changing statuses.
