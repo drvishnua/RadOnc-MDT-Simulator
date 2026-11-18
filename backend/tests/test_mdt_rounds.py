@@ -973,16 +973,16 @@ def test_chair_reconciliation_preserves_position_counts_and_minor_view():
     assert report.evidence_limitations
 
 
-def test_chair_reconciliation_marks_support_opposition_split_as_no_consensus():
+def test_chair_reconciliation_does_not_infer_no_consensus_from_unlinked_position_labels():
     case = SyntheticCase(
-        scenario_title="Synthetic disagreement test",
-        case_summary="Fictional case for validating position disagreement handling.",
+        scenario_title="Synthetic unlinked-position test",
+        case_summary="Fictional case for validating proposition-level status handling.",
     )
     round1 = _chair_rows("assessment", ["conditional"] * 45)
     round2 = _chair_rows("result", ["conditional"] * 45)
     round3 = _chair_rows("result", ["supports"] * 44 + ["opposes"])
     report = reconcile_chair_report_draft(
-        "synthetic-disagreement",
+        "synthetic-unlinked-positions",
         case,
         round1,
         round2,
@@ -990,8 +990,10 @@ def test_chair_reconciliation_marks_support_opposition_split_as_no_consensus():
         _chair_draft(),
     )
 
-    assert report.consensus_status == "no_consensus"
+    assert report.consensus_status == "insufficient_information"
+    assert report.consensus_points == []
     assert any("supports" in item and "opposes" in item for item in report.unresolved_disagreements)
+    assert "shared proposition" in report.chair_conclusion
 
 
 def test_uniform_support_labels_with_conflicting_options_are_not_consensus():
@@ -1053,7 +1055,8 @@ def test_chair_reconciliation_preserves_all_groups_when_round3_top_positions_tie
     assert all(agent_id in visible_history for agent_id in expected_roles)
     assert "RO-45" not in visible_history
     assert "no unique modal position" in " ".join(report.unresolved_disagreements).casefold()
-    assert report.consensus_status == "no_consensus"
+    assert report.consensus_status == "insufficient_information"
+    assert report.consensus_points == []
 
 
 def test_final_chair_boundary_retains_earlier_and_later_minority_histories():

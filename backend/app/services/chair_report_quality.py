@@ -943,22 +943,18 @@ def ensure_chair_report_completeness(
                 "those findings cannot be attributed to a distinct role."
             )
 
-    # No proposition-level support exists in the saved contribution schema.
-    # Position labels alone therefore cannot create a consensus point or status.
+    # The saved contribution schema has no normalized proposition identifier.
+    # The Chair cannot prove that role-level labels address the same proposition,
+    # so it must not infer either consensus or no_consensus from their distribution.
+    # Keep the positions visible in the attributed history and unresolved notes.
     data["consensus_points"] = []
-    if final_counts.get("supports") and final_counts.get("opposes"):
-        data["consensus_status"] = "no_consensus"
-        data["chair_conclusion"] = (
-            "The saved Round-3 role positions include both supporting and opposing views. "
-            "The simulated MDT did not reach a single position; review the attributed "
-            "contributions and their unresolved conditions."
-        )
-    else:
-        data["consensus_status"] = "insufficient_information"
-        data["chair_conclusion"] = (
-            "No proposition-level consensus can be established from the saved structured "
-            "contributions. No treatment recommendation can be made from this educational record."
-        )
+    data["consensus_status"] = "insufficient_information"
+    data["chair_conclusion"] = (
+        "No proposition-level agreement or disagreement on a shared educational proposition "
+        "can be established from the saved structured contributions. Recorded role positions "
+        "are preserved separately for review. No treatment recommendation can be made from "
+        "this educational record."
+    )
 
     for field, limit in SECTION_LIMITS.items():
         data[field] = _unique(data.get(field) or [], limit)

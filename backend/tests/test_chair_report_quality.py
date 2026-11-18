@@ -241,10 +241,10 @@ def test_completeness_rebuilds_recorded_agreements_from_completed_round_records(
     assert "No proposition-level consensus" in reconciled.chair_conclusion
 
 
-def test_completeness_rejects_model_consensus_when_saved_round_three_positions_conflict():
+def test_completeness_rejects_model_consensus_from_unlinked_support_opposition_labels():
     case = SyntheticCase(
-        scenario_title="Chair split-position consensus guard",
-        case_summary="Fictional case used only to test deterministic consensus rejection.",
+        scenario_title="Chair unlinked-position consensus guard",
+        case_summary="Fictional case used only to test deterministic proposition-status handling.",
     )
     report = _empty_report().model_copy(
         update={
@@ -261,10 +261,37 @@ def test_completeness_rejects_model_consensus_when_saved_round_three_positions_c
         report, case, round1, round2, round3
     )
 
-    assert reconciled.consensus_status == "no_consensus"
+    assert reconciled.consensus_status == "insufficient_information"
     assert reconciled.consensus_points == []
-    assert "both supporting and opposing" in reconciled.chair_conclusion
+    assert "No proposition-level agreement or disagreement" in reconciled.chair_conclusion
+    assert any("supports" in item and "opposes" in item for item in reconciled.unresolved_disagreements)
     assert "unanimously" not in reconciled.chair_conclusion.casefold()
+
+
+
+def test_completeness_does_not_infer_no_consensus_from_uniform_unlinked_support_labels():
+    case = SyntheticCase(
+        scenario_title="Chair unsupported no-consensus guard",
+        case_summary="Fictional case used only to test proposition-status integrity.",
+    )
+    report = _empty_report().model_copy(
+        update={
+            "consensus_status": "no_consensus",
+            "chair_conclusion": "The model claims no consensus was reached.",
+        }
+    )
+    round1 = _rows("assessment", ["supports"] * 45)
+    round2 = _rows("result", ["supports"] * 45)
+    round3 = _rows("result", ["supports"] * 45)
+
+    reconciled = ensure_chair_report_completeness(
+        report, case, round1, round2, round3
+    )
+
+    assert reconciled.consensus_status == "insufficient_information"
+    assert reconciled.consensus_points == []
+    assert "No proposition-level agreement or disagreement" in reconciled.chair_conclusion
+    assert "45/45 supports" in reconciled.overall_educational_synthesis
 
 
 def test_empty_chair_sections_are_filled_from_source_records():

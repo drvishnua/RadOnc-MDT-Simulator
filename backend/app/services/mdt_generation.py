@@ -675,14 +675,12 @@ def reconcile_chair_report_draft(
     }
     final_counts = counts_by_round["Round 3"]
 
-    # Position labels describe each role's stance; they do not identify a shared
-    # proposition or common educational option. Only a direct support/opposition
-    # split is enough to establish that the recorded positions conflict. In every
-    # other case, no proposition-level consensus has been demonstrated.
-    if final_counts.get("supports") and final_counts.get("opposes"):
-        consensus_status = "no_consensus"
-    else:
-        consensus_status = "insufficient_information"
+    # The persisted contribution schema has no normalized shared-proposition
+    # identifier. Role-level support/opposition labels therefore cannot establish
+    # either agreement or disagreement on one common proposition. Keep the
+    # deterministic status at insufficient_information; retain each role's label
+    # and attributed contribution in the distributions and history below.
+    consensus_status = "insufficient_information"
 
     distribution = "; ".join(
         f"{name}: {_format_position_counts(counts)}"
@@ -885,30 +883,13 @@ def reconcile_chair_report_draft(
     evidence_limitations.extend(_unique_strings(evidence_gaps, limit=4))
     evidence_limitations = _unique_strings(evidence_limitations, limit=8)
 
-    if consensus_status == "no_consensus":
-        chair_conclusion = (
-            "The simulated MDT did not reach a single position. Round-3 position labels were "
-            f"{_format_position_counts(final_counts)}; review the recorded minority views and "
-            "underlying contributions rather than treating the label counts as a clinical vote."
-        )
-    elif consensus_status == "insufficient_information":
-        key_unknowns = "; ".join(uncertainties[:4]) or "critical clinical information is not supplied"
-        chair_conclusion = (
-            "No treatment recommendation can be made from the supplied case. "
-            f"Unresolved information includes: {key_unknowns}. Round-3 positions were "
-            f"{_format_position_counts(final_counts)}; any conditional view is retained separately."
-        )
-    elif consensus_status == "qualified_consensus":
-        chair_conclusion = (
-            "The recorded Round-3 positions indicate a qualified rather than definitive "
-            "educational position. This simulation does not support a patient-specific treatment "
-            "recommendation, and the missing information must remain explicit."
-        )
-    else:
-        chair_conclusion = (
-            "The recorded Round-3 positions are aligned, but this is only an educational "
-            "summary and does not establish clinical validity or support a patient-specific treatment recommendation."
-        )
+    key_unknowns = "; ".join(uncertainties[:4]) or "critical clinical information is not supplied"
+    chair_conclusion = (
+        "The saved contributions do not establish a shared proposition against which the "
+        "Round-3 positions can be compared. The recorded role positions remain separately "
+        f"traceable ({_format_position_counts(final_counts)}); unresolved information includes: "
+        f"{key_unknowns}. No treatment recommendation can be made from this educational record."
+    )
 
     overall = (
         f"Recorded position distribution — {distribution}. These are role-level labels, not "
@@ -2984,8 +2965,7 @@ async def generate_chair_report(
         "Keep the JSON output compact. chair_conclusion: 2 short sentences. overall_educational_synthesis: at most 100 words. "
         "chair_reflection: 2 short sentences. For each list field, provide no more than 3 concise entries; use [] when there is no distinct supported point. "
         "Populate every applicable section from the supplied records; do not leave a section empty merely to save tokens. Preserve non-modal positions and list them separately without overstating dissent. "
-        "Set consensus_status to consensus, qualified_consensus, no_consensus, or insufficient_information. "
-        "If there is no clear agreement, use no_consensus or insufficient_information. Do not infer consensus from missing views and never fabricate a majority count. "
+        "The saved contribution schema has no normalized shared-proposition identifier. Set consensus_status to insufficient_information and consensus_points to []: role-level supports/opposes/conditional labels and free-text agreement statements cannot establish either consensus or no_consensus on a common proposition. Preserve the source-attributed positions and disagreements instead. "
         "The output format is schema-enforced."
     )
     draft = await _generate_structured(prompt, FinalReportDraft, max_tokens)

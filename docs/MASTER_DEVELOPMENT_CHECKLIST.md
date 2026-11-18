@@ -1,3 +1,11 @@
+### Chair proposition-status integrity correction — implementation and regression added; CI pending
+
+**Source-review finding:** the current Chair reconciler and final deterministic boundary inferred `no_consensus` from Round-3 role-level `supports` and `opposes` counts. The saved `RoundContribution` schema has no normalized proposition identifier. These labels therefore cannot establish that roles are supporting and opposing the same proposition; they may refer to different educational options. This is distinct from the consensus false-positive guard: without proposition-level evidence, the status must remain `insufficient_information`, not a manufactured consensus or proposition-specific disagreement.
+
+The change makes both the reconciler and final Chair boundary set `consensus_status=insufficient_information` and `consensus_points=[]` while the schema lacks a structured, source-traceable shared proposition. Role labels, position distributions, saved contributions and minority history remain visible. Regression tests cover mixed support/opposition labels, tied labels, a model-authored consensus claim, and a model-authored no-consensus claim over uniform support labels. Exact-head CI has not yet run; keep this correction **IN PROGRESS** pending CI.
+
+---
+
 ### Exact-head CI refresh — checklist/security triage commit b21f89f — 18 November 2026
 
 **PR head at this verification:** `b21f89fdcb0b070ba2a2f3f6d07f5dbbd3c8acd7`, a documentation-only descendant updating this checklist. PR #1 remains open/draft/unmerged and targets `main`; base SHA `39a356b8eb09399aa2da1b9b9085965999f5105a` is unchanged. Latest application/test code remains `fbea522b4f1371d8bb82b202a48c178833c10735`.
