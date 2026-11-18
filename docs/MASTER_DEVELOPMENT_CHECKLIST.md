@@ -2443,3 +2443,82 @@ These are exact-head engineering/build/security checks. They do not demonstrate 
 ### Verification boundary
 
 The six standard workflows above belong to the exact branch head `208198ba9e7895b24b738a2639c300825bb01743`. No workflow result from an earlier code head is used to mark these items VERIFIED. No new hosted Ollama/model run was started. No current RTX 4060 inference proof, clinical validation, or guideline verification is claimed.
+
+
+## Current verified checkpoint — fail-closed per-run model-screen risk gate (18 November 2026)
+
+
+## Current verified checkpoint — fail-closed per-run model-screen risk gate (18 November 2026)
+
+**Repository:** `drvishnua/RadOnc-MDT-Simulator`  
+**Development branch:** `feature/four-round-mdt-and-performance`  
+**PR #1:** open, draft, unmerged; base `main`. No changes to `main`.  
+**Exact application/test head:** `6d2fef95069f6ef7efa3371156c2ff5b0e24c74f`  
+**Workflow-gate implementation:** `404b02c75fc89b6bad4fcea49a6012b4c6f3c60a`
+
+### Reason for the workflow change
+
+The workflow's historical comment already stated that the previously authorised one-time Qwen-only screen was consumed and that every future Qwen/MedGemma screen requires a fresh explicit risk review. The executable workflow previously enforced HAI-DEF terms acceptance for MedGemma, but did not enforce this separate per-run risk review. This was a fail-closed control gap.
+
+### Implemented and regression-tested
+
+- Added required boolean input `fresh_risk_review_accepted` for manual workflow dispatch, with a default of `false` and an explicit description of the proposed synthetic-only hosted CPU screening scope.
+- Added the equivalent commit-trigger marker `[fresh-synthetic-risk-review-accepted]` for the development-branch push route.
+- Added a fail-closed gate immediately after checkout and before Python setup or Ollama/model provisioning. A missing attestation terminates the job with the message that no model was provisioned.
+- Added manifest provenance for the attestation: accepted value, GitHub actor, trigger event and source commit SHA.
+- Kept HAI-DEF terms acceptance as a separate gate. MedGemma requires both the fresh per-run risk attestation and the HAI-DEF attestation.
+- Added two workflow regression tests to verify default-false input, both trigger routes, pre-provision ordering, fail-closed message and manifest provenance.
+
+The workflow/test commits are `404b02c` and `6d2fef9`. The test commit did not contain the `[model-integrity-screen]` trigger marker. The optional hosted model-bootstrap job was skipped in the standard installer workflow; no Qwen or MedGemma model was pulled or run.
+
+### Exact-head CI — all six standard workflows passed on `6d2fef9`
+
+| Workflow | Status | Run / evidence |
+|---|---|---|
+| Backend tests | VERIFIED | Run [44366576916](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44366576916): **491 passed, 0 failed**. Both new risk-gate tests passed. Deterministic preflight **7 passed, 0 failed, 0 inconclusive**. JUnit artifact 14456741664; preflight artifact 14456831504. |
+| Frontend build | VERIFIED | Run [44366576695](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44366576695): success. |
+| Patient Registry / Four-Round Dashboard browser E2E | VERIFIED | Run [44366576705](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44366576705): real-browser acceptance success. |
+| Windows packaging prerequisites | VERIFIED | Run [44366576694](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44366576694): success. |
+| Windows installer | VERIFIED | Run [44366576687](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44366576687): packaged application, install/smoke test, checksum and artifact upload all succeeded. Installer SHA-256: `00e51128b6523e78bf993b2231c815efeec8ac109018ba0db19db90ff357bed8`. Artifact 14458185546; 14,897,525 bytes; archive digest `sha256:0254251ccc7eaea4b2506c6a933d2499d68a7795810ed3db6530dc75e9327787`. |
+| Security, dependency audit, secret scan and CodeQL | VERIFIED | Run [44366576821](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44366576821): all four jobs succeeded. `pip-audit`: no known vulnerabilities; production and complete Node dependency audits: 0 vulnerabilities; Python and JavaScript/TypeScript CodeQL passed; full-history secret scan passed. |
+
+These results verify engineering/build/security checks on the exact application/test commit. They do not establish live-model quality, guideline concordance, clinical accuracy, local RTX 4060 inference or release readiness.
+
+### Master Development and Verification Checklist — current snapshot
+
+| Area | Status | Evidence / boundary |
+|---|---|---|
+| Four-round R1–R4 architecture and saved-round data flow | IN PROGRESS | Backend and browser tests pass; full current 45-role live execution and saved-output audit remain outstanding. |
+| R1 independent assessments and unknown/staging safeguards | IN PROGRESS | Deterministic staging and missing-information regressions pass; live-model behaviour remains unverified. |
+| R2 debate, proposition agreement/disagreement and peer provenance | IN PROGRESS | Structured-round and provenance tests pass; no current full live debate run. |
+| R3 adversarial audit and case-local identifier inventory | VERIFIED | Audit-v17 and supplied-ID contradiction regressions pass in the 491-test suite; no new model inference. |
+| R4 Chair synthesis from actual saved R1–R3 rows | IN PROGRESS | Deterministic reconciliation tests pass; current full 45-role saved-run reconciliation remains outstanding. |
+| Clinical safety, staging and incomplete-case handling | IN PROGRESS | Deterministic guardrails tested; no clinical validation or live-model assurance. |
+| Case integrity and deterministic audit-v17 | VERIFIED | Exact-head backend suite passed; source records remain preserved. |
+| Source provenance, allowlists and traceability | IN PROGRESS | Case-local identifier and provenance regressions passed; live response attribution remains outstanding. |
+| Chair counts, consensus, dissent and minority positions | IN PROGRESS | Deterministic tests passed; full saved 45-role contribution distribution and report audit remain outstanding. |
+| Missing, failed and duplicate specialist handling | VERIFIED | Backend regression suite passed; live 45-role orchestration remains unvalidated. |
+| Backend API and tests | VERIFIED | 491/491 tests passed on exact code head; deterministic preflight 7/7. |
+| Frontend build | VERIFIED | Exact-head workflow passed. |
+| Patient Registry / Four-Round Dashboard browser E2E | VERIFIED | Exact-head real-browser workflow passed. |
+| Development Mission Control/monitor coverage | IN PROGRESS | Patient registry/dashboard E2E is green; complete development-monitor views/metrics are not fully verified. |
+| Windows packaging and installer | VERIFIED | Exact-head build, install/smoke test, checksum and artifact upload passed. |
+| Dependency audit, CodeQL and full-history secret scan | VERIFIED | Exact-head audit passed; Python audit clean, npm audits 0 vulnerabilities, both CodeQL analyses and secret scan succeeded. |
+| Authentication, authorisation and broader product security acceptance | IN PROGRESS | CI security checks are not a complete security assessment or release sign-off. |
+| Fresh per-run synthetic screening risk gate | IN PROGRESS | Default-false input/commit marker, pre-provision block and manifest provenance are implemented; static workflow regression tests pass. A dispatched negative-path runtime test has not been run. |
+| HAI-DEF terms acceptance statement | VERIFIED | User's personal-capacity acceptance statement was recorded previously; this is not independent legal advice. |
+| Ollama identity, effective context and truncation | NOT STARTED | No current request-time context/truncation measurements. |
+| RTX 4060 request-time GPU/offload verification | NOT STARTED | No local inference telemetry or GPU evidence. |
+| Performance/latency and concurrency validation | NOT STARTED | No new controlled benchmark; concurrency remains 1. |
+| New Qwen/MedGemma screening inference | BLOCKED | The previous dependency-audit blocker is cleared by run 44366576821. A fresh per-run risk attestation has not yet been authorised. The older one-time Qwen risk acceptance is consumed. No new inference was run. |
+| Live four-round validation and saved-artifact audit | BLOCKED | No current-head 45-role run or current-run audit artefact. |
+| Guideline/evidence retrieval and verification | NOT STARTED | No current authoritative guideline set retrieved and checked for simulator use. |
+| Independent qualified clinical review | NOT STARTED | Required before clinical-quality acceptance. |
+| Clinical validation | NOT STARTED | Software tests and synthetic model screens do not establish clinical validity. |
+| Release acceptance | BLOCKED | Full live validation, GPU/performance evidence, evidence retrieval, independent clinical review and broader security/governance gates remain outstanding. |
+
+### Current acceptance boundary and next action
+
+The earlier Node/Python dependency-audit blocker has been resolved for the dependencies assessed by the exact-head security workflow. This is not a blanket security approval. The HAI-DEF terms acceptance and the new per-run synthetic-risk attestation are separate gates.
+
+The workflow supports an authorised marker-based push on the development branch; a manual dispatch is not required for that route. The next model screen must not be triggered until the user explicitly accepts the fresh screening scope. After approval, use the workflow's required per-run risk marker; add the HAI-DEF marker only because MedGemma is also being requested. The sequence remains Qwen first, followed by the MedGemma version/digest-gated path only when Qwen execution and provenance gates pass. All outputs remain pending independent human review. This hosted validation is CPU-only, not local RTX 4060 verification or clinical validation.
