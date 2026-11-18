@@ -17,6 +17,11 @@ from app.schemas import SyntheticCase
 from app.services import run_store
 
 
+SOURCE_OPINION_EXCERPT = (
+    "Fictional source opinion: Option A remains conditional on complete local staging."
+)
+
+
 def main() -> int:
     if len(sys.argv) != 2:
         raise SystemExit("Usage: seed-mdt-dashboard-e2e.py <disposable-patient-name>")
@@ -29,7 +34,8 @@ def main() -> int:
             scenario_title="Dashboard four-round browser smoke test",
             case_summary=(
                 "Fictional training scenario used only to verify restoration and display "
-                "of previously saved MDT round records in the local browser."
+                "of previously saved MDT round records in the local browser. "
+                + SOURCE_OPINION_EXCERPT
             ),
             known_unknowns=[
                 "Clinical stage is not supplied.",
@@ -107,7 +113,7 @@ def main() -> int:
                     source_opinion_responses=(
                         [{
                             "source_id": "CASE:case_summary#1",
-                            "source_excerpt": "Fictional source opinion: Option A remains conditional on complete local staging.",
+                            "source_excerpt": SOURCE_OPINION_EXCERPT,
                             "analysis": "The attributed Option A remains conditional until complete local staging is documented; its prerequisites are not established by this test case.",
                             "comparison": "This source-reported option is not an endorsement or a finding of suitability.",
                         }]
@@ -118,7 +124,7 @@ def main() -> int:
                         [{
                             "source_id": "CASE:case_summary#1",
                             "opinion_label": "Option A",
-                            "source_excerpt": "Fictional source opinion: Option A remains conditional on complete local staging.",
+                            "source_excerpt": SOURCE_OPINION_EXCERPT,
                             "option_status": "preserved",
                             "conditions_status": "preserved",
                             "review_basis": "The saved R2 text retains the distinct option and its complete local staging prerequisite.",
