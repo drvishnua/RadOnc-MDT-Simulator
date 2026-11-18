@@ -1828,6 +1828,25 @@ async def generate_debate_contribution(
     payload["source_reference_integrity_flags"] = (
         _audit_source_references(payload, allowed_sources) + source_opinion_response_flags
     )[:20]
+    # Append a clearly labelled, server-authored register of the exact case-summary
+    # opinions. This guarantees that a model omission in its free-text narrative
+    # cannot make an attributed option or prerequisite disappear from the saved R2
+    # narrative. The register is source text, not a specialist conclusion/endorsement.
+    if expected_source_opinions:
+        register_lines = [
+            f"{source_id}: {source_excerpt}"
+            for source_id, source_excerpt in expected_source_opinions.items()
+        ]
+        server_register = (
+            "SERVER-BOUND CASE OPINION REGISTER (verbatim source excerpts; "
+            "not specialist-authored conclusions, verified facts, or endorsements):\\n"
+            + "\\n".join(register_lines)
+        )
+        payload["response_to_other_perspectives"] = (
+            str(payload.get("response_to_other_perspectives") or "").rstrip()
+            + "\\n\\n"
+            + server_register
+        )
     payload, case_integrity_flags = await _repair_unsupported_prerequisite_wording(
         case,
         payload,
