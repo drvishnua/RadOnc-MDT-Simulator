@@ -996,8 +996,8 @@ def audit_screen_response(case: dict[str, Any], response: Any) -> list[str]:
             for fact in supplied_facts
         )
         denies_supplied_diagnosis = re.search(
-            r"\\bno diagnosis(?:\\s+or staging)?\\s+information\\s+(?:is|was)\\s+present\\b"
-            r"|\\b(?:the )?record\\s+(?:contains|has)\\s+no\\s+diagnosis\\s+information\\b",
+            r"\bno diagnosis(?:\s+or staging)?\s+information\s+(?:is|was)\s+present\b"
+            r"|\b(?:the )?record\s+(?:contains|has)\s+no\s+diagnosis\s+information\b",
             folded,
         )
         if supplied_nonempty_diagnosis and denies_supplied_diagnosis:
@@ -1011,15 +1011,15 @@ def audit_screen_response(case: dict[str, Any], response: Any) -> list[str]:
             any("source a" in str(fact).casefold() and "laterality" in str(fact).casefold() for fact in supplied_facts)
             and any("source b" in str(fact).casefold() and "laterality" in str(fact).casefold() for fact in supplied_facts)
         )
-        mentions_both_sources = bool(re.search(r"\\bsource a\\b", folded)) and bool(
-            re.search(r"\\bsource b\\b", folded)
+        mentions_both_sources = bool(re.search(r"\bsource a\b", folded)) and bool(
+            re.search(r"\bsource b\b", folded)
         )
         mentions_discrepancy = bool(re.search(
-            r"\\b(?:laterality|opposite|conflict|conflicting|contradiction|discrepancy)\\b",
+            r"\b(?:laterality|opposite|conflict|conflicting|contradiction|discrepancy)\b",
             folded,
         ))
         states_unresolved = bool(re.search(
-            r"\\b(?:unresolved|cannot be resolved|not possible to determine which source|neither source)\\b",
+            r"\b(?:unresolved|cannot be resolved|not possible to determine which source|neither source)\b",
             folded,
         ))
         if has_opposing_laterality_sources and not all(
