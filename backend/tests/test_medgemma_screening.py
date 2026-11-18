@@ -307,6 +307,27 @@ def test_audit_v16_flags_omission_of_opposing_laterality_source_statements():
     )
 
 
+    selected_while_unresolved = _valid_model_output(
+        case,
+        "Source A and Source B record opposite laterality values. The discrepancy remains unresolved, "
+        "but Source A is correct and should be used as the authoritative source.",
+    )
+    assert any(
+        "R1 contradictory source resolution" in item
+        for item in screening.audit_screen_response(case, selected_while_unresolved)
+    )
+
+    explicit_nonselection = _valid_model_output(
+        case,
+        "Source A and Source B record opposite laterality values. The discrepancy remains unresolved. "
+        "Do not select either source as correct until independently reconciled.",
+    )
+    assert not any(
+        "R1 contradictory source resolution" in item
+        for item in screening.audit_screen_response(case, explicit_nonselection)
+    )
+
+
 def test_audit_v16_flags_r3_synthetic_input_json_echo():
     corpus, _ = load_corpus()
     case = next(item for item in corpus["cases"] if item["case_id"] == "R3-INVALID-SOURCE-008")
@@ -321,6 +342,14 @@ def test_audit_v16_flags_r3_synthetic_input_json_echo():
     output = _valid_model_output(case, json.dumps(echoed))
     findings = screening.audit_screen_response(case, output)
     assert any("R3 synthetic-input echo" in item for item in findings)
+
+    nested_echo = {"review": {"payload": {"synthetic_input": case["input"]}}}
+    fenced_response = " ```json\\n" + json.dumps(nested_echo) + "\\n``` "
+    fenced_output = _valid_model_output(case, fenced_response)
+    assert any(
+        "R3 synthetic-input echo" in item
+        for item in screening.audit_screen_response(case, fenced_output)
+    )
 
     concise = _valid_model_output(
         case,
@@ -1017,7 +1046,7 @@ def test_run_screen_records_complete_immutable_case_set(tmp_path, monkeypatch):
     manifest = next(record for record in records if record["record_type"] == "manifest")
 
     assert manifest["prompt_version"] == "radonc-mdt-integrity-screen-v16"
-    assert manifest["audit_version"] == "radonc-mdt-integrity-audit-v16"
+    assert manifest["audit_version"] == "radonc-mdt-integrity-audit-v17"
     assert manifest["screening_script_sha256"] == screening.SCRIPT_SHA256
     assert len(manifest["screening_script_sha256"]) == 64
     assert calls == {"tags": 25, "generate": 12, "show": 1, "version": 1}
@@ -1860,9 +1889,9 @@ def test_r4_missing_agent_audit_rejects_no_agreement_inference_from_counts():
     assert screening.audit_screen_response(case, valid) == []
 
 
-def test_screen_version_metadata_declares_prompt_v16_and_audit_v16():
+def test_screen_version_metadata_declares_prompt_v16_and_audit_v17():
     assert screening.PROMPT_VERSION == "radonc-mdt-integrity-screen-v16"
-    assert screening.AUDIT_VERSION == "radonc-mdt-integrity-audit-v16"
+    assert screening.AUDIT_VERSION == "radonc-mdt-integrity-audit-v17"
 
 
 def test_v15_r2_prompt_preserves_unknown_prerequisite_and_shared_source_attribution():
