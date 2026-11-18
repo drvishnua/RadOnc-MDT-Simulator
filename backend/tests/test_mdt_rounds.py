@@ -119,7 +119,8 @@ def test_round_input_gate_requires_exactly_one_structured_record_per_expected_sp
             rows + [dict(rows[0])], "assessment", "Round 1"
         )
 
-    with pytest.raises(RuntimeError, match="missing=.*RO-45"):
+    missing_role_id = AGENT_PROFILES[-1]["agent_id"]
+    with pytest.raises(RuntimeError, match=f"missing=.*{missing_role_id}"):
         mdt_rounds._require_exact_completed_role_payloads(
             rows[:-1], "assessment", "Round 1"
         )
