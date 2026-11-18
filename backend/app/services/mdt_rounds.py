@@ -26,6 +26,65 @@ def _profile_map() -> dict[str, dict[str, str]]:
     return {item["agent_id"]: item for item in AGENT_PROFILES}
 
 
+def _require_exact_completed_role_payloads(
+    rows: list[dict],
+    payload_field: str,
+    round_label: str,
+) -> dict[str, dict]:
+    """Require one structured saved contribution from every expected specialist.
+
+    A raw completed-row count is not sufficient: duplicate specialist rows can mask a
+    missing role. This guard uses canonical role IDs and does not inspect clinical text.
+    """
+    expected_ids = set(_profile_map())
+    rows_by_role: dict[str, list[dict]] = {}
+    unidentified_completed_rows = 0
+    for row in rows:
+        if not isinstance(row, dict) or row.get("status") != "completed":
+            continue
+        role_id = str(row.get("agent_id") or "").strip().upper()
+        if not role_id:
+            unidentified_completed_rows += 1
+            continue
+        rows_by_role.setdefault(role_id, []).append(row)
+
+    actual_ids = set(rows_by_role)
+    missing_ids = sorted(expected_ids - actual_ids)
+    duplicate_ids = sorted(
+        role_id for role_id, role_rows in rows_by_role.items()
+        if len(role_rows) != 1
+    )
+    unexpected_ids = sorted(actual_ids - expected_ids)
+    malformed_payload_ids = sorted(
+        role_id
+        for role_id, role_rows in rows_by_role.items()
+        if role_id in expected_ids
+        and len(role_rows) == 1
+        and not isinstance(role_rows[0].get(payload_field), dict)
+    )
+
+    if (
+        missing_ids
+        or duplicate_ids
+        or unexpected_ids
+        or unidentified_completed_rows
+        or malformed_payload_ids
+    ):
+        raise RuntimeError(
+            f"{round_label} requires exactly one completed, structured "
+            f"{payload_field} contribution per expected specialist; "
+            f"missing={missing_ids}; duplicates={duplicate_ids}; "
+            f"unexpected={unexpected_ids}; "
+            f"unidentified_completed_rows={unidentified_completed_rows}; "
+            f"malformed_payloads={malformed_payload_ids}."
+        )
+
+    return {
+        role_id: role_rows[0][payload_field]
+        for role_id, role_rows in rows_by_role.items()
+    }
+
+
 def _select_peer_views(
     current_profile: dict[str, str],
     rows: list[dict],
@@ -139,34 +198,24 @@ async def run_mdt_round(run_id: str, round_number: int) -> None:
             }
 
             round1_rows = run_store.list_results(run_id)
-            round1_by_id = {
-                row["agent_id"]: row["assessment"]
-                for row in round1_rows
-                if row.get("status") == "completed" and row.get("assessment")
-            }
-            if len(round1_by_id) != len(AGENT_PROFILES):
-                raise RuntimeError("All 45 Round-1 assessments are required before debate.")
+            round1_by_id = _require_exact_completed_role_payloads(
+                round1_rows, "assessment", "Round 1"
+            )
 
             if round_number >= 3:
                 round2_rows = run_store.list_round_results(run_id, 2)
-                round2_by_id = {
-                    row["agent_id"]: row["result"]
-                    for row in round2_rows
-                    if row.get("status") == "completed" and row.get("result")
-                }
-                if len(round2_by_id) != len(AGENT_PROFILES):
-                    raise RuntimeError("All 45 Round-2 debate contributions are required.")
+                round2_by_id = _require_exact_completed_role_payloads(
+                    round2_rows, "result", "Round 2"
+                )
             else:
                 round2_rows = []
                 round2_by_id = {}
 
             if round_number == 4:
                 round3_rows = run_store.list_round_results(run_id, 3)
-                if sum(
-                    1 for row in round3_rows
-                    if row.get("status") == "completed" and row.get("result")
-                ) != len(AGENT_PROFILES):
-                    raise RuntimeError("All 45 Round-3 adversarial reviews are required.")
+                _require_exact_completed_role_payloads(
+                    round3_rows, "result", "Round 3"
+                )
                 if "SG-07" not in completed_ids:
                     started = time.perf_counter()
                     run_store.mark_round_agent_running(run_id, 4, "SG-07")

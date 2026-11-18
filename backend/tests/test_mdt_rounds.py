@@ -96,6 +96,52 @@ def _create_complete_round1(monkeypatch, tmp_path):
     return run_id
 
 
+def test_round_input_gate_requires_exactly_one_structured_record_per_expected_specialist():
+    import pytest
+    from app.agents.catalog import AGENT_PROFILES
+
+    rows = [
+        {
+            "agent_id": profile["agent_id"],
+            "status": "completed",
+            "assessment": {"position": "insufficient_information"},
+        }
+        for profile in AGENT_PROFILES
+    ]
+    payloads = mdt_rounds._require_exact_completed_role_payloads(
+        rows, "assessment", "Round 1"
+    )
+    assert set(payloads) == {profile["agent_id"] for profile in AGENT_PROFILES}
+    assert len(payloads) == 45
+
+    with pytest.raises(RuntimeError, match="duplicates=.*RO-01"):
+        mdt_rounds._require_exact_completed_role_payloads(
+            rows + [dict(rows[0])], "assessment", "Round 1"
+        )
+
+    with pytest.raises(RuntimeError, match="missing=.*RO-45"):
+        mdt_rounds._require_exact_completed_role_payloads(
+            rows[:-1], "assessment", "Round 1"
+        )
+
+    unexpected = rows + [{
+        "agent_id": "XX-99",
+        "status": "completed",
+        "assessment": {"position": "supports"},
+    }]
+    with pytest.raises(RuntimeError, match="unexpected=.*XX-99"):
+        mdt_rounds._require_exact_completed_role_payloads(
+            unexpected, "assessment", "Round 1"
+        )
+
+    malformed = [dict(row) for row in rows]
+    malformed[0]["assessment"] = None
+    with pytest.raises(RuntimeError, match="malformed_payloads=.*RO-01"):
+        mdt_rounds._require_exact_completed_role_payloads(
+            malformed, "assessment", "Round 1"
+        )
+
+
 def test_r3_peer_context_carries_r1_audit_flags_without_mutating_saved_r1(monkeypatch):
     source_flags = ["R1 source record retains an unsupported T1 assertion."]
     saved_r1 = {"MO-01": {"case_data_integrity_flags": source_flags}}
