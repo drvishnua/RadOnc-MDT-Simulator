@@ -227,6 +227,26 @@ async function clickButton(textPrefix) {
   await evaluate(expression);
 }
 
+async function submitCaseValidation() {
+  await evaluate(
+    "(() => {" +
+      "const form = document.querySelector('form.case-form');" +
+      "if (!form) throw new Error('The patient case form is missing.');" +
+      "const button = [...form.querySelectorAll('button[type=submit]')].find(node => (node.innerText || '').trim().startsWith('Validate patient details'));" +
+      "if (!button) throw new Error('The case validation submit button is missing.');" +
+      "const invalid = [...form.elements].filter(element => !element.checkValidity()).map(element => ({" +
+        "label: (element.closest('label')?.innerText || element.name || element.type || 'unnamed field').replace(/\\s+/g, ' ').trim()," +
+        "value: element.value," +
+        "validationMessage: element.validationMessage" +
+      "}));" +
+      "if (invalid.length) throw new Error('Case validation form has invalid native constraint fields: ' + JSON.stringify(invalid));" +
+      "if (button.disabled) throw new Error('The case validation submit button is disabled.');" +
+      "form.requestSubmit(button);" +
+      "return true;" +
+    "})()"
+  );
+}
+
 async function clickDevelopmentMonitorRefresh() {
   const clicked = await evaluate(
     "(() => {" +
@@ -722,7 +742,7 @@ try {
   await setLabelValue("Clinical summary", originalSummary);
   await setAllStructuredFieldValues();
   await waitForValidationReady();
-  await clickButton("Validate patient details");
+  await submitCaseValidation();
   await waitForExpression(
     "[...document.querySelectorAll('.result-card')].some(node => (node.innerText || '').includes('Case structure valid'))",
     "case validation to complete"
@@ -756,7 +776,7 @@ try {
   // Change one field only; every other narrative and structured field must remain intact.
   await setLabelValue("Clinical summary", updatedSummary);
   await waitForValidationReady();
-  await clickButton("Validate patient details");
+  await submitCaseValidation();
   await waitForExpression(
     "[...document.querySelectorAll('button')].some(node => (node.innerText || '').trim().startsWith('Save new version of " + patientIdentifier + "') && !node.disabled)",
     "the version-save action after editing"
