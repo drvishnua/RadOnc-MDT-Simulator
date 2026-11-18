@@ -974,6 +974,14 @@ def test_chair_synthesis_traces_examples_to_saved_role_records_in_all_three_roun
     round1 = _rows("assessment", ["insufficient_information"] * 45)
     round2 = _rows("result", ["insufficient_information"] * 45)
     round3 = _rows("result", ["insufficient_information"] * 45)
+    # Give each seeded example its own position group so the deterministic
+    # one-example-per-position selector can be asserted unambiguously.
+    round1[0]["assessment"]["position"] = "conditional"
+    round2[0]["result"]["position"] = "supports"
+    round2[1]["result"]["position"] = "conditional"
+    round3[0]["result"]["position"] = "supports"
+    round3[1]["result"]["position"] = "opposes"
+    round3[2]["result"]["position"] = "conditional"
 
     round1[0]["assessment"]["provisional_conclusion"] = (
         "The R1 contribution records that the supplied information is insufficient "
