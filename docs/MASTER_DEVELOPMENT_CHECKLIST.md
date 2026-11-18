@@ -24,7 +24,7 @@
 | R4 Chair synthesis from actual saved R1–R3 | FAILED | v15 live screen exposed source echo and reconciliation issues; no corrective live retest yet. |
 | Cross-round minority-history regression | VERIFIED | New test `test_final_chair_boundary_retains_earlier_and_later_minority_histories` passed in backend run 44262841444; it verifies an earlier R1 minority remains visible alongside a different R3 minority. This is a deterministic regression test, not live-model acceptance. |
 | Chair consensus, distinct-role counting, dissent and traceability | FAILED | Deterministic counts exist, but v15 model-level consensus/dissent findings remain unresolved by live retest. |
-| Exact specialist-ID input gate | VERIFIED | Guard in `47dfa9d`; corrected regression in `8cde5dd`; backend run 44261206592 passed. |
+| Exact specialist-ID input gate | VERIFIED | Guard in `47dfa9d`; corrected regression in `8cde5dd`; exact regression-test-head backend run 44262841444 passed (480/480 rows). |
 | Missing/failed-agent handling | FAILED | Orchestration rejects incomplete predecessor-round records; model-level missing-agent behaviour still requires live verification. |
 | Clinical safety, staging and unknown data | IN PROGRESS | Deterministic safeguards exist; no clinical validation, guideline concordance or zero-hallucination guarantee. |
 | Case integrity, contradiction preservation and audit history | IN PROGRESS | Historical failed outputs retained; full live audit integrity and contradiction behaviour not yet accepted. |
@@ -32,7 +32,7 @@
 | Backend tests — regression-test commit `a8863f9` | VERIFIED | Exact-head PR workflow 44262841444 succeeded; 480 recorded pytest rows passed, 0 failed; artifact [14409301267](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44262841444/artifacts/14409301267). |
 | Frontend unit/build checks | VERIFIED | Frontend Build workflow 44262841436 succeeded. |
 | Patient Registry / four-round Dashboard browser E2E | VERIFIED | Browser E2E workflow 44262841821 succeeded; registry, Mission Control, Development Monitor and four-round dashboard checks passed; artifact [14409580293](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44262841821/artifacts/14409580293). |
-| Mission Control / Development Monitor dashboard | VERIFIED | Browser E2E 44261206525 succeeded; dedicated refresh/error-resilience evidence in run 44257129743. |
+| Mission Control / Development Monitor dashboard | VERIFIED | Latest browser E2E 44262841821 passed registry, Mission Control, Development Monitor and four-round dashboard checks; dedicated refresh/error-resilience edge cases were also covered in run 44257129743. |
 | Dashboard/API error and last-good-state handling | VERIFIED | Prior browser checks cover 403/429, malformed metadata, recovery and valid empty state. |
 | Ollama context handling and truncation resistance | IN PROGRESS | Long-run effective context behaviour has not been proven fixed. |
 | Ollama performance and concurrency | IN PROGRESS | Concurrency remains 1; comparable local RTX 4060 timing evidence incomplete. |
