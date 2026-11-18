@@ -15,9 +15,9 @@
 **Repository:** `drvishnua/RadOnc-MDT-Simulator`  
 **Development branch:** `feature/four-round-mdt-and-performance`  
 **PR #1:** open, draft, unmerged; base `main`.  
-**Current PR head before this checklist refresh:** `b317304b74f0abc66d6fc53ef58253c395324620` (checklist-only descendant of application/test head `44dc622a7dd48d1b75af608f67452cce16b6288f`).  
-**Latest application code commit:** `2e46a1bd781c6a5e0e8f5ca2230d36e9cf5cb749` (audit-v16 logic with corrected regex escaping).  
-**Latest backend regression-test commit:** `c1fb981e648b76429bc29403cd2febcf5e4739d0` (three audit-v16 false-negative regressions plus corrected positive R1 contradiction fixture).  
+**Current PR head before this checklist refresh:** `e65622ebc9d1eb498c2797f2dbe9a80cbfcbf486` (checklist-only descendant of application/test head `44dc622a7dd48d1b75af608f67452cce16b6288f`).  
+**Latest application code commit:** `5cf470855886c992bdad7011054b7ab0cc7e26b0` (Chair prompt digest preserves fuller saved R2 narrative and source opinion details).  
+**Latest backend regression-test commit:** `44dc622a7dd48d1b75af608f67452cce16b6288f` (R2 source opinion/condition Chair-digest regression and corrected test delimiters; backend 478/478 passed).  
 **Latest frontend provenance-visibility commit:** `afbe6af6ffbc463ad92457e5179545c92b55b398`; E2E selector corrections in `198c8be7dfa203fba51eec99f9a2151738dabc12` and `1e8d3559dc12e7aa1b7599f9bd076b3873f4e88b`.  
 **Latest source-bound browser fixture correction:** `1c8a22b435e047f6524b9172ae3663d40a9d127c`; test excerpt is now literally embedded in the disposable `case_summary`, not merely stored as an unrelated string.  
 **Main:** `39a356b8eb09399aa2da1b9b9085965999f5105a`; unchanged.  
@@ -43,7 +43,7 @@
 | Provenance and guideline/evidence retrieval | IN PROGRESS | Source-bound controls exist; current guideline retrieval/verification incomplete. |
 | Backend tests — R2/R4 patch head `44dc622` | VERIFIED | Exact-head backend run [44297288098](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44297288098), attempt 2: raw logs confirm 478/478 pytest passed, 0 failed/errors/skips; deterministic preflight 7/7. Both new R2/R4 regressions passed. |
 | Frontend unit/build checks | VERIFIED | R2/R4 patch head Frontend Build [44297288443](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44297288443), attempt 2: succeeded. |
-| Patient Registry / four-round Dashboard browser E2E | IN PROGRESS | R2/R4 patch head Browser E2E [44297288067](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44297288067) is still running; prior source-bound fixture E2E passed on [44289875520](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44289875520). |
+| Patient Registry / four-round Dashboard browser E2E | VERIFIED | R2/R4 patch head Browser E2E [44297288067](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44297288067), attempt 2: succeeded. No model inference was invoked. |
 | R2/R3 provenance warnings and source-opinion visibility in role detail cards | VERIFIED | Frontend commit `afbe6af6ffbc463ad92457e5179545c92b55b398` renders saved `source_reference_integrity_flags`, server-bound R2 `source_opinion_responses`, and R3 `source_opinion_reviews` beside each original role response. The disposable fixture correction `1c8a22b` embeds the exact source excerpt in `case_summary`; browser assertions passed in exact-head run [44289875520](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44289875520). Visibility only; live model correctness and semantic interpretation remain unverified. |
 | Mission Control / Development Monitor dashboard | VERIFIED | Exact audit-v16 code-head Browser E2E [44267217873](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44267217873) passed; prior dedicated refresh/error-resilience coverage remains in run 44257129743. |
 | Dashboard/API error and last-good-state handling | VERIFIED | Prior browser checks cover 403/429, malformed metadata, recovery and valid empty state. |
