@@ -2888,6 +2888,9 @@ async def generate_chair_report(
                 "conclusion": chair_prompt_text(result.get("provisional_conclusion", ""), 160),
             }
             if round_key in {"round2", "round3"}:
+                entry["debate_or_review_narrative"] = chair_prompt_text(
+                    result.get("response_to_other_perspectives", ""), 600
+                )
                 entry["agreements"] = [
                     chair_prompt_text(value, 100)
                     for value in (result.get("agreements") or [])[:1]
@@ -2897,12 +2900,15 @@ async def generate_chair_report(
                     for value in (result.get("substantive_challenges") or [])[:1]
                 ]
             if round_key == "round2":
+                # Preserve the server-bound source excerpt and its complete attached
+                # option/condition analysis in the Chair's model input. The previous
+                # 180/240-character truncation could remove the prerequisite itself.
                 entry["attributed_source_opinion_responses"] = [
                     {
                         "source_id": item.get("source_id", ""),
-                        "source_excerpt": chair_prompt_text(item.get("source_excerpt", ""), 180),
-                        "analysis": chair_prompt_text(item.get("analysis", ""), 240),
-                        "comparison": chair_prompt_text(item.get("comparison", ""), 160),
+                        "source_excerpt": chair_prompt_text(item.get("source_excerpt", ""), 400),
+                        "analysis": chair_prompt_text(item.get("analysis", ""), 700),
+                        "comparison": chair_prompt_text(item.get("comparison", ""), 400),
                     }
                     for item in (result.get("source_opinion_responses") or [])[:4]
                     if isinstance(item, dict)
