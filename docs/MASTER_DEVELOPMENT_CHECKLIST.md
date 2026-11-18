@@ -2702,3 +2702,25 @@ The user's example is an illustration of the desired reasoning style, not an app
 The intake agent should identify high-impact missing variables and ask concise questions before R1. If the user declines or cannot provide them, the case still proceeds when the user chooses; the MDT receives the confirmed case plus explicit unresolved gaps and is expected to reason conditionally where safe. The intake agent must not pre-select the treatment pathway or prime specialists toward a desired conclusion.
 
 **No implementation is claimed by this checklist entry.** All requirements remain NOT STARTED pending code, regression tests, exact-head CI and synthetic end-to-end verification.
+
+---
+
+## Implementation progress — R1 evidence-grounded conditional assessment (19 November 2026)
+
+**Status: IN PROGRESS.** This is the first implementation slice of the conditional specialist-decision requirement. It does not complete R2/R3/R4 integration.
+
+| Workstream | Status | Evidence / boundary |
+|---|---|---|
+| R1 structured conditional options | IN PROGRESS | Added a typed optional `conditional_options` array with separate hypothetical condition, educational option, prerequisites, unresolved unknowns and limitations in `AgentDraft` and persisted `AgentAssessment`. |
+| R1 prompt: use supplied facts before generic insufficiency | IN PROGRESS | Prompt instructs the role to state what can be assessed from supplied case facts, identify limits and return only defensible hypothetical branches. Model adherence has not been tested. |
+| Missing-data and assumption separation | IN PROGRESS | Schema keeps conditions, prerequisites and unresolved unknowns separate; no runtime semantic verifier yet proves that generated text respects these labels. |
+| Role-specific perspective | IN PROGRESS | The existing per-role name and mandate remain in the R1 prompt; the new conditional instruction is role-scoped. Role-distinct live outputs are not verified. |
+| R2 preservation and debate of conditional branches | NOT STARTED | Structured conditional options are not yet added to R2 generation, persistence, peer comparison or saved debate audit. |
+| R3 adversarial review of conditional branches | NOT STARTED | R3 does not yet receive and audit the new structured R1 branch records as a dedicated contract. |
+| R4 conditional synthesis and source traceability | NOT STARTED | Chair schema/reconciliation has not yet been extended to aggregate conditional branches from saved R1–R3 records. No consensus behavior changed; consensus points remain disabled pending proposition-level representation. |
+| Conditional-branch provenance validation | NOT STARTED | Branches are stored within role records, but each branch is not yet deterministically linked to specific source case fields or evidence references. |
+| R1 schema and mocked-generation regressions | IN PROGRESS | Added schema validation and a mocked Ollama request test. Exact-head backend CI for the first implementation commit `9612687` failed one test because the test inspected `.default` rather than `.default_factory` for a Pydantic list field. This commit corrects the assertion; follow-up exact-head CI is pending. |
+| Live model adherence, clinical review and guideline verification | NOT STARTED | No Ollama inference was run. No clinical validation or guideline concordance is claimed. |
+
+The initial implementation commit `96126870bb65b84f599d2c8859b398d45b8a694b` triggered six standard workflows. Backend run [44419049547](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44419049547) failed on the single Pydantic default-factory test assertion. Frontend build [44419049486](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44419049486), browser E2E [44419049608](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44419049608), packaging prerequisites [44419049492](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44419049492), Windows installer [44419049461](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44419049461), and security audit [44419049462](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44419049462) completed successfully. The hosted Ollama/model bootstrap was skipped. These results are tied to `9612687`, not to this follow-up commit.
+

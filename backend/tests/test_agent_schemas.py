@@ -70,7 +70,7 @@ def test_conditional_options_keep_conditions_prerequisites_and_unknowns_separate
     ]
     assert branch.unresolved_unknowns == ["Current functional status is not supplied."]
     assert branch.limitations[0].startswith("Hypothetical only")
-    assert AgentDraft.model_fields["conditional_options"].default == []
+    assert AgentDraft.model_fields["conditional_options"].default_factory is list
 
 
 def test_conditional_option_without_explicit_prerequisites_is_rejected():
