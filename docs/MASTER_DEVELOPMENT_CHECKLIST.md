@@ -1,3 +1,20 @@
+### Branch-tip CI refresh — PR head 0bfb8e6 — 18 November 2026
+
+**Verified PR head:** `0bfb8e62a3d914894a82afdfc63ee8cfab98f6c6` (documentation-only commit: `docs: verify Chair duplicate-row integrity fix`). PR #1 remains open, draft and unmerged; base is `main`. No changes were made to `main`.
+**Latest application/test commit:** `fbea522b4f1371d8bb82b202a48c178833c10735`; exact code-head CI and both mixed-row regressions are recorded immediately below.
+
+All six pull-request workflows triggered by the current documentation head completed:
+- Backend Tests [44316515210](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44316515210): SUCCESS. Test job and deterministic preflight steps completed; diagnostics artifact [14433095975](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44316515210/artifacts/14433095975), digest `sha256:3b858ecf13271b4aa3373afdb28a4d933c648463c06b3fd4f5c06ca6839ea56a`; preflight artifact [14432861680](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44316515210/artifacts/14432861680), digest `sha256:4477fe6d7342cfa1a07edccefc5965346e0a78390a7a97b5ea5f5f47a3b764bd`. Exact latest application/test SHA `fbea522` separately passed **482/482** backend tests and preflight **7/7** in run [44315991587](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44315991587).
+- Frontend Build [44316515237](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44316515237): SUCCESS.
+- Patient Registry / Four-Round Dashboard Browser E2E [44316515273](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44316515273): SUCCESS.
+- Windows Packaging Prerequisites [44316515230](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44316515230): SUCCESS.
+- Windows Installer [44316515373](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44316515373): SUCCESS; build/install/smoke/checksum/artifact upload completed. Artifact [14432931647](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44316515373/artifacts/14432931647), digest `sha256:daa7addbc75987a15be101e60fed8c8a1bdd73df087542038fc2e5122a932b3e`. Clean-hosted Ollama/model bootstrap was SKIPPED; no model inference.
+- Security and Dependency Audit [44316515309](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44316515309): FAILED only in the full Node dependency audit. Python dependency audit found no known vulnerabilities; production-only Node audit found zero vulnerabilities; JavaScript/TypeScript CodeQL, Python CodeQL and full-history secret scan all succeeded. Full npm audit reports four HIGH `picomatch` findings (GHSA-fc5q-39xc-vjpf) through the Vite `fdir`/`tinyglobby` development dependency chain. The suggested forced fix downgrades Vite to 6.2.7 (breaking change); do not force-downgrade, suppress or vendor an unreviewed fork.
+
+**Status boundary:** keep full Node dependency audit **FAILED** and production-only Node audit **VERIFIED**. This documentation-head CI is not model inference, clinical validation, guideline verification or GPU verification. No live Qwen/MedGemma run was started; the existing risk authorisation remains consumed. The release and model-screen blockers in the master status table remain open.
+
+---
+
 ### Conflicting completed-row hardening — exact CI verified
 
 The current application/test commit is `fbea522b4f1371d8bb82b202a48c178833c10735`. The change uses the existing `_distinct_role_entries` result to identify usable completed roles. Therefore, a role with conflicting completed duplicate positions is not incorrectly considered usable merely because completed payload dictionaries exist. The original valid-completed-plus-failed-duplicate case remains separately covered.
