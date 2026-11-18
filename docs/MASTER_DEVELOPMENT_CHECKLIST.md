@@ -3,7 +3,7 @@
 
 **Repository:** `drvishnua/RadOnc-MDT-Simulator`  
 **Development branch:** `feature/four-round-mdt-and-performance`  
-**Current branch HEAD / PR #1 head:** `8cde5dd847d1c656e195ac9239f39fb75b51691f`  
+**Latest application/test commit:** `8cde5dd847d1c656e195ac9239f39fb75b51691f` (the latest verified PR head recorded below, `ef40def`, is a checklist-only descendant; this checklist refresh follows it).  
 **Application guard commit:** `47dfa9d7576d545b5d1acc574f9597c4bc7bd3fc`  
 **Regression expectation correction:** `8cde5dd847d1c656e195ac9239f39fb75b51691f`  
 **PR #1:** open, draft, unmerged; base `main`.  
@@ -29,6 +29,16 @@ All six PR workflows completed:
 - Security and Dependency Audit [44259969880](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44259969880): WORKFLOW FAILED. Python dependency audit found no known vulnerabilities; Python CodeQL, JavaScript/TypeScript CodeQL and full-history secret scan passed. Node audit failed with four high-severity `picomatch` findings (GHSA-fc5q-39xc-vjpf / CVE-2026-112366).
 
 The preceding application/test attempt `47dfa9d7576d545b5d1acc574f9597c4bc7bd3fc` had Backend Tests run [44259683869](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44259683869) fail solely because of the incorrect hard-coded role ID in the new regression assertion. The correction on `8cde5dd` passed the backend suite. The earlier failure remains recorded and was not rewritten.
+
+### Checklist-only descendant verification — `ef40defe38c5e6f3db299b660f6f40d7a952fa94`
+
+This commit changed only `docs/MASTER_DEVELOPMENT_CHECKLIST.md`; the application/test tree remained the same as `8cde5dd`. Its six PR workflows completed:
+- Backend [44260641959](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44260641959): SUCCESS; 472/472 pytest records passed; preflight artifact [14407942037](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44260641959/artifacts/14407942037).
+- Frontend [44260641958](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44260641958): SUCCESS.
+- Browser E2E [44260641988](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44260641988): SUCCESS.
+- Packaging prerequisites [44260641942](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44260641942): SUCCESS.
+- Windows installer [44260641950](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44260641950): SUCCESS; clean-hosted first-run Ollama/model bootstrap SKIPPED.
+- Security audit [44260641962](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44260641962): FAILED at Node `npm audit` with the same four high picomatch findings. Python dependency audit, Python/JavaScript CodeQL and full-history secret scan passed.
 
 ### Dependency security disposition
 
