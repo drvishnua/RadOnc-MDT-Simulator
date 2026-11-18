@@ -5,11 +5,11 @@
 **Repository:** `drvishnua/RadOnc-MDT-Simulator`  
 **Development branch:** `feature/four-round-mdt-and-performance`  
 **PR #1:** open, draft, unmerged; base `main`.  
-**PR head verified immediately before this checklist refresh:** `bfc06d3e94d8a9e7bceca73302e0ab1a6e196208`.  
-**Latest application code commit:** `8cde5dd847d1c656e195ac9239f39fb75b51691f`.  
-**Latest regression-test commit:** `a8863f9caa28479599d9b9f10722d2afafa29bb0` (adds a cross-round Chair minority-history regression; no application code changed).  
+**PR head verified immediately before this checklist refresh:** `c1fb981e648b76429bc29403cd2febcf5e4739d0`.  
+**Latest application code commit:** `2e46a1bd781c6a5e0e8f5ca2230d36e9cf5cb749` (audit-v16 logic with corrected regex escaping).  
+**Latest regression-test commit:** `c1fb981e648b76429bc29403cd2febcf5e4739d0` (three audit-v16 false-negative regressions plus corrected positive R1 contradiction fixture).  
 **Main:** `39a356b8eb09399aa2da1b9b9085965999f5105a`; unchanged.  
-**Current checklist update:** the one authorised Qwen-only v16/audit-v15 synthetic screen completed on push run [44263369594](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44263369594), artifact [14409068927](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44263369594/artifacts/14409068927). Execution succeeded, but 4 cases were automatically flagged with 6 deterministic review flags, plus 3 further manual audit observations. Acceptance remains PENDING_HUMAN_REVIEW; this is not a model pass. The one-run temporary risk acceptance is consumed. No additional screen or MedGemma run is authorised without fresh explicit risk review and security disposition.
+**Current checklist update:** the one authorised Qwen-only v16/audit-v15 synthetic screen completed on push run [44263369594](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44263369594), artifact [14409068927](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44263369594/artifacts/14409068927). Execution succeeded, but 4 cases were automatically flagged with 6 deterministic review flags, plus 3 further manual audit observations. Acceptance remains PENDING_HUMAN_REVIEW; this is not a model pass. The one-run temporary risk acceptance is consumed. Audit-v16 code is CI-verified but has not been live-model screened. No further Qwen or MedGemma run is authorised without fresh explicit risk review and security disposition.
 
 ## Master Checklist — Current Status
 
@@ -17,28 +17,29 @@
 |---|---|---|
 | Four-round R1–R4 architecture and persisted data flow | IN PROGRESS | Implemented; fresh full 45-role live acceptance is outstanding. |
 | R1 independent specialist assessments | VERIFIED | Round implementation and saved contribution flow covered by backend tests; live model quality remains unverified. |
-| R1 unknown/staging safeguards | IN PROGRESS | v16 preserved unknown TNM/stage, but R1-UNKNOWN-STAGE-001 denied a supplied non-empty diagnosis field; R1-CONTRADICTION-003 did not display both opposing laterality statements or flag the discrepancy. These manual findings were not caught by audit-v15; add narrow regressions. No stage was inferred. |
+| R1 unknown/staging safeguards | IN PROGRESS | The audit-v16 deterministic checks now flag denial of the supplied diagnosis-field fact and omission of opposing Source A / Source B laterality statements. Exact tests passed in run 44267217866. No live audit-v16 screen has been run; the original R1 findings remain part of the audit-v15 historical result. |
 | R2 saved-source identity and exact ordering | VERIFIED | Exact specialist-ID gate checks saved R1 records before R2, R2 before R3, and R3 before Chair R4. |
 | R2 proposition-level consensus and conditionality | FAILED | v15 failures remain. In v16, R2-PARTIAL-AGREEMENT-006 omitted source IDs from the narrative despite correct structured ledger; R2-CONDITIONALITY-007 omitted Option A, prerequisite X and unknown status from the narrative. Both were automatically flagged. R2-FALSE-CONSENSUS-005 kept distinct conditional options separate. |
-| R3 adversarial review and source provenance | IN PROGRESS | R3-INVALID-SOURCE-008 correctly classified source IDs, but its response echoed JSON containing case_id and synthetic_input despite the prompt prohibition. This manual finding was not caught by audit-v15; add an output-echo regression. R3-FABRICATED-QUOTE-009 correctly rejected the unsupported quote. |
+| R3 adversarial review and source provenance | IN PROGRESS | Audit-v16 flags a JSON response containing the synthetic_input field; regression test passed in backend run 44267217866. This is a narrow output-echo check, not comprehensive R3 model validation. R3-FABRICATED-QUOTE-009 rejected the unsupported quote in the historical audit-v15 screen. |
 | R4 Chair synthesis from actual saved R1–R3 | FAILED | v15 failures remain. In v16, R4-MISSING-AGENT-011 omitted exact completeness details from the main response (they appeared only in a separate coverage_statement); R4-CHAIR-TRACEABILITY-012 returned only INSUFFICIENT SAVED CONTRIBUTIONS TO DETERMINE despite supplied R1–R3 text, omitting Chair synthesis and unresolved-source traceability. Both cases were automatically flagged. |
 | Cross-round minority-history regression | VERIFIED | New test `test_final_chair_boundary_retains_earlier_and_later_minority_histories` passed in backend run 44262841444; it verifies an earlier R1 minority remains visible alongside a different R3 minority. This is a deterministic regression test, not live-model acceptance. |
 | Chair consensus, distinct-role counting, dissent and traceability | FAILED | Deterministic counts exist, but v15 model-level consensus/dissent findings remain unresolved by live retest. |
 | Exact specialist-ID input gate | VERIFIED | Guard in `47dfa9d`; corrected regression in `8cde5dd`; exact regression-test-head backend run 44262841444 passed (473/473 pytest rows, re-counted from job logs). |
 | Missing/failed-agent handling | FAILED | Orchestration rejects incomplete predecessor-round records; model-level missing-agent behaviour still requires live verification. |
 | Clinical safety, staging and unknown data | IN PROGRESS | Deterministic safeguards exist; no clinical validation, guideline concordance or zero-hallucination guarantee. |
-| Case integrity, contradiction preservation and audit history | IN PROGRESS | Historical records retained. v16 identified a supplied-diagnosis fact contradiction, failure to display conflicting laterality statements, and R3 echoing of synthetic input JSON; audit-v15 did not catch these. Add tests against raw outputs before revising audit rules. |
+| Case integrity, contradiction preservation and audit history | IN PROGRESS | Historical raw outputs retained. Three audit-v16 deterministic checks now cover the three manual false negatives recorded from v16/audit-v15. Exact regression tests passed, but there is no live audit-v16 model rerun; raw case and audit history remain preserved. |
 | Provenance and guideline/evidence retrieval | IN PROGRESS | Source-bound controls exist; current guideline retrieval/verification incomplete. |
-| Backend tests — regression-test commit `a8863f9` | VERIFIED | Exact-head PR workflow 44262841444 succeeded; 473 recorded pytest rows passed, 0 failed, 0 errors or skips; cross-round minority-history regression passed. The prior checklist figure of 480 was an overcount; raw job logs were re-counted. Artifact [14409301267](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44262841444/artifacts/14409301267). |
-| Frontend unit/build checks | VERIFIED | Frontend Build workflow 44262841436 succeeded. |
-| Patient Registry / four-round Dashboard browser E2E | VERIFIED | Browser E2E workflow 44262841821 succeeded; registry, Mission Control, Development Monitor and four-round dashboard checks passed; artifact [14409580293](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44262841821/artifacts/14409580293). |
-| Mission Control / Development Monitor dashboard | VERIFIED | Latest browser E2E 44262841821 passed registry, Mission Control, Development Monitor and four-round dashboard checks; dedicated refresh/error-resilience edge cases were also covered in run 44257129743. |
+| Backend tests — audit-v16 remediation head `c1fb981` | VERIFIED | Exact-head backend run [44267217866](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44267217866): raw job logs confirm 476/476 pytest rows passed, 0 failed/errors/skips. Three audit-v16 regressions and the 12-case deterministic harness passed. JUnit artifact [14409834554](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44267217866/artifacts/14409834554); preflight [14410892064](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44267217866/artifacts/14410892064). |
+| Frontend unit/build checks | VERIFIED | Exact audit-v16 code-head Frontend Build [44267218284](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44267218284) succeeded. |
+| Patient Registry / four-round Dashboard browser E2E | VERIFIED | Exact audit-v16 code-head Browser E2E [44267217873](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44267217873) succeeded; artifact [14411570079](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44267217873/artifacts/14411570079). |
+| Mission Control / Development Monitor dashboard | VERIFIED | Exact audit-v16 code-head Browser E2E [44267217873](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44267217873) passed; prior dedicated refresh/error-resilience coverage remains in run 44257129743. |
 | Dashboard/API error and last-good-state handling | VERIFIED | Prior browser checks cover 403/429, malformed metadata, recovery and valid empty state. |
 | Ollama context handling and truncation resistance | IN PROGRESS | Long-run effective context behaviour has not been proven fixed. |
 | Ollama performance and concurrency | IN PROGRESS | Concurrency remains 1; comparable local RTX 4060 timing evidence incomplete. |
 | RTX 4060 request-time GPU inference | NOT STARTED | No current local request-time `nvidia-smi` and Ollama offload evidence. |
 | Hosted v9–v15 model screens | FAILED | Historical bounded runs retain integrity failures; failures are preserved. |
 | v16/audit-v15 code/schema/audit regression suite | FAILED | The 12-case v16 screen exposed three additional manual findings not caught by audit-v15: R1 diagnosis-field contradiction, R1 contradiction-display omission and R3 synthetic_input echo. Existing schema/fixture tests passed, but audit coverage is incomplete. |
+| v16/audit-v16 deterministic false-negative checks and regression tests | VERIFIED | Audit version `radonc-mdt-integrity-audit-v16` is enforced by the workflow gate. New tests cover R1 denial of supplied diagnosis field, R1 omission of opposing laterality sources and R3 synthetic_input JSON echo. Exact backend run [44267217866](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44267217866) passed all three and 476/476 pytest rows. Deterministic checks only; no live Qwen audit-v16 screen. |
 | v16/audit-v15 live model screen | FAILED | Run [44263369594](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44263369594) executed successfully, but the model integrity screen is not accepted: 12/12 outputs recorded, 4 cases automatically flagged / 6 review flags, plus 3 further manual observations. Summary: PENDING_HUMAN_REVIEW, automatic score null. Artifact [14409068927](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44263369594/artifacts/14409068927). Execution success is not model pass. One-run exception consumed. |
 | Qwen exact-version gate before MedGemma | VERIFIED | Workflow requires exact Qwen prompt/audit/script manifest checks before MedGemma pull. |
 | Fresh full 45-role R1–R4 live validation | NOT STARTED | No current fresh full run accepted. |
@@ -47,14 +48,14 @@
 | Independent blinded model-output review | NOT STARTED | No independent blinded review artefact; manifest remains PENDING_HUMAN_REVIEW. These deterministic/manual observations are not an independent review. |
 | Guideline retrieval and verification | NOT STARTED | No current verified guideline source set linked to a run. |
 | Independent qualified clinical review | NOT STARTED | No attributable qualified review artefact. |
-| Windows packaging prerequisites | VERIFIED | Exact PR-head workflow 44262841556 succeeded. |
-| Windows installer build | VERIFIED | Exact PR-head workflow 44262841453 succeeded; installer installed and smoke-tested, artifact [14408632519](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44262841453/artifacts/14408632519), SHA256 `d245f20ef146898e09b3f6de873c5a44412a90c1ef033eb573199df812e85bf3`. AI bootstrap paths were mocked; no real Ollama request or model inference occurred. |
-| Full-history secret scan | VERIFIED | Exact PR-head security workflow 44262841543: passed. |
-| Python CodeQL | VERIFIED | Exact PR-head security workflow 44262841543: passed. |
-| JavaScript/TypeScript CodeQL | VERIFIED | Exact PR-head security workflow 44262841543: passed. |
-| Python dependency audit | VERIFIED | Exact PR-head security workflow 44262841543: no known vulnerabilities found. |
-| Node dependency audit | FAILED | Latest checklist-head security workflow [44264563041](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44264563041): npm audit again reports four HIGH transitive picomatch@4.0.7 findings. Python dependency audit, both CodeQL analyses and full-history secret scan passed in that run. |
-| Dependency advisory applicability and risk disposition | IN PROGRESS | The one-run temporary development-only exception was consumed by Qwen run 44263369594 and did not waive or suppress the audit. Node audit remains FAILED on run 44264563041 with four HIGH picomatch@4.0.7 findings. No dependency change, production use, additional screen or MedGemma evaluation is authorised; reassess the advisory before any future exception. |
+| Windows packaging prerequisites | VERIFIED | Exact audit-v16 code-head workflow [44267217819](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44267217819) succeeded. |
+| Windows installer build | VERIFIED | Exact audit-v16 code-head installer [44267218391](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44267218391) succeeded; artifact [14409849910](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44267218391/artifacts/14409849910), SHA-256 `286acdfb8230fdac2ba0a8522dffbb107c3dc806bdd75d6abe97573655bb4fe3`. Installer smoke test does not prove Ollama/model inference. |
+| Full-history secret scan | VERIFIED | Exact audit-v16 code-head security run [44267217685](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44267217685): passed. |
+| Python CodeQL | VERIFIED | Exact audit-v16 code-head security run 44267217685: passed. |
+| JavaScript/TypeScript CodeQL | VERIFIED | Exact audit-v16 code-head security run 44267217685: passed. |
+| Python dependency audit | VERIFIED | Exact audit-v16 code-head security run 44267217685: no known vulnerabilities found. |
+| Node dependency audit | FAILED | Exact audit-v16 code-head security workflow [44267217685](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44267217685): npm audit reports four HIGH transitive `picomatch@4.0.7` findings. Python audit, both CodeQL analyses and full-history secret scan passed. |
+| Dependency advisory applicability and risk disposition | IN PROGRESS | One-run temporary development-only exception was consumed by Qwen run 44263369594; npm audit remains FAILED and unsuppressed, with four HIGH picomatch@4.0.7 findings in run 44267217685. No further model run or MedGemma evaluation is authorised until security disposition is independently reviewed and fresh explicit risk approval is obtained. |
 | Release acceptance | BLOCKED | Temporary one-run development exception does not clear the Node audit. R2/R4 live failures, full 45-role run, GPU, evidence retrieval and independent clinical review remain outstanding. |
 
 ## Latest screen evidence — Qwen v16 / audit-v15, run 44263369594
@@ -100,6 +101,21 @@ All six PR workflows on this exact checklist commit completed. Five succeeded; d
 - Security/dependency audit [44264563041](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44264563041): FAILED at Node npm audit with four HIGH picomatch findings. Python dependency audit, Python and JS/TS CodeQL, and full-history secret scan passed.
 
 These results are software/build verification only. They do not prove model integrity, clinical validity, GPU inference or release readiness.
+## Latest exact-code-head CI — audit-v16 remediation commit `c1fb981e648b76429bc29403cd2febcf5e4739d0`
+
+Five standard PR workflows succeeded; Security and Dependency Audit failed:
+
+- Backend [44267217866](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44267217866): SUCCESS; 476/476 raw pytest rows passed, zero failures/errors/skips. All three audit-v16 false-negative regressions and the 12-case deterministic harness passed. JUnit artifact [14409834554](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44267217866/artifacts/14409834554); deterministic preflight artifact [14410892064](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44267217866/artifacts/14410892064).
+- Frontend Build [44267218284](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44267218284): SUCCESS.
+- Patient Registry / Four-Round Dashboard Browser E2E [44267217873](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44267217873): SUCCESS; artifact [14411570079](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44267217873/artifacts/14411570079).
+- Windows Packaging Prerequisites [44267217819](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44267217819): SUCCESS.
+- Windows Installer Build [44267218391](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44267218391): SUCCESS; artifact [14409849910](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44267218391/artifacts/14409849910), SHA-256 `286acdfb8230fdac2ba0a8522dffbb107c3dc806bdd75d6abe97573655bb4fe3`. This is installer smoke verification, not model inference.
+- Security and Dependency Audit [44267217685](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44267217685): FAILED at Node npm audit with four HIGH `picomatch@4.0.7` findings. Python audit, Python and JS/TS CodeQL and full-history secret scan passed.
+
+Push-triggered Synthetic Model Integrity Screening [44267204599](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44267204599) (run #82) was SKIPPED because the code commit message had no `[model-integrity-screen]` marker. No model inference occurred. Audit-v16 is software-tested, not live-model-tested.
+
+Audit-v16 commits: `77dcf81e14565cb43f89e63bb83e80caa0aa0d1b` (new audit/tests/workflow gate), `2e46a1bd781c6a5e0e8f5ca2230d36e9cf5cb749` (corrected regex escaping), `c1fb981e648b76429bc29403cd2febcf5e4739d0` (corrected passing fixture; current code head).
+
 ## Temporary development-only risk acceptance — 18 November 2026
 
 The project owner replied “Ok” to the explicit request for a temporary, documented exception for the disputed development-only transitive `picomatch` advisory. Scope was limited to **one** bounded Qwen v16/audit-v15 synthetic screening run on the isolated GitHub-hosted CPU runner at concurrency 1. Run 44263369594 is complete; the exception is consumed and does not provide continuing authority.
@@ -153,7 +169,7 @@ The screenshot's job ID `134652860736` is from backend workflow 44260641959. Its
 
 1. Resolve the advisory disposition with an auditable decision based on the upstream maintainer dispute, Snyk revocation and current GitHub/NVD status. Keep the npm audit result visible until a defensible policy decision is recorded.
 2. The single authorised Qwen v16 run has completed and its exception is consumed. Do not start another Qwen screen or any MedGemma live inference while the security gate remains unresolved. Any future model run requires a fresh explicit risk review and documented security disposition.
-3. Continue deterministic R2/R4 integrity work only after inspecting the exact current implementation, existing tests and saved live-failure evidence; add narrow regression tests and preserve dissent/conditionality.
+3. Continue deterministic R2/R4 Chair and consensus work against exact saved failures. Audit-v16 covers three additional false negatives and passed software CI, but has no live-model validation. Preserve source identity, conditions, dissent and minority histories.
 4. After the security gate is resolved, rerun all CI on the exact new application commit, then perform bounded Qwen live corrective validation at concurrency 1.
 5. Only after bounded corrective acceptance, plan the fresh full 45-role R1–R4 run and inspect all saved round records, Chair traceability and audit hashes.
 6. Separately verify local RTX 4060 request-time inference with `nvidia-smi`, Ollama offload details, request-time activity and latency.
