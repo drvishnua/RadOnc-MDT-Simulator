@@ -2643,3 +2643,62 @@ The above redesign requirements are all outstanding and must remain NOT STARTED 
 7. Add backend, frontend, audit, security and desktop E2E tests; then run a bounded synthetic evaluation before any separately authorised larger model run.
 
 **No implementation is claimed by this checklist entry.** The feature is a new requirement and remains NOT STARTED until code, tests and exact-head verification exist.
+
+
+---
+
+## Additional product requirement — evidence-grounded conditional specialist decisions (19 November 2026)
+
+**Requested behaviour:** After the pre-MDT Case Clarification Agent submits the confirmed case snapshot, every specialist must independently reason from their own professional remit and the available case data. Missing information must not cause a blanket refusal to assess. Specialists should state what can be concluded now, what remains unknown, and how their assessment or recommendation changes under clearly labelled hypothetical conditions.
+
+### Requirements and acceptance criteria
+
+| Workstream | Status | Required outcome / verification |
+|---|---|---|
+| Evidence-grounded specialist assessment | NOT STARTED | Each of the 45 roles analyses the actual confirmed case snapshot and explicitly uses relevant supplied facts. Generic “insufficient information” responses that ignore available data must fail quality checks. |
+| Role-specific clinical perspective | NOT STARTED | Each role reasons within its remit, identifies its own relevant risks/options/priorities and raises role-appropriate questions. Roles must not simply repeat a shared generic assessment. |
+| Conditional decision-making | NOT STARTED | Where a decision depends on missing information, the role may provide useful conditional branches (if X, then consider A; if Y, then consider B), provided the branches are relevant, clinically defensible and clearly hypothetical. |
+| Missing-data handling | NOT STARTED | Explicitly identify the missing variable and why it matters. Do not convert unknown ECOG, comorbidity, staging, organ function, pathology or patient preference into a presumed normal/negative value. |
+| Assumptions labelling | NOT STARTED | Separate documented case facts from model interpretations, hypothetical assumptions, prerequisites and unanswered questions. Every hypothetical branch must identify the condition it depends on. |
+| Decision options despite uncertainty | NOT STARTED | Permit a role to state a provisional/conditional option, alternatives and decision boundaries instead of defaulting to “cannot be determined” when meaningful conditional analysis is possible. Do not force a definitive recommendation where the evidence is inadequate. |
+| Specialist disclaimers and limitations | NOT STARTED | Each role states concise scope/limitations and the facts or investigations needed to firm up its view. Avoid repetitive boilerplate disclaimers that obscure the actual reasoning. |
+| Actionable information requests | NOT STARTED | Each role asks only for additional information relevant to its remit and explains how the answer could alter its assessment. The pre-MDT agent may consolidate duplicate questions without erasing role provenance. |
+| R2 conditional debate | NOT STARTED | Specialists discuss differences in conditional branches and prerequisites, not just binary agreement. They must distinguish agreement on a proposition from agreement only under a shared condition. |
+| R3 adversarial conditional review | NOT STARTED | Challenge unsupported assumptions, missing prerequisites, unsafe branch logic, omitted alternatives and conversion of hypothetical conditions into asserted facts. Preserve valid uncertainty and dissent. |
+| R4 conditional Chair synthesis | NOT STARTED | Chair synthesises actual saved R1–R3 contributions, preserving conditions, alternatives, dependencies, disagreement and missing information. It must not collapse conditional support into unconditional consensus or invent a preferred branch. |
+| Deterministic output schema | NOT STARTED | Represent documented facts, interpretations, unknowns, assumptions, conditional options, prerequisites, risks, alternatives and required information as distinct validated fields where feasible. |
+| Provenance and traceability | NOT STARTED | Link each material conclusion and conditional branch to the role contribution and supplied case facts it relies on. Preserve the exact confirmed pre-MDT case snapshot and subsequent round inputs. |
+| Quality evaluation | NOT STARTED | Add synthetic test cases with both sufficient and incomplete data. Verify roles use known facts, label unknowns, generate relevant conditional branches, avoid unsupported assumptions and remain role-distinct. Include cases where no safe conditional recommendation is possible. |
+
+### Required reasoning pattern for each specialist
+
+1. **My role's assessment:** what this specialty can say about this case from the supplied facts.
+2. **Relevant documented facts:** cite the case fields/findings actually supplied; do not invent evidence.
+3. **What is unknown:** identify only decision-relevant gaps and their impact.
+4. **Conditional options:** state clearly labelled “If …, then …” branches when justified. These are hypothetical pathways, not claims that the condition is true.
+5. **Prerequisites and cautions:** investigations, fitness, organ function, comorbidity, patient preference, technical feasibility or other factors required before a pathway could be selected.
+6. **Alternatives:** include reasonable alternatives within the role's remit, including supportive/palliative approaches where appropriate to the case and evidence.
+7. **What would change my view:** specify the information that would materially alter the assessment.
+8. **Position and confidence boundary:** support, oppose, conditional support or insufficient information, with concise rationale. Do not force certainty.
+
+### Conditional reasoning example — illustrative only, not a clinical protocol
+
+If performance status and comorbidity data are absent, a specialist may state that a concurrent treatment approach could be considered if the patient meets the relevant fitness criteria and has no contraindicating comorbidity; if performance status is poor or comorbidity is severe/uncontrolled, a less intensive approach or symptom-directed/palliative option may need consideration. The role must state that ECOG and comorbidity status are not supplied, identify what assessment is required, and must not claim that either branch describes the actual patient.
+
+The user's example is an illustration of the desired reasoning style, not an approved treatment rule or guideline recommendation. Actual clinical branches must be checked against the case, current evidence/guidelines when retrieved, and qualified clinical review.
+
+### Safety constraints
+
+- Conditional analysis is not permission to fabricate a patient's status or to present hypothetical branches as patient-specific facts.
+- Do not infer ECOG, comorbidity burden, stage, resectability, organ function, suitability or preference.
+- Do not use an ungrounded “if” statement to smuggle in a definitive recommendation.
+- If no defensible branch can be constructed from available information, explain precisely why and what information is required.
+- Preserve disagreements and distinguish consensus on a conditional proposition from consensus on an unconditional treatment choice.
+- The Chair must derive conclusions from actual saved R1–R3 records and preserve every material prerequisite.
+- Model-generated conditional reasoning remains educational and unvalidated until independently reviewed; no guideline compliance or clinical validity is implied.
+
+### Integration with pre-MDT clarification stage
+
+The intake agent should identify high-impact missing variables and ask concise questions before R1. If the user declines or cannot provide them, the case still proceeds when the user chooses; the MDT receives the confirmed case plus explicit unresolved gaps and is expected to reason conditionally where safe. The intake agent must not pre-select the treatment pathway or prime specialists toward a desired conclusion.
+
+**No implementation is claimed by this checklist entry.** All requirements remain NOT STARTED pending code, regression tests, exact-head CI and synthetic end-to-end verification.
