@@ -1525,3 +1525,60 @@ def test_all_empty_structured_list_fields_are_reported_as_not_reported_in_valida
     ):
         assert field in warnings
     assert "not confirmed negatives" in warnings
+
+
+
+def test_opposing_source_laterality_is_flagged_and_carried_without_resolution():
+    summary = (
+        "Fictional educational case. Source A records left laterality for the primary lesion. "
+        "Source B records right laterality for the primary lesion."
+    )
+    case = _case(case_summary=summary)
+
+    warnings = build_case_validation_warnings(case)
+    context = build_case_prompt_context(case)
+    generated_flags = audit_unverified_case_claims(
+        case,
+        {"provisional_conclusion": "The laterality remains unresolved pending source verification."},
+    )
+
+    conflict_warning = next(
+        item for item in warnings if "opposing laterality statements" in item
+    )
+    assert conflict_warning in context["source_integrity_warnings"]
+    assert conflict_warning in generated_flags
+    assert context["case_snapshot"]["case_summary"] == summary
+    assert case.case_summary == summary
+    assert "No source is selected" in conflict_warning
+
+
+def test_opposite_laterality_is_flagged_but_matching_or_unattributed_values_are_not():
+    opposite = _case(
+        case_summary=(
+            "Fictional case. Source A records one laterality value. "
+            "Source B records the opposite laterality value."
+        )
+    )
+    assert any(
+        "opposing laterality statements" in item
+        for item in build_case_validation_warnings(opposite)
+    )
+
+    matching = _case(
+        case_summary=(
+            "Fictional case. Source A records left laterality. "
+            "Source B records left laterality."
+        )
+    )
+    assert not any(
+        "opposing laterality statements" in item
+        for item in build_case_validation_warnings(matching)
+    )
+
+    unattributed = _case(
+        case_summary="Fictional case. Left and right are hypothetical alternatives."
+    )
+    assert not any(
+        "opposing laterality statements" in item
+        for item in build_case_validation_warnings(unattributed)
+    )
