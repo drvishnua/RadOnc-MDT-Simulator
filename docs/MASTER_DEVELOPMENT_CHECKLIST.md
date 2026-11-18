@@ -15,7 +15,7 @@
 **Repository:** `drvishnua/RadOnc-MDT-Simulator`  
 **Development branch:** `feature/four-round-mdt-and-performance`  
 **PR #1:** open, draft, unmerged; base `main`.  
-**PR head verified immediately before this checklist refresh:** `65a573affcb6af8ccb98a163e2c17ebb191df2bd`. **Exact-head CI for this new patch is pending.**  
+**Current PR head:** `c18fd1f597a247396afcb30909cadc2d812f69b7` (checklist-only descendant of application/test head `65a573affcb6af8ccb98a163e2c17ebb191df2bd`).  
 **Latest application code commit:** `2e46a1bd781c6a5e0e8f5ca2230d36e9cf5cb749` (audit-v16 logic with corrected regex escaping).  
 **Latest backend regression-test commit:** `c1fb981e648b76429bc29403cd2febcf5e4739d0` (three audit-v16 false-negative regressions plus corrected positive R1 contradiction fixture).  
 **Latest frontend provenance-visibility commit:** `afbe6af6ffbc463ad92457e5179545c92b55b398`; E2E selector corrections in `198c8be7dfa203fba51eec99f9a2151738dabc12` and `1e8d3559dc12e7aa1b7599f9bd076b3873f4e88b`.  
