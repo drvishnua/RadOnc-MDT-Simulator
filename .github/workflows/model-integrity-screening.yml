@@ -1,4 +1,8 @@
 name: Synthetic Model Integrity Screening
+# TEMPORARY DEVELOPMENT-ONLY RISK ACCEPTANCE (user-authorised in project conversation, 2026-11-18):
+# Permit this bounded Qwen-only v16/audit-v15 synthetic screen while npm audit remains FAILED for the disputed transitive picomatch advisory.
+# Do NOT suppress the audit, alter dependency resolution, request MedGemma, infer production approval, or treat this as release/security clearance.
+# Reassess this exception after this single screening run; any further run or broader use requires a fresh risk review.
 # [model-integrity-screen] v16/audit-v15 retest from CI-green 785a094; exact Qwen manifest version gate before any MedGemma pull; concurrency 1, hosted CPU only.
 # [model-integrity-screen] v16/audit-v15 bounded retest: R2 unknown-prerequisite certainty and R3 supplied-quote refusal audit; sequential Qwen-first, then MedGemma only after Qwen succeeds and HAI-DEF terms are attested.
 # [model-integrity-screen] v11/audit-v10 retest after R2 proposition separation, R3 narrative consistency and R4 echo audit; sequential Qwen then MedGemma only after Qwen gate.
