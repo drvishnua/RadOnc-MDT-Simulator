@@ -3973,3 +3973,70 @@ def test_chair_prompt_retains_full_saved_r2_source_opinion_and_condition(monkeyp
     assert source["source_excerpt"] == source_excerpt
     assert source["analysis"] == source_analysis
     assert source["comparison"] == source_comparison
+
+
+def test_r2_saved_narrative_appends_verbatim_server_bound_option_and_prerequisites(monkeypatch):
+    from app.round_schemas import Round2ContributionDraft
+    from app.services import mdt_generation
+
+    async def fake_generate(prompt, schema_type, max_tokens):
+        assert "SERVER-IDENTIFIED ATTRIBUTED SOURCE OPINIONS" in prompt
+        return Round2ContributionDraft(
+            position="insufficient_information",
+            provisional_conclusion=(
+                "The supplied synthetic record does not establish a definitive educational pathway."
+            ),
+            response_to_other_perspectives=(
+                "The option remains conditional; the required investigations are not supplied."
+            ),
+            agreements=[],
+            substantive_challenges=[],
+            remaining_unknowns=["MRI and complete local staging remain unknown."],
+            risk_flags=[],
+            confidence=0.5,
+            source_opinion_responses=[{
+                "source_id": "CASE:case_summary#1",
+                "analysis": (
+                    "The surgical assessment first option remains conditional on complete "
+                    "local staging and resectability review."
+                ),
+                "comparison": (
+                    "This remains distinct from the role's own insufficient-information position."
+                ),
+            }],
+        )
+
+    monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate)
+    profile = {
+        "agent_id": "RO-01",
+        "name": "Radiation Oncology",
+        "mandate": "Review the synthetic case while preserving unknowns and source conditions.",
+    }
+    source_opinion = (
+        "colorectal surgical note favours proceeding to a surgical assessment first, "
+        "conditional on complete local staging and resectability review"
+    )
+    case = SyntheticCase(
+        scenario_title="R2 server-bound opinion register regression",
+        case_summary=f"Fictional referral summary. The {source_opinion}.",
+    )
+    own = {
+        "position": "insufficient_information",
+        "provisional_conclusion": (
+            "The case does not supply enough information to establish a definitive pathway."
+        ),
+        "preferred_educational_option": "No option can be assessed until missing information is reviewed.",
+    }
+
+    result = asyncio.run(
+        mdt_generation.generate_debate_contribution(profile, case, own, [])
+    )
+
+    assert "SERVER-BOUND CASE OPINION REGISTER" in result.response_to_other_perspectives
+    assert "CASE:case_summary#1" in result.response_to_other_perspectives
+    assert source_opinion in result.response_to_other_perspectives
+    assert "not specialist-authored conclusions, verified facts, or endorsements" in (
+        result.response_to_other_perspectives
+    )
+    assert result.source_opinion_responses[0].source_excerpt == source_opinion
+    assert result.case_data_integrity_flags == []
