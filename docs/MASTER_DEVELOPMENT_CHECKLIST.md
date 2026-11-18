@@ -1,3 +1,70 @@
+
+## Resume verification — PR head 07e0abaf (18 November 2026)
+
+**Repository:** `drvishnua/RadOnc-MDT-Simulator`  
+**Development branch:** `feature/four-round-mdt-and-performance`  
+**PR #1:** open, draft, unmerged; base `main`; PR head `07e0abafc3baedf16d588eaf9e50eed3dc812dc7`.  
+**Application/test tree:** unchanged from `8cde5dd847d1c656e195ac9239f39fb75b51691f`; the two commits from that SHA to PR head modify only `docs/MASTER_DEVELOPMENT_CHECKLIST.md` (compare: 2 commits, 1 file, 106 changes).  
+**Main:** `39a356b8eb09399aa2da1b9b9085965999f5105a`; unchanged.
+
+### Exact PR-head CI — `07e0abaf`
+
+All six workflows completed; five succeeded and the security workflow failed:
+- Backend Tests [44261206592](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44261206592): SUCCESS; 479 recorded passing pytest rows, 0 failed rows in the uploaded log; JUnit artifact [14408530437](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44261206592/artifacts/14408530437).
+- Frontend Build [44261206517](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44261206517): SUCCESS.
+- Patient Registry / Four-Round Dashboard Browser E2E [44261206525](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44261206525): SUCCESS.
+- Windows Packaging Prerequisites [44261206570](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44261206570): SUCCESS.
+- Windows Installer Build [44261206474](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44261206474): SUCCESS; hosted Ollama/model bootstrap was not established by this workflow.
+- Security / Dependency / CodeQL [44261206545](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44261206545): FAILED. Python dependency audit found no known vulnerabilities; Python CodeQL, JavaScript/TypeScript CodeQL and full-history secret scan passed. Node `npm audit --audit-level=high` failed on four HIGH `picomatch` findings, GHSA-fc5q-39xc-vjpf, through the `fdir`/`tinyglobby` dependency tree. The log's suggested `npm audit fix --force` is not an approved remediation; do not apply a breaking downgrade, unreviewed override/fork or suppress the finding.
+
+The screenshot's job ID `134652860736` belongs to the earlier backend workflow [44260641959](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44260641959); its log confirms that the pytest diagnostics and preflight artifacts were uploaded and the job completed successfully. It is not a still-running inference job.
+
+### Current acceptance boundary
+
+This is exact-head software CI only. No new model inference, full 45-role live run, RTX 4060 request-time GPU verification, guideline retrieval, independent blinded output review or qualified clinical review was performed. The v16/audit-v15 model screen and MedGemma live evaluation remain BLOCKED by the dependency-security failure and Qwen-first sequencing. Existing R2 proposition/conditionality and Chair R4 reconciliation failures from the v15 live screen remain unresolved by live retest.
+
+### Master Checklist — Current Status (18 November 2026)
+
+| Workstream | Status | Evidence / boundary |
+|---|---|---|
+| R1–R4 architecture and persisted data flow | IN PROGRESS | Implemented; fresh full 45-role live acceptance outstanding. |
+| R1 unknown/staging safeguards | IN PROGRESS | Deterministic safeguards exist; broad live adherence unverified. |
+| R2 saved-source identity and exact ordering | VERIFIED | Exact specialist-ID gate and backend regressions pass. |
+| R2 proposition-level consensus and conditionality | FAILED | v15 live screen contradictions remain; corrective live retest blocked. |
+| R3 adversarial provenance | IN PROGRESS | Source-bound deterministic checks pass; live adherence unverified. |
+| R4 Chair synthesis from actual saved R1–R3 | FAILED | v15 source-echo and reconciliation findings remain; no live corrective retest. |
+| Exact specialist-ID input gate | VERIFIED | 45-role identity/structure guard and duplicate/missing/unexpected/malformed regressions pass. |
+| Clinical safety, staging and unknown data | IN PROGRESS | No clinical validation, guideline concordance or zero-hallucination claim. |
+| Case integrity, contradictions and audit history | IN PROGRESS | Historical records preserved; live remediation unverified. |
+| Provenance and evidence retrieval | IN PROGRESS | Source-bound controls exist; current guideline retrieval incomplete. |
+| Missing/failed-agent handling | FAILED | Deterministic predecessor gate rejects incomplete rows; live-model behavior still unverified. |
+| Backend tests — PR head 07e0abaf (application tree 8cde5dd) | VERIFIED | Run 44261206592 succeeded; 479 recorded passing pytest rows in diagnostics. |
+| Frontend build — PR head 07e0abaf | VERIFIED | Run 44261206517 succeeded. |
+| Browser E2E / Development Monitor | VERIFIED | Run 44261206525 succeeded; prior dedicated Development Monitor behavior remains covered by run 44257129743. |
+| Packaging prerequisites — PR head 07e0abaf | VERIFIED | Run 44261206570 succeeded. |
+| Windows installer — PR head 07e0abaf | VERIFIED | Run 44261206474 succeeded; hosted Ollama/model bootstrap not verified. |
+| Development Monitor read-only refresh/error handling | VERIFIED | Browser regression evidence includes last-good snapshot, 403/429, malformed metadata, recovery and valid-empty-state behavior. |
+| Ollama context handling | IN PROGRESS | Long-run effective context/truncation not proven fixed. |
+| Ollama performance and concurrency | IN PROGRESS | Concurrency remains 1; local RTX 4060 timings incomplete. |
+| RTX 4060 request-time GPU inference | NOT STARTED | No current local request-time nvidia-smi/Ollama offload evidence. |
+| Hosted v9–v15 model screens | FAILED | Historical bounded runs retain integrity failures. |
+| v16/audit-v15 code/schema/audit regression suite | VERIFIED | Backend regression suite passes; not a live-model result. |
+| v16/audit-v15 live model screen | BLOCKED | Held by failed Node dependency audit. |
+| Qwen exact-version gate before MedGemma | VERIFIED | Workflow requires exact Qwen manifest checks before MedGemma pull. |
+| Fresh full 45-role R1–R4 validation | NOT STARTED | No current fresh full run accepted. |
+| MedGemma HAI-DEF acceptance | VERIFIED | Prior explicit terms acceptance recorded; not model validation. |
+| MedGemma live evaluation | BLOCKED | Dependency-security gate and Qwen-first sequencing. |
+| Independent blinded model-output review | NOT STARTED | No independent review artefact. |
+| Guideline retrieval and verification | NOT STARTED | No current verified guideline source set. |
+| Independent qualified clinical review | NOT STARTED | No attributable review artefact. |
+| Python dependency audit | VERIFIED | Run 44261206545: no known vulnerabilities found. |
+| Node dependency audit | FAILED | Run 44261206545: four HIGH picomatch findings; official patched release not verified. |
+| CodeQL and full-history secret scan | VERIFIED | Both CodeQL jobs and secret scan passed in run 44261206545. |
+| Release acceptance | BLOCKED | Dependency audit failed; live R2/R4 findings, full 45-role validation, GPU, evidence and clinical review remain outstanding. |
+
+**Next controlled action:** resolve the Node dependency advisory only through an official, reviewable upstream fix or formal advisory clarification; rerun the complete security audit. Keep model-screen and MedGemma inference blocked until that gate passes. Then run bounded live corrective validation at concurrency 1 before considering a fresh 45-role run.
+
+---
 # Master Development and Verification Checklist — CURRENT, 18 November 2026
 ## Current checkpoint — specialist input identity gate and exact-head verification (18 November 2026)
 
