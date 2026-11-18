@@ -5,11 +5,11 @@
 **Repository:** `drvishnua/RadOnc-MDT-Simulator`  
 **Development branch:** `feature/four-round-mdt-and-performance`  
 **PR #1:** open, draft, unmerged; base `main`.  
-**Current PR head before this checklist refresh:** `a8863f9caa28479599d9b9f10722d2afafa29bb0`.  
+**Current PR head before this checklist refresh:** `77d8969956cabaa9e83224180f954653b57039bb`.  
 **Latest application code commit:** `8cde5dd847d1c656e195ac9239f39fb75b51691f`.  
 **Latest regression-test commit:** `a8863f9caa28479599d9b9f10722d2afafa29bb0` (adds a cross-round Chair minority-history regression; no application code changed).  
 **Main:** `39a356b8eb09399aa2da1b9b9085965999f5105a`; unchanged.  
-**Current checklist update:** documentation-only; no application code or tests changed.
+**Current checklist update:** records temporary development-only risk acceptance for one Qwen-only screen. Workflow commit `77d8969956cabaa9e83224180f954653b57039bb` modifies only a workflow comment and uses the existing `[model-integrity-screen]` push trigger; no application code, dependency resolution, or audit suppression changed. A workflow run ID is not yet independently visible in the available run lookup.
 
 ## Master Checklist — Current Status
 
@@ -39,7 +39,7 @@
 | RTX 4060 request-time GPU inference | NOT STARTED | No current local request-time `nvidia-smi` and Ollama offload evidence. |
 | Hosted v9–v15 model screens | FAILED | Historical bounded runs retain integrity failures; failures are preserved. |
 | v16/audit-v15 code/schema/audit regression suite | VERIFIED | Backend regression suite passes; this is not a live-model result. |
-| v16/audit-v15 live model screen | BLOCKED | Held pending explicit security-gate disposition and Qwen-first sequencing. |
+| v16/audit-v15 live model screen | IN PROGRESS | User authorised one temporary development-only risk acceptance on 18 Nov 2026. Workflow commit `77d8969956cabaa9e83224180f954653b57039bb` requests the existing Qwen-only push trigger; MedGemma is not requested. Actual run ID/start is not yet verified from available run lookup; do not claim inference has begun until a run is located. |
 | Qwen exact-version gate before MedGemma | VERIFIED | Workflow requires exact Qwen prompt/audit/script manifest checks before MedGemma pull. |
 | Fresh full 45-role R1–R4 live validation | NOT STARTED | No current fresh full run accepted. |
 | MedGemma HAI-DEF terms acceptance | VERIFIED | Prior explicit acceptance is recorded; this is not model validation. |
@@ -54,8 +54,18 @@
 | JavaScript/TypeScript CodeQL | VERIFIED | Exact PR-head security workflow 44262841543: passed. |
 | Python dependency audit | VERIFIED | Exact PR-head security workflow 44262841543: no known vulnerabilities found. |
 | Node dependency audit | FAILED | Exact PR-head security workflow 44262841543: npm audit reports four HIGH findings for transitive `picomatch@4.0.7` via `tinyglobby@0.2.17` / `fdir@6.5.0`. |
-| Dependency advisory applicability and risk disposition | BLOCKED | Advisory GHSA-fc5q-39xc-vjpf / CVE-2026-112366 is disputed by the upstream maintainer; Snyk shows it revoked as not a vulnerability, while GitHub Advisory Database still lists it as unreviewed/high and NVD awaits enrichment. No fixed picomatch release or formal GHSA withdrawal verified. Do not suppress or accept risk silently. |
-| Release acceptance | BLOCKED | Node audit failure/dispute unresolved; R2/R4 live failures, full 45-role run, GPU, evidence retrieval and independent clinical review remain outstanding. |
+| Dependency advisory applicability and risk disposition | IN PROGRESS | User authorised a single temporary development-only exception on 18 Nov 2026 solely to permit one bounded Qwen v16/audit-v15 synthetic screen. npm audit remains FAILED and unsuppressed; no dependency changes, production use, MedGemma pull, further screening run or release clearance is authorised by this exception. Reassess after this one run. The advisory remains disputed: Snyk reports revocation while GitHub still lists it unreviewed/high and NVD awaits enrichment. |
+| Release acceptance | BLOCKED | Temporary one-run development exception does not clear the Node audit. R2/R4 live failures, full 45-role run, GPU, evidence retrieval and independent clinical review remain outstanding. |
+
+## Temporary development-only risk acceptance — 18 November 2026
+
+The project owner replied “Ok” to the explicit request for a temporary, documented exception for the disputed development-only transitive `picomatch` advisory. Scope is limited to **one** bounded Qwen v16/audit-v15 synthetic screening run on the isolated GitHub-hosted CPU runner at concurrency 1.
+
+- The automated npm audit remains failed and visible; no suppression, allowlist, lockfile modification, or claim of a passed security audit is permitted.
+- MedGemma is excluded. The workflow commit message contains `[model-integrity-screen]` only and does not contain the `[medgemma]` or `[hai-def-terms-accepted]` trigger markers.
+- This does not authorise production deployment, release, clinical use, GPU claims, additional model runs, or general acceptance of the dependency risk.
+- Reassess the advisory immediately after this single run. A further run requires a fresh explicit risk review.
+- Workflow trigger commit: `77d8969956cabaa9e83224180f954653b57039bb`. The existing push trigger is configured for this workflow path and commit marker. Available commit-run lookup returned no run yet; actual workflow run ID and inference start remain unverified.
 
 ## Latest exact-head CI — regression-test commit `a8863f9caa28479599d9b9f10722d2afafa29bb0`
 
