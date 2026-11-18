@@ -1,23 +1,73 @@
 # RadOnc MDT Simulator — Master Development and Verification Checklist
 
-### Current exact-head verification — 18 November 2026
+### Current checkpoint — exact-head CI and dependency security — 18 November 2026
 
-**Development branch HEAD:** `4e6bde22042bc3a9bc2ad965695aecbf0ada4783` (checklist-only commit).  
-**PR #1:** open, draft, unmerged; base `main`.  
+**Development branch application/workflow commit:** `30543049f302b6bbd84608fea8ae723a06f28f4b`.  
+**PR #1:** open, draft, unmerged; targets `main`.  
 **Main:** unchanged at `39a356b8eb09399aa2da1b9b9085965999f5105a`.  
-**Checklist blob before this refresh:** `cdfdc603b8ea3d7d6ebe14fbf390b6ce8f74402d`.
+**Authoritative checklist path:** `docs/MASTER_DEVELOPMENT_CHECKLIST.md`.
 
-All six standard workflows completed on exact HEAD `4e6bde2`:
-- Backend [44307039866](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44307039866): SUCCESS; **480 passed, 0 failed, 0 errors, 0 skipped**, 1 warning; deterministic preflight **7 passed, 0 failed, 0 inconclusive**. Artifacts: preflight [14428961646](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44307039866/artifacts/14428961646), pytest diagnostics [14429325758](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44307039866/artifacts/14429325758).
-- Frontend [44307039827](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44307039827): SUCCESS.
-- Patient Registry / Four-Round Dashboard Browser E2E [44307039912](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44307039912): SUCCESS.
-- Windows Packaging Prerequisites [44307039800](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44307039800): SUCCESS.
-- Windows Installer [44307039959](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44307039959): SUCCESS.
-- Security Audit [44307039863](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44307039863): FAILED only in Node dependency audit. Python dependency audit reported no known vulnerabilities; JavaScript/TypeScript CodeQL, Python CodeQL and full-history secret scan succeeded.
+#### Exact-head CI — commit `3054304`
 
-**Security finding reconfirmed from exact-head logs:** four HIGH `picomatch` findings, reached through `vite -> fdir/tinyglobby -> picomatch`, associated with GHSA-fc5q-39xc-vjpf (ReDoS via single-branch repeated extglobs). npm's suggested `npm audit fix --force` would install Vite 6.2.7 as a breaking change. No forced downgrade, unreviewed fork, dependency override or audit suppression was applied. Keep Node dependency audit **FAILED** until a verified safe upstream fix is available.
+All six standard workflows completed:
+- Backend [44311254332](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44311254332): SUCCESS; **480 passed, 0 failed, 0 errors, 0 skipped**, 1 warning; deterministic preflight **7 passed, 0 failed, 0 inconclusive**.
+- Frontend Build [44311254385](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44311254385): SUCCESS.
+- Patient Registry / Four-Round Dashboard Browser E2E [44311254377](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44311254377): SUCCESS.
+- Windows Packaging Prerequisites [44311254200](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44311254200): SUCCESS.
+- Windows Installer [44311254179](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44311254179): SUCCESS; installer build, installed-app smoke test, checksum and artifact upload completed.
+- Security Audit [44311254370](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44311254370): overall FAILED only at the full Node dependency audit. Python dependency audit, production Node dependency audit, JavaScript/TypeScript CodeQL, Python CodeQL and full-history secret scan succeeded.
 
-No model inference, GPU verification, guideline verification or clinical validation occurred in this CI. Existing live-model acceptance blockers and prior failed runs remain unchanged. Exact-head software CI success does not establish clinical correctness or zero hallucinations.
+#### Dependency security investigation and CI change
+
+The frontend manifest declares React and React DOM as production dependencies; Vite 7.3.8, TypeScript and React type/plugin packages are development dependencies. The workflow now runs `npm audit --omit=dev --audit-level=high` separately before the unchanged full `npm audit --audit-level=high`. This preserves a blocking audit of all dependencies while separately reporting the production dependency set. On exact commit `3054304`, the production-only audit passed; the full audit still fails.
+
+The full audit continues to report four HIGH `picomatch` findings through `vite -> fdir/tinyglobby -> picomatch`, GHSA-fc5q-39xc-vjpf / CVE-2026-112366. npm's forced remediation suggests a breaking Vite 6.2.7 downgrade. No downgrade, override, suppression, or unreviewed fork was applied.
+
+Upstream status rechecked 18 Nov 2026:
+- Official release page still identifies `4.0.7` as latest: https://github.com/micromatch/picomatch/releases
+- GitHub advisory identifies versions through 4.0.7 as affected and states no fixed version: https://github.com/advisories/GHSA-fc5q-39xc-vjpf
+- Candidate PR #264 remains OPEN with no formal reviews. Its author describes extensive regression tests/differential fuzzing, but the PR itself records that independent review of security effectiveness is still needed: https://github.com/micromatch/picomatch/pull/264
+- PR #194 is a separate extglob parsing behavior fix, not the GHSA-fc5q-39xc-vjpf security remediation: https://github.com/micromatch/picomatch/pull/194
+
+Decision: do not consume PR #264 or another unmerged fork as a production dependency until the upstream patch is merged/released or an independent security review establishes coverage and downstream regression evidence. Full Node dependency audit remains **FAILED**; production-only Node audit is **VERIFIED** on this commit.
+
+#### Master development status
+
+| Workstream | Status | Evidence / boundary |
+|---|---|---|
+| Four-round R1–R4 architecture and saved data flow | IN PROGRESS | Deterministic tests pass; full live-model acceptance outstanding |
+| R1 staging/unknown-data safeguards | IN PROGRESS | Historical staging flags and live-model remediation remain outstanding |
+| R2 source identity/order and preserved source register | VERIFIED | Server-bound source identity/register regression suite |
+| R2 proposition-level consensus and conditionality | IN PROGRESS | Live Qwen behavior not verified |
+| R3 adversarial review/provenance | IN PROGRESS | Deterministic regressions pass; full live behavior unresolved |
+| R4 synthesis from actual saved R1–R3 contributions | IN PROGRESS | Saved contribution excerpts and completeness disclosure implemented/tested; live acceptance outstanding |
+| Chair consensus, dissent and source traceability | FAILED | Historic live-model false-agreement/unsupported-stage failures remain unresolved; do not downgrade from failed |
+| Missing/failed-agent disclosure | IN PROGRESS | Deterministic handling tested; full 45-role live validation outstanding |
+| Clinical safety and staging integrity | IN PROGRESS | No clinical validation; uncertainty and incomplete staging gates remain |
+| Case integrity, hashes, run IDs and audit history | IN PROGRESS | Historical artifacts preserved; full current live run not accepted |
+| Evidence provenance/guideline retrieval | IN PROGRESS | Evidence retrieval not yet verified |
+| Guideline verification | NOT STARTED | No guideline-concordance claim |
+| Backend tests | VERIFIED | 480/480; 0 failed/errors/skips; preflight 7/7 on `3054304` |
+| Frontend build | VERIFIED | Exact-head workflow success |
+| Patient Registry / four-round browser E2E | VERIFIED | Exact-head workflow success |
+| Mission Control / Development Monitor | VERIFIED | Prior browser E2E; no claim of live model telemetry |
+| Windows packaging prerequisites | VERIFIED | Exact-head workflow success |
+| Windows installer build/install/smoke/checksum/artifact | VERIFIED | Exact-head workflow success |
+| Python dependency audit | VERIFIED | Exact-head workflow passed |
+| Production Node dependency audit | VERIFIED | `npm audit --omit=dev --audit-level=high` passed on `3054304` |
+| Full Node dependency audit | FAILED | Four HIGH transitive `picomatch` findings remain |
+| JavaScript/TypeScript CodeQL | VERIFIED | Exact-head workflow success |
+| Python CodeQL | VERIFIED | Exact-head workflow success |
+| Full-history secret scan | VERIFIED | Exact-head workflow success |
+| Ollama context/performance and request telemetry | IN PROGRESS | No current inference measurement |
+| RTX 4060 request-time GPU verification | NOT STARTED | No active GPU inference evidence |
+| Qwen live validation | BLOCKED | Prior live-model failures remain; no new inference started |
+| MedGemma evaluation | BLOCKED | Separate prerequisites/approval and live evaluation outstanding |
+| Full 45-role current-code validation | NOT STARTED | No accepted current-head 45-role run |
+| Independent clinical validation | NOT STARTED | No qualified independent review recorded |
+| Release acceptance | BLOCKED | Security, live-model, GPU and clinical gates open |
+
+No model inference was run in this CI. It does not establish clinical correctness, guideline concordance, GPU usage, or zero hallucinations.
 
 ---
 
