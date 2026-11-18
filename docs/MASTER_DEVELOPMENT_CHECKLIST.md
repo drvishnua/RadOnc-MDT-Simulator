@@ -1,5 +1,20 @@
 # RadOnc MDT Simulator — Master Development and Verification Checklist
 
+### Exact-head CI refresh — commit be028c8 — 18 November 2026
+
+The checklist-only commit `be028c80da60546670fe847fa708f6c210011f3a` triggered the standard CI automatically. All six workflows completed on that exact SHA:
+- Backend [44305545982](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44305545982): SUCCESS; regression suite and deterministic preflight passed (480/480 and 7/7 confirmed in prior exact application/test SHA; this run's job completed successfully).
+- Frontend [44305546045](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44305546045): SUCCESS.
+- Browser E2E [44305546149](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44305546149): SUCCESS.
+- Packaging prerequisites [44305546567](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44305546567): SUCCESS.
+- Windows Installer [44305545734](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44305545734): installer build/smoke SUCCESS; optional clean-hosted Ollama/model bootstrap SKIPPED.
+- Security Audit [44305546093](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44305546093): FAILED only in Node dependency audit. Python dependency audit, JavaScript/TypeScript CodeQL, Python CodeQL and full-history secret scan SUCCESS.
+
+The Node audit job log confirms four HIGH findings for `picomatch`, reached through `vite -> fdir/tinyglobby -> picomatch`; `npm audit fix --force` proposes a breaking Vite 6.2.7 downgrade. The current npm registry still lists picomatch 4.0.7 as latest and the GitHub advisory records affected versions through 4.0.7 with no patched version stated. Sources checked 18 Nov 2026: [GitHub advisory GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf), [npm picomatch versions](https://www.npmjs.com/package/picomatch). No dependency override, forced downgrade, advisory suppression or unreviewed upstream patch was applied. Security gate remains FAILED.
+
+PR #1 remains open/draft/unmerged; main remains unchanged at `39a356b8eb09399aa2da1b9b9085965999f5105a`. No model inference, GPU verification or clinical validation occurred.
+
+
 ### Exact-head CI refresh — 18 November 2026
 
 **Verified branch/PR state:** development branch head at inspection was `e33a9ffc3fd4c6f229eb9da8b75fe6c4a512b8dd`; PR #1 remains open, draft and unmerged, targeting `main`. Main remains `39a356b8eb09399aa2da1b9b9085965999f5105a` (unchanged).
