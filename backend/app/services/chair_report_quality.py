@@ -61,6 +61,7 @@ def _round_completion_disclosures(
         if str(row.get("agent_id") or "").strip()
     }
     noncompleted_by_status: dict[str, list[str]] = defaultdict(list)
+    duplicate_unusable_by_status: dict[str, list[str]] = defaultdict(list)
     unidentified_noncompleted = 0
     for row in rows:
         if row.get("status") == "completed" and isinstance(row.get(field), dict):
@@ -68,7 +69,14 @@ def _round_completion_disclosures(
         status = str(row.get("status") or "missing_status").strip().casefold()
         role_id = str(row.get("agent_id") or "").strip().upper()
         if role_id:
-            noncompleted_by_status[status].append(role_id)
+            # A failed or malformed duplicate must not make a role appear to have
+            # no usable contribution when another saved row for that role completed.
+            target = (
+                duplicate_unusable_by_status
+                if role_id in completed_ids
+                else noncompleted_by_status
+            )
+            target[status].append(role_id)
         else:
             unidentified_noncompleted += 1
 
@@ -88,6 +96,16 @@ def _round_completion_disclosures(
             f"Round {round_number}: {len(unique_ids)} distinct role(s) have no usable completed "
             f"{field} contribution (status {status}): {shown}{suffix}. These roles were excluded "
             "from position counts and synthesis."
+        )
+    for status, identifiers in sorted(duplicate_unusable_by_status.items()):
+        unique_ids = sorted(set(identifiers))
+        shown = ", ".join(unique_ids[:12])
+        suffix = f", and {len(unique_ids) - 12} more" if len(unique_ids) > 12 else ""
+        disclosures.append(
+            f"Round {round_number}: {len(unique_ids)} role(s) have an additional non-usable row "
+            f"(status {status}) despite also having a usable completed {field} contribution: "
+            f"{shown}{suffix}. Their completed contribution remains eligible for position counts "
+            "and synthesis; the additional row was excluded."
         )
     if unidentified_noncompleted:
         disclosures.append(

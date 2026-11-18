@@ -1,3 +1,23 @@
+### Latest exact-head CI — commit `2111c26` — 18 November 2026
+
+**Exact development branch head:** `2111c26ae63b374b5afce742e0e00eac0ea1892d`. PR #1 remains open/draft/unmerged and targets `main`; `main` remains unchanged at `39a356b8eb09399aa2da1b9b9085965999f5105a`.
+
+All six standard workflows completed on this exact SHA:
+- Backend Tests [44312833873](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44312833873): SUCCESS; **480 passed, 0 failed, 0 errors, 0 skipped**, 1 warning; deterministic preflight **7 passed, 0 failed, 0 inconclusive**. Diagnostic artifact [14431566122](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44312833873/artifacts/14431566122).
+- Frontend Build [44312833851](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44312833851): SUCCESS.
+- Patient Registry / Four-Round Dashboard Browser E2E [44312834121](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44312834121): SUCCESS.
+- Windows Packaging Prerequisites [44312833743](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44312833743): SUCCESS.
+- Windows Installer [44312833545](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44312833545): installer build/install/smoke SUCCESS; optional clean-hosted Ollama/model bootstrap SKIPPED.
+- Security and Dependency Audit [44312833728](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44312833728): FAILED only in the all-dependencies Node audit. Python dependency audit, production-only Node audit, JavaScript/TypeScript CodeQL, Python CodeQL and full-history secret scan succeeded. The full Node audit still reports four HIGH `picomatch` findings via the Vite development dependency chain; retain the security blocker. No downgrade, override, suppression or unreviewed fork was applied.
+
+No model inference, GPU verification, guideline verification or clinical validation occurred on this checkpoint.
+
+### Chair failed-duplicate contribution accounting — follow-up in progress
+
+Code review found that `_round_completion_disclosures` computed `completed_ids` but did not use it when classifying additional unusable rows. A role with both a valid completed contribution and a failed/malformed duplicate could therefore be incorrectly described as having **no usable completed contribution**. The helper now separates these cases: the valid contribution remains eligible, while the extra unusable row is disclosed separately. A focused regression test covers one role with a valid plus failed row and another role with only a failed row. This change is **IN PROGRESS** until the exact-commit backend CI passes; it does not change source rows or erase duplicate audit history.
+
+---
+
 # RadOnc MDT Simulator — Master Development and Verification Checklist
 
 ### Exact-head CI result — checklist commit e538081 — 18 November 2026
@@ -160,6 +180,7 @@ Historical checkpoints below are immutable evidence and do not override this tab
 | Cross-round minority-history regression | VERIFIED | New test `test_final_chair_boundary_retains_earlier_and_later_minority_histories` passed in backend run 44262841444; it verifies an earlier R1 minority remains visible alongside a different R3 minority. This is a deterministic regression test, not live-model acceptance. |
 | Chair consensus, distinct-role counting, dissent and traceability | FAILED | Deterministic counts exist, but v15 model-level consensus/dissent findings remain unresolved by live retest. |
 | Exact specialist-ID input gate | VERIFIED | Guard in `47dfa9d`; corrected regression in `8cde5dd`; exact regression-test-head backend run 44262841444 passed (473/473 pytest rows, re-counted from job logs). |
+| Chair mixed completed/failed duplicate-row accounting | IN PROGRESS | A valid completed contribution must remain eligible when another row for the same role failed or is malformed; a new regression separates the duplicate-row disclosure from the no-usable-contribution disclosure. Await exact-head backend CI. |
 | Missing/failed-agent handling | IN PROGRESS | Deterministic Chair report identifies failed/unusable rows by status and reports absent rows against the configured 45-role roster; failed records remain excluded from distinct-role counts. Regression passed in exact-head backend run [44303234900](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44303234900), including failed/absent-role disclosure in the primary Chair conclusion. Entirely absent upstream rows cannot be individually named without a complete roster in the Chair input. |
 | Clinical safety, staging and unknown data | IN PROGRESS | Deterministic safeguards exist; no clinical validation, guideline concordance or zero-hallucination guarantee. |
 | Case integrity, contradiction preservation and audit history | IN PROGRESS | Historical raw outputs retained. Three audit-v16 deterministic checks now cover the three manual false negatives recorded from v16/audit-v15. Exact regression tests passed, but there is no live audit-v16 model rerun; raw case and audit history remain preserved. |

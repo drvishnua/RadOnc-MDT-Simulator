@@ -5,6 +5,7 @@ from app.services.chair_report_quality import (
     build_recorded_agreements,
     build_source_opinion_review_coverage,
     ensure_chair_report_completeness,
+    _round_completion_disclosures,
     validate_consensus_points,
 )
 
@@ -33,6 +34,37 @@ def _rows(field: str, positions: list[str], *, unknowns: bool = True) -> list[di
             field: payload,
         })
     return rows
+
+
+def test_failed_duplicate_row_does_not_hide_a_usable_completed_role_contribution():
+    rows = [
+        {
+            "agent_id": "RO-01",
+            "status": "completed",
+            "assessment": {"position": "supports"},
+        },
+        {
+            "agent_id": "RO-01",
+            "status": "failed",
+            "assessment": None,
+        },
+        {
+            "agent_id": "MO-01",
+            "status": "failed",
+            "assessment": None,
+        },
+    ]
+
+    disclosures = _round_completion_disclosures(rows, "assessment", 1)
+    no_usable = [item for item in disclosures if "no usable completed" in item]
+    duplicate_rows = [item for item in disclosures if "additional non-usable row" in item]
+
+    assert len(no_usable) == 1
+    assert "MO-01" in no_usable[0]
+    assert "RO-01" not in no_usable[0]
+    assert len(duplicate_rows) == 1
+    assert "RO-01" in duplicate_rows[0]
+    assert "completed contribution remains eligible" in duplicate_rows[0]
 
 
 def _empty_report() -> FinalMDTReport:
