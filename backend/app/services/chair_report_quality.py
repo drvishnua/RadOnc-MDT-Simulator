@@ -43,6 +43,69 @@ def _entries(rows: list[dict], field: str) -> list[tuple[dict, dict]]:
         if row.get("status") == "completed" and isinstance(row.get(field), dict)
     ]
 
+EXPECTED_MDT_ROLE_COUNT = 45
+
+
+def _round_completion_disclosures(
+    rows: list[dict], field: str, round_number: int
+) -> list[str]:
+    """Describe missing/failed role rows without treating absent rows as completed."""
+    role_ids = {
+        str(row.get("agent_id") or "").strip().upper()
+        for row in rows
+        if str(row.get("agent_id") or "").strip()
+    }
+    completed_ids = {
+        str(row.get("agent_id") or "").strip().upper()
+        for row, _ in _entries(rows, field)
+        if str(row.get("agent_id") or "").strip()
+    }
+    noncompleted_by_status: dict[str, list[str]] = defaultdict(list)
+    unidentified_noncompleted = 0
+    for row in rows:
+        if row.get("status") == "completed" and isinstance(row.get(field), dict):
+            continue
+        status = str(row.get("status") or "missing_status").strip().casefold()
+        role_id = str(row.get("agent_id") or "").strip().upper()
+        if role_id:
+            noncompleted_by_status[status].append(role_id)
+        else:
+            unidentified_noncompleted += 1
+
+    disclosures: list[str] = []
+    if len(role_ids) < EXPECTED_MDT_ROLE_COUNT:
+        disclosures.append(
+            f"Round {round_number}: the Chair input contains {len(role_ids)} distinct identified "
+            f"role rows of {EXPECTED_MDT_ROLE_COUNT} configured roles. At least "
+            f"{EXPECTED_MDT_ROLE_COUNT - len(role_ids)} role row(s) are absent from the supplied "
+            "input; their identities and contribution status cannot be inferred."
+        )
+    for status, identifiers in sorted(noncompleted_by_status.items()):
+        unique_ids = sorted(set(identifiers))
+        shown = ", ".join(unique_ids[:12])
+        suffix = f", and {len(unique_ids) - 12} more" if len(unique_ids) > 12 else ""
+        disclosures.append(
+            f"Round {round_number}: {len(unique_ids)} distinct role(s) have no usable completed "
+            f"{field} contribution (status {status}): {shown}{suffix}. These roles were excluded "
+            "from position counts and synthesis."
+        )
+    if unidentified_noncompleted:
+        disclosures.append(
+            f"Round {round_number}: {unidentified_noncompleted} non-completed role row(s) lack "
+            "an agent_id and cannot be attributed."
+        )
+    # A completed payload without a stable identifier cannot be included in distinct-role counts.
+    unidentified_completed = sum(
+        1 for row, _ in _entries(rows, field)
+        if not str(row.get("agent_id") or "").strip()
+    )
+    if unidentified_completed:
+        disclosures.append(
+            f"Round {round_number}: {unidentified_completed} completed {field} row(s) lack "
+            "an agent_id and were excluded from distinct-role summaries."
+        )
+    return disclosures
+
 
 def _unique(values: list[str], limit: int) -> list[str]:
     result: list[str] = []
@@ -943,6 +1006,16 @@ def ensure_chair_report_completeness(
     r3_challenge_disclosure = [] if saved_round3_challenge_count else [
         "No Round-3 role saved a substantive_challenges entry; this is a report of the saved records, not evidence that no risks or defects exist."
     ]
+    completion_disclosures = [
+        disclosure
+        for round_number, rows, field in (
+            (1, round1_rows, "assessment"),
+            (2, round2_rows, "result"),
+            (3, round3_rows, "result"),
+        )
+        for disclosure in _round_completion_disclosures(rows, field, round_number)
+    ]
+    quarantine_flags.extend(completion_disclosures)
     proposition_consensus_note = (
         "No proposition-level consensus is established by free-text agreement notes; "
         "position labels and repeated wording are not counted as votes."
@@ -950,6 +1023,7 @@ def ensure_chair_report_completeness(
     data["unresolved_disagreements"] = _unique(
         [
             position_note,
+            *completion_disclosures,
             *r3_challenge_disclosure,
             proposition_consensus_note,
             *saved_challenge_items,
