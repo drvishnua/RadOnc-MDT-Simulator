@@ -1,3 +1,19 @@
+### Exact-head CI refresh — checklist/security triage commit b21f89f — 18 November 2026
+
+**PR head at this verification:** `b21f89fdcb0b070ba2a2f3f6d07f5dbbd3c8acd7`, a documentation-only descendant updating this checklist. PR #1 remains open/draft/unmerged and targets `main`; base SHA `39a356b8eb09399aa2da1b9b9085965999f5105a` is unchanged. Latest application/test code remains `fbea522b4f1371d8bb82b202a48c178833c10735`.
+
+All six workflows associated with exact documentation head `b21f89f` completed:
+- Backend Tests [44318896553](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44318896553): SUCCESS; **482 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive**, 1 warning; deterministic no-inference preflight **7 passed, 0 failed, 0 inconclusive**. JUnit diagnostics artifact [14434610361](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44318896553/artifacts/14434610361), digest `sha256:c37f841341165ba9ebc830981124a378d8f8ebe0c5ac3dd24bad31bf90ca39e7`; preflight artifact [14433663425](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44318896553/artifacts/14433663425), digest `sha256:49c6089feab205260e9a4331d37fa4faaeb51e9052fa1ca67a3cbff9ef118512`.
+- Frontend Build [44318896446](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44318896446): SUCCESS.
+- Patient Registry / Four-Round Dashboard Browser E2E [44318896407](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44318896407): SUCCESS.
+- Windows Packaging Prerequisites [44318896375](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44318896375): SUCCESS.
+- Windows Installer [44318896382](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44318896382): SUCCESS; build/install/smoke/checksum/upload succeeded. Artifact [14434625169](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44318896382/artifacts/14434625169), digest `sha256:f974c790b1aec160d1c85dbc7f31edf7f32fffc1128df9eb58055f5951bd96d5`. Clean-hosted Ollama/model bootstrap SKIPPED; no model inference.
+- Security and Dependency Audit [44318896490](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44318896490): FAILED only in full Node dependency audit. Python dependency audit found no known vulnerabilities; production-only npm audit found 0 vulnerabilities; JavaScript/TypeScript CodeQL, Python CodeQL and full-history secret scan succeeded. Full Node audit again reports four HIGH `picomatch` findings (GHSA-fc5q-39xc-vjpf); the published advisory still has no patched version.
+
+The detailed dependency reachability review and upstream advisory/candidate assessment immediately below this checkpoint remain current. No risk acceptance or renewed Qwen/MedGemma authorisation was created.
+
+---
+
 ### Latest branch-tip CI and security triage — PR head 4f034f7 — 18 November 2026
 
 **Current PR #1 head:** `4f034f73e45019fd19428ce8698da933ae059190`; documentation-only commit `docs: record current PR-head CI and security status`. Development branch `feature/four-round-mdt-and-performance`; PR remains open, draft and unmerged, targeting `main`. PR base SHA remains `39a356b8eb09399aa2da1b9b9085965999f5105a`. No changes to `main`.
