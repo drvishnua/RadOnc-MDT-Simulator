@@ -3,6 +3,7 @@ from app.schemas import SyntheticCase
 from app.services.chair_report_quality import (
     SECTION_LIMITS,
     build_recorded_agreements,
+    build_source_opinion_position_summary,
     build_source_opinion_review_coverage,
     ensure_chair_report_completeness,
     _round_completion_disclosures,
@@ -915,6 +916,143 @@ def test_final_chair_rebuilds_source_opinion_coverage_from_saved_r3_reviews():
     assert "Round 3 source-reference detail (1 distinct role(s): RO-03)" in flags
     assert "Round 2 source-reference detail (1 distinct role(s): RO-01)" in flags
     assert "unanimously" not in unresolved.casefold()
+
+
+
+
+def test_source_opinion_position_summary_keeps_each_server_identified_opinion_separate():
+    case_summary = (
+        "The surgical note recommends a surgery-led assessment first, conditional on complete local staging. "
+        "The medical oncology note favours discussing a preoperative multimodality sequence, conditional on MRI staging and fitness assessment."
+    )
+    from app.services.case_integrity import extract_attributed_note_opinions
+    register = extract_attributed_note_opinions(case_summary)
+    assert [item["source_id"] for item in register] == [
+        "CASE:case_summary#1",
+        "CASE:case_summary#2",
+    ]
+
+    def make_row(role_id, responses):
+        return {
+            "agent_id": role_id,
+            "agent_name": role_id,
+            "status": "completed",
+            "result": {"source_opinion_responses": responses},
+        }
+
+    def response(source, position):
+        return {
+            "source_id": source["source_id"],
+            "source_excerpt": source["source_excerpt"],
+            "position_on_source_opinion": position,
+        }
+
+    rows = [
+        make_row("RO-01", [
+            response(register[0], "supports"),
+            response(register[1], "conditional"),
+        ]),
+        make_row("MO-01", [
+            response(register[0], "opposes"),
+            response(register[1], "supports"),
+        ]),
+        make_row("SO-01", [
+            response(register[0], "conditional"),
+        ]),
+    ]
+
+    summary, flags = build_source_opinion_position_summary(rows, case_summary)
+    first = next(item for item in summary if "CASE:case_summary#1" in item)
+    second = next(item for item in summary if "CASE:case_summary#2" in item)
+
+    assert "supports 1 [RO-01]" in first
+    assert "opposes 1 [MO-01]" in first
+    assert "conditional 1 [SO-01]" in first
+    assert "no response 0 [none]" in first
+    assert "conditional 1 [RO-01]" in second
+    assert "supports 1 [MO-01]" in second
+    assert "no response 1 [SO-01]" in second
+    assert "not a vote, verified clinical finding, or consensus" in first
+    assert flags == []
+
+
+def test_source_opinion_position_summary_excludes_duplicate_unbound_and_missing_positions():
+    case_summary = (
+        "The surgical note recommends a surgery-led assessment first, conditional on complete local staging."
+    )
+    from app.services.case_integrity import extract_attributed_note_opinions
+    source = extract_attributed_note_opinions(case_summary)[0]
+
+    rows = [
+        {
+            "agent_id": "RO-01",
+            "status": "completed",
+            "result": {
+                "source_opinion_responses": [
+                    {
+                        "source_id": source["source_id"],
+                        "source_excerpt": source["source_excerpt"],
+                        "position_on_source_opinion": "supports",
+                    },
+                    {
+                        "source_id": source["source_id"],
+                        "source_excerpt": source["source_excerpt"],
+                        "position_on_source_opinion": "opposes",
+                    },
+                ]
+            },
+        },
+        {
+            "agent_id": "MO-01",
+            "status": "completed",
+            "result": {
+                "source_opinion_responses": [
+                    {
+                        "source_id": source["source_id"],
+                        "source_excerpt": "not the exact server-bound excerpt",
+                        "position_on_source_opinion": "supports",
+                    }
+                ]
+            },
+        },
+        {
+            "agent_id": "SO-01",
+            "status": "completed",
+            "result": {
+                "source_opinion_responses": [
+                    {
+                        "source_id": source["source_id"],
+                        "source_excerpt": source["source_excerpt"],
+                    }
+                ]
+            },
+        },
+        {
+            "agent_id": "DS-01",
+            "status": "completed",
+            "result": {
+                "source_opinion_responses": [
+                    {
+                        "source_id": "CASE:case_summary#99",
+                        "source_excerpt": "unregistered excerpt",
+                        "position_on_source_opinion": "supports",
+                    }
+                ]
+            },
+        },
+    ]
+
+    summary, flags = build_source_opinion_position_summary(rows, case_summary)
+    line = summary[0]
+
+    assert "supports 0 [none]" in line
+    assert "opposes 0 [none]" in line
+    assert "ambiguous duplicate response 1 [RO-01]" in line
+    assert "invalid excerpt binding 1 [MO-01]" in line
+    assert "position not reported 1 [SO-01]" in line
+    assert any("unregistered source-opinion ID CASE:case_summary#99" in item for item in flags)
+    assert any("no valid position_on_source_opinion" in item for item in flags)
+
 
 def test_recorded_agreements_quarantine_overbroad_claims_and_unsupplied_sources():
     rows = [{

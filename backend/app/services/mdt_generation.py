@@ -1602,6 +1602,12 @@ async def generate_debate_contribution(
         "describe different prerequisites as identical unless the source text explicitly says so. "
         "For EACH server-identified attributed opinion listed in the dedicated register below, return exactly "
         "one item in the required source_opinion_responses array using that exact CASE source ID. "
+        "Also set position_on_source_opinion for that exact opinion: supports, opposes, conditional, or "
+        "insufficient_information. This is your role's reported stance on that one attributed opinion, "
+        "not the source author's stance, your overall round position, an endorsement, or a vote. Use "
+        "conditional when your view depends on prerequisites and name those prerequisites in analysis; "
+        "do not imply they are fulfilled. Use insufficient_information when you cannot state a defensible "
+        "stance. Do not transfer a stance between different CASE source IDs. "
         "In its analysis, name the distinct option and every stated prerequisite/condition; in comparison, "
         "compare it with your own R1 position and the selected peer R1 records. Do not replace an "
         "option with generic uncertainty about missing data. "
@@ -1704,10 +1710,14 @@ async def generate_debate_contribution(
             "the actual selected R1 peer records are included below. For each opinion, name its "
             "distinct educational option and every prerequisite exactly enough to preserve the "
             "source meaning. Explain how it relates to your own R1 position and the supplied peer "
-            "R1 positions. Missing prerequisites remain unknown/not supplied, not unmet; do not "
-            "infer clinical appropriateness or endorse the source option. Do not invent peer "
-            "statements, facts, or treatment recommendations. Use only the source_id values in "
-            "MISSING REGISTER. Return only the schema fields source_id, analysis, and comparison.\n"
+            "R1 positions. Also report position_on_source_opinion for that exact source ID using "
+            "supports, opposes, conditional, or insufficient_information. This is your role-reported "
+            "stance, not an endorsement, vote, or clinical determination. Keep every prerequisite "
+            "explicit and unknown unless the case confirms it. Missing prerequisites remain unknown/"
+            "not supplied, not unmet; do not infer clinical appropriateness or endorse the source option. "
+            "Do not invent peer statements, facts, or treatment recommendations. Use only the source_id "
+            "values in MISSING REGISTER. Return only source_id, position_on_source_opinion, analysis, "
+            "and comparison.\n"
             f"ROLE: {profile['name']} ({profile['agent_id']})\n"
             "SUPPLIED CASE (source data, not verified findings):\n"
             + json.dumps(build_case_prompt_context(case), ensure_ascii=False, separators=(",", ":"))
@@ -1773,6 +1783,13 @@ async def generate_debate_contribution(
             continue
         source_id = str(response_item.get("source_id") or "")
         expected_excerpt = expected_source_opinions.get(source_id)
+        if response_item.get("position_on_source_opinion") not in {
+            "supports", "opposes", "conditional", "insufficient_information"
+        }:
+            source_opinion_response_flags.append(
+                f"R2 structured response for {source_id or '(missing source ID)'} "
+                "has no valid model-reported position_on_source_opinion; no stance was inferred."
+            )
         if expected_excerpt is None:
             source_opinion_response_flags.append(
                 f"R2 returned an unregistered attributed-opinion response ID: {source_id or '(missing)'}."

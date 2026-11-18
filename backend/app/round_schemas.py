@@ -39,6 +39,18 @@ class RoundContributionDraft(StrictModel):
 
 class Round2SourceOpinionResponseDraft(StrictModel):
     source_id: str = Field(min_length=8, max_length=100)
+    position_on_source_opinion: Literal[
+        "supports", "opposes", "conditional", "insufficient_information"
+    ] | None = Field(
+        default=None,
+        description=(
+            "The role's model-reported position on this exact server-identified attributed opinion. "
+            "This is not the original source author's position, an endorsement, a vote, or a clinical "
+            "determination. Use conditional when the role's view depends on prerequisites stated in "
+            "analysis; those prerequisites remain unknown unless the supplied case explicitly confirms them. "
+            "Use insufficient_information when no defensible stance can be stated."
+        ),
+    )
     analysis: str = Field(
         min_length=20,
         max_length=700,
@@ -260,6 +272,7 @@ class FinalMDTReport(StrictModel):
     consensus_points: list[str]
     recorded_agreements: list[str] = Field(default_factory=list, max_length=90)
     source_opinion_review_coverage: list[str] = Field(default_factory=list, max_length=15)
+    source_opinion_position_summary: list[str] = Field(default_factory=list, max_length=4)
     unresolved_disagreements: list[str]
     minority_and_dissenting_views: list[str]
     major_uncertainties: list[str]

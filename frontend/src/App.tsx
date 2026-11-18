@@ -301,6 +301,7 @@ type RoundAgentResult = {
     source_opinion_responses?: {
       source_id: string;
       source_excerpt: string;
+      position_on_source_opinion?: string | null;
       analysis: string;
       comparison: string;
     }[];
@@ -332,6 +333,7 @@ type FinalMDTReport = {
   consensus_points: string[];
   recorded_agreements?: string[];
   source_opinion_review_coverage?: string[];
+  source_opinion_position_summary?: string[];
   unresolved_disagreements: string[];
   minority_and_dissenting_views: string[];
   major_uncertainties: string[];
@@ -2272,6 +2274,7 @@ function App() {
                                             <div key={opinion.source_id + "-" + index}>
                                               <strong>{opinion.source_id}</strong>
                                               <p><em>Exact saved source excerpt:</em> {opinion.source_excerpt}</p>
+                                               <p><em>Model-reported position on this exact opinion:</em> {opinion.position_on_source_opinion ?? "not reported"}</p>
                                               <p><em>Role analysis:</em> {opinion.analysis}</p>
                                               <p><em>Comparison:</em> {opinion.comparison}</p>
                                             </div>
@@ -2323,6 +2326,7 @@ function App() {
                     {([
                       ["Proposition-level consensus", finalReport.consensus_points],
                       ["Recorded agreements · attributed, not consensus", finalReport.recorded_agreements ?? []],
+                      ["R2 positions on attributed source opinions · model-reported, not votes or consensus", finalReport.source_opinion_position_summary ?? []],
                       ["R3 source-opinion review coverage · distinct roles; representation only", finalReport.source_opinion_review_coverage ?? []],
                       ["Unresolved disagreements", finalReport.unresolved_disagreements],
                       ["Minority and dissenting views", finalReport.minority_and_dissenting_views],

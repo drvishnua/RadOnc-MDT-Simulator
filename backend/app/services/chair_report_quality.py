@@ -10,6 +10,7 @@ from app.schemas import SyntheticCase
 from app.services.case_integrity import (
     audit_unverified_case_claims,
     build_case_report_title,
+    extract_attributed_note_opinions,
     is_empty_challenge_placeholder,
 )
 
@@ -24,6 +25,7 @@ SECTION_LIMITS = {
     "consensus_points": 15,
     "recorded_agreements": 90,
     "source_opinion_review_coverage": 15,
+    "source_opinion_position_summary": 4,
     "unresolved_disagreements": 15,
     "minority_and_dissenting_views": 45,
     "major_uncertainties": 20,
@@ -764,6 +766,121 @@ def _merge_minority_views(
     return merged[:limit]
 
 
+def build_source_opinion_position_summary(
+    round2_rows: list[dict],
+    case_summary: str,
+) -> tuple[list[str], list[str]]:
+    """Summarise model-reported R2 stances against exact server-owned source opinions.
+
+    Source IDs/excerpts are server-derived. Model-reported position labels are never
+    used to set consensus_status or consensus_points.
+    """
+    source_register = extract_attributed_note_opinions(case_summary)
+    if not source_register:
+        return [], []
+
+    expected_by_id = {
+        str(item["source_id"]): str(item["source_excerpt"])
+        for item in source_register
+    }
+    integrity: list[str] = []
+    entries = _distinct_role_entries(round2_rows, "result", "Round 2", integrity)
+    grouped: dict[str, dict[str, list[dict]]] = defaultdict(lambda: defaultdict(list))
+    role_ids: list[str] = []
+
+    for row, payload in entries:
+        role_id = str(row.get("agent_id") or "").strip().upper()
+        if not role_id:
+            continue
+        role_ids.append(role_id)
+        raw_responses = payload.get("source_opinion_responses") or []
+        if not isinstance(raw_responses, (list, tuple)):
+            integrity.append(
+                f"R2 attributed source-opinion responses from {role_id} are not a list; excluded from the position summary."
+            )
+            continue
+        for response in raw_responses:
+            if not isinstance(response, dict):
+                integrity.append(
+                    f"R2 attributed source-opinion response from {role_id} is not a structured object; excluded."
+                )
+                continue
+            source_id = str(response.get("source_id") or "").strip()
+            if source_id not in expected_by_id:
+                integrity.append(
+                    f"R2 {role_id} returned an unregistered source-opinion ID "
+                    f"{source_id or '(missing)'}; it was excluded from the position summary."
+                )
+                continue
+            grouped[source_id][role_id].append(response)
+
+    positions = ("supports", "opposes", "conditional", "insufficient_information")
+    summary: list[str] = []
+    for source_id, source_excerpt in expected_by_id.items():
+        role_positions: dict[str, list[str]] = {position: [] for position in positions}
+        no_response: list[str] = []
+        position_not_reported: list[str] = []
+        ambiguous: list[str] = []
+        invalid_excerpt: list[str] = []
+
+        for role_id in sorted(set(role_ids)):
+            responses = grouped[source_id].get(role_id, [])
+            if not responses:
+                no_response.append(role_id)
+                continue
+            if len(responses) != 1:
+                ambiguous.append(role_id)
+                integrity.append(
+                    f"R2 {role_id} returned {len(responses)} records for {source_id}; "
+                    "the ambiguous source-opinion position was excluded."
+                )
+                continue
+            response = responses[0]
+            if response.get("source_excerpt") != source_excerpt:
+                invalid_excerpt.append(role_id)
+                integrity.append(
+                    f"R2 {role_id} source-opinion response {source_id} is not bound to "
+                    "the exact server-owned source excerpt; its position was excluded."
+                )
+                continue
+            position = response.get("position_on_source_opinion")
+            if position not in positions:
+                position_not_reported.append(role_id)
+                integrity.append(
+                    f"R2 {role_id} did not report a valid position_on_source_opinion "
+                    f"for {source_id}; no stance was inferred."
+                )
+                continue
+            role_positions[position].append(role_id)
+
+        excerpt = " ".join(source_excerpt.split())
+        if len(excerpt) > 220:
+            excerpt = excerpt[:219].rstrip() + "…"
+        position_parts = [
+            f"{position} {len(role_positions[position])} "
+            f"[{', '.join(role_positions[position]) if role_positions[position] else 'none'}]"
+            for position in positions
+        ]
+        summary.append(
+            "Round 2 position on attributed source opinion — model-reported role labels only; "
+            "not a vote, verified clinical finding, or consensus. "
+            f"{source_id} (exact server-bound excerpt: “{excerpt}”): "
+            + "; ".join(position_parts)
+            + f"; no response {len(no_response)} "
+            f"[{', '.join(no_response) if no_response else 'none'}]"
+            + f"; position not reported {len(position_not_reported)} "
+            f"[{', '.join(position_not_reported) if position_not_reported else 'none'}]"
+            + f"; ambiguous duplicate response {len(ambiguous)} "
+            f"[{', '.join(ambiguous) if ambiguous else 'none'}]"
+            + f"; invalid excerpt binding {len(invalid_excerpt)} "
+            f"[{', '.join(invalid_excerpt) if invalid_excerpt else 'none'}]."
+        )
+
+    return _unique(summary, SECTION_LIMITS["source_opinion_position_summary"]), _unique(
+        integrity, 45
+    )
+
+
 def build_recorded_agreements(
     round2_rows: list[dict],
     round3_rows: list[dict],
@@ -1045,6 +1162,16 @@ def ensure_chair_report_completeness(
         round3_rows,
         case=case,
         integrity_flags=quarantine_flags,
+    )
+
+    # Rebuild R2 stances against each exact server-owned attributed source opinion.
+    # These are model-reported role positions, not votes or consensus.
+    position_summary, position_integrity = build_source_opinion_position_summary(
+        round2_rows, case.case_summary
+    )
+    quarantine_flags.extend(position_integrity)
+    data["source_opinion_position_summary"] = _unique(
+        position_summary, SECTION_LIMITS["source_opinion_position_summary"]
     )
 
     # Rebuild source-opinion review coverage from the saved R3 role records at
