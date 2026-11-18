@@ -344,7 +344,7 @@ def test_audit_v16_flags_r3_synthetic_input_json_echo():
     assert any("R3 synthetic-input echo" in item for item in findings)
 
     nested_echo = {"review": {"payload": {"synthetic_input": case["input"]}}}
-    fenced_response = " ```json\\n" + json.dumps(nested_echo) + "\\n``` "
+    fenced_response = " ```json\n" + json.dumps(nested_echo) + "\n``` "
     fenced_output = _valid_model_output(case, fenced_response)
     assert any(
         "R3 synthetic-input echo" in item
