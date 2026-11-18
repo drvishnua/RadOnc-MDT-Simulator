@@ -1,11 +1,21 @@
 # RadOnc MDT Simulator — Master Development and Verification Checklist
 
-**Current status as of 18 November 2026. This is the single authoritative checklist.** Historical checkpoints below are immutable evidence and do not override this table.
+**Current status as of 18 November 2026. This is the single authoritative checklist.**
+
+### Latest deterministic R2/R4 patch — 18 November 2026
+
+- Development branch head: `65a573affcb6af8ccb98a163e2c17ebb191df2bd`; PR #1 remains open/draft/unmerged and `main` is unchanged.
+- `442b4ab28290057f4e2a2a5727905dd54b8186eb`: Chair finalizer now reports failed/unusable role rows and missing role rows against the configured 45-role input, without counting failed records.
+- `5cf470855886c992bdad7011054b7ab0cc7e26b0`: Chair R4 prompt digest now carries the saved R2 debate narrative and fuller server-bound source excerpt, analysis and comparison. This addresses truncation in the Chair input; it does not validate the semantic correctness of the R2 prose.
+- `2269d80dbcf0b1046bc66ed521721b4db79f0245`: regression for failed and absent role rows.
+- `65a573affcb6af8ccb98a163e2c17ebb191df2bd`: regression for full saved R2 source opinion/condition retention in the Chair prompt.
+- Test execution and CI on this exact head are **PENDING**. No live Qwen/MedGemma inference was run; no GPU verification or clinical validation was performed.
+ Historical checkpoints below are immutable evidence and do not override this table.
 
 **Repository:** `drvishnua/RadOnc-MDT-Simulator`  
 **Development branch:** `feature/four-round-mdt-and-performance`  
 **PR #1:** open, draft, unmerged; base `main`.  
-**PR head verified immediately before this checklist refresh:** `1c8a22b435e047f6524b9172ae3663d40a9d127c`.  
+**PR head verified immediately before this checklist refresh:** `65a573affcb6af8ccb98a163e2c17ebb191df2bd`. **Exact-head CI for this new patch is pending.**  
 **Latest application code commit:** `2e46a1bd781c6a5e0e8f5ca2230d36e9cf5cb749` (audit-v16 logic with corrected regex escaping).  
 **Latest backend regression-test commit:** `c1fb981e648b76429bc29403cd2febcf5e4739d0` (three audit-v16 false-negative regressions plus corrected positive R1 contradiction fixture).  
 **Latest frontend provenance-visibility commit:** `afbe6af6ffbc463ad92457e5179545c92b55b398`; E2E selector corrections in `198c8be7dfa203fba51eec99f9a2151738dabc12` and `1e8d3559dc12e7aa1b7599f9bd076b3873f4e88b`.  
@@ -21,17 +31,17 @@
 | R1 independent specialist assessments | VERIFIED | Round implementation and saved contribution flow covered by backend tests; live model quality remains unverified. |
 | R1 unknown/staging safeguards | IN PROGRESS | The audit-v16 deterministic checks now flag denial of the supplied diagnosis-field fact and omission of opposing Source A / Source B laterality statements. Exact tests passed in run 44267217866. No live audit-v16 screen has been run; the original R1 findings remain part of the audit-v15 historical result. |
 | R2 saved-source identity and exact ordering | VERIFIED | Exact specialist-ID gate checks saved R1 records before R2, R2 before R3, and R3 before Chair R4. |
-| R2 proposition-level consensus and conditionality | FAILED | v15 failures remain. In v16, R2-PARTIAL-AGREEMENT-006 omitted source IDs from the narrative despite correct structured ledger; R2-CONDITIONALITY-007 omitted Option A, prerequisite X and unknown status from the narrative. Both were automatically flagged. R2-FALSE-CONSENSUS-005 kept distinct conditional options separate. |
+| R2 proposition-level consensus and conditionality | IN PROGRESS | Historical v16 narrative failures remain unresolved at model level. Deterministic Chair prompt now retains saved R2 response narrative plus longer server-bound source excerpts, analysis and comparisons rather than truncating them to 180/240/160 characters (commit `5cf4708`). Regression added; exact-head CI pending. This does not prove model-authored R2 prose is correct. |
 | R3 adversarial review and source provenance | IN PROGRESS | Audit-v16 flags a JSON response containing the synthetic_input field; regression test passed in backend run 44267217866. This is a narrow output-echo check, not comprehensive R3 model validation. R3-FABRICATED-QUOTE-009 rejected the unsupported quote in the historical audit-v15 screen. |
-| R4 Chair synthesis from actual saved R1–R3 | FAILED | v15 failures remain. In v16, R4-MISSING-AGENT-011 omitted exact completeness details from the main response (they appeared only in a separate coverage_statement); R4-CHAIR-TRACEABILITY-012 returned only INSUFFICIENT SAVED CONTRIBUTIONS TO DETERMINE despite supplied R1–R3 text, omitting Chair synthesis and unresolved-source traceability. Both cases were automatically flagged. |
+| R4 Chair synthesis from actual saved R1–R3 | IN PROGRESS | Historical v16 synthesis/traceability failures remain unresolved at model level. Deterministic finalizer now discloses failed role rows and role rows absent from the supplied 45-role input, and excludes failed rows from counts; regression added in `442b4ab`/`226d80d`. Chair prompt now receives fuller saved R2 source-opinion content (`5cf4708`); prompt regression added in `65a573a`. Exact-head CI pending. This is not a live-model retest. |
 | Cross-round minority-history regression | VERIFIED | New test `test_final_chair_boundary_retains_earlier_and_later_minority_histories` passed in backend run 44262841444; it verifies an earlier R1 minority remains visible alongside a different R3 minority. This is a deterministic regression test, not live-model acceptance. |
 | Chair consensus, distinct-role counting, dissent and traceability | FAILED | Deterministic counts exist, but v15 model-level consensus/dissent findings remain unresolved by live retest. |
 | Exact specialist-ID input gate | VERIFIED | Guard in `47dfa9d`; corrected regression in `8cde5dd`; exact regression-test-head backend run 44262841444 passed (473/473 pytest rows, re-counted from job logs). |
-| Missing/failed-agent handling | FAILED | Orchestration rejects incomplete predecessor-round records; model-level missing-agent behaviour still requires live verification. |
+| Missing/failed-agent handling | IN PROGRESS | Deterministic Chair report now identifies failed/unusable rows by status and reports absent rows against the configured 45-role roster; failed records remain excluded from distinct-role counts. Regression added; exact-head CI pending. Entirely absent upstream rows cannot be individually named without a complete roster in the Chair input. |
 | Clinical safety, staging and unknown data | IN PROGRESS | Deterministic safeguards exist; no clinical validation, guideline concordance or zero-hallucination guarantee. |
 | Case integrity, contradiction preservation and audit history | IN PROGRESS | Historical raw outputs retained. Three audit-v16 deterministic checks now cover the three manual false negatives recorded from v16/audit-v15. Exact regression tests passed, but there is no live audit-v16 model rerun; raw case and audit history remain preserved. |
 | Provenance and guideline/evidence retrieval | IN PROGRESS | Source-bound controls exist; current guideline retrieval/verification incomplete. |
-| Backend tests — exact source-bound fixture head `1c8a22b` | VERIFIED | Exact-head backend run [44289875570](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44289875570): raw job logs confirm 476/476 pytest rows passed, 0 failed/errors/skips. The dashboard fixture compiles and the backend suite passes. |
+| Backend tests — prior source-bound fixture head `1c8a22b` | VERIFIED | Exact-head backend run [44289875570](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44289875570): raw job logs confirm 476/476 pytest rows passed, 0 failed/errors/skips. New R2/R4 regressions are on `65a573a`; exact-head CI is pending. |
 | Frontend unit/build checks | VERIFIED | Exact source-bound fixture head Frontend Build [44289875433](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44289875433) succeeded. |
 | Patient Registry / four-round Dashboard browser E2E | VERIFIED | Exact source-bound fixture head Browser E2E [44289875520](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44289875520) succeeded. Headless Edge verified the seeded 45-role R1/R2/R3 and R4 report, provenance displays, and patient registry; no model inference was invoked. |
 | R2/R3 provenance warnings and source-opinion visibility in role detail cards | VERIFIED | Frontend commit `afbe6af6ffbc463ad92457e5179545c92b55b398` renders saved `source_reference_integrity_flags`, server-bound R2 `source_opinion_responses`, and R3 `source_opinion_reviews` beside each original role response. The disposable fixture correction `1c8a22b` embeds the exact source excerpt in `case_summary`; browser assertions passed in exact-head run [44289875520](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44289875520). Visibility only; live model correctness and semantic interpretation remain unverified. |
