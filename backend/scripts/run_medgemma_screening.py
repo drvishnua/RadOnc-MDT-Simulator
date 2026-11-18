@@ -1647,7 +1647,13 @@ def audit_screen_response(case: dict[str, Any], response: Any) -> list[str]:
         # consult other cases or infer identifiers from model output.
         inventory = case_local_identifier_inventory(case.get("input") or {})
         supplied_ids = set(inventory["explicitly_supplied_source_ids"])
-        invalid_statuses = {"deliberately_unsupplied", "unsupplied", "malformed", "invalid"}
+        invalid_statuses = {
+            "deliberately_unsupplied",
+            "unsupplied",
+            "malformed",
+            "invalid",
+            "malformed_reference_text_verbatim",
+        }
         # The prose/JSON response must not contradict the separately validated
         # structured inventory. A supplied ID cannot be relabelled as unsupplied
         # or malformed in the response string.
