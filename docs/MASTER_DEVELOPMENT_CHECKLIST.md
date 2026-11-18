@@ -5,11 +5,11 @@
 **Repository:** `drvishnua/RadOnc-MDT-Simulator`  
 **Development branch:** `feature/four-round-mdt-and-performance`  
 **PR #1:** open, draft, unmerged; base `main`.  
-**Current PR head:** `94d0fc5beb6141850aae0c3c3921e07ca6beef63`. The workflow-trigger commit is `77d8969956cabaa9e83224180f954653b57039bb`.  
+**PR head verified immediately before this checklist refresh:** `e75616a3c24fa330e9fbc624340b64862afc6fce`.  
 **Latest application code commit:** `8cde5dd847d1c656e195ac9239f39fb75b51691f`.  
 **Latest regression-test commit:** `a8863f9caa28479599d9b9f10722d2afafa29bb0` (adds a cross-round Chair minority-history regression; no application code changed).  
 **Main:** `39a356b8eb09399aa2da1b9b9085965999f5105a`; unchanged.  
-**Current checklist update:** records temporary development-only risk acceptance for one Qwen-only screen. Workflow commit `77d8969956cabaa9e83224180f954653b57039bb` modifies only a workflow comment and uses the existing `[model-integrity-screen]` push trigger; no application code, dependency resolution, or audit suppression changed. A workflow run ID is not yet independently visible in the available run lookup.
+**Current checklist update:** the approved workflow trigger commit `77d8969956cabaa9e83224180f954653b57039bb` has started Synthetic Model Integrity Screening run [44263369594](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44263369594) (#79, push event). Job `134661859308` is IN PROGRESS at the combined isolated Ollama provisioning/model-screen step; the MedGemma pre-provision guard was skipped and no screening artifact has been uploaded yet. Model inference start is not independently confirmed because live job logs are not yet retrievable. The trigger commit changes only a workflow comment; no application code, dependency resolution, or audit suppression changed.
 
 ## Master Checklist — Current Status
 
@@ -24,12 +24,12 @@
 | R4 Chair synthesis from actual saved R1–R3 | FAILED | v15 live screen exposed source echo and reconciliation issues; no corrective live retest yet. |
 | Cross-round minority-history regression | VERIFIED | New test `test_final_chair_boundary_retains_earlier_and_later_minority_histories` passed in backend run 44262841444; it verifies an earlier R1 minority remains visible alongside a different R3 minority. This is a deterministic regression test, not live-model acceptance. |
 | Chair consensus, distinct-role counting, dissent and traceability | FAILED | Deterministic counts exist, but v15 model-level consensus/dissent findings remain unresolved by live retest. |
-| Exact specialist-ID input gate | VERIFIED | Guard in `47dfa9d`; corrected regression in `8cde5dd`; exact regression-test-head backend run 44262841444 passed (480/480 rows). |
+| Exact specialist-ID input gate | VERIFIED | Guard in `47dfa9d`; corrected regression in `8cde5dd`; exact regression-test-head backend run 44262841444 passed (473/473 pytest rows, re-counted from job logs). |
 | Missing/failed-agent handling | FAILED | Orchestration rejects incomplete predecessor-round records; model-level missing-agent behaviour still requires live verification. |
 | Clinical safety, staging and unknown data | IN PROGRESS | Deterministic safeguards exist; no clinical validation, guideline concordance or zero-hallucination guarantee. |
 | Case integrity, contradiction preservation and audit history | IN PROGRESS | Historical failed outputs retained; full live audit integrity and contradiction behaviour not yet accepted. |
 | Provenance and guideline/evidence retrieval | IN PROGRESS | Source-bound controls exist; current guideline retrieval/verification incomplete. |
-| Backend tests — regression-test commit `a8863f9` | VERIFIED | Exact-head PR workflow 44262841444 succeeded; 480 recorded pytest rows passed, 0 failed; artifact [14409301267](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44262841444/artifacts/14409301267). |
+| Backend tests — regression-test commit `a8863f9` | VERIFIED | Exact-head PR workflow 44262841444 succeeded; 473 recorded pytest rows passed, 0 failed, 0 errors or skips; cross-round minority-history regression passed. The prior checklist figure of 480 was an overcount; raw job logs were re-counted. Artifact [14409301267](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44262841444/artifacts/14409301267). |
 | Frontend unit/build checks | VERIFIED | Frontend Build workflow 44262841436 succeeded. |
 | Patient Registry / four-round Dashboard browser E2E | VERIFIED | Browser E2E workflow 44262841821 succeeded; registry, Mission Control, Development Monitor and four-round dashboard checks passed; artifact [14409580293](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44262841821/artifacts/14409580293). |
 | Mission Control / Development Monitor dashboard | VERIFIED | Latest browser E2E 44262841821 passed registry, Mission Control, Development Monitor and four-round dashboard checks; dedicated refresh/error-resilience edge cases were also covered in run 44257129743. |
@@ -39,7 +39,7 @@
 | RTX 4060 request-time GPU inference | NOT STARTED | No current local request-time `nvidia-smi` and Ollama offload evidence. |
 | Hosted v9–v15 model screens | FAILED | Historical bounded runs retain integrity failures; failures are preserved. |
 | v16/audit-v15 code/schema/audit regression suite | VERIFIED | Backend regression suite passes; this is not a live-model result. |
-| v16/audit-v15 live model screen | IN PROGRESS | User authorised one temporary development-only risk acceptance on 18 Nov 2026. Workflow commit `77d8969956cabaa9e83224180f954653b57039bb` requests the existing Qwen-only push trigger; MedGemma is not requested. Actual run ID/start is not yet verified from available run lookup; do not claim inference has begun until a run is located. |
+| v16/audit-v15 live model screen | IN PROGRESS | One-run temporary development-only risk acceptance was authorised on 18 Nov 2026. Push-triggered run [44263369594](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44263369594) (#79) is IN PROGRESS on trigger SHA `77d8969956cabaa9e83224180f954653b57039bb`; job `134661859308` is at the combined isolated Ollama provisioning/model-screen step. The MedGemma guard step was skipped. No artifact is published and model inference start is not yet independently confirmed. No second run is authorised without a fresh risk review. |
 | Qwen exact-version gate before MedGemma | VERIFIED | Workflow requires exact Qwen prompt/audit/script manifest checks before MedGemma pull. |
 | Fresh full 45-role R1–R4 live validation | NOT STARTED | No current fresh full run accepted. |
 | MedGemma HAI-DEF terms acceptance | VERIFIED | Prior explicit acceptance is recorded; this is not model validation. |
@@ -57,6 +57,19 @@
 | Dependency advisory applicability and risk disposition | IN PROGRESS | User authorised a single temporary development-only exception on 18 Nov 2026 solely to permit one bounded Qwen v16/audit-v15 synthetic screen. npm audit remains FAILED and unsuppressed; no dependency changes, production use, MedGemma pull, further screening run or release clearance is authorised by this exception. Reassess after this one run. The advisory remains disputed: Snyk reports revocation while GitHub still lists it unreviewed/high and NVD awaits enrichment. |
 | Release acceptance | BLOCKED | Temporary one-run development exception does not clear the Node audit. R2/R4 live failures, full 45-role run, GPU, evidence retrieval and independent clinical review remain outstanding. |
 
+## Latest PR-head CI — PR head `e75616a3c24fa330e9fbc624340b64862afc6fce` (18 November 2026)
+
+All six standard PR workflow records were checked against this exact head. Five completed successfully; the security workflow is queued and has no completed jobs yet.
+
+- Backend Tests [44263477537](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44263477537): SUCCESS; raw job-log recount **473/473 pytest rows passed**, 0 failed, 0 errors and 0 skips. The cross-round minority-history regression is included and passed. JUnit artifact [14409715687](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44263477537/artifacts/14409715687); preflight artifact [14409785131](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44263477537/artifacts/14409785131).
+- Frontend Build [44263476256](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44263476256): SUCCESS.
+- Patient Registry / Four-Round Dashboard Browser E2E [44263476208](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44263476208): SUCCESS.
+- Windows Packaging Prerequisites [44263476167](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44263476167): SUCCESS.
+- Windows Installer Build [44263476238](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44263476238): SUCCESS; install/smoke test and checksum/upload steps completed. The separate clean-hosted Ollama/model bootstrap job was SKIPPED, so this is not live inference evidence.
+- Security and Dependency Audit [44263476344](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44263476344): QUEUED at the latest inspection; no job result is available. The most recent completed security audit remains FAILED on run 44262841543 due to four HIGH transitive `picomatch@4.0.7` findings. The current queued run must complete before updating that disposition.
+
+This PR-head CI is software/build verification only. It does not prove model quality, clinical safety, guideline compliance, GPU inference or release readiness.
+
 ## Temporary development-only risk acceptance — 18 November 2026
 
 The project owner replied “Ok” to the explicit request for a temporary, documented exception for the disputed development-only transitive `picomatch` advisory. Scope is limited to **one** bounded Qwen v16/audit-v15 synthetic screening run on the isolated GitHub-hosted CPU runner at concurrency 1.
@@ -65,13 +78,13 @@ The project owner replied “Ok” to the explicit request for a temporary, docu
 - MedGemma is excluded. The workflow commit message contains `[model-integrity-screen]` only and does not contain the `[medgemma]` or `[hai-def-terms-accepted]` trigger markers.
 - This does not authorise production deployment, release, clinical use, GPU claims, additional model runs, or general acceptance of the dependency risk.
 - Reassess the advisory immediately after this single run. A further run requires a fresh explicit risk review.
-- Workflow trigger commit: `77d8969956cabaa9e83224180f954653b57039bb`. The existing push trigger is configured for this workflow path and commit marker. Available commit-run lookup returned no run yet; actual workflow run ID and inference start remain unverified.
+- Workflow trigger commit: `77d8969956cabaa9e83224180f954653b57039bb`. The existing push trigger is configured for this workflow path and commit marker. It started push-triggered run [44263369594](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44263369594) (#79). Job `134661859308` remains in progress at the combined isolated Ollama provisioning/model-screen step; the MedGemma guard was skipped; no artifact is available yet and model inference start remains unconfirmed.
 
 ## Latest exact-head CI — regression-test commit `a8863f9caa28479599d9b9f10722d2afafa29bb0`
 
 All six standard PR workflows completed. Five succeeded; the security workflow failed solely because the Node dependency audit failed.
 
-- Backend Tests [44262841444](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44262841444): SUCCESS; 480 recorded pytest rows passed, 0 failed. The new cross-round minority-history test is explicitly present and passed. Diagnostics artifact [14409301267](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44262841444/artifacts/14409301267).
+- Backend Tests [44262841444](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44262841444): SUCCESS; raw job-log recount confirms 473 pytest rows passed, 0 failed, 0 errors or skips. The cross-round minority-history test is explicitly present and passed. The previous 480-row figure was incorrect and is superseded by this recount. Diagnostics artifact [14409301267](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44262841444/artifacts/14409301267).
 - Frontend Build [44262841436](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44262841436): SUCCESS.
 - Patient Registry / Four-Round Dashboard Browser E2E [44262841821](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44262841821): SUCCESS; registry, Mission Control, Development Monitor and four-round dashboard checks passed. Artifact [14409580293](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44262841821/artifacts/14409580293).
 - Windows Packaging Prerequisites [44262841556](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44262841556): SUCCESS.
@@ -109,7 +122,7 @@ The screenshot's job ID `134652860736` is from backend workflow 44260641959. Its
 ## Next controlled actions
 
 1. Resolve the advisory disposition with an auditable decision based on the upstream maintainer dispute, Snyk revocation and current GitHub/NVD status. Keep the npm audit result visible until a defensible policy decision is recorded.
-2. Do not start Qwen v16 or MedGemma live inference while the security gate remains unresolved.
+2. No additional Qwen screen or any MedGemma live inference is authorised while the security gate remains unresolved. The one explicitly authorised Qwen v16 run is now run 44263369594; once it finishes, reassess the npm audit and advisory disposition. Any further model run requires a fresh explicit risk review.
 3. Continue deterministic R2/R4 integrity work only after inspecting the exact current implementation, existing tests and saved live-failure evidence; add narrow regression tests and preserve dissent/conditionality.
 4. After the security gate is resolved, rerun all CI on the exact new application commit, then perform bounded Qwen live corrective validation at concurrency 1.
 5. Only after bounded corrective acceptance, plan the fresh full 45-role R1–R4 run and inspect all saved round records, Chair traceability and audit hashes.
