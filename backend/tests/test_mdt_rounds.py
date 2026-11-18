@@ -4038,5 +4038,5 @@ def test_r2_saved_narrative_appends_verbatim_server_bound_option_and_prerequisit
     assert "not specialist-authored conclusions, verified facts, or endorsements" in (
         result.response_to_other_perspectives
     )
-    assert result.source_opinion_responses[0].source_excerpt == source_opinion
+    assert result.source_opinion_responses[0].source_excerpt == source_opinion + "."
     assert result.case_data_integrity_flags == []
