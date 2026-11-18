@@ -220,7 +220,7 @@ jobs:
               throw "Qwen JSONL screening-script digest does not match the checked-out script."
             }
             $expectedPromptVersion = "radonc-mdt-integrity-screen-v16"
-            $expectedAuditVersion = "radonc-mdt-integrity-audit-v16"
+            $expectedAuditVersion = "radonc-mdt-integrity-audit-v17"
             if (
               $qwenRunManifest.prompt_version -ne $expectedPromptVersion -or
               $qwenRunManifest.audit_version -ne $expectedAuditVersion
@@ -233,7 +233,7 @@ jobs:
                 observed_audit_version = [string]$qwenRunManifest.audit_version
               }
               $manifest | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
-              throw "Qwen output version mismatch; expected prompt-v16/audit-v16. MedGemma remains NOT_REQUESTED."
+              throw "Qwen output version mismatch; expected prompt-v16/audit-v17. MedGemma remains NOT_REQUESTED."
             }
             $manifest.screening.prompt_version = [string]$qwenRunManifest.prompt_version
             $manifest.screening.audit_version = [string]$qwenRunManifest.audit_version
