@@ -760,6 +760,72 @@ def build_recorded_agreements(
                 )
     return output[:SECTION_LIMITS["recorded_agreements"]]
 
+def _saved_round_contribution_highlights(
+    rows: list[dict],
+    field: str,
+    round_number: int,
+    case: SyntheticCase,
+    integrity_flags: list[str],
+) -> str:
+    """Create an attributed, non-exhaustive position summary from actual saved rows."""
+    entries = _distinct_role_entries(
+        rows, field, f"Round {round_number}", integrity_flags
+    )
+    if not entries:
+        return (
+            f"Round {round_number}: no usable completed role contributions were "
+            "available for this summary."
+        )
+
+    grouped: dict[str, list[tuple[dict, dict]]] = defaultdict(list)
+    for row, payload in entries:
+        position = str(payload.get("position") or "position_not_recorded")
+        grouped[position].append((row, payload))
+
+    parts: list[str] = []
+    for position in sorted(grouped, key=lambda item: (-len(grouped[item]), item)):
+        members = sorted(
+            grouped[position],
+            key=lambda pair: str(pair[0].get("agent_id") or "").upper(),
+        )
+        role_ids = [
+            str(row.get("agent_id") or "").strip().upper()
+            for row, _ in members
+            if str(row.get("agent_id") or "").strip()
+        ]
+        role_list = ", ".join(role_ids) if role_ids else "unattributed role rows"
+        example = "No conclusion excerpt passed the deterministic case-claim audit."
+        for row, payload in members:
+            raw_conclusion = payload.get("provisional_conclusion")
+            safe = _safe_text_items(
+                case,
+                [raw_conclusion] if isinstance(raw_conclusion, str) else [],
+                "provisional_conclusion",
+                integrity_flags=integrity_flags,
+                source_label=(
+                    f"R{round_number} {str(row.get('agent_id') or 'unknown-role')} "
+                    "saved contribution highlight"
+                ),
+            )
+            if safe:
+                excerpt = " ".join(safe[0].split())
+                if len(excerpt) > 170:
+                    excerpt = excerpt[:169].rstrip() + "…"
+                role_id = str(row.get("agent_id") or "unknown-role")
+                example = f"Example {role_id}: “{excerpt}”"
+                break
+        parts.append(
+            f"{position}: {len(members)} distinct role(s) [{role_list}]. {example}"
+        )
+
+    return (
+        f"Round {round_number} saved role positions and attributed examples "
+        "(all listed IDs are from completed, distinct-role records; one safe example "
+        "per position is illustrative, not exhaustive): "
+        + " | ".join(parts)
+    )
+
+
 def ensure_chair_report_completeness(
     report: FinalMDTReport,
     case: SyntheticCase,
@@ -1016,6 +1082,16 @@ def ensure_chair_report_completeness(
         for disclosure in _round_completion_disclosures(rows, field, round_number)
     ]
     quarantine_flags.extend(completion_disclosures)
+    if completion_disclosures:
+        # Keep failed/absent contribution accounting in the primary Chair response,
+        # not only in a secondary audit/disagreement section.
+        completion_text = " ".join(completion_disclosures)
+        current_conclusion = str(data.get("chair_conclusion") or "").strip()
+        data["chair_conclusion"] = (
+            (current_conclusion + " " if current_conclusion else "")
+            + "Saved-input completeness: "
+            + completion_text
+        )
     proposition_consensus_note = (
         "No proposition-level consensus is established by free-text agreement notes; "
         "position labels and repeated wording are not counted as votes."
@@ -1175,12 +1251,32 @@ def ensure_chair_report_completeness(
         f"Round {round_number}: {_format_position_counts(counts_by_round[round_number])}"
         for round_number in (1, 2, 3)
     )
+    saved_round_highlights = [
+        _saved_round_contribution_highlights(
+            rows, field, round_number, case, quarantine_flags
+        )
+        for round_number, rows, field in (
+            (1, round1_rows, "assessment"),
+            (2, round2_rows, "result"),
+            (3, round3_rows, "result"),
+        )
+    ]
+    completion_summary = (
+        " Saved-input completeness: " + " ".join(completion_disclosures)
+        if completion_disclosures else
+        " No missing or failed role rows were identified in the supplied Chair inputs; "
+        "this is not proof that upstream data collection was complete."
+    )
     data["overall_educational_synthesis"] = (
         f"Recorded position distribution — {round_distribution}. These are role-level labels, not "
         "votes; conditional positions are not recast as support or opposition, and a non-uniform "
-        "distribution is not described as unanimous. The source case and saved role contributions "
-        "may identify missing information, which is listed separately. Evidence retrieval is not "
-        "connected, and clinical accuracy was not evaluated."
+        "distribution is not described as unanimous. The following saved-contribution excerpts "
+        "are directly attributed to their original round and role; they illustrate recorded "
+        "views but are not an exhaustive summary, consensus, verified clinical facts, or "
+        "treatment recommendations. "
+        + " ".join(saved_round_highlights)
+        + completion_summary
+        + " Evidence retrieval is not connected, and clinical accuracy was not evaluated."
     )
     data["chair_reflection"] = (
         "This Chair record is reconciled against the saved Round-1, Round-2, and Round-3 "
