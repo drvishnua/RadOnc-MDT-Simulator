@@ -32,8 +32,8 @@ CORPUS_PATH = (
     / "medgemma_model_integrity_screening_v1.json"
 )
 PROMPT_VERSION = "radonc-mdt-integrity-screen-v16"
-AUDIT_VERSION = "radonc-mdt-integrity-audit-v15"
-# Prompt-v16/audit-v15: explicit R4 source inventory, locked completeness metadata,
+AUDIT_VERSION = "radonc-mdt-integrity-audit-v16"
+# Prompt-v16/audit-v16: explicit R4 source inventory, locked completeness metadata,
 # insufficient-data guard, and clearer proposition-consistent R2 narrative contract.
 # [model-integrity-screen] bounded paired Qwen/MedGemma retest after exact-SHA backend regression pass.
 DEFAULT_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/")
@@ -989,6 +989,46 @@ def audit_screen_response(case: dict[str, Any], response: Any) -> list[str]:
             "R1 wording ambiguity: absent_fields metadata was phrased as a fact that the record contains an absent field; review that missing fields remain simply not supplied."
         )
 
+    if case_id == "R1-UNKNOWN-STAGE-001":
+        supplied_facts = (case.get("input") or {}).get("supplied_facts", [])
+        supplied_nonempty_diagnosis = any(
+            "non-empty diagnosis field" in str(fact).casefold()
+            for fact in supplied_facts
+        )
+        denies_supplied_diagnosis = re.search(
+            r"\\bno diagnosis(?:\\s+or staging)?\\s+information\\s+(?:is|was)\\s+present\\b"
+            r"|\\b(?:the )?record\\s+(?:contains|has)\\s+no\\s+diagnosis\\s+information\\b",
+            folded,
+        )
+        if supplied_nonempty_diagnosis and denies_supplied_diagnosis:
+            findings.append(
+                "R1 supplied-fact contradiction: the case supplies a non-empty diagnosis field, but the response denies that diagnosis information is present. Keep staging unknown without negating the supplied diagnosis-field fact."
+            )
+
+    if case_id == "R1-CONTRADICTION-003":
+        supplied_facts = (case.get("input") or {}).get("supplied_facts", [])
+        has_opposing_laterality_sources = (
+            any("source a" in str(fact).casefold() and "laterality" in str(fact).casefold() for fact in supplied_facts)
+            and any("source b" in str(fact).casefold() and "laterality" in str(fact).casefold() for fact in supplied_facts)
+        )
+        mentions_both_sources = bool(re.search(r"\\bsource a\\b", folded)) and bool(
+            re.search(r"\\bsource b\\b", folded)
+        )
+        mentions_discrepancy = bool(re.search(
+            r"\\b(?:laterality|opposite|conflict|conflicting|contradiction|discrepancy)\\b",
+            folded,
+        ))
+        states_unresolved = bool(re.search(
+            r"\\b(?:unresolved|cannot be resolved|not possible to determine which source|neither source)\\b",
+            folded,
+        ))
+        if has_opposing_laterality_sources and not all(
+            (mentions_both_sources, mentions_discrepancy, states_unresolved)
+        ):
+            findings.append(
+                "R1 contradiction-display omission: the supplied opposing Source A and Source B laterality statements were not both represented, flagged as a discrepancy and retained as unresolved."
+            )
+
     if case_id == "R2-CONDITIONALITY-007" and structured is None:
         unknown_status = re.search(
             r"\b(?:unknown|not documented|not supplied|not present in the supplied record|unverified|unconfirmed)\b",
@@ -1574,6 +1614,10 @@ def audit_screen_response(case: dict[str, Any], response: Any) -> list[str]:
                         f"R3 narrative identifier contradiction: explicitly supplied ID {source_id} was described as {status!r}."
                     )
         elif isinstance(narrative_payload, dict):
+            if "synthetic_input" in narrative_payload:
+                findings.append(
+                    "R3 synthetic-input echo: the response serialized the supplied synthetic_input object instead of giving the requested bounded source-inventory audit."
+                )
             nested_inventory = narrative_payload.get("identifier_inventory_review")
             if isinstance(nested_inventory, dict):
                 nested_unsupplied = nested_inventory.get("deliberately_unsupplied_ids", [])

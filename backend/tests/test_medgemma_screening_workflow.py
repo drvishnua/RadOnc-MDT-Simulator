@@ -52,12 +52,12 @@ def test_qwen_exact_prompt_and_audit_versions_are_required_before_medgemma():
     workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
     qwen_manifest = workflow.index('$qwenRunManifest = Get-ModelScreenOutputManifest -Path $qwenOutput')
     expected_prompt = workflow.index('$expectedPromptVersion = "radonc-mdt-integrity-screen-v16"')
-    expected_audit = workflow.index('$expectedAuditVersion = "radonc-mdt-integrity-audit-v15"')
+    expected_audit = workflow.index('$expectedAuditVersion = "radonc-mdt-integrity-audit-v16"')
     version_failure = workflow.index('$manifest.execution.qwen_status = "FAILED_VERSION_GATE"')
     medgemma_gate = workflow.index('$includeMed = ($env:MEDGEMMA_REQUESTED -eq "true")')
 
     assert qwen_manifest < expected_prompt < expected_audit < version_failure < medgemma_gate
-    assert "Qwen output version mismatch; expected prompt-v16/audit-v15" in workflow
+    assert "Qwen output version mismatch; expected prompt-v16/audit-v16" in workflow
     assert "MedGemma remains NOT_REQUESTED." in workflow
     assert 'medgemma_status = "NOT_REQUESTED"' in workflow
 

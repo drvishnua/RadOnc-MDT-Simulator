@@ -265,6 +265,74 @@ def test_deterministic_review_audit_flags_observed_v2_misreadings(case_id, respo
     assert any(expected_flag in finding for finding in findings)
 
 
+def test_audit_v16_flags_denial_of_a_supplied_nonempty_diagnosis_field():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R1-UNKNOWN-STAGE-001")
+    response = _valid_model_output(
+        case,
+        "No diagnosis or staging information is present in the record; T, N and M remain unknown.",
+    )
+    findings = screening.audit_screen_response(case, response)
+    assert any("R1 supplied-fact contradiction" in item for item in findings)
+
+    safe = _valid_model_output(
+        case,
+        "A non-empty diagnosis field is supplied. TNM fields and stage group are not supplied; "
+        "T, N and M remain unknown, and no stage is inferred from the diagnosis field.",
+    )
+    assert not any(
+        "R1 supplied-fact contradiction" in item
+        for item in screening.audit_screen_response(case, safe)
+    )
+
+
+def test_audit_v16_flags_omission_of_opposing_laterality_source_statements():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R1-CONTRADICTION-003")
+    incomplete = _valid_model_output(
+        case,
+        "Not enough information to complete this task; the input only describes a synthetic contradiction scenario.",
+    )
+    findings = screening.audit_screen_response(case, incomplete)
+    assert any("R1 contradiction-display omission" in item for item in findings)
+
+    complete = _valid_model_output(
+        case,
+        "Source A records one laterality value and Source B records the opposite laterality value. "
+        "The statements conflict; the discrepancy remains unresolved and neither source is selected.",
+    )
+    assert not any(
+        "R1 contradiction-display omission" in item
+        for item in screening.audit_screen_response(case, complete)
+    )
+
+
+def test_audit_v16_flags_r3_synthetic_input_json_echo():
+    corpus, _ = load_corpus()
+    case = next(item for item in corpus["cases"] if item["case_id"] == "R3-INVALID-SOURCE-008")
+    echoed = {
+        "case_id": case["case_id"],
+        "identifier_inventory_review": {
+            "explicitly_supplied_source_ids": ["R2:MO-01", "R2:RO-01"],
+            "deliberately_unsupplied_ids": ["R2:MO-99"],
+        },
+        "synthetic_input": case["input"],
+    }
+    output = _valid_model_output(case, json.dumps(echoed))
+    findings = screening.audit_screen_response(case, output)
+    assert any("R3 synthetic-input echo" in item for item in findings)
+
+    concise = _valid_model_output(
+        case,
+        "R2:RO-01 and R2:MO-01 are supplied; R2:MO-99 is unsupplied. "
+        "The malformed range R2:RO-01-RO-09 is preserved without expansion.",
+    )
+    assert not any(
+        "R3 synthetic-input echo" in item
+        for item in screening.audit_screen_response(case, concise)
+    )
+
+
 def test_audit_v6_flags_r2_source_position_misattribution_observed_in_medgemma():
     corpus, _ = load_corpus()
     case = next(item for item in corpus["cases"] if item["case_id"] == "R2-PARTIAL-AGREEMENT-006")
@@ -949,7 +1017,7 @@ def test_run_screen_records_complete_immutable_case_set(tmp_path, monkeypatch):
     manifest = next(record for record in records if record["record_type"] == "manifest")
 
     assert manifest["prompt_version"] == "radonc-mdt-integrity-screen-v16"
-    assert manifest["audit_version"] == "radonc-mdt-integrity-audit-v15"
+    assert manifest["audit_version"] == "radonc-mdt-integrity-audit-v16"
     assert manifest["screening_script_sha256"] == screening.SCRIPT_SHA256
     assert len(manifest["screening_script_sha256"]) == 64
     assert calls == {"tags": 25, "generate": 12, "show": 1, "version": 1}
@@ -1792,9 +1860,9 @@ def test_r4_missing_agent_audit_rejects_no_agreement_inference_from_counts():
     assert screening.audit_screen_response(case, valid) == []
 
 
-def test_screen_version_metadata_declares_prompt_v16_and_audit_v15():
+def test_screen_version_metadata_declares_prompt_v16_and_audit_v16():
     assert screening.PROMPT_VERSION == "radonc-mdt-integrity-screen-v16"
-    assert screening.AUDIT_VERSION == "radonc-mdt-integrity-audit-v15"
+    assert screening.AUDIT_VERSION == "radonc-mdt-integrity-audit-v16"
 
 
 def test_v15_r2_prompt_preserves_unknown_prerequisite_and_shared_source_attribution():
