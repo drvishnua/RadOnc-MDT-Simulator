@@ -5,8 +5,9 @@
 **Repository:** `drvishnua/RadOnc-MDT-Simulator`  
 **Development branch:** `feature/four-round-mdt-and-performance`  
 **PR #1:** open, draft, unmerged; base `main`.  
-**Current PR head before this checklist-only update:** `3aaeeb2c32f6f57d428997bc6a69e85377f5a384`.  
-**Latest application/test commit:** `8cde5dd847d1c656e195ac9239f39fb75b51691f`. The commits after this SHA through PR head changed only this checklist.  
+**Current PR head before this checklist refresh:** `a8863f9caa28479599d9b9f10722d2afafa29bb0`.  
+**Latest application code commit:** `8cde5dd847d1c656e195ac9239f39fb75b51691f`.  
+**Latest regression-test commit:** `a8863f9caa28479599d9b9f10722d2afafa29bb0` (adds a cross-round Chair minority-history regression; no application code changed).  
 **Main:** `39a356b8eb09399aa2da1b9b9085965999f5105a`; unchanged.  
 **Current checklist update:** documentation-only; no application code or tests changed.
 
@@ -21,15 +22,16 @@
 | R2 proposition-level consensus and conditionality | FAILED | v15 live screen exposed narrative/structured-position contradictions; no corrective live retest yet. |
 | R3 adversarial review and source provenance | IN PROGRESS | Source-bound deterministic checks pass; broad live-model adherence is unverified. |
 | R4 Chair synthesis from actual saved R1–R3 | FAILED | v15 live screen exposed source echo and reconciliation issues; no corrective live retest yet. |
+| Cross-round minority-history regression | VERIFIED | New test `test_final_chair_boundary_retains_earlier_and_later_minority_histories` passed in backend run 44262841444; it verifies an earlier R1 minority remains visible alongside a different R3 minority. This is a deterministic regression test, not live-model acceptance. |
 | Chair consensus, distinct-role counting, dissent and traceability | FAILED | Deterministic counts exist, but v15 model-level consensus/dissent findings remain unresolved by live retest. |
 | Exact specialist-ID input gate | VERIFIED | Guard in `47dfa9d`; corrected regression in `8cde5dd`; backend run 44261206592 passed. |
 | Missing/failed-agent handling | FAILED | Orchestration rejects incomplete predecessor-round records; model-level missing-agent behaviour still requires live verification. |
 | Clinical safety, staging and unknown data | IN PROGRESS | Deterministic safeguards exist; no clinical validation, guideline concordance or zero-hallucination guarantee. |
 | Case integrity, contradiction preservation and audit history | IN PROGRESS | Historical failed outputs retained; full live audit integrity and contradiction behaviour not yet accepted. |
 | Provenance and guideline/evidence retrieval | IN PROGRESS | Source-bound controls exist; current guideline retrieval/verification incomplete. |
-| Backend tests — application tree `8cde5dd` | VERIFIED | Exact-head PR workflow 44261206592 succeeded; 479 recorded pytest rows passed, 0 failed. |
-| Frontend unit/build checks | VERIFIED | Frontend Build workflow 44261206517 succeeded. |
-| Patient Registry / four-round Dashboard browser E2E | VERIFIED | Browser E2E workflow 44261206525 succeeded. |
+| Backend tests — regression-test commit `a8863f9` | VERIFIED | Exact-head PR workflow 44262841444 succeeded; 480 recorded pytest rows passed, 0 failed; artifact [14409301267](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44262841444/artifacts/14409301267). |
+| Frontend unit/build checks | VERIFIED | Frontend Build workflow 44262841436 succeeded. |
+| Patient Registry / four-round Dashboard browser E2E | VERIFIED | Browser E2E workflow 44262841821 succeeded; registry, Mission Control, Development Monitor and four-round dashboard checks passed; artifact [14409580293](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44262841821/artifacts/14409580293). |
 | Mission Control / Development Monitor dashboard | VERIFIED | Browser E2E 44261206525 succeeded; dedicated refresh/error-resilience evidence in run 44257129743. |
 | Dashboard/API error and last-good-state handling | VERIFIED | Prior browser checks cover 403/429, malformed metadata, recovery and valid empty state. |
 | Ollama context handling and truncation resistance | IN PROGRESS | Long-run effective context behaviour has not been proven fixed. |
@@ -45,15 +47,28 @@
 | Independent blinded model-output review | NOT STARTED | No independent review artefact. |
 | Guideline retrieval and verification | NOT STARTED | No current verified guideline source set linked to a run. |
 | Independent qualified clinical review | NOT STARTED | No attributable qualified review artefact. |
-| Windows packaging prerequisites | VERIFIED | Exact PR-head workflow 44261206570 succeeded. |
-| Windows installer build | VERIFIED | Exact PR-head workflow 44261206474 succeeded; hosted Ollama/model bootstrap was not established. |
-| Full-history secret scan | VERIFIED | Exact PR-head security workflow 44261206545: passed. |
-| Python CodeQL | VERIFIED | Exact PR-head security workflow 44261206545: passed. |
-| JavaScript/TypeScript CodeQL | VERIFIED | Exact PR-head security workflow 44261206545: passed. |
-| Python dependency audit | VERIFIED | Exact PR-head security workflow 44261206545: no known vulnerabilities found. |
-| Node dependency audit | FAILED | Exact PR-head security workflow 44261206545: npm audit reports four HIGH findings for transitive `picomatch@4.0.7` via `tinyglobby@0.2.17` / `fdir@6.5.0`. |
+| Windows packaging prerequisites | VERIFIED | Exact PR-head workflow 44262841556 succeeded. |
+| Windows installer build | VERIFIED | Exact PR-head workflow 44262841453 succeeded; installer installed and smoke-tested, artifact [14408632519](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44262841453/artifacts/14408632519), SHA256 `d245f20ef146898e09b3f6de873c5a44412a90c1ef033eb573199df812e85bf3`. AI bootstrap paths were mocked; no real Ollama request or model inference occurred. |
+| Full-history secret scan | VERIFIED | Exact PR-head security workflow 44262841543: passed. |
+| Python CodeQL | VERIFIED | Exact PR-head security workflow 44262841543: passed. |
+| JavaScript/TypeScript CodeQL | VERIFIED | Exact PR-head security workflow 44262841543: passed. |
+| Python dependency audit | VERIFIED | Exact PR-head security workflow 44262841543: no known vulnerabilities found. |
+| Node dependency audit | FAILED | Exact PR-head security workflow 44262841543: npm audit reports four HIGH findings for transitive `picomatch@4.0.7` via `tinyglobby@0.2.17` / `fdir@6.5.0`. |
 | Dependency advisory applicability and risk disposition | BLOCKED | Advisory GHSA-fc5q-39xc-vjpf / CVE-2026-112366 is disputed by the upstream maintainer; Snyk shows it revoked as not a vulnerability, while GitHub Advisory Database still lists it as unreviewed/high and NVD awaits enrichment. No fixed picomatch release or formal GHSA withdrawal verified. Do not suppress or accept risk silently. |
 | Release acceptance | BLOCKED | Node audit failure/dispute unresolved; R2/R4 live failures, full 45-role run, GPU, evidence retrieval and independent clinical review remain outstanding. |
+
+## Latest exact-head CI — regression-test commit `a8863f9caa28479599d9b9f10722d2afafa29bb0`
+
+All six standard PR workflows completed. Five succeeded; the security workflow failed solely because the Node dependency audit failed.
+
+- Backend Tests [44262841444](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44262841444): SUCCESS; 480 recorded pytest rows passed, 0 failed. The new cross-round minority-history test is explicitly present and passed. Diagnostics artifact [14409301267](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44262841444/artifacts/14409301267).
+- Frontend Build [44262841436](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44262841436): SUCCESS.
+- Patient Registry / Four-Round Dashboard Browser E2E [44262841821](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44262841821): SUCCESS; registry, Mission Control, Development Monitor and four-round dashboard checks passed. Artifact [14409580293](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44262841821/artifacts/14409580293).
+- Windows Packaging Prerequisites [44262841556](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44262841556): SUCCESS.
+- Windows Installer Build [44262841453](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44262841453): SUCCESS; install/uninstall smoke test passed. Artifact [14408632519](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44262841453/artifacts/14408632519); installer SHA256 `d245f20ef146898e09b3f6de873c5a44412a90c1ef033eb573199df812e85bf3`. AI bootstrap paths used mocked Ollama/model endpoints; no real Ollama request or model inference occurred.
+- Security / Dependency / CodeQL [44262841543](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44262841543): FAILED. Python dependency audit found no known vulnerabilities; Python CodeQL, JavaScript/TypeScript CodeQL and full-history secret scan passed. Node `npm audit --audit-level=high` again failed on four HIGH `picomatch` findings. This confirms the security blocker persists on the exact regression-test commit.
+
+This commit changes tests only; no production application code was changed. The CI results do not establish live model behaviour, local GPU use, clinical accuracy or guideline concordance.
 
 ## Exact-head CI evidence — PR head `07e0abafc3baedf16d588eaf9e50eed3dc812dc7`
 
