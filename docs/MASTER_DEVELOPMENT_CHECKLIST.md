@@ -2367,3 +2367,14 @@ The screening runner previously had helper-level tests but lacked no-inference c
 **Implementation commits:** production warning 8fa60e4, regex correction bb0357e; production regression tests 6fff56b; screening audit-v17 1b0bede, regex correction 1d058ab; audit regression tests e31bde1, fenced-JSON test correction 9320810; workflow gate 09bf4e6; workflow gate test 18f9460. All changes are on feature/four-round-mdt-and-performance; no changes to main.
 
 **Verification boundary:** GitHub writes succeeded. PR-triggered CI has started for code head `9320810911129a9364f2a41f1a78609895e64f1d`: backend run `44361551304`, frontend `44361551319`, browser E2E `44361551310`, packaging prerequisites `44361551322`, installer `44361551387`, security/dependency audit `44361551453` (in progress at last check). These runs predate this checklist-only commit and must not be attributed to the final branch head. Await exact-head runs before marking the new items VERIFIED. Do not mark the new items VERIFIED until the exact branch-head CI completes. The prior audit-v16 results and their 487/487 backend run remain historical evidence only; they do not verify audit-v17.
+
+
+### CI failure and targeted correction — 18 November 2026
+
+| Workstream | Status | Evidence / boundary |
+|---|---|---|
+| Backend CI at code head 1f99d956 | FAILED | Run 44361611773 failed in pytest: NameError for undefined `supplied_ids` in the R3 narrative identifier audit. Other named workflow results on this code head: frontend 44361611724 SUCCESS; browser E2E 44361611744 SUCCESS; packaging prerequisites 44361611708 SUCCESS; installer 44361611718 SUCCESS; security/dependency audit 44361611719 SUCCESS. |
+| R3 case-local identifier allowlist correction | IN PROGRESS | Commit 0b61038 defines supplied_ids and invalid_statuses from the exact case-local inventory before prose/JSON checks. This addresses the observed NameError without deriving facts from model output. Regression is the previously failing test `test_r3_audit_flags_narrative_identifier_labels_that_conflict_with_structured_inventory`; new CI pending. |
+| Full backend regression suite after correction | IN PROGRESS | Not yet executed on commit 0b61038; do not carry forward the failed run as a pass. |
+
+**Failure diagnosis:** the v17 narrative JSON validation referenced `supplied_ids` and `invalid_statuses` without defining them in that branch. The failure was a deterministic implementation error, not evidence of model inference failure. The case-local inventory helper is now the single source for the allowlist.
