@@ -934,3 +934,30 @@ def test_final_chair_report_keeps_high_volume_source_excerpt_audit_visible():
     assert report.source_opinion_review_coverage == []
     assert len(report.case_data_integrity_flags) <= SECTION_LIMITS["case_data_integrity_flags"]
 
+
+
+def test_final_chair_discloses_failed_and_absent_role_inputs_without_counting_them():
+    case = SyntheticCase(
+        scenario_title="Chair missing-agent disclosure regression",
+        case_summary="Fictional incomplete case for deterministic completion accounting.",
+    )
+    round1 = _rows("assessment", ["insufficient_information"] * 45)
+    round2 = _rows("result", ["insufficient_information"] * 45)
+    round3 = _rows("result", ["insufficient_information"] * 45)
+    round2[4]["status"] = "failed"
+    round2[4]["error_message"] = "Synthetic agent failure."
+    round3.pop()
+
+    report = ensure_chair_report_completeness(
+        _empty_report(), case, round1, round2, round3
+    )
+    unresolved = " ".join(report.unresolved_disagreements)
+    flags = " ".join(report.case_data_integrity_flags)
+
+    assert "Round 2: 1 distinct role(s) have no usable completed result contribution" in unresolved
+    assert "RO-05" in unresolved
+    assert "Round 3: the Chair input contains 44 distinct identified role rows of 45 configured roles" in unresolved
+    assert "At least 1 role row(s) are absent" in unresolved
+    assert "RO-05" in flags
+    assert "Round 2: 44/44 insufficient-information" in report.overall_educational_synthesis
+    assert "Round 3: 44/44 insufficient-information" in report.overall_educational_synthesis
