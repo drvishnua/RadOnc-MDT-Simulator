@@ -961,15 +961,15 @@ def _is_r4_case_echo(response_text: str, case: dict[str, Any]) -> bool:
 
 
 _DIAGNOSIS_DENIAL_PATTERN = re.compile(
-    r"\\bno\\s+diagnosis(?:\\s+or\\s+staging)?(?:\\s+(?:information|field|data|details?))?"
-    r"\\s+(?:(?:is|are|was|were|has\\s+been|have\\s+been)\\s+)?"
-    r"(?:present|supplied|provided|recorded|documented|available|identified|missing|absent|unavailable)\\b"
-    r"|\\b(?:the\\s+)?record\\s+(?:contains|has|includes?)\\s+no\\s+diagnosis"
-    r"(?:\\s+(?:information|field|data|details?))?\\b"
-    r"|\\bthere\\s+(?:is|was)\\s+no\\s+diagnosis(?:\\s+(?:information|field|data|details?))?\\b"
-    r"|\\bdiagnosis(?:\\s+(?:information|field|data|details?))?"
-    r"\\s+(?:(?:is|are|was|were)\\s+)?(?:not|never)\\s+"
-    r"(?:present|supplied|provided|recorded|documented|available|identified)\\b",
+    r"\bno\s+diagnosis(?:\s+or\s+staging)?(?:\s+(?:information|field|data|details?))?"
+    r"\s+(?:(?:is|are|was|were|has\s+been|have\s+been)\s+)?"
+    r"(?:present|supplied|provided|recorded|documented|available|identified|missing|absent|unavailable)\b"
+    r"|\b(?:the\s+)?record\s+(?:contains|has|includes?)\s+no\s+diagnosis"
+    r"(?:\s+(?:information|field|data|details?))?\b"
+    r"|\bthere\s+(?:is|was)\s+no\s+diagnosis(?:\s+(?:information|field|data|details?))?\b"
+    r"|\bdiagnosis(?:\s+(?:information|field|data|details?))?"
+    r"\s+(?:(?:is|are|was|were)\s+)?(?:not|never)\s+"
+    r"(?:present|supplied|provided|recorded|documented|available|identified)\b",
     re.IGNORECASE,
 )
 
@@ -977,25 +977,25 @@ _DIAGNOSIS_DENIAL_PATTERN = re.compile(
 def _affirmatively_selects_conflicting_source(text: str) -> bool:
     """Detect an affirmative source choice even if the response also says unresolved."""
     patterns = (
-        r"\\bsource\\s+[ab]\\b.{0,70}\\b(?:is|was)\\s+(?:the\\s+)?(?:correct|accurate|authoritative|preferred|reliable|trusted)\\b",
-        r"\\b(?:select|selected|choose|chosen|prefer|preferred|use|using|accept|accepted|trust|trusted|rely\\s+on)\\s+source\\s+[ab]\\b",
-        r"\\bsource\\s+[ab]\\s+(?:is|was)\\s+(?:selected|chosen|preferred|accepted|trusted)\\b",
-        r"\\b(?:resolve|resolved|settle|settled)\\s+(?:the\\s+)?(?:discrepancy|conflict|contradiction)\\s+(?:in\\s+)?(?:favor|favour)\\s+of\\s+source\\s+[ab]\\b",
+        r"\bsource\s+[ab]\b.{0,70}\b(?:is|was)\s+(?:the\s+)?(?:correct|accurate|authoritative|preferred|reliable|trusted)\b",
+        r"\b(?:select|selected|choose|chosen|prefer|preferred|use|using|accept|accepted|trust|trusted|rely\s+on)\s+source\s+[ab]\b",
+        r"\bsource\s+[ab]\s+(?:is|was)\s+(?:selected|chosen|preferred|accepted|trusted)\b",
+        r"\b(?:resolve|resolved|settle|settled)\s+(?:the\s+)?(?:discrepancy|conflict|contradiction)\s+(?:in\s+)?(?:favor|favour)\s+of\s+source\s+[ab]\b",
     )
     folded = text.casefold()
     for expression in patterns:
         for match in re.finditer(expression, folded, re.IGNORECASE):
-            start = max(folded.rfind(".", 0, match.start()), folded.rfind("!", 0, match.start()), folded.rfind("?", 0, match.start()), folded.rfind(";", 0, match.start()), folded.rfind("\\n", 0, match.start())) + 1
+            start = max(folded.rfind(".", 0, match.start()), folded.rfind("!", 0, match.start()), folded.rfind("?", 0, match.start()), folded.rfind(";", 0, match.start()), folded.rfind("\n", 0, match.start())) + 1
             prefix = folded[start:match.start()]
-            if re.search(r"\\b(?:not|never|do not|don't|should not|must not|cannot)\\b[^.!?;:]{0,40}$", prefix):
+            if re.search(r"\b(?:not|never|do not|don't|should not|must not|cannot)\b[^.!?;:]{0,40}$", prefix):
                 continue
             return True
     return False
 
 
 def _parse_screen_json(response_text: str) -> Any:
-    candidate = response_text.strip().lstrip("\\ufeff")
-    fenced = re.fullmatch(r"```(?:json)?\\s*(.*?)\\s*```", candidate, re.IGNORECASE | re.DOTALL)
+    candidate = response_text.strip().lstrip("\ufeff")
+    fenced = re.fullmatch(r"```(?:json)?\s*(.*?)\s*```", candidate, re.IGNORECASE | re.DOTALL)
     if fenced:
         candidate = fenced.group(1).strip()
     try:
