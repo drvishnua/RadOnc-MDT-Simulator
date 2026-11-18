@@ -263,7 +263,7 @@ def test_completeness_rejects_model_consensus_from_unlinked_support_opposition_l
 
     assert reconciled.consensus_status == "insufficient_information"
     assert reconciled.consensus_points == []
-    assert "No proposition-level agreement or disagreement" in reconciled.chair_conclusion
+    assert "No proposition-level consensus" in reconciled.chair_conclusion
     assert any("supports" in item and "opposes" in item for item in reconciled.unresolved_disagreements)
     assert "unanimously" not in reconciled.chair_conclusion.casefold()
 
@@ -290,7 +290,7 @@ def test_completeness_does_not_infer_no_consensus_from_uniform_unlinked_support_
 
     assert reconciled.consensus_status == "insufficient_information"
     assert reconciled.consensus_points == []
-    assert "No proposition-level agreement or disagreement" in reconciled.chair_conclusion
+    assert "No proposition-level consensus" in reconciled.chair_conclusion
     assert "45/45 supports" in reconciled.overall_educational_synthesis
 
 

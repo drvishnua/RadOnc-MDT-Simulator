@@ -950,10 +950,10 @@ def ensure_chair_report_completeness(
     data["consensus_points"] = []
     data["consensus_status"] = "insufficient_information"
     data["chair_conclusion"] = (
-        "No proposition-level agreement or disagreement on a shared educational proposition "
-        "can be established from the saved structured contributions. Recorded role positions "
-        "are preserved separately for review. No treatment recommendation can be made from "
-        "this educational record."
+        "No treatment recommendation can be made from the supplied case. No proposition-level "
+        "consensus or proposition-specific disagreement can be established because the saved "
+        "structured contributions do not identify a shared proposition. Recorded role positions "
+        "are preserved separately for review."
     )
 
     for field, limit in SECTION_LIMITS.items():

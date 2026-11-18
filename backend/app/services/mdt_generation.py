@@ -885,10 +885,11 @@ def reconcile_chair_report_draft(
 
     key_unknowns = "; ".join(uncertainties[:4]) or "critical clinical information is not supplied"
     chair_conclusion = (
-        "The saved contributions do not establish a shared proposition against which the "
-        "Round-3 positions can be compared. The recorded role positions remain separately "
-        f"traceable ({_format_position_counts(final_counts)}); unresolved information includes: "
-        f"{key_unknowns}. No treatment recommendation can be made from this educational record."
+        "No treatment recommendation can be made from the supplied case. No proposition-level "
+        "consensus or proposition-specific disagreement can be established because the saved "
+        "contributions do not identify a shared proposition. The recorded Round-3 positions remain "
+        f"separately traceable ({_format_position_counts(final_counts)}); unresolved information "
+        f"includes: {key_unknowns}."
     )
 
     overall = (
