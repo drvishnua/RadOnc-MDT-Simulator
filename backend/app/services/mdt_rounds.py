@@ -62,6 +62,35 @@ def _require_exact_completed_role_payloads(
         and len(role_rows) == 1
         and not isinstance(role_rows[0].get(payload_field), dict)
     )
+    try:
+        expected_round_number = int(round_label.rsplit(" ", 1)[-1])
+    except (TypeError, ValueError):
+        raise ValueError(f"Invalid round label for payload validation: {round_label!r}")
+
+    payload_identity_errors: list[str] = []
+    for role_id, role_rows in rows_by_role.items():
+        if len(role_rows) != 1:
+            continue
+        payload = role_rows[0].get(payload_field)
+        if not isinstance(payload, dict):
+            continue
+        payload_agent_id = payload.get("agent_id")
+        if not isinstance(payload_agent_id, str) or not payload_agent_id.strip():
+            payload_identity_errors.append(f"{role_id}: missing or invalid payload agent_id")
+        elif payload_agent_id.strip().upper() != role_id:
+            payload_identity_errors.append(
+                f"{role_id}: payload agent_id={payload_agent_id.strip().upper()}"
+            )
+        payload_round_number = payload.get("round_number")
+        if (
+            isinstance(payload_round_number, bool)
+            or not isinstance(payload_round_number, int)
+            or payload_round_number != expected_round_number
+        ):
+            payload_identity_errors.append(
+                f"{role_id}: payload round_number={payload_round_number!r}, "
+                f"expected={expected_round_number}"
+            )
 
     if (
         missing_ids
@@ -69,6 +98,7 @@ def _require_exact_completed_role_payloads(
         or unexpected_ids
         or unidentified_completed_rows
         or malformed_payload_ids
+        or payload_identity_errors
     ):
         raise RuntimeError(
             f"{round_label} requires exactly one completed, structured "
@@ -76,7 +106,8 @@ def _require_exact_completed_role_payloads(
             f"missing={missing_ids}; duplicates={duplicate_ids}; "
             f"unexpected={unexpected_ids}; "
             f"unidentified_completed_rows={unidentified_completed_rows}; "
-            f"malformed_payloads={malformed_payload_ids}."
+            f"malformed_payloads={malformed_payload_ids}; "
+            f"payload_identity_errors={payload_identity_errors}."
         )
 
     return {

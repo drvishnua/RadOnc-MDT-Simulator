@@ -267,14 +267,63 @@ def _safe_role_text_items(
     )
 
 
+def _saved_payload_identity_issues(
+    row: dict,
+    payload: dict,
+    round_label: str,
+) -> list[str]:
+    """Detect disagreement between immutable row identity and saved payload metadata."""
+    row_agent_id = str(row.get("agent_id") or "").strip().upper()
+    issues: list[str] = []
+    payload_agent_id = payload.get("agent_id")
+    if payload_agent_id is not None:
+        if not isinstance(payload_agent_id, str) or not payload_agent_id.strip():
+            issues.append(
+                f"{round_label} saved row {row_agent_id} has an invalid payload agent_id; "
+                "the contribution was excluded from Chair-derived summaries."
+            )
+        elif payload_agent_id.strip().upper() != row_agent_id:
+            issues.append(
+                f"{round_label} saved row {row_agent_id} identifies payload agent_id "
+                f"{payload_agent_id.strip().upper()}; the contribution was excluded from "
+                "Chair-derived summaries."
+            )
+
+    payload_round_number = payload.get("round_number")
+    if payload_round_number is not None:
+        try:
+            expected_round_number = int(round_label.rsplit(" ", 1)[-1])
+        except (TypeError, ValueError):
+            expected_round_number = None
+        if (
+            expected_round_number is not None
+            and (
+                isinstance(payload_round_number, bool)
+                or not isinstance(payload_round_number, int)
+                or payload_round_number != expected_round_number
+            )
+        ):
+            issues.append(
+                f"{round_label} saved row {row_agent_id} identifies payload "
+                f"round_number {payload_round_number!r}; expected {expected_round_number}. "
+                "The contribution was excluded from Chair-derived summaries."
+            )
+    return issues
+
+
 def _distinct_role_entries(rows: list[dict], field: str, round_label: str, integrity_flags: list[str] | None = None) -> list[tuple[dict, dict]]:
-    """Return at most one unambiguous completed contribution per role and round."""
+    """Return at most one unambiguous identity-consistent completed contribution per role."""
     grouped: dict[str, list[tuple[dict, dict]]] = defaultdict(list)
     for row, item in _entries(rows, field):
         raw_agent_id = str(row.get("agent_id") or "").strip()
         if not raw_agent_id:
             if integrity_flags is not None:
                 integrity_flags.append(f"{round_label} completed contribution has no agent_id and was excluded from distinct-role summaries.")
+            continue
+        identity_issues = _saved_payload_identity_issues(row, item, round_label)
+        if identity_issues:
+            if integrity_flags is not None:
+                integrity_flags.extend(identity_issues)
             continue
         # Role identifiers are canonical uppercase codes (for example RO-01).
         # Normalise only the grouping key; the saved source row is left unchanged.

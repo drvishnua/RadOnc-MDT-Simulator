@@ -1,3 +1,11 @@
+### Saved contribution identity integrity — implementation added; exact-head CI pending
+
+The current strict round-entry gate verified the outer database row ID and payload shape, but not that the saved payload's own `agent_id` and `round_number` matched the immutable row identity and round. The Chair's distinct-role aggregator also trusted the outer row without checking those payload metadata fields. This could misattribute an otherwise well-formed saved contribution if persisted data were inconsistent.
+
+The change rejects mismatched/missing payload identity at the R2/R3 prerequisite gate and excludes/flags mismatched identity or round metadata again at the Chair derivation boundary. This is provenance validation only; it does not change model-generated clinical text or establish clinical correctness. Regression tests cover cross-role and cross-round mismatches. Exact-head CI is pending; keep this item **IN PROGRESS** until the exact commit passes.
+
+---
+
 ### Chair proposition-status integrity correction — VERIFIED on exact PR head c9d45c7 — 18 November 2026
 
 **Source-review finding:** the prior reconciler and final deterministic Chair boundary inferred `no_consensus` from mixed Round-3 `supports`/`opposes` labels. The saved `RoundContribution` schema has no normalized proposition identifier. Those labels cannot establish that roles are supporting and opposing the same proposition; they may refer to different educational options.
@@ -300,6 +308,7 @@ Historical checkpoints below are immutable evidence and do not override this tab
 | Chair consensus, distinct-role counting, dissent and traceability | FAILED | Deterministic counts exist, but v15 model-level consensus/dissent findings remain unresolved by live retest. |
 | Chair proposition-status integrity (role labels cannot infer shared-proposition consensus or no-consensus) | VERIFIED | Deterministic reconciler and final boundary force `insufficient_information` without a normalized shared-proposition key; preserve all positions/history. Exact PR-head `c9d45c7` backend run [44321432475](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44321432475): 483/483 passed; mixed/tied/model-authored status regressions passed. Model-level consensus/dissent acceptance remains separately FAILED. |
 | Exact specialist-ID input gate | VERIFIED | Guard in `47dfa9d`; corrected regression in `8cde5dd`; exact regression-test-head backend run 44262841444 passed (473/473 pytest rows, re-counted from job logs). |
+| Saved contribution outer-row/payload identity and round consistency | IN PROGRESS | Strict R2/R3 prerequisite gate now rejects missing/mismatched payload `agent_id` and wrong `round_number`; Chair distinct-role aggregation excludes and records inconsistent payload metadata. Regression tests added for both gates; exact-head CI pending. |
 | Chair mixed completed/failed duplicate-row accounting | VERIFIED | Exact code SHA `fbea522`; backend run [44315991587](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44315991587) passed 482/482 with both mixed-row regressions; conflicting completed duplicates remain excluded from usable-role status. Deterministic software verification only. |
 | Missing/failed-agent handling | IN PROGRESS | Deterministic Chair report identifies failed/unusable rows by status and reports absent rows against the configured 45-role roster; failed records remain excluded from distinct-role counts. Regression passed in exact-head backend run [44303234900](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44303234900), including failed/absent-role disclosure in the primary Chair conclusion. Entirely absent upstream rows cannot be individually named without a complete roster in the Chair input. |
 | Clinical safety, staging and unknown data | IN PROGRESS | Deterministic safeguards exist; no clinical validation, guideline concordance or zero-hallucination guarantee. |

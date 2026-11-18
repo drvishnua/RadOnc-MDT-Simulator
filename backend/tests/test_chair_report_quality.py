@@ -98,6 +98,28 @@ def test_conflicting_completed_duplicates_do_not_make_failed_duplicate_look_usab
     )
 
 
+
+def test_chair_excludes_saved_payloads_with_mismatched_role_or_round_identity():
+    case = SyntheticCase(
+        scenario_title="Chair payload provenance mismatch test",
+        case_summary="Fictional case used only to validate saved row identity integrity.",
+    )
+    round1 = _rows("assessment", ["insufficient_information"] * 45)
+    round2 = _rows("result", ["insufficient_information"] * 45)
+    round3 = _rows("result", ["insufficient_information"] * 45)
+    round3[0]["result"].update({"agent_id": "MO-01", "round_number": 3})
+    round3[1]["result"].update({"agent_id": "RO-02", "round_number": 2})
+
+    report = ensure_chair_report_completeness(
+        _empty_report(), case, round1, round2, round3
+    )
+
+    assert "43/43 insufficient-information" in report.overall_educational_synthesis
+    integrity = " ".join(report.case_data_integrity_flags)
+    assert "saved row RO-01 identifies payload agent_id MO-01" in integrity
+    assert "saved row RO-02 identifies payload round_number 2; expected 3" in integrity
+
+
 def _empty_report() -> FinalMDTReport:
     return FinalMDTReport(
         run_id="synthetic-run",

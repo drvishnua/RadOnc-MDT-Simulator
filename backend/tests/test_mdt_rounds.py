@@ -104,7 +104,11 @@ def test_round_input_gate_requires_exactly_one_structured_record_per_expected_sp
         {
             "agent_id": profile["agent_id"],
             "status": "completed",
-            "assessment": {"position": "insufficient_information"},
+            "assessment": {
+                "agent_id": profile["agent_id"],
+                "round_number": 1,
+                "position": "insufficient_information",
+            },
         }
         for profile in AGENT_PROFILES
     ]
@@ -133,6 +137,25 @@ def test_round_input_gate_requires_exactly_one_structured_record_per_expected_sp
     with pytest.raises(RuntimeError, match="unexpected=.*XX-99"):
         mdt_rounds._require_exact_completed_role_payloads(
             unexpected, "assessment", "Round 1"
+        )
+
+
+    mismatched_agent = [dict(row) for row in rows]
+    mismatched_agent[0] = {**mismatched_agent[0], "assessment": {
+        **mismatched_agent[0]["assessment"], "agent_id": "MO-01",
+    }}
+    with pytest.raises(RuntimeError, match="payload_identity_errors=.*RO-01: payload agent_id=MO-01"):
+        mdt_rounds._require_exact_completed_role_payloads(
+            mismatched_agent, "assessment", "Round 1"
+        )
+
+    mismatched_round = [dict(row) for row in rows]
+    mismatched_round[0] = {**mismatched_round[0], "assessment": {
+        **mismatched_round[0]["assessment"], "round_number": 2,
+    }}
+    with pytest.raises(RuntimeError, match="payload_identity_errors=.*round_number=2"):
+        mdt_rounds._require_exact_completed_role_payloads(
+            mismatched_round, "assessment", "Round 1"
         )
 
     malformed = [dict(row) for row in rows]
