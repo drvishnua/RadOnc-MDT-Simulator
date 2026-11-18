@@ -2655,9 +2655,9 @@ The above redesign requirements are all outstanding and must remain NOT STARTED 
 
 | Workstream | Status | Required outcome / verification |
 |---|---|---|
-| Evidence-grounded specialist assessment | NOT STARTED | Each of the 45 roles analyses the actual confirmed case snapshot and explicitly uses relevant supplied facts. Generic “insufficient information” responses that ignore available data must fail quality checks. |
-| Role-specific clinical perspective | NOT STARTED | Each role reasons within its remit, identifies its own relevant risks/options/priorities and raises role-appropriate questions. Roles must not simply repeat a shared generic assessment. |
-| Conditional decision-making | NOT STARTED | Where a decision depends on missing information, the role may provide useful conditional branches (if X, then consider A; if Y, then consider B), provided the branches are relevant, clinically defensible and clearly hypothetical. |
+| Evidence-grounded specialist assessment | IN PROGRESS | Each of the 45 roles analyses the actual confirmed case snapshot and explicitly uses relevant supplied facts. Generic “insufficient information” responses that ignore available data must fail quality checks. |
+| Role-specific clinical perspective | IN PROGRESS | Each role reasons within its remit, identifies its own relevant risks/options/priorities and raises role-appropriate questions. Roles must not simply repeat a shared generic assessment. |
+| Conditional decision-making | IN PROGRESS | Where a decision depends on missing information, the role may provide useful conditional branches (if X, then consider A; if Y, then consider B), provided the branches are relevant, clinically defensible and clearly hypothetical. |
 | Missing-data handling | NOT STARTED | Explicitly identify the missing variable and why it matters. Do not convert unknown ECOG, comorbidity, staging, organ function, pathology or patient preference into a presumed normal/negative value. |
 | Assumptions labelling | NOT STARTED | Separate documented case facts from model interpretations, hypothetical assumptions, prerequisites and unanswered questions. Every hypothetical branch must identify the condition it depends on. |
 | Decision options despite uncertainty | NOT STARTED | Permit a role to state a provisional/conditional option, alternatives and decision boundaries instead of defaulting to “cannot be determined” when meaningful conditional analysis is possible. Do not force a definitive recommendation where the evidence is inadequate. |
@@ -2666,9 +2666,9 @@ The above redesign requirements are all outstanding and must remain NOT STARTED 
 | R2 conditional debate | NOT STARTED | Specialists discuss differences in conditional branches and prerequisites, not just binary agreement. They must distinguish agreement on a proposition from agreement only under a shared condition. |
 | R3 adversarial conditional review | NOT STARTED | Challenge unsupported assumptions, missing prerequisites, unsafe branch logic, omitted alternatives and conversion of hypothetical conditions into asserted facts. Preserve valid uncertainty and dissent. |
 | R4 conditional Chair synthesis | NOT STARTED | Chair synthesises actual saved R1–R3 contributions, preserving conditions, alternatives, dependencies, disagreement and missing information. It must not collapse conditional support into unconditional consensus or invent a preferred branch. |
-| Deterministic output schema | NOT STARTED | Represent documented facts, interpretations, unknowns, assumptions, conditional options, prerequisites, risks, alternatives and required information as distinct validated fields where feasible. |
+| Deterministic output schema | IN PROGRESS | Represent documented facts, interpretations, unknowns, assumptions, conditional options, prerequisites, risks, alternatives and required information as distinct validated fields where feasible. |
 | Provenance and traceability | NOT STARTED | Link each material conclusion and conditional branch to the role contribution and supplied case facts it relies on. Preserve the exact confirmed pre-MDT case snapshot and subsequent round inputs. |
-| Quality evaluation | NOT STARTED | Add synthetic test cases with both sufficient and incomplete data. Verify roles use known facts, label unknowns, generate relevant conditional branches, avoid unsupported assumptions and remain role-distinct. Include cases where no safe conditional recommendation is possible. |
+| Quality evaluation | IN PROGRESS | Add synthetic test cases with both sufficient and incomplete data. Verify roles use known facts, label unknowns, generate relevant conditional branches, avoid unsupported assumptions and remain role-distinct. Include cases where no safe conditional recommendation is possible. |
 
 ### Required reasoning pattern for each specialist
 
@@ -2719,8 +2719,35 @@ The intake agent should identify high-impact missing variables and ask concise q
 | R3 adversarial review of conditional branches | NOT STARTED | R3 does not yet receive and audit the new structured R1 branch records as a dedicated contract. |
 | R4 conditional synthesis and source traceability | NOT STARTED | Chair schema/reconciliation has not yet been extended to aggregate conditional branches from saved R1–R3 records. No consensus behavior changed; consensus points remain disabled pending proposition-level representation. |
 | Conditional-branch provenance validation | NOT STARTED | Branches are stored within role records, but each branch is not yet deterministically linked to specific source case fields or evidence references. |
-| R1 schema and mocked-generation regressions | IN PROGRESS | Added schema validation and a mocked Ollama request test. Exact-head backend CI for the first implementation commit `9612687` failed one test because the test inspected `.default` rather than `.default_factory` for a Pydantic list field. This commit corrects the assertion; follow-up exact-head CI is pending. |
+| R1 schema and mocked-generation regressions | VERIFIED | Schema validation and mocked Ollama request tests passed in exact-head Backend Tests run `44419549097` on code commit `bec9dd8` (495 passed, 1 warning; deterministic preflight 7/7). The earlier failure on `9612687` was the test's `.default` versus `.default_factory` assertion and was corrected in `bec9dd8`. |
 | Live model adherence, clinical review and guideline verification | NOT STARTED | No Ollama inference was run. No clinical validation or guideline concordance is claimed. |
 
 The initial implementation commit `96126870bb65b84f599d2c8859b398d45b8a694b` triggered six standard workflows. Backend run [44419049547](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44419049547) failed on the single Pydantic default-factory test assertion. Frontend build [44419049486](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44419049486), browser E2E [44419049608](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44419049608), packaging prerequisites [44419049492](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44419049492), Windows installer [44419049461](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44419049461), and security audit [44419049462](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44419049462) completed successfully. The hosted Ollama/model bootstrap was skipped. These results are tied to `9612687`, not to this follow-up commit.
+---
 
+## Exact-head verification close-out — R1 conditional assessment (19 November 2026)
+
+**Verified code commit:** `bec9dd8e350662e220fdbf0052d33f52436aa28c`  
+**Branch:** `feature/four-round-mdt-and-performance`  
+**PR #1:** open, draft, unmerged; base `main` (base SHA `39a356b8eb09399aa2da1b9b9085965999f5105a`).
+
+All six standard workflows completed successfully against this exact code SHA:
+
+| Workflow | Run ID | Result |
+|---|---:|---|
+| Backend Tests | [44419549097](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44419549097) | SUCCESS — **495 passed, 1 warning**; deterministic no-inference preflight **7 passed, 0 failed, 0 inconclusive** |
+| Frontend Build | [44419548881](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44419548881) | SUCCESS |
+| Patient Registry and Four-Round Dashboard Browser E2E | [44419549190](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44419549190) | SUCCESS |
+| GitHub-hosted Windows Packaging Prerequisites | [44419548837](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44419548837) | SUCCESS |
+| Windows Installer Build | [44419548924](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44419548924) | SUCCESS; packaged install/smoke test completed; hosted Ollama/model bootstrap skipped |
+| Security and Dependency Audit | [44419549043](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44419549043) | SUCCESS; Python/Node audit, CodeQL and full-history secret scan passed |
+
+The additional installer run [44419539369](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44419539369) also succeeded, but is a redundant installer run for the same code head and is not counted as a seventh workflow.
+
+**Scope of what is verified:** the R1 `conditional_options` schema, prompt instructions and mocked Ollama request/response mapping are implemented and backend-tested. These checks do not demonstrate actual Qwen/MedGemma adherence or clinical accuracy. No model inference was run, no RTX 4060 activity was tested, and no clinical validation is claimed.
+
+**Correction to the earlier progress note:** follow-up CI is no longer pending. The initial `9612687` backend failure was a test assertion checking the Pydantic field `.default` rather than `.default_factory`; it was corrected in `bec9dd8` and exact-head backend CI passed.
+
+**R2/R3/R4 implementation boundary:** at `bec9dd8`, R2 does not yet receive or persist a structured R1 conditional-option register; R3 does not yet adversarially audit those branch records; R4 does not yet render a saved-row-derived conditional-option ledger. These workstreams remain NOT STARTED in code. Existing R2/R3 attributed source-opinion handling is a separate mechanism and must not be misrepresented as conditional-branch integration.
+
+A subsequent exploration of an R2 implementation approach was interrupted before any repository write/commit. It produced no repository change. The next implementation must resume from `bec9dd8`, recheck the live PR/head, and add a narrow R2 contract plus mocked tests before touching R3 or R4. Preserve exact source branch IDs and bind model responses back to immutable saved R1 rows; unregistered branches must be excluded and flagged. Branch support is not a vote or consensus.
