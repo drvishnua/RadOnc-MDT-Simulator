@@ -36,6 +36,23 @@ All six PR workflows associated with this exact documentation-only commit have c
 - Overall: five workflows SUCCESS, one workflow FAILED. The security failure remains a release gate. This is software/build verification only, not model acceptance, GPU verification, clinical validation or release approval.
 - PR #1 remains open/draft/unmerged; development branch head is ffac5043b7bc986996ba9f4ae20c852e1ca38d9f; main remains 39a356b8eb09399aa2da1b9b9085965999f5105a and was not modified.
 
+
+## Verification refresh — 18 November 2026 (checklist commit dc0ab4eb5766cefb9d529efe1b83c5ad7b3a9214)
+
+Exact-tip PR workflows associated with the preceding checklist commit dc0ab4eb5766cefb9d529efe1b83c5ad7b3a9214:
+- Backend run 44255058599: SUCCESS; deterministic preflight, compilation and pytest job completed successfully. Do not state an exact test count without checking its job log.
+- Frontend build run 44255058617: SUCCESS.
+- Patient registry/four-round dashboard browser E2E run 44255058600: SUCCESS. This does not demonstrate dedicated Development Monitor browser tests.
+- Windows packaging prerequisites run 44255058601: SUCCESS.
+- Windows installer run 44255058612: SUCCESS; clean-hosted Ollama/model bootstrap not independently confirmed.
+- Security/dependency audit run 44255058618: FAILED. Python dependency audit SUCCESS; Node npm audit FAILED with four high picomatch findings via fdir/tinyglobby/Vite. npm audit fix --force proposes a breaking Vite 6.2.7 downgrade; not applied.
+- Full-history secret scan, Python CodeQL and JavaScript/TypeScript CodeQL jobs in prior exact-tip security run 44145921274 all SUCCESS.
+- Overall: five standard workflows SUCCESS, security/dependency workflow FAILED. Security disposition unchanged.
+- The subsequent checklist-only update is not yet CI-associated; these run IDs refer to dc0ab4e, not the new documentation commit.
+
+### Status corrections
+Backend tests, frontend build, patient registry/dashboard browser E2E, packaging prerequisites, installer build/smoke, full-history secret scan and both CodeQL analyses are VERIFIED on exact tip dc0ab4eb5766cefb9d529efe1b83c5ad7b3a9214. Dependency audit remains FAILED. Development Monitor dedicated browser acceptance remains IN PROGRESS. Model screen remains held; GPU and clinical validation remain NOT STARTED / NOT EVALUATED.
+
 ## Dependency-security investigation — CVE-2026-112366
 
 - Resolved frontend lockfile has one picomatch 4.0.7 occurrence, marked dev=true. It is reached through fdir and tinyglobby, which are used by Vite 7.3.8. The finding is in the build-tool dependency tree, not the declared React runtime dependencies. Full dependency audit still remains a required security gate and is FAILED.
@@ -68,9 +85,9 @@ All six PR workflows associated with this exact documentation-only commit have c
 | Provenance and guideline/evidence retrieval | IN PROGRESS | Screening harness has source text/IDs; in-app guideline retrieval and linked evidence incomplete. |
 | Chair consensus, dissent and traceability | FAILED | v15 partial-agreement contradiction and R4 source-echo failures await live retest. |
 | Missing/failed-agent handling | FAILED | v15 MedGemma omitted counts/role identity; deterministic guard is regression-tested, not live-model verified. |
-| Backend tests — exact CI-tested baseline ffac504 | VERIFIED | Run 44142134948: 471/471 passed; preflight 7/7; diagnostic errors 0. |
-| Frontend build — exact head ffac504 | VERIFIED | Run 44142134991 passed. |
-| Patient registry and saved MDT dashboard browser E2E — exact head ffac504 | VERIFIED | Run 44142134881 passed; not full 45-role clinical simulation. |
+| Backend tests — exact tested tip dc0ab4e | VERIFIED | Run 44255058599 completed successfully; exact pytest count not quoted. |
+| Frontend build — exact tested tip dc0ab4e | VERIFIED | Run 44255058617 passed. |
+| Patient registry and saved MDT dashboard browser E2E — exact tested tip dc0ab4e | VERIFIED | Run 44255058600 passed; does not cover dedicated Development Monitor acceptance. |
 | Mission Control development-process monitor | IN PROGRESS | Backend tests pass; complete operational/browser acceptance of live development monitor not established. |
 | Ollama context handling | IN PROGRESS | Historical 6,144/8,192 allocation only; long-run context truncation not proven fixed. |
 | Ollama performance and concurrency | IN PROGRESS | Hosted screening concurrency 1; comparable local RTX 4060 timings incomplete. |
@@ -84,11 +101,11 @@ All six PR workflows associated with this exact documentation-only commit have c
 | Independent blinded model-output review | NOT STARTED | Required independent review not completed. |
 | Guideline retrieval and verification | NOT STARTED | No current authoritative evidence set retrieved and linked to simulator conclusions. |
 | Independent qualified clinical review | NOT STARTED | No attributable clinical review artifact. |
-| Packaging prerequisites — exact head ffac504 | VERIFIED | Run 44142134831 passed. |
-| Windows installer — exact head ffac504 | VERIFIED | Run 44142134823 passed installer build/install-smoke/checksum/upload. Clean-hosted first-run Ollama/model bootstrap was SKIPPED. |
-| Full-history secret scan — exact head ffac504 | VERIFIED | Run 44142134877 passed. |
-| CodeQL — exact head ffac504 | VERIFIED | Python and JavaScript/TypeScript jobs passed in run 44142134877. |
-| Dependency audit — exact head ffac504 | FAILED | Run 44142134877: frontend lockfile audit failed; Python dependency audit passed. The outstanding picomatch 4.0.7 finding remains GHSA-fc5q-39xc-vjpf / CVE-2026-112366. No override/downgrade/suppression applied. |
+| Packaging prerequisites — exact tested tip dc0ab4e | VERIFIED | Run 44255058601 passed. |
+| Windows installer — exact tested tip dc0ab4e | VERIFIED | Run 44255058612 passed; clean-hosted first-run Ollama/model bootstrap not independently confirmed. |
+| Full-history secret scan — exact tested tip dc0ab4e | VERIFIED | Run 44145921274 passed. |
+| CodeQL — exact tested tip dc0ab4e | VERIFIED | Python and JavaScript/TypeScript jobs passed in run 44145921274. |
+| Dependency audit — exact tested tip dc0ab4e | FAILED | Run 44255058618: Node npm audit failed on four high picomatch findings; Python dependency audit passed. The outstanding picomatch 4.0.7 finding remains GHSA-fc5q-39xc-vjpf / CVE-2026-112366. No override/downgrade/suppression applied. |
 | Release acceptance | BLOCKED | Dependency audit failed; v15 model screen failed; v16 screen held; full 45-role run, GPU telemetry, evidence verification and independent clinical review outstanding. |
 
 ## Next controlled actions
