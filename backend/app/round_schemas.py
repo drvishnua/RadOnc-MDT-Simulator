@@ -186,7 +186,9 @@ class RoundContribution(StrictModel):
     round_number: Literal[2, 3]
     position: Position
     provisional_conclusion: str = Field(min_length=20, max_length=900)
-    response_to_other_perspectives: str = Field(min_length=20, max_length=1600)
+    # Saved R2 text may include the server-bound source opinion register appended
+    # after the model-authored narrative; R3 remains model-authored and shorter.
+    response_to_other_perspectives: str = Field(min_length=20, max_length=4200)
     agreements: list[str] = Field(default_factory=list, max_length=8)
     substantive_challenges: list[str] = Field(default_factory=list, max_length=8)
     source_opinion_responses: list[Round2SourceOpinionResponse] = Field(default_factory=list, max_length=4)
