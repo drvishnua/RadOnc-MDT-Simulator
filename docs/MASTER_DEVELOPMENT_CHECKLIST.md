@@ -294,10 +294,10 @@ Decision: do not consume PR #264 or another unmerged fork as a production depend
 | Workstream | Status | Evidence / boundary |
 |---|---|---|
 | Four-round R1–R4 architecture and saved data flow | IN PROGRESS | Deterministic tests pass; full live-model acceptance outstanding |
-| R1 staging/unknown-data safeguards | IN PROGRESS | Historical staging flags and live-model remediation remain outstanding |
+| R1 staging/unknown-data safeguards | IN PROGRESS | Explicit unknown-stage protections remain; audit-v16 now regression-tests denial of a supplied diagnosis field and omission of opposing source statements. Live-model remediation remains unverified |
 | R2 source identity/order and preserved source register | VERIFIED | Server-bound source identity/register regression suite |
 | R2 proposition-level consensus and conditionality | IN PROGRESS | Live Qwen behavior not verified |
-| R3 adversarial review/provenance | IN PROGRESS | Deterministic regressions pass; full live behavior unresolved |
+| R3 adversarial review/provenance | IN PROGRESS | Deterministic source-quote, source-ID, omission/preservation, and audit-v16 input-echo regressions pass; full live behavior unresolved |
 | R4 synthesis from actual saved R1–R3 contributions | IN PROGRESS | Saved contribution excerpts and completeness disclosure implemented/tested; live acceptance outstanding |
 | Chair consensus, dissent and source traceability | FAILED | Historic live-model false-agreement/unsupported-stage failures remain unresolved; do not downgrade from failed |
 | Missing/failed-agent disclosure | IN PROGRESS | Deterministic handling tested; full 45-role live validation outstanding |
@@ -305,9 +305,9 @@ Decision: do not consume PR #264 or another unmerged fork as a production depend
 | Case integrity, hashes, run IDs and audit history | IN PROGRESS | Historical artifacts preserved; full current live run not accepted |
 | Evidence provenance/guideline retrieval | IN PROGRESS | Evidence retrieval not yet verified |
 | Guideline verification | NOT STARTED | No guideline-concordance claim |
-| Backend tests | VERIFIED | 480/480; 0 failed/errors/skips; preflight 7/7 on `3054304` |
-| Frontend build | VERIFIED | Exact-head workflow success |
-| Patient Registry / four-round browser E2E | VERIFIED | Exact-head workflow success |
+| Backend tests | VERIFIED | **487/487 passed**, 0 failed/errors/skips/inconclusives; preflight **7/7** on application commit `e9a585c` (run [44335531381](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44335531381)); branch-tip backend workflow [44336253352](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44336253352) also SUCCESS on `9c70fd4` |
+| Frontend build | VERIFIED | SUCCESS on application commit `e9a585c` (run [44335531398](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44335531398)) and checklist branch tip `9c70fd4` (run [44336253095](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44336253095)) |
+| Patient Registry / four-round browser E2E | VERIFIED | SUCCESS on application commit `e9a585c` (run [44335531728](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44335531728)) and checklist branch tip `9c70fd4` (run [44336253065](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44336253065)) |
 | Mission Control / Development Monitor | VERIFIED | Prior browser E2E; no claim of live model telemetry |
 | Windows packaging prerequisites | VERIFIED | Exact-head workflow success |
 | Windows installer build/install/smoke/checksum/artifact | VERIFIED | Exact-head workflow success |
@@ -464,7 +464,20 @@ Additional manual audit observations not caught by audit-v15: R1-UNKNOWN-STAGE-0
 
 Positive controls: R2-FALSE-CONSENSUS-005 kept separate conditional options distinct; R3-FABRICATED-QUOTE-009 rejected the unsupplied MRI quote. This corpus is a synthetic software-integrity screen, not clinical cases or gold-standard oncology answers.
 
-Follow-up: add narrow regressions for the three audit false negatives and strengthen R2/R4 narrative checks. No further model screen is authorised without fresh risk review and security clearance.
+### Deterministic screening-audit upgrade after the historical run — prompt-v16 / audit-v16
+
+The prior Qwen screen above remains an immutable **prompt-v16 / audit-v15** result. The current application code subsequently upgraded the deterministic screen audit to **audit-v16** and added no-inference regression coverage for the three manual false negatives recorded above:
+
+- `R1-UNKNOWN-STAGE-001`: flags a response that denies a supplied non-empty diagnosis field while preserving a safe positive control that leaves T/N/M and stage unknown.
+- `R1-CONTRADICTION-003`: flags failure to mention both supplied source labels, the laterality discrepancy and its unresolved status; the positive control retains both statements without selecting a source.
+- `R3-INVALID-SOURCE-008`: flags a serialized `synthetic_input` object instead of the requested bounded source-inventory audit; a concise valid inventory is accepted.
+
+Audit-v16 also has deterministic R2 partial-agreement/source-attribution and conditionality checks, plus R4 missing-role/completeness, synthesis-traceability and JSON-echo checks. Existing R3/R4 tests already cover exact supplied-source quotation, omission versus preservation of conditional options/prerequisites, false treatment consensus across distinct propositions, missing/failed roles, and rebuilding Chair content from actual saved contributions. No duplicate test set was added.
+
+**Code/test provenance:** The screening script blob `a0eff65721ace1c0c5dafa9172b2f84687cdc5c2` and test blob `22f576af83d3b1805a273a40f0c2c3da0a4a52d2` are unchanged between application commit `e9a585c711b6205cb17c2b039d41fe4a5c569929` and the current checklist branch tip. Backend run [44335531381](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44335531381) on `e9a585c` passed **487/487** tests and preflight **7/7**. Its JUnit artifact [14441935461](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/artifacts/14441935461) has digest `sha256:abfc5a378fbad39769be11870348706b6c9b45af059b2c0f8ee1586e1ebc4f92`; preflight artifact [14442030349](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/artifacts/14442030349) has digest `sha256:623f9bb527b4c2320d6c6c32d51ecd99cdfe67a72c46aa5dd844cfcde2d64c73`.
+
+**Boundary:** These tests verify the audit code's deterministic flags and safe controls, not model behaviour. No model response was generated with audit-v16. Run [44263369594](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44263369594) remains the historical audit-v15 model result and cannot validate the later audit-v16 rules. No new Qwen or MedGemma inference or GPU measurement occurred. The one-run security exception remains consumed.
+Follow-up: the deterministic audit-v16 regressions are implemented and CI-tested; do not duplicate them. A new bounded Qwen/MedGemma screen remains BLOCKED until the Node dependency security gate has a documented disposition and fresh explicit risk approval is recorded. Any later screen must use the current code/audit version, concurrency 1, and independent review of complete artefacts.
 ## Latest PR-head CI — PR head `e75616a3c24fa330e9fbc624340b64862afc6fce` (18 November 2026)
 
 All six standard PR workflows completed on this exact head: five succeeded and the security/dependency workflow failed.
