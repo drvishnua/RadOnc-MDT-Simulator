@@ -3959,8 +3959,8 @@ def test_chair_prompt_retains_full_saved_r2_source_opinion_and_condition(monkeyp
         )
     )
     prompt = prompts[0]
-    digest_text = prompt.split("ROUND 2 DEBATE POSITIONS:\\n", 1)[1].split(
-        "\\nROUND 3 ADVERSARIAL REVIEW:", 1
+    digest_text = prompt.split("ROUND 2 DEBATE POSITIONS:\n", 1)[1].split(
+        "\nROUND 3 ADVERSARIAL REVIEW:", 1
     )[0]
     digest = json.loads(digest_text)
     saved = next(
