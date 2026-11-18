@@ -1,3 +1,9 @@
+### Follow-up hardening — conflicting completed-row handling
+
+The first failed-duplicate accounting regression passed on `aee52ca`. A second edge case was then identified: raw completed dictionaries are not necessarily eligible for distinct-role summaries when completed duplicates have conflicting positions. The completed-role set now comes from the existing deterministic `_distinct_role_entries` function. The added regression verifies that two conflicting completed positions plus a failed duplicate are not misclassified as a usable completed role. This follow-up is **IN PROGRESS** until exact-head CI completes.
+
+---
+
 ### Exact-head validation — Chair failed-duplicate accounting — commit `aee52ca` — 18 November 2026
 
 **Application + regression-test + checklist commit:** `aee52ca9b49708a01ee0e846d30239e2392f5aa8`. All six PR workflows completed on this exact SHA:
@@ -27,9 +33,9 @@ All six standard workflows completed on this exact SHA:
 
 No model inference, GPU verification, guideline verification or clinical validation occurred on this checkpoint.
 
-### Chair failed-duplicate contribution accounting — deterministic fix verified
+### Chair failed-duplicate contribution accounting — conflicting-completion edge case added; validation pending
 
-Code review found that `_round_completion_disclosures` computed `completed_ids` but did not use it when classifying additional unusable rows. A role with both a valid completed contribution and a failed/malformed duplicate could therefore be incorrectly described as having **no usable completed contribution**. The helper now separates these cases: the valid contribution remains eligible, while the extra unusable row is disclosed separately. A focused regression test covers one role with a valid plus failed row and another role with only a failed row. Exact-head backend CI passed 481/481, including the new test; the deterministic software correction is **VERIFIED**. It does not change source rows or erase duplicate audit history and does not establish live-model or clinical correctness.
+Code review found that `_round_completion_disclosures` computed `completed_ids` but did not use it when classifying additional unusable rows. A role with both a valid completed contribution and a failed/malformed duplicate could therefore be incorrectly described as having **no usable completed contribution**. The helper now separates these cases: the valid contribution remains eligible, while the extra unusable row is disclosed separately. A focused regression test covers one role with a valid plus failed row and another role with only a failed row. A second regression now ensures conflicting completed duplicates are first excluded by the existing distinct-role logic and cannot make a separate failed row appear to coexist with a usable contribution. The completed-role set now uses `_distinct_role_entries`, rather than raw completed dictionaries. The first regression passed on commit `aee52ca` (481/481); this additional edge-case refinement is **IN PROGRESS** pending exact-head CI. Saved rows and audit history are not rewritten.
 
 ---
 
@@ -195,7 +201,7 @@ Historical checkpoints below are immutable evidence and do not override this tab
 | Cross-round minority-history regression | VERIFIED | New test `test_final_chair_boundary_retains_earlier_and_later_minority_histories` passed in backend run 44262841444; it verifies an earlier R1 minority remains visible alongside a different R3 minority. This is a deterministic regression test, not live-model acceptance. |
 | Chair consensus, distinct-role counting, dissent and traceability | FAILED | Deterministic counts exist, but v15 model-level consensus/dissent findings remain unresolved by live retest. |
 | Exact specialist-ID input gate | VERIFIED | Guard in `47dfa9d`; corrected regression in `8cde5dd`; exact regression-test-head backend run 44262841444 passed (473/473 pytest rows, re-counted from job logs). |
-| Chair mixed completed/failed duplicate-row accounting | VERIFIED | Exact-head commit `aee52ca` backend CI passed 481/481 including the new regression; a valid completed contribution remains eligible while an additional failed/malformed duplicate is separately disclosed. Deterministic software verification only. |
+| Chair mixed completed/failed duplicate-row accounting | IN PROGRESS | Initial mixed completed/failed duplicate regression passed on `aee52ca` (481/481). Follow-up now derives usable completed IDs from `_distinct_role_entries`, so conflicting completed duplicates cannot be treated as usable; a second regression was added. Await exact-head CI. |
 | Missing/failed-agent handling | IN PROGRESS | Deterministic Chair report identifies failed/unusable rows by status and reports absent rows against the configured 45-role roster; failed records remain excluded from distinct-role counts. Regression passed in exact-head backend run [44303234900](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44303234900), including failed/absent-role disclosure in the primary Chair conclusion. Entirely absent upstream rows cannot be individually named without a complete roster in the Chair input. |
 | Clinical safety, staging and unknown data | IN PROGRESS | Deterministic safeguards exist; no clinical validation, guideline concordance or zero-hallucination guarantee. |
 | Case integrity, contradiction preservation and audit history | IN PROGRESS | Historical raw outputs retained. Three audit-v16 deterministic checks now cover the three manual false negatives recorded from v16/audit-v15. Exact regression tests passed, but there is no live audit-v16 model rerun; raw case and audit history remain preserved. |

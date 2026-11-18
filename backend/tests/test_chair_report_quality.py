@@ -67,6 +67,37 @@ def test_failed_duplicate_row_does_not_hide_a_usable_completed_role_contribution
     assert "completed contribution remains eligible" in duplicate_rows[0]
 
 
+def test_conflicting_completed_duplicates_do_not_make_failed_duplicate_look_usable():
+    rows = [
+        {
+            "agent_id": "RO-01",
+            "status": "completed",
+            "assessment": {"position": "supports"},
+        },
+        {
+            "agent_id": "RO-01",
+            "status": "completed",
+            "assessment": {"position": "opposes"},
+        },
+        {
+            "agent_id": "RO-01",
+            "status": "failed",
+            "assessment": None,
+        },
+    ]
+
+    disclosures = _round_completion_disclosures(rows, "assessment", 1)
+
+    assert any(
+        "RO-01" in item and "no usable completed" in item
+        for item in disclosures
+    )
+    assert not any(
+        "RO-01" in item and "additional non-usable row" in item
+        for item in disclosures
+    )
+
+
 def _empty_report() -> FinalMDTReport:
     return FinalMDTReport(
         run_id="synthetic-run",

@@ -57,7 +57,7 @@ def _round_completion_disclosures(
     }
     completed_ids = {
         str(row.get("agent_id") or "").strip().upper()
-        for row, _ in _entries(rows, field)
+        for row, _ in _distinct_role_entries(rows, field, f"Round {round_number}")
         if str(row.get("agent_id") or "").strip()
     }
     noncompleted_by_status: dict[str, list[str]] = defaultdict(list)
