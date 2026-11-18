@@ -1,5 +1,23 @@
 # RadOnc MDT Simulator — Master Development and Verification Checklist
 
+### Exact-head CI result — checklist commit e538081 — 18 November 2026
+
+**Exact PR head:** `e5380812e7ec4ef5cdad3f519a293674aebf9ae0`. PR #1 remains open/draft/unmerged; `main` remains unchanged at `39a356b8eb09399aa2da1b9b9085965999f5105a`.
+
+All six workflows completed on this exact commit:
+- Backend [44311731148](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44311731148): SUCCESS; **480 passed, 0 failed, 0 errors, 0 skipped**, 1 warning; deterministic preflight **7 passed, 0 failed, 0 inconclusive**.
+- Frontend [44311731140](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44311731140): SUCCESS.
+- Patient Registry / Four-Round Dashboard Browser E2E [44311731139](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44311731139): SUCCESS.
+- Windows Packaging Prerequisites [44311731170](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44311731170): SUCCESS.
+- Windows Installer [44311731206](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44311731206): SUCCESS; installer build/install/smoke/checksum/artifact passed; optional clean-hosted Ollama/model bootstrap SKIPPED.
+- Security Audit [44311731201](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44311731201): overall FAILED only in full Node dependency audit. Python audit, production-only Node audit, both CodeQL scans and full-history secret scan succeeded.
+
+The separate production audit introduced on `3054304` passed again on `e538081`; the full audit still reports four HIGH `picomatch` findings through the Vite build dependency chain. The full audit remains FAILED. Do not suppress the advisory, downgrade Vite, or use an unreviewed upstream fork.
+
+No model inference, GPU verification, guideline verification or clinical validation occurred. All live-model/clinical/release blockers in the current status table remain open.
+
+---
+
 ### Current checkpoint — exact-head CI and dependency security — 18 November 2026
 
 **Development branch application/workflow commit:** `30543049f302b6bbd84608fea8ae723a06f28f4b`.  
