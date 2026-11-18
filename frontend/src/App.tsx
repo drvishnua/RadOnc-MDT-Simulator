@@ -683,22 +683,30 @@ function App() {
         head?: { ref?: string; sha?: string };
         base?: { ref?: string };
       };
-      const runsPayload = await runsResponse.json() as { workflow_runs?: Array<{
-        id?: number;
-        workflow_id?: number;
-        name?: string;
-        run_number?: number;
-        status?: string;
-        conclusion?: string | null;
-        event?: string;
-        head_sha?: string;
-        created_at?: string;
-        updated_at?: string;
-        html_url?: string;
-      }> };
+      const runsPayload = await runsResponse.json() as {
+        total_count?: number;
+        workflow_runs?: Array<{
+          id?: number;
+          workflow_id?: number;
+          name?: string;
+          run_number?: number;
+          status?: string;
+          conclusion?: string | null;
+          event?: string;
+          head_sha?: string;
+          created_at?: string;
+          updated_at?: string;
+          html_url?: string;
+        }>;
+      };
       const headSha = pull.head?.sha;
-      if (!headSha || !Array.isArray(runsPayload.workflow_runs)) {
-        throw new Error("GitHub returned incomplete development metadata; the last saved view is retained.");
+      if (!headSha || !Number.isSafeInteger(runsPayload.total_count) ||
+          (runsPayload.total_count as number) < 0 ||
+          !Array.isArray(runsPayload.workflow_runs) ||
+          (runsPayload.total_count as number) < runsPayload.workflow_runs.length ||
+          ((runsPayload.total_count as number) > 0 && runsPayload.workflow_runs.length === 0) ||
+          ((runsPayload.total_count as number) === 0 && runsPayload.workflow_runs.length !== 0)) {
+        throw new Error("GitHub returned incomplete or inconsistent workflow metadata; the last saved view is retained.");
       }
 
       // Keep the newest run per workflow; do not mix status records from different attempts.
@@ -709,6 +717,9 @@ function App() {
         const key = typeof run.workflow_id === "number" ? run.workflow_id : run.name;
         const previous = latestByWorkflow.get(key);
         if (!previous || run.created_at > (previous.created_at ?? "")) latestByWorkflow.set(key, run);
+      }
+      if ((runsPayload.total_count as number) > 0 && latestByWorkflow.size === 0) {
+        throw new Error("GitHub returned no usable workflow records; the last saved view is retained.");
       }
       const workflows: DevelopmentWorkflowRun[] = Array.from(latestByWorkflow.values())
         .sort((left, right) => (right.created_at ?? "").localeCompare(left.created_at ?? ""))
