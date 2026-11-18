@@ -1,4 +1,16 @@
-# Master Development and Verification Checklist — CURRENT, 17 November 2026
+# Master Development and Verification Checklist — CURRENT, 18 November 2026
+
+## Verification refresh — 18 November 2026 (exact branch tip a17acb66e89a956b0ada1a21baff30d9528f865f)
+
+The six standard PR workflows are now associated with this exact tip and have completed:
+- Backend run 44145921238: SUCCESS (see run for test summary).
+- Frontend build run 44145921239: SUCCESS.
+- Patient registry and saved MDT dashboard browser E2E run 44145921510: SUCCESS. This workflow does not establish dedicated Development Monitor interaction/refresh/error-state browser acceptance; that workstream remains IN PROGRESS.
+- Windows packaging prerequisites run 44145921302: SUCCESS.
+- Windows installer run 44145921228: SUCCESS (do not infer clean-hosted first-run Ollama/model bootstrap unless its job is separately shown as passed).
+- Security/dependency run 44145921274: FAILED. Dependency audit remains a release blocker; secret scan/CodeQL subjobs must be read from the run before asserting their individual current status.
+- This exact-tip result supersedes the older statement that a17acb had no associated Actions runs. It does not resolve the picomatch finding or establish live model, GPU or clinical validation.
+
 
 Repository: drvishnua/RadOnc-MDT-Simulator  
 Development branch: feature/four-round-mdt-and-performance  
