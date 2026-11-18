@@ -4,8 +4,8 @@
 
 **Repository:** `drvishnua/RadOnc-MDT-Simulator`  
 **Development branch:** `feature/four-round-mdt-and-performance`  
-**Current branch HEAD:** `e3dbc3b60a3f2f8c369c31ecf1ba51c7055e9712`  
-**PR #1:** open, draft, unmerged; base `main`; head SHA matches the development branch.  
+**Latest application/test commit:** `e3dbc3b60a3f2f8c369c31ecf1ba51c7055e9712` (later commits in this sequence update only the checklist).  
+**PR #1:** open, draft, unmerged; base `main`.  
 **`main`:** `39a356b8eb09399aa2da1b9b9085965999f5105a`; unchanged.
 
 ### Development Monitor implementation and regression coverage
@@ -24,6 +24,17 @@ All six standard PR workflows completed:
 - Windows Packaging Prerequisites [44257129933](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44257129933): SUCCESS.
 - Windows Installer Build [44257129757](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44257129757): SUCCESS. The separate clean-hosted first-run Ollama/model bootstrap job was SKIPPED; no model inference was performed by this workflow.
 - Security and Dependency Audit [44257129843](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44257129843): WORKFLOW FAILED. Python dependency audit reported no known vulnerabilities; Python CodeQL, JavaScript/TypeScript CodeQL and full-history secret scan all passed. Node `npm audit --audit-level=high` failed with **four high-severity picomatch findings** through the Vite/fdir/tinyglobby dependency tree. Dependency audit job [134641397382](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44257129843) is the failing job. No forced downgrade, unmerged fork, override or audit suppression was applied.
+
+### Confirmed repeat CI after the checklist refresh — docs-only commit a16a923
+
+The checklist-only commit `a16a92301f5e513d123027275705c4700f75c224` left the application/test tree unchanged from `e3dbc3b`. All six PR workflows associated with `a16a923` have since completed:
+- Backend [44257698125](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44257698125): SUCCESS; 471/471 tests, preflight 7/7; artifacts [14406706313](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44257698125/artifacts/14406706313) (preflight) and [14406308611](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44257698125/artifacts/14406308611) (JUnit diagnostics).
+- Frontend [44257698093](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44257698093): SUCCESS.
+- Browser E2E [44257698053](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44257698053): SUCCESS; all five browser acceptance markers emitted, including `DEVELOPMENT_MONITOR_BROWSER_E2E_OK`.
+- Packaging prerequisites [44257698026](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44257698026): SUCCESS.
+- Windows installer [44257697944](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44257697944): SUCCESS; optional clean-hosted first-run Ollama/model bootstrap SKIPPED.
+- Security [44257698007](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44257698007): WORKFLOW FAILED solely at the Node dependency audit; Python dependency audit, both CodeQL jobs and full-history secret scan passed.
+- This repeat run confirms the same software tree, but the dependency-security failure remains unchanged. No live model inference was performed.
 
 ### Dependency-security disposition — still a release blocker
 
