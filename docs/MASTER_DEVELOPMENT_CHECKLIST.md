@@ -2584,3 +2584,62 @@ PR head `e614ac07ebafbbf223226e1e2c0a2de4d868b6a1`, PR #1 open/draft/unmerged, b
 ### Current acceptance status
 
 The above redesign requirements are all outstanding and must remain NOT STARTED until implementation evidence exists. Existing historical VERIFIED statuses elsewhere in this document refer only to their named commits and checks; they do not satisfy these new requirements. Release acceptance remains BLOCKED.
+
+
+---
+
+## Additional product requirement — pre-MDT case clarification agent and chat (19 November 2026)
+
+**Requested feature:** introduce a dedicated pre-MDT case clarification agent, presented in a chat interface before R1 begins. This is a separate intake stage, not an additional voting specialist and not a fifth MDT round. The existing 45 specialist roles and R1–R4 boundaries remain unchanged.
+
+### Feature requirements and acceptance criteria
+
+| Workstream | Status | Required outcome / verification |
+|---|---|---|
+| Pre-MDT Case Clarification Agent | NOT STARTED | Add a dedicated agent that reviews the submitted case before any MDT round starts, identifies decision-relevant gaps, ambiguities and useful optional details, and interacts with the user. Keep it separate from the 45 specialist contributions and Chair consensus counts. |
+| Pre-MDT chat interface | NOT STARTED | Add a chatbox before the MDT start action, with a familiar message-thread layout (WhatsApp-like visual interaction), clear agent/user message distinction, timestamps or turn ordering, typing/submission state, and readable message history. Do not imitate WhatsApp branding or imply WhatsApp integration. |
+| Case-aware clarification questions | NOT STARTED | Agent reads only the submitted case and relevant structured fields. Ask concise, specific, decision-relevant questions that help complete or clarify the case. Prefer one focused question at a time or a very short grouped set; avoid repetitive, generic or unnecessarily lengthy questioning. |
+| Guided but non-leading question quality | NOT STARTED | Questions may guide the user toward useful missing information, but must not suggest a desired diagnosis, stage, treatment or answer. Use neutral examples/prompts where helpful; never presume an unknown value is normal or negative. |
+| Distinguish essential gaps from optional enhancements | NOT STARTED | Clearly distinguish information that materially limits assessment from optional details that could improve MDT deliberation. Explain briefly why a requested detail matters without exaggerating its impact. |
+| User may decline or skip | NOT STARTED | User can decline to answer any question, skip the clarification stage, or proceed with the current case. Do not trap the user in a forced conversation or block MDT solely because optional details are unavailable. |
+| Declined/missing-information warning | NOT STARTED | On skip/decline, show a concise plain-language warning identifying which decision areas may remain limited and that conclusions may be conditional or indeterminate. Do not imply that declining makes the case invalid. |
+| Intake conversation completion | NOT STARTED | Provide a clear “Start MDT” / proceed action when the user is ready, including when no additional information is supplied. Avoid unnecessary conversation turns. |
+| Structured case update and provenance | NOT STARTED | User-provided answers may update the case only through explicit, reviewable confirmation. Preserve original case input; record added information separately with source= user, timestamps, and audit linkage. Never convert agent suggestions or unanswered questions into facts. |
+| Unknown, declined and not-applicable states | NOT STARTED | Preserve distinct states for unknown, not provided/declined, not applicable and explicitly negative. Never silently convert one state into another or infer a clinical fact from refusal/silence. |
+| Intake summary passed to MDT | NOT STARTED | Pass the confirmed case plus a compact clarification summary and unresolved gaps into R1. Label provenance and distinguish confirmed user facts, existing case facts, agent-identified gaps and unanswered/declined questions. Do not pass speculative agent assumptions as facts. |
+| No influence on specialist independence | NOT STARTED | Intake agent must not generate or dictate treatment recommendations or pre-decide consensus. R1 specialists independently assess the same confirmed case snapshot and retain freedom to disagree. |
+| Clinical safety and audit tests | NOT STARTED | Test contradictory answers, unsupported assumptions, leading/biased questions, user refusal, skip, empty answers, partial answers, case edits after clarification, and provenance preservation. Verify no R1 launch occurs with a silently mutated or unaudited case. |
+| Concise conversation quality | NOT STARTED | Add regression/evaluation criteria for question relevance, brevity, no repeated questions, no unnecessary follow-up loops, and clear final impact warning. |
+
+### Intended user journey
+
+1. User creates or opens a case and submits the available clinical information.
+2. Before R1, the pre-MDT agent reviews the case for missing, ambiguous or potentially useful decision-relevant information.
+3. The agent opens the chat and asks a short, targeted question, explaining its relevance briefly where necessary.
+4. User answers, says they do not know, declines a specific question, or skips the entire clarification stage.
+5. The agent summarises confirmed additions and remaining gaps; user can review/confirm the additions.
+6. If information remains unavailable, show a short warning about the likely limitations. User can still choose to proceed.
+7. On “Start MDT”, save an immutable/auditable case snapshot and pass it to R1. R1–R4 then run under the existing architecture.
+
+### Safety and design constraints
+
+- This agent is a case-intake clarification assistant, not a clinician, diagnostic authority, triage service or MDT voting member.
+- Do not fabricate or infer pathology, staging, performance status, resectability, comorbidities, investigations, patient preferences or treatment suitability.
+- Do not pressure the user to provide information or imply a preferred treatment.
+- Ask only questions whose answers could reasonably affect interpretation, eligibility, risk, options, sequencing or confidence in the MDT discussion.
+- Accept “unknown”, “not available”, “decline to answer” and “not applicable” distinctly.
+- Preserve uncertainty and original case data; retain provenance and audit history for all accepted additions.
+- The warning must be short, specific to the unanswered items and understandable to a non-technical user.
+- No clinical validation or zero-hallucination claim follows from implementation or software tests.
+
+### Implementation sequence
+
+1. Inspect current case schema, case creation flow, persistence/audit model, R1 launch path and desktop UI architecture.
+2. Define a separate intake-agent schema and strict input/output contract; keep it outside the 45 specialist role registry and consensus counts.
+3. Implement deterministic missing-field/ambiguity inventory where possible, with the LLM limited to prioritising and phrasing grounded questions.
+4. Implement the concise chat UX, skip/decline/unknown controls and explicit review/confirmation of proposed case additions.
+5. Persist original input, accepted additions, unanswered/declined items, conversation transcript and final pre-R1 snapshot with provenance.
+6. Pass only the confirmed snapshot and neutral gap summary to independent R1 agents.
+7. Add backend, frontend, audit, security and desktop E2E tests; then run a bounded synthetic evaluation before any separately authorised larger model run.
+
+**No implementation is claimed by this checklist entry.** The feature is a new requirement and remains NOT STARTED until code, tests and exact-head verification exist.
