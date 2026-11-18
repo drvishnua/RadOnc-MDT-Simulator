@@ -1,5 +1,26 @@
 # RadOnc MDT Simulator — Master Development and Verification Checklist
 
+### Current exact-head verification — 18 November 2026
+
+**Development branch HEAD:** `4e6bde22042bc3a9bc2ad965695aecbf0ada4783` (checklist-only commit).  
+**PR #1:** open, draft, unmerged; base `main`.  
+**Main:** unchanged at `39a356b8eb09399aa2da1b9b9085965999f5105a`.  
+**Checklist blob before this refresh:** `cdfdc603b8ea3d7d6ebe14fbf390b6ce8f74402d`.
+
+All six standard workflows completed on exact HEAD `4e6bde2`:
+- Backend [44307039866](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44307039866): SUCCESS; **480 passed, 0 failed, 0 errors, 0 skipped**, 1 warning; deterministic preflight **7 passed, 0 failed, 0 inconclusive**. Artifacts: preflight [14428961646](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44307039866/artifacts/14428961646), pytest diagnostics [14429325758](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44307039866/artifacts/14429325758).
+- Frontend [44307039827](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44307039827): SUCCESS.
+- Patient Registry / Four-Round Dashboard Browser E2E [44307039912](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44307039912): SUCCESS.
+- Windows Packaging Prerequisites [44307039800](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44307039800): SUCCESS.
+- Windows Installer [44307039959](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44307039959): SUCCESS.
+- Security Audit [44307039863](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44307039863): FAILED only in Node dependency audit. Python dependency audit reported no known vulnerabilities; JavaScript/TypeScript CodeQL, Python CodeQL and full-history secret scan succeeded.
+
+**Security finding reconfirmed from exact-head logs:** four HIGH `picomatch` findings, reached through `vite -> fdir/tinyglobby -> picomatch`, associated with GHSA-fc5q-39xc-vjpf (ReDoS via single-branch repeated extglobs). npm's suggested `npm audit fix --force` would install Vite 6.2.7 as a breaking change. No forced downgrade, unreviewed fork, dependency override or audit suppression was applied. Keep Node dependency audit **FAILED** until a verified safe upstream fix is available.
+
+No model inference, GPU verification, guideline verification or clinical validation occurred in this CI. Existing live-model acceptance blockers and prior failed runs remain unchanged. Exact-head software CI success does not establish clinical correctness or zero hallucinations.
+
+---
+
 ### Exact-head CI refresh — commit be028c8 — 18 November 2026
 
 The checklist-only commit `be028c80da60546670fe847fa708f6c210011f3a` triggered the standard CI automatically. All six workflows completed on that exact SHA:
