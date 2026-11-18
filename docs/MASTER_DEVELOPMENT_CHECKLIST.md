@@ -5,7 +5,7 @@
 **Repository:** `drvishnua/RadOnc-MDT-Simulator`  
 **Development branch:** `feature/four-round-mdt-and-performance`  
 **PR #1:** open, draft, unmerged; base `main`.  
-**Current PR head before this checklist refresh:** `77d8969956cabaa9e83224180f954653b57039bb`.  
+**Current PR head:** `94d0fc5beb6141850aae0c3c3921e07ca6beef63`. The workflow-trigger commit is `77d8969956cabaa9e83224180f954653b57039bb`.  
 **Latest application code commit:** `8cde5dd847d1c656e195ac9239f39fb75b51691f`.  
 **Latest regression-test commit:** `a8863f9caa28479599d9b9f10722d2afafa29bb0` (adds a cross-round Chair minority-history regression; no application code changed).  
 **Main:** `39a356b8eb09399aa2da1b9b9085965999f5105a`; unchanged.  
