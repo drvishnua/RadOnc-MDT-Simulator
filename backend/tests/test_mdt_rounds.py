@@ -3910,3 +3910,66 @@ def test_r2_peer_agreement_scope_audit_flags_unstructured_unanimity_claim():
     flags = _audit_source_references(unstructured_claim, allowed)
     assert sum("Unsupported peer-agreement claim" in item for item in flags) == 1
 
+
+
+def test_chair_prompt_retains_full_saved_r2_source_opinion_and_condition(monkeypatch):
+    from app.services import mdt_generation
+
+    prompts = []
+
+    async def fake_generate(prompt, schema_type, max_tokens):
+        prompts.append(prompt)
+        return _chair_draft()
+
+    monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate)
+    case = SyntheticCase(
+        scenario_title="R2 source opinion Chair digest regression",
+        case_summary="Fictional incomplete case; prerequisites remain unknown.",
+    )
+    round1 = _chair_rows("assessment", ["insufficient_information"] * 45)
+    round2 = _chair_rows("result", ["insufficient_information"] * 45)
+    round3 = _chair_rows("result", ["insufficient_information"] * 45)
+    source_excerpt = (
+        "medical oncology note favours a preoperative multimodality sequence "
+        "conditional on MRI staging, metastatic work-up, and documented fitness assessment"
+    )
+    source_analysis = (
+        "The preoperative multimodality sequence remains a distinct conditional option; "
+        "MRI staging, metastatic work-up, and documented fitness assessment remain prerequisites."
+    )
+    source_comparison = (
+        "This differs from the role's independent assessment and must not be collapsed into it."
+    )
+    round2[0]["result"].update({
+        "response_to_other_perspectives": (
+            "The source opinion remains conditional on MRI staging, metastatic work-up, "
+            "and documented fitness assessment; missing results remain unknown."
+        ),
+        "source_opinion_responses": [{
+            "source_id": "CASE:case_summary#1",
+            "source_excerpt": source_excerpt,
+            "analysis": source_analysis,
+            "comparison": source_comparison,
+        }],
+    })
+
+    asyncio.run(
+        mdt_generation.generate_chair_report(
+            "r2-source-opinion-chair-digest", case, round1, round2, round3
+        )
+    )
+    prompt = prompts[0]
+    digest_text = prompt.split("ROUND 2 DEBATE POSITIONS:\\n", 1)[1].split(
+        "\\nROUND 3 ADVERSARIAL REVIEW:", 1
+    )[0]
+    digest = json.loads(digest_text)
+    saved = next(
+        item for item in digest["representative_views"]
+        if item["agent"] == "RO-01"
+    )
+
+    assert saved["debate_or_review_narrative"].endswith("missing results remain unknown.")
+    source = saved["attributed_source_opinion_responses"][0]
+    assert source["source_excerpt"] == source_excerpt
+    assert source["analysis"] == source_analysis
+    assert source["comparison"] == source_comparison
