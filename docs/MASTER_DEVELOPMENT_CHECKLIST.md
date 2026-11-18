@@ -1,5 +1,22 @@
 # RadOnc MDT Simulator — Master Development and Verification Checklist
 
+### Exact-head CI refresh — 18 November 2026
+
+**Verified branch/PR state:** development branch head at inspection was `e33a9ffc3fd4c6f229eb9da8b75fe6c4a512b8dd`; PR #1 remains open, draft and unmerged, targeting `main`. Main remains `39a356b8eb09399aa2da1b9b9085965999f5105a` (unchanged).
+
+**All six workflows for exact head `e33a9ffc` have completed:**
+- Backend [44304845230](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44304845230): SUCCESS; 480/480 pytest passed and deterministic preflight 7/7 (job logs checked).
+- Frontend [44304845454](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44304845454): SUCCESS.
+- Patient Registry / four-round Dashboard Browser E2E [44304845491](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44304845491): SUCCESS.
+- Windows Packaging Prerequisites [44304845203](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44304845203): SUCCESS.
+- Windows Installer [44304845260](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44304845260): installer build/smoke job SUCCESS; optional clean-hosted Ollama/model bootstrap SKIPPED (no inference).
+- Security Audit [44304845253](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44304845253): overall FAILED because Node dependency audit failed on four HIGH transitive picomatch findings. Python dependency audit, JavaScript/TypeScript CodeQL, Python CodeQL and full-history secret scan all SUCCESS.
+
+The R4 deterministic changes and regression suite remain software-verified (480/480); exact-head CI confirms this. No live model inference, RTX 4060 request-time GPU verification, guideline verification or clinical validation occurred. Keep Node audit FAILED; do not adopt an unmerged upstream patch or breaking forced downgrade.
+
+**Status correction:** Browser E2E and Windows installer on `e33a9ffc` are VERIFIED; CodeQL and secret scanning are VERIFIED; Node dependency audit remains FAILED. All clinical/live-model blockers below remain unchanged.
+
+
 **Current status as of 18 November 2026. This is the single authoritative checklist.**
 
 ### Latest deterministic R2/R4 patch — 18 November 2026
