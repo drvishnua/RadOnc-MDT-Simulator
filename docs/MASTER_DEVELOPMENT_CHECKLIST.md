@@ -1,3 +1,36 @@
+### Latest branch-tip CI and security triage — PR head 4f034f7 — 18 November 2026
+
+**Current PR #1 head:** `4f034f73e45019fd19428ce8698da933ae059190`; documentation-only commit `docs: record current PR-head CI and security status`. Development branch `feature/four-round-mdt-and-performance`; PR remains open, draft and unmerged, targeting `main`. PR base SHA remains `39a356b8eb09399aa2da1b9b9085965999f5105a`. No changes to `main`.
+**Latest application/test SHA:** `fbea522b4f1371d8bb82b202a48c178833c10735`. The documentation-only head does not change application/test code.
+
+All six workflows triggered by the exact PR head `4f034f7` completed:
+- Backend Tests [44317646759](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44317646759): SUCCESS; **482 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive**, 1 warning. Deterministic no-inference preflight **7 passed, 0 failed, 0 inconclusive**. Pytest diagnostics artifact [14433860663](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44317646759/artifacts/14433860663), digest `sha256:9407f97076058fc61c6af4568d5f67c739b81c012d2a601d581932e39d059e1a`; deterministic preflight artifact [14433760995](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44317646759/artifacts/14433760995), digest `sha256:b032878d2d63b944d67c7ee11a81e59d1731b8ff2d4ea58fae9348c1556e85ec`.
+- Frontend Build [44317646747](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44317646747): SUCCESS.
+- Patient Registry / Four-Round Dashboard Browser E2E [44317646742](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44317646742): SUCCESS; real browser acceptance completed.
+- Windows Packaging Prerequisites [44317646768](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44317646768): SUCCESS.
+- Windows Installer [44317646755](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44317646755): SUCCESS; frontend build, package, installation, installed-app smoke test, checksum and artifact upload completed. Installer artifact [14433696352](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44317646755/artifacts/14433696352), digest `sha256:9d7b53e486fa731bbf8a4f0fd5e114fbe39e654c718d5a9fe28b4eab2dda4591`. Clean-hosted Ollama/model bootstrap was SKIPPED; no model inference.
+- Security and Dependency Audit [44317646753](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44317646753): overall FAILED only in full Node dependency audit. Python dependency audit reported no known vulnerabilities; production-only Node audit found **0 vulnerabilities**; JavaScript/TypeScript CodeQL, Python CodeQL and full-history secret scan succeeded. Full Node audit still reports **four HIGH** `picomatch` findings (GHSA-fc5q-39xc-vjpf) in the Vite `fdir`/`tinyglobby` development-tool dependency chain.
+
+#### Dependency reachability review — limited static inspection, not a security clearance
+
+- `frontend/package.json` declares only React and React DOM as runtime dependencies. Vite 7.3.8 is a development dependency.
+- The development lockfile resolves `picomatch@4.0.7`, `fdir@6.5.0` and `tinyglobby@0.2.17`; all are marked development dependencies. The lockfile shows Vite -> fdir/tinyglobby/picomatch and tinyglobby -> fdir/picomatch.
+- The inspected `frontend/vite.config.ts` sets fixed local `/api` and `/health` proxy routes and loopback host `127.0.0.1`; no direct `picomatch` use or dynamic user-supplied glob is present in that configuration.
+- This narrows the presently evidenced dependency exposure to development/build tooling and is consistent with the passing production-only audit. It is **not** a complete call-path review of Vite/fdir, proof that all runtime glob input is trusted, or a reason to suppress the full audit.
+
+#### Upstream advisory and candidate fixes — checked 18 November 2026
+
+- GitHub Advisory Database GHSA-fc5q-39xc-vjpf: HIGH, CVSS 8.7; reviewed/updated 17 November 2026; affected versions `<=4.0.7`; patched versions: **None**. Description identifies event-loop blocking from attacker-supplied single-branch repeated extglob patterns. Source: https://github.com/advisories/GHSA-fc5q-39xc-vjpf
+- Upstream issue #234 remains OPEN and contains a dispute request; this has not withdrawn or changed the published GitHub advisory: https://github.com/micromatch/picomatch/issues/234
+- Upstream issue #247 remains OPEN. A 18 November commenter supplied a local timing reproduction for `+(*a)`; treat the reported numbers as an upstream issue comment, not as independently reproduced by this project: https://github.com/micromatch/picomatch/issues/247
+- Candidate PR #238 remains OPEN/unmerged. It has approvals, but review comments report that the advisory's explicit `+(*)` pattern still exhibits exponential behaviour; therefore do not treat this candidate as a complete remediation: https://github.com/micromatch/picomatch/pull/238
+- Candidate PR #264 remains OPEN/unmerged with no recorded formal review at inspection. Its downstream compatibility comment explicitly says security effectiveness still needs independent review: https://github.com/micromatch/picomatch/pull/264
+- Official release page still lists 4.0.7 as latest at inspection: https://github.com/micromatch/picomatch/releases
+
+**Disposition:** full Node dependency audit remains **FAILED**; production-only Node audit remains **VERIFIED**. Do not force-downgrade Vite, adopt an unreviewed patch, suppress the advisory or claim the dependency is fixed. No fresh security-owner disposition or renewed model-screen authorisation is recorded. Qwen and MedGemma inference therefore remain BLOCKED. This triage is not a clinical or regulatory validation.
+
+---
+
 ### Branch-tip CI refresh — PR head 0bfb8e6 — 18 November 2026
 
 **Verified PR head:** `0bfb8e62a3d914894a82afdfc63ee8cfab98f6c6` (documentation-only commit: `docs: verify Chair duplicate-row integrity fix`). PR #1 remains open, draft and unmerged; base is `main`. No changes were made to `main`.
