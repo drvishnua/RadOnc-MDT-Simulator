@@ -1,8 +1,9 @@
 name: Synthetic Model Integrity Screening
 # HISTORICAL TEMPORARY DEVELOPMENT-ONLY RISK ACCEPTANCE (user-authorised 2026-11-18):
 # The one permitted Qwen-only v16/audit-v15 synthetic screen completed as run 44263369594; that exception is consumed.
-# Do NOT run another screen while the npm audit remains FAILED. Any future Qwen/MedGemma run requires a fresh explicit risk review.
-# Do NOT suppress the audit, alter dependency resolution, infer production approval, or treat this as release/security clearance.
+# The previous Node/Python dependency-audit blocker was closed by security workflow run 44364076143 (pip-audit clean; npm audit 0 vulnerabilities).
+# Every subsequent Qwen/MedGemma screen requires a fresh, per-run synthetic-risk attestation enforced before model provisioning below.
+# Do NOT suppress audits, alter dependency resolution, infer production approval, or treat CI success as release/security clearance.
 # [model-integrity-screen] v16/audit-v15 retest from CI-green 785a094; exact Qwen manifest version gate before any MedGemma pull; concurrency 1, hosted CPU only.
 # [model-integrity-screen] v16/audit-v15 bounded retest: R2 unknown-prerequisite certainty and R3 supplied-quote refusal audit; sequential Qwen-first, then MedGemma only after Qwen succeeds and HAI-DEF terms are attested.
 # [model-integrity-screen] v11/audit-v10 retest after R2 proposition separation, R3 narrative consistency and R4 echo audit; sequential Qwen then MedGemma only after Qwen gate.
@@ -17,6 +18,11 @@ on:
     inputs:
       include_medgemma:
         description: "Also pull and screen MedGemma 1.5 after the Qwen baseline."
+        type: boolean
+        required: true
+        default: false
+      fresh_risk_review_accepted:
+        description: "Confirm you reviewed and accept this fresh, synthetic-only hosted CPU screening risk: an isolated GitHub-hosted Windows runner downloads model artefacts, sends only the frozen synthetic corpus to Qwen and (if selected) MedGemma, and uploads raw outputs/manifest for 30 days; no patient data, GPU proof, clinical validation or model promotion results."
         type: boolean
         required: true
         default: false
@@ -58,6 +64,17 @@ jobs:
       - name: Check out the development branch
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
 
+      - name: Require fresh synthetic risk review before provisioning
+        shell: powershell
+        env:
+          FRESH_RISK_REVIEW_ACCEPTED: ${{ (github.event_name == 'workflow_dispatch' && inputs.fresh_risk_review_accepted == true) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[fresh-synthetic-risk-review-accepted]')) }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          if ($env:FRESH_RISK_REVIEW_ACCEPTED -ne "true") {
+            throw "Fresh per-run synthetic risk review was not accepted. No model was provisioned."
+          }
+          Write-Host "FRESH_SYNTHETIC_RISK_REVIEW_ACCEPTED=TRUE"
+
       - name: Set up Python 3.11
         uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
         with:
@@ -81,6 +98,7 @@ jobs:
         env:
           MEDGEMMA_REQUESTED: ${{ (github.event_name == 'workflow_dispatch' && inputs.include_medgemma == true) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[medgemma]')) }}
           HAI_DEF_TERMS_ACCEPTED: ${{ (github.event_name == 'workflow_dispatch' && inputs.hai_def_terms_accepted == true) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[hai-def-terms-accepted]')) }}
+          FRESH_RISK_REVIEW_ACCEPTED: ${{ (github.event_name == 'workflow_dispatch' && inputs.fresh_risk_review_accepted == true) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[fresh-synthetic-risk-review-accepted]')) }}
         run: |
           $ErrorActionPreference = "Stop"
           $artifactDir = Join-Path $env:GITHUB_WORKSPACE "backend\validation_artifacts\model_screening"
@@ -127,6 +145,12 @@ jobs:
               qwen_status = "NOT_STARTED"
               medgemma_status = "NOT_REQUESTED"
               medgemma_terms_attested = ($env:MEDGEMMA_REQUESTED -eq "true" -and $env:HAI_DEF_TERMS_ACCEPTED -eq "true")
+              fresh_synthetic_risk_review = [ordered]@{
+                accepted = ($env:FRESH_RISK_REVIEW_ACCEPTED -eq "true")
+                accepted_by = $env:GITHUB_ACTOR
+                trigger_event = $env:GITHUB_EVENT_NAME
+                source_sha = $env:GITHUB_SHA
+              }
             }
             ollama = [ordered]@{ version = $null; endpoint = $ollamaUrl; model_records = @{} }
             artifacts = [ordered]@{
