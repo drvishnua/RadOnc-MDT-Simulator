@@ -1555,8 +1555,8 @@ def test_opposing_source_laterality_is_flagged_and_carried_without_resolution():
 def test_opposite_laterality_is_flagged_but_matching_or_unattributed_values_are_not():
     opposite = _case(
         case_summary=(
-            "Fictional case. Source A records one laterality value. "
-            "Source B records the opposite laterality value."
+            "Fictional case. Source A records left laterality. "
+            "Source B records right laterality."
         )
     )
     assert any(
