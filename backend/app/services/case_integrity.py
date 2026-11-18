@@ -71,14 +71,14 @@ def _source_laterality_integrity_warnings(case_summary: str) -> list[str]:
     """
     if not isinstance(case_summary, str):
         return []
-    source_pattern = re.compile(r"\\bsource\\s+(?P<label>[A-Za-z0-9_-]+)\\b", re.IGNORECASE)
-    side_pattern = re.compile(r"\\b(left|right|ipsilateral|contralateral|opposite)\\b", re.IGNORECASE)
+    source_pattern = re.compile(r"\bsource\s+(?P<label>[A-Za-z0-9_-]+)\b", re.IGNORECASE)
+    side_pattern = re.compile(r"\b(left|right|ipsilateral|contralateral|opposite)\b", re.IGNORECASE)
     mentions = list(source_pattern.finditer(case_summary))
     claims: dict[str, set[str]] = {}
     for index, match in enumerate(mentions):
         end = mentions[index + 1].start() if index + 1 < len(mentions) else len(case_summary)
         segment = case_summary[match.end():end]
-        if not re.search(r"\\b(laterality|side|sided)\\b", segment, re.IGNORECASE):
+        if not re.search(r"\b(laterality|side|sided)\b", segment, re.IGNORECASE):
             continue
         values = {
             value.casefold()
