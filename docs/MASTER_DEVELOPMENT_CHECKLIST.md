@@ -2351,3 +2351,19 @@ The screening runner previously had helper-level tests but lacked no-inference c
 **Corrective software under test:** 358bc1a includes source-specific prompt redaction for flagged TNM components across R2/R3/Chair model views, preserving actual saved contributions and audit arrays; a deterministic model-authored-output repeat gate; and a stronger whole-MDT false-consensus positive control. Preceding live run 43854920258 failed: R2 SO-02/MO-01 and R3 RO-01 repeated seeded unsupported staging literals; Chair structurally reconciled 3/3 saved R2 and 3/3 saved R3 contributions but overall acceptance failed. Earlier failure 43850544644 also remains immutable.
 
 **Next action:** monitor only job 133298583867 until completion. Retrieve complete logs and artifacts; verify model identity/digest, actual generation calls, R2/R3/R4 model-authored text for flagged-component repetition, warning propagation, Chair use of actual saved contributions, deterministic position/consensus counts, false-consensus positive control, failures and JSON/SQLite/report hashes. Record CPU-only telemetry as CPU-only; do not claim RTX 4060 GPU inference. If this bounded run fails, preserve artifacts, classify the failure and add targeted regressions before one new retry. Even a bounded pass is not full 45-role acceptance, clinical validation, guideline verification or zero-hallucination assurance.
+
+### Follow-up hardening — audit-v17 and production source-conflict warnings (18 November 2026)
+
+| Workstream | Status | Evidence / boundary |
+|---|---|---|
+| Production case integrity — source-attributed laterality | IN PROGRESS | Added a non-blocking warning for explicit opposing laterality statements attributed to distinct sources. Both source statements remain verbatim; no source is selected. Regression tests added; CI not yet run on this change. |
+| R1 diagnosis-field denial audit | IN PROGRESS | Expanded deterministic denial-language patterns while preserving the supplied diagnosis fact and unknown TNM/stage semantics. New audit version is v17; tests/CI pending. |
+| R1 conflicting-source selection audit | IN PROGRESS | Added detection for affirmative selection of Source A/B even when the response also says the conflict is unresolved. Positive/negative controls added; CI pending. |
+| R3 JSON input-echo audit | IN PROGRESS | Added plain/fenced JSON parsing and recursive nested-key detection for synthetic_input; nested/fenced regression added; CI pending. |
+| Model-screen workflow version gate | IN PROGRESS | Workflow and workflow test now require radonc-mdt-integrity-audit-v17 with prompt-v16. CI pending. |
+| New Qwen/MedGemma inference | BLOCKED | No new inference is authorised until the existing Node dependency security blocker has documented disposition and fresh explicit risk approval. No GPU inference verification. |
+| Clinical validation | NOT STARTED | Software integrity tests do not establish clinical accuracy or guideline concordance. |
+
+**Implementation commits:** production warning 8fa60e4; production regression tests 6fff56b; screening audit-v17 1b0bede; audit regression tests e31bde1; workflow gate 09bf4e6; workflow gate test 18f9460. All changes are on feature/four-round-mdt-and-performance; no changes to main.
+
+**Verification boundary:** GitHub writes succeeded, but no test suite or workflow result has yet been observed for these commits. Do not mark the new items VERIFIED until the exact branch-head CI completes. The prior audit-v16 results and their 487/487 backend run remain historical evidence only; they do not verify audit-v17.
