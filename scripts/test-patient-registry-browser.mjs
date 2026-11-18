@@ -562,7 +562,7 @@ async function verifyFourRoundDashboard() {
 
   await evaluate(
     "(() => { const stages = [...document.querySelectorAll('.round-stage')]; " +
-      "for (const index of [1, 2]) { const first = stages[index]?.querySelector('.round-agent-list details'); if (first) first.open = true; } " +
+      "for (const index of [0, 1]) { const first = stages[index]?.querySelector('.round-agent-list details'); if (first) first.open = true; } " +
       "return true; })()"
   );
   const rendered = await evaluate(
@@ -571,8 +571,9 @@ async function verifyFourRoundDashboard() {
       "const headings = stages.map(stage => (stage.querySelector('.round-stage-heading')?.innerText || '').replace(/\\s+/g, ' ').trim());" +
       "const completed = stages.map(stage => (stage.innerText || '').includes('Stage completed'));" +
       "const roundRoleCount = document.querySelectorAll('.round-agent-list details').length;" +
-      "const r2First = stages[1]?.querySelector('.round-agent-list details')?.innerText || '';" +
-      "const r3First = stages[2]?.querySelector('.round-agent-list details')?.innerText || '';" +
+      "const roleText = (stageIndex) => { const stage = stages[stageIndex]; const role = [...(stage?.querySelectorAll('.round-agent-list details') || [])].find(node => node.querySelector('.agent-id')?.textContent?.trim() === 'RO-01'); if (role) role.open = true; return role?.innerText || ''; };" +
+      "const r2First = roleText(0);" +
+      "const r3First = roleText(1);" +
       "const report = document.querySelector('.final-mdt-report')?.innerText || '';" +
       "return { headings, completed, roundRoleCount, " +
         "hasR2SourceReferenceWarning: r2First.includes('Source/provenance integrity flags · review required') && r2First.includes('Peer-scope overclaim'), " +
