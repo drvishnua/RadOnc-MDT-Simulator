@@ -40,6 +40,7 @@
 | Hosted v9–v15 model screens | FAILED | Historical bounded runs retain integrity failures; failures are preserved. |
 | v16/audit-v15 code/schema/audit regression suite | FAILED | The 12-case v16 screen exposed three additional manual findings not caught by audit-v15: R1 diagnosis-field contradiction, R1 contradiction-display omission and R3 synthetic_input echo. Existing schema/fixture tests passed, but audit coverage is incomplete. |
 | v16/audit-v16 deterministic false-negative checks and regression tests | VERIFIED | Audit version `radonc-mdt-integrity-audit-v16` is enforced by the workflow gate. New tests cover R1 denial of supplied diagnosis field, R1 omission of opposing laterality sources and R3 synthetic_input JSON echo. Exact backend run [44267217866](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44267217866) passed all three and 476/476 pytest rows. Deterministic checks only; no live Qwen audit-v16 screen. |
+| v16/audit-v16 live model screen | BLOCKED | No live Qwen v16/audit-v16 run is authorised. The single temporary exception was consumed by run 44263369594 (which used audit-v15). New model inference requires a fresh explicit risk review, documented security disposition and renewed authorisation. |
 | v16/audit-v15 live model screen | FAILED | Run [44263369594](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44263369594) executed successfully, but the model integrity screen is not accepted: 12/12 outputs recorded, 4 cases automatically flagged / 6 review flags, plus 3 further manual observations. Summary: PENDING_HUMAN_REVIEW, automatic score null. Artifact [14409068927](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44263369594/artifacts/14409068927). Execution success is not model pass. One-run exception consumed. |
 | Qwen exact-version gate before MedGemma | VERIFIED | Workflow requires exact Qwen prompt/audit/script manifest checks before MedGemma pull. |
 | Fresh full 45-role R1–R4 live validation | NOT STARTED | No current fresh full run accepted. |
@@ -54,8 +55,8 @@
 | Python CodeQL | VERIFIED | Exact audit-v16 code-head security run 44267217685: passed. |
 | JavaScript/TypeScript CodeQL | VERIFIED | Exact audit-v16 code-head security run 44267217685: passed. |
 | Python dependency audit | VERIFIED | Exact audit-v16 code-head security run 44267217685: no known vulnerabilities found. |
-| Node dependency audit | FAILED | Exact audit-v16 code-head security workflow [44267217685](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44267217685): npm audit reports four HIGH transitive `picomatch@4.0.7` findings. Python audit, both CodeQL analyses and full-history secret scan passed. |
-| Dependency advisory applicability and risk disposition | IN PROGRESS | One-run temporary development-only exception was consumed by Qwen run 44263369594; npm audit remains FAILED and unsuppressed, with four HIGH picomatch@4.0.7 findings in run 44267217685. No further model run or MedGemma evaluation is authorised until security disposition is independently reviewed and fresh explicit risk approval is obtained. |
+| Node dependency audit | FAILED | Latest exact PR-head security workflow [44268129380](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44268129380): npm audit reports four HIGH transitive `picomatch@4.0.7` findings. Python audit, both CodeQL analyses and full-history secret scan passed. The security gate remains failed. |
+| Dependency advisory applicability and risk disposition | IN PROGRESS | The one-run exception was consumed by Qwen run 44263369594. Current GitHub Advisory GHSA-fc5q-39xc-vjpf is now GitHub Reviewed (updated 17 Nov), High, affected through 4.0.7 and has no patched version listed. Snyk still says its advisory was revoked. The npm audit remains FAILED and unsuppressed. No further model run or MedGemma evaluation is authorised until this conflicting evidence has a documented security-owner disposition and fresh explicit approval. |
 | Release acceptance | BLOCKED | Temporary one-run development exception does not clear the Node audit. R2/R4 live failures, full 45-role run, GPU, evidence retrieval and independent clinical review remain outstanding. |
 
 ## Latest screen evidence — Qwen v16 / audit-v15, run 44263369594
@@ -101,6 +102,18 @@ All six PR workflows on this exact checklist commit completed. Five succeeded; d
 - Security/dependency audit [44264563041](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44264563041): FAILED at Node npm audit with four HIGH picomatch findings. Python dependency audit, Python and JS/TS CodeQL, and full-history secret scan passed.
 
 These results are software/build verification only. They do not prove model integrity, clinical validity, GPU inference or release readiness.
+## Latest exact PR-head CI — documentation-only head `b59c52d49e888473d751a600a126bfaeb3e17f5b` (18 November 2026)
+
+This head changes only `docs/MASTER_DEVELOPMENT_CHECKLIST.md`; application code and tests are unchanged from audit-v16 regression commit `c1fb981`. All six standard PR workflows completed: five passed and Security/Dependency Audit failed.
+
+- Backend [44268129179](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44268129179): SUCCESS; raw job-log recount **476/476 pytest records passed**, 0 failed, 0 errors or skips. The three new audit-v16 regressions are explicitly present and passed.
+- Frontend Build [44268129231](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44268129231): SUCCESS.
+- Patient Registry / Four-Round Dashboard Browser E2E [44268129197](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44268129197): SUCCESS.
+- Windows Packaging Prerequisites [44268129383](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44268129383): SUCCESS.
+- Windows Installer [44268129155](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44268129155): SUCCESS.
+- Security/Dependency Audit [44268129380](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44268129380): FAILED at Node npm audit with four HIGH picomatch findings. Python dependency audit, both CodeQL analyses and full-history secret scan passed.
+
+This confirms the exact current branch head. It does not constitute a live model, GPU, clinical or release validation.
 ## Latest exact-code-head CI — audit-v16 remediation commit `c1fb981e648b76429bc29403cd2febcf5e4739d0`
 
 Five standard PR workflows succeeded; Security and Dependency Audit failed:
@@ -157,17 +170,18 @@ The screenshot's job ID `134652860736` is from backend workflow 44260641959. Its
 **Repository lockfile evidence:** `frontend/package-lock.json` resolves `picomatch@4.0.7` as a development dependency; it is reached through `tinyglobby@0.2.17` and `fdir@6.5.0`. It is not listed as a direct application runtime dependency in `frontend/package.json`.
 
 **External evidence reviewed:**
-- GitHub Advisory Database: GHSA-fc5q-39xc-vjpf remains marked **Unreviewed**, severity High, with affected and patched versions unspecified; it describes a possible ReDoS for repeated extglob patterns. [Advisory](https://github.com/advisories/GHSA-fc5q-39xc-vjpf)
-- NVD: CVE-2026-112366 is awaiting NVD enrichment; the displayed CNA assessment is VulnCheck's 8.7 High score. [NVD record](https://nvd.nist.gov/vuln/detail/CVE-2026-112366)
-- Snyk currently states that its advisory was revoked and amended as “not a vulnerability”, and notes the upstream maintainer dispute. [Snyk amendment](https://security.snyk.io/vuln/SNYK-JS-PICOMATCH-21248802)
+- GitHub Advisory Database: GHSA-fc5q-39xc-vjpf is now marked **GitHub Reviewed** (updated 17 November 2026), severity High (CVSS v4 8.7), affected versions `<=4.0.7`, with **no patched versions listed**. Its description identifies a possible ReDoS through single-branch repeated extglob patterns. [Advisory](https://github.com/advisories/GHSA-fc5q-39xc-vjpf)
+- NVD: CVE-2026-112366 remains **Awaiting Enrichment**; NVD has not supplied its own assessment, while the displayed CNA assessment from VulnCheck is CVSS v4 8.7 High. [NVD record](https://nvd.nist.gov/vuln/detail/CVE-2026-112366)
+- Snyk states that its advisory was revoked and amended as “not a vulnerability”, citing the maintainer dispute and advising against patterns/untrusted user-defined glob input. This conflicts with the reviewed GitHub Advisory; it does not clear npm audit. [Snyk amendment](https://security.snyk.io/vuln/SNYK-JS-PICOMATCH-21248802)
 - Upstream picomatch PR #235, proposing a mitigation, was closed; the maintainer disputed the report and stated a position that applications should not allow untrusted users to define glob patterns. [Upstream PR #235](https://github.com/micromatch/picomatch/pull/235)
-- The npm registry and official release list still show `4.0.7` as latest; no release above the advisory's stated range was verified. [npm versions](https://www.npmjs.com/package/picomatch?activeTab=versions) · [official releases](https://github.com/micromatch/picomatch/releases)
+- The npm registry and official release list still show `4.0.7` as latest; no patched release above the affected range was verified. [npm versions](https://www.npmjs.com/package/picomatch?activeTab=versions) · [official releases](https://github.com/micromatch/picomatch/releases)
+- Upstream picomatch PR [#194](https://github.com/micromatch/picomatch/pull/194) remains OPEN and UNMERGED. It is a parser-behaviour change, not a released security fix; its own description explicitly says `+(*a)` remains exponential (~53 seconds on the stated input) and is out of scope. Do not treat this PR as remediation.
 
-**Disposition:** This is a disputed, unreviewed advisory rather than a confirmed exploitable path in the shipped application. The package is in the frontend development/build tool dependency tree, but the automated full-lockfile audit still fails. Do not call the security gate passed. Do not suppress the advisory, omit development dependencies, force a breaking downgrade, install an unmerged fork or silently accept the risk. A documented security-owner decision or formal advisory withdrawal/clarification is required before changing the gate.
+**Disposition (reassessed 18 November 2026):** the finding is no longer labelled unreviewed: GitHub marks it reviewed/high and identifies `<=4.0.7` as affected, with no patch listed. Snyk has revoked its separate advisory as not a vulnerability, and the upstream PR it references is still unmerged and does not fix the reported `+(*a)` behaviour. The transitive package remains in the frontend development/build dependency tree rather than being a direct runtime dependency, but the full-lockfile npm audit fails. Exposure in this application's own execution path has not been proven; neither has exploitability in the deployed app. Keep the automated security gate FAILED and unsuppressed. Do not omit development dependencies, force a breaking downgrade, install an unmerged fork, or claim the advisory is fixed. Require an auditable security-owner disposition and a verified official remediation or formal advisory withdrawal before clearing the gate.
 
 ## Next controlled actions
 
-1. Resolve the advisory disposition with an auditable decision based on the upstream maintainer dispute, Snyk revocation and current GitHub/NVD status. Keep the npm audit result visible until a defensible policy decision is recorded.
+1. Obtain an auditable security-owner disposition for the conflicting reviewed GitHub advisory and Snyk revocation. Keep npm audit FAILED and visible until an official fix or formal withdrawal/clarification is verified.
 2. The single authorised Qwen v16 run has completed and its exception is consumed. Do not start another Qwen screen or any MedGemma live inference while the security gate remains unresolved. Any future model run requires a fresh explicit risk review and documented security disposition.
 3. Continue deterministic R2/R4 Chair and consensus work against exact saved failures. Audit-v16 covers three additional false negatives and passed software CI, but has no live-model validation. Preserve source identity, conditions, dissent and minority histories.
 4. After the security gate is resolved, rerun all CI on the exact new application commit, then perform bounded Qwen live corrective validation at concurrency 1.
