@@ -959,5 +959,46 @@ def test_final_chair_discloses_failed_and_absent_role_inputs_without_counting_th
     assert "Round 3: the Chair input contains 44 distinct identified role rows of 45 configured roles" in unresolved
     assert "At least 1 role row(s) are absent" in unresolved
     assert "RO-05" in flags
+    assert "Saved-input completeness" in report.chair_conclusion
+    assert "Round 2: 1 distinct role(s) have no usable completed result contribution" in report.chair_conclusion
+    assert "Round 3: the Chair input contains 44 distinct identified role rows of 45 configured roles" in report.chair_conclusion
     assert "Round 2: 44/44 insufficient-information" in report.overall_educational_synthesis
     assert "Round 3: 44/44 insufficient-information" in report.overall_educational_synthesis
+
+
+def test_chair_synthesis_traces_examples_to_saved_role_records_in_all_three_rounds():
+    case = SyntheticCase(
+        scenario_title="Saved contribution synthesis traceability regression",
+        case_summary="Fictional incomplete case; the staging status remains unknown.",
+    )
+    round1 = _rows("assessment", ["insufficient_information"] * 45)
+    round2 = _rows("result", ["insufficient_information"] * 45)
+    round3 = _rows("result", ["insufficient_information"] * 45)
+
+    round1[0]["assessment"]["provisional_conclusion"] = (
+        "The R1 contribution records that the supplied information is insufficient "
+        "to determine the educational question."
+    )
+    round2[1]["result"]["provisional_conclusion"] = (
+        "The R2 contribution records that the debate retained distinct, attributed views."
+    )
+    round3[2]["result"]["provisional_conclusion"] = (
+        "The R3 contribution records that one source-attribution question remains unresolved."
+    )
+
+    report = ensure_chair_report_completeness(
+        _empty_report(), case, round1, round2, round3
+    )
+    synthesis = report.overall_educational_synthesis
+
+    assert "Round 1 saved role positions and attributed examples" in synthesis
+    assert "Example RO-01" in synthesis
+    assert "R1 contribution records" in synthesis
+    assert "Round 2 saved role positions and attributed examples" in synthesis
+    assert "Example RO-02" in synthesis
+    assert "R2 contribution records" in synthesis
+    assert "Round 3 saved role positions and attributed examples" in synthesis
+    assert "Example RO-03" in synthesis
+    assert "R3 contribution records" in synthesis
+    assert "not exhaustive" in synthesis
+    assert "not verified clinical facts" in synthesis
