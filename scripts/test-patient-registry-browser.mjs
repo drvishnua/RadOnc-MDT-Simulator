@@ -458,14 +458,78 @@ async function verifyFourRoundDashboard() {
     !developmentSnapshot.hasPr ||
     !developmentSnapshot.hasBranch ||
     !/^[0-9a-f]{12}$/i.test(developmentSnapshot.headSha) ||
-    developmentSnapshot.workflowCards < 2 ||
-    developmentSnapshot.workflowLinks < 1 ||
+    developmentSnapshot.workflowCards !== 2 ||
+    developmentSnapshot.workflowLinks !== 2 ||
     developmentSnapshot.hasUnavailableError
   ) {
     throw new Error("Development Monitor did not render verified GitHub branch/PR/workflow metadata: " + JSON.stringify(developmentSnapshot));
   }
+  const initialMonitorState = await evaluate(
+    "(() => {" +
+      "const panel = [...document.querySelectorAll('section')].find(node => node.getAttribute('aria-label') === 'Development Monitor');" +
+      "const rows = [...(panel?.querySelectorAll('.mission-run-list .development-run-card') || [])].map(node => node.innerText || '');" +
+      "return { currentHeadCount: (panel?.innerText || '').includes('1 / 2'), newestBackend: rows.some(row => row.includes('Run #1188')), staleBackendExcluded: !rows.some(row => row.includes('Run #1187')), hasEarlierCommit: rows.some(row => row.includes('Earlier commit')), hasCurrentCommit: rows.some(row => row.includes('Current branch HEAD')) };" +
+    "})()"
+  );
+  if (
+    !initialMonitorState.currentHeadCount ||
+    !initialMonitorState.newestBackend ||
+    !initialMonitorState.staleBackendExcluded ||
+    !initialMonitorState.hasEarlierCommit ||
+    !initialMonitorState.hasCurrentCommit
+  ) {
+    throw new Error("Development Monitor selected stale or misclassified workflow metadata: " + JSON.stringify(initialMonitorState));
+  }
+
+  await evaluate("window.__RADONC_DEVELOPMENT_MONITOR_FIXTURE__.mode = 'rate-limit'; true");
+  await clickButton("Refresh");
+  await waitForExpression(
+    "(() => { const panel = [...document.querySelectorAll('section')].find(node => node.getAttribute('aria-label') === 'Development Monitor'); return !!panel?.querySelector('[role=alert]') && (panel.innerText || '').includes('Showing the last retrieved snapshot.'); })()",
+    "the rate-limit warning while retaining the last good Development Monitor snapshot"
+  );
+  const retainedAfterRateLimit = await evaluate(
+    "(() => { const panel = [...document.querySelectorAll('section')].find(node => node.getAttribute('aria-label') === 'Development Monitor'); return { sha: [...panel.querySelectorAll('a')].find(node => (node.href || '').includes('/commit/'))?.textContent?.trim() || '', cards: panel.querySelectorAll('.mission-run-list .development-run-card').length, hasNewestBackend: (panel.innerText || '').includes('Run #1188') }; })()"
+  );
+  if (retainedAfterRateLimit.sha !== "a1a1a1a1a1a1" || retainedAfterRateLimit.cards !== 2 || !retainedAfterRateLimit.hasNewestBackend) {
+    throw new Error("Development Monitor discarded its last good snapshot after HTTP 429: " + JSON.stringify(retainedAfterRateLimit));
+  }
+
+  await evaluate("window.__RADONC_DEVELOPMENT_MONITOR_FIXTURE__.mode = 'forbidden'; true");
+  await clickButton("Refresh");
+  await waitForExpression(
+    "(() => { const panel = [...document.querySelectorAll('section')].find(node => node.getAttribute('aria-label') === 'Development Monitor'); return !!panel?.querySelector('[role=alert]') && (panel.innerText || '').includes('Showing the last retrieved snapshot.'); })()",
+    "the HTTP 403 warning while retaining the last good Development Monitor snapshot"
+  );
+
+  await evaluate("window.__RADONC_DEVELOPMENT_MONITOR_FIXTURE__.mode = 'incomplete'; true");
+  await clickButton("Refresh");
+  await waitForExpression(
+    "(() => { const panel = [...document.querySelectorAll('section')].find(node => node.getAttribute('aria-label') === 'Development Monitor'); return (panel?.querySelector('[role=alert]')?.innerText || '').includes('incomplete or inconsistent workflow metadata') && (panel.innerText || '').includes('Showing the last retrieved snapshot.'); })()",
+    "inconsistent GitHub workflow metadata to be rejected without replacing the prior snapshot"
+  );
+
+  await evaluate("window.__RADONC_DEVELOPMENT_MONITOR_FIXTURE__.mode = 'unusable'; true");
+  await clickButton("Refresh");
+  await waitForExpression(
+    "(() => { const panel = [...document.querySelectorAll('section')].find(node => node.getAttribute('aria-label') === 'Development Monitor'); return (panel?.querySelector('[role=alert]')?.innerText || '').includes('no usable workflow records') && (panel.innerText || '').includes('Showing the last retrieved snapshot.'); })()",
+    "malformed workflow records to be rejected without replacing the prior snapshot"
+  );
+
+  await evaluate("window.__RADONC_DEVELOPMENT_MONITOR_FIXTURE__.mode = 'success'; true");
+  await clickButton("Refresh");
+  await waitForExpression(
+    "(() => { const panel = [...document.querySelectorAll('section')].find(node => node.getAttribute('aria-label') === 'Development Monitor'); return !panel?.querySelector('[role=alert]') && (panel.innerText || '').includes('Run #1188'); })()",
+    "Development Monitor recovery after GitHub API errors"
+  );
+
+  await evaluate("window.__RADONC_DEVELOPMENT_MONITOR_FIXTURE__.mode = 'empty'; true");
+  await clickButton("Refresh");
+  await waitForExpression(
+    "(() => { const panel = [...document.querySelectorAll('section')].find(node => node.getAttribute('aria-label') === 'Development Monitor'); return !panel?.querySelector('[role=alert]') && (panel.innerText || '').includes('No workflow runs were returned for this branch.'); })()",
+    "a valid API response with zero workflow runs to render as an explicit empty state"
+  );
   console.log("DEVELOPMENT_MONITOR_BROWSER_E2E_OK");
-  console.log("Verified in headless Edge: PR #1, development branch, current HEAD SHA and linked workflow runs render from deterministic GitHub API fixtures without exposing clinical case content.");
+  console.log("Verified in headless Edge: newest-run-per-workflow selection, current-HEAD matching, HTTP 403/429 handling, last-good snapshot retention, incomplete/malformed metadata rejection, recovery after errors and a legitimate empty-state response.");
 
   await waitForExpression(
     "document.body.innerText.includes('Four-round MDT workflow')",
@@ -566,6 +630,7 @@ try {
       base: { ref: "main" }
     };
     const runs = {
+      total_count: 3,
       workflow_runs: [
         {
           id: 7100001, workflow_id: 101, name: "Backend Tests", run_number: 1188,
@@ -575,23 +640,42 @@ try {
           html_url: "https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/7100001"
         },
         {
+          id: 7100003, workflow_id: 101, name: "Backend Tests", run_number: 1187,
+          status: "completed", conclusion: "success", event: "pull_request",
+          head_sha: headSha, created_at: "2026-11-17T01:41:00Z",
+          updated_at: "2026-11-17T01:41:00Z",
+          html_url: "https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/7100003"
+        },
+        {
           id: 7100002, workflow_id: 102,
           name: "Patient Registry and Four-Round Dashboard Browser E2E", run_number: 400,
           status: "completed", conclusion: "success", event: "pull_request",
-          head_sha: headSha, created_at: "2026-11-17T01:42:00Z",
+          head_sha: "b2".repeat(20), created_at: "2026-11-17T01:42:00Z",
           updated_at: checkedAt,
           html_url: "https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/7100002"
         }
       ]
     };
-    const jsonResponse = payload => new Response(JSON.stringify(payload), {
-      status: 200,
+    window.__RADONC_DEVELOPMENT_MONITOR_FIXTURE__ = { mode: "success" };
+    const jsonResponse = (payload, status = 200) => new Response(JSON.stringify(payload), {
+      status,
       headers: { "Content-Type": "application/json" }
     });
     window.fetch = (input, init) => {
       const url = typeof input === "string" ? input : (input && input.url) || String(input);
+      const mode = window.__RADONC_DEVELOPMENT_MONITOR_FIXTURE__.mode;
       if (url === apiBase + "/pulls/1") return Promise.resolve(jsonResponse(pullRequest));
-      if (url.startsWith(apiBase + "/actions/runs?")) return Promise.resolve(jsonResponse(runs));
+      if (url.startsWith(apiBase + "/actions/runs?")) {
+        if (mode === "rate-limit") return Promise.resolve(jsonResponse({ message: "API rate limit exceeded" }, 429));
+        if (mode === "forbidden") return Promise.resolve(jsonResponse({ message: "API access restricted" }, 403));
+        if (mode === "incomplete") return Promise.resolve(jsonResponse({ total_count: 2, workflow_runs: [] }));
+        if (mode === "unusable") return Promise.resolve(jsonResponse({
+          total_count: 1,
+          workflow_runs: [{ id: 7100004, created_at: checkedAt }]
+        }));
+        if (mode === "empty") return Promise.resolve(jsonResponse({ total_count: 0, workflow_runs: [] }));
+        return Promise.resolve(jsonResponse(runs));
+      }
       return realFetch(input, init);
     };
   })();`;
