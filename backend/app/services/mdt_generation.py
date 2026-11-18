@@ -1840,11 +1840,11 @@ async def generate_debate_contribution(
         server_register = (
             "SERVER-BOUND CASE OPINION REGISTER (verbatim source excerpts; "
             "not specialist-authored conclusions, verified facts, or endorsements):\\n"
-            + "\\n".join(register_lines)
+            + "\n".join(register_lines)
         )
         payload["response_to_other_perspectives"] = (
             str(payload.get("response_to_other_perspectives") or "").rstrip()
-            + "\\n\\n"
+            + "\n\n"
             + server_register
         )
     payload, case_integrity_flags = await _repair_unsupported_prerequisite_wording(
