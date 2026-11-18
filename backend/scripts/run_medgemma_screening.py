@@ -32,7 +32,7 @@ CORPUS_PATH = (
     / "medgemma_model_integrity_screening_v1.json"
 )
 PROMPT_VERSION = "radonc-mdt-integrity-screen-v16"
-AUDIT_VERSION = "radonc-mdt-integrity-audit-v16"
+AUDIT_VERSION = "radonc-mdt-integrity-audit-v17"
 # Prompt-v16/audit-v16: explicit R4 source inventory, locked completeness metadata,
 # insufficient-data guard, and clearer proposition-consistent R2 narrative contract.
 # [model-integrity-screen] bounded paired Qwen/MedGemma retest after exact-SHA backend regression pass.
@@ -960,6 +960,62 @@ def _is_r4_case_echo(response_text: str, case: dict[str, Any]) -> bool:
     return observed_inventory in ({}, None)
 
 
+_DIAGNOSIS_DENIAL_PATTERN = re.compile(
+    r"\\bno\\s+diagnosis(?:\\s+or\\s+staging)?(?:\\s+(?:information|field|data|details?))?"
+    r"\\s+(?:(?:is|are|was|were|has\\s+been|have\\s+been)\\s+)?"
+    r"(?:present|supplied|provided|recorded|documented|available|identified|missing|absent|unavailable)\\b"
+    r"|\\b(?:the\\s+)?record\\s+(?:contains|has|includes?)\\s+no\\s+diagnosis"
+    r"(?:\\s+(?:information|field|data|details?))?\\b"
+    r"|\\bthere\\s+(?:is|was)\\s+no\\s+diagnosis(?:\\s+(?:information|field|data|details?))?\\b"
+    r"|\\bdiagnosis(?:\\s+(?:information|field|data|details?))?"
+    r"\\s+(?:(?:is|are|was|were)\\s+)?(?:not|never)\\s+"
+    r"(?:present|supplied|provided|recorded|documented|available|identified)\\b",
+    re.IGNORECASE,
+)
+
+
+def _affirmatively_selects_conflicting_source(text: str) -> bool:
+    """Detect an affirmative source choice even if the response also says unresolved."""
+    patterns = (
+        r"\\bsource\\s+[ab]\\b.{0,70}\\b(?:is|was)\\s+(?:the\\s+)?(?:correct|accurate|authoritative|preferred|reliable|trusted)\\b",
+        r"\\b(?:select|selected|choose|chosen|prefer|preferred|use|using|accept|accepted|trust|trusted|rely\\s+on)\\s+source\\s+[ab]\\b",
+        r"\\bsource\\s+[ab]\\s+(?:is|was)\\s+(?:selected|chosen|preferred|accepted|trusted)\\b",
+        r"\\b(?:resolve|resolved|settle|settled)\\s+(?:the\\s+)?(?:discrepancy|conflict|contradiction)\\s+(?:in\\s+)?(?:favor|favour)\\s+of\\s+source\\s+[ab]\\b",
+    )
+    folded = text.casefold()
+    for expression in patterns:
+        for match in re.finditer(expression, folded, re.IGNORECASE):
+            start = max(folded.rfind(".", 0, match.start()), folded.rfind("!", 0, match.start()), folded.rfind("?", 0, match.start()), folded.rfind(";", 0, match.start()), folded.rfind("\\n", 0, match.start())) + 1
+            prefix = folded[start:match.start()]
+            if re.search(r"\\b(?:not|never|do not|don't|should not|must not|cannot)\\b[^.!?;:]{0,40}$", prefix):
+                continue
+            return True
+    return False
+
+
+def _parse_screen_json(response_text: str) -> Any:
+    candidate = response_text.strip().lstrip("\\ufeff")
+    fenced = re.fullmatch(r"```(?:json)?\\s*(.*?)\\s*```", candidate, re.IGNORECASE | re.DOTALL)
+    if fenced:
+        candidate = fenced.group(1).strip()
+    try:
+        return json.loads(candidate)
+    except (TypeError, json.JSONDecodeError):
+        return None
+
+
+def _contains_nested_json_key(value: Any, target: str) -> bool:
+    if isinstance(value, dict):
+        return any(
+            (isinstance(key, str) and key.casefold() == target.casefold())
+            or _contains_nested_json_key(child, target)
+            for key, child in value.items()
+        )
+    if isinstance(value, list):
+        return any(_contains_nested_json_key(item, target) for item in value)
+    return False
+
+
 def audit_screen_response(case: dict[str, Any], response: Any) -> list[str]:
     """Emit narrow, deterministic reviewer flags for known synthetic failure modes.
 
@@ -995,11 +1051,7 @@ def audit_screen_response(case: dict[str, Any], response: Any) -> list[str]:
             "non-empty diagnosis field" in str(fact).casefold()
             for fact in supplied_facts
         )
-        denies_supplied_diagnosis = re.search(
-            r"\bno diagnosis(?:\s+or staging)?\s+information\s+(?:is|was)\s+present\b"
-            r"|\b(?:the )?record\s+(?:contains|has)\s+no\s+diagnosis\s+information\b",
-            folded,
-        )
+        denies_supplied_diagnosis = _DIAGNOSIS_DENIAL_PATTERN.search(folded)
         if supplied_nonempty_diagnosis and denies_supplied_diagnosis:
             findings.append(
                 "R1 supplied-fact contradiction: the case supplies a non-empty diagnosis field, but the response denies that diagnosis information is present. Keep staging unknown without negating the supplied diagnosis-field fact."
@@ -1022,6 +1074,10 @@ def audit_screen_response(case: dict[str, Any], response: Any) -> list[str]:
             r"\b(?:unresolved|cannot be resolved|not possible to determine which source|neither source)\b",
             folded,
         ))
+        if has_opposing_laterality_sources and _affirmatively_selects_conflicting_source(text):
+            findings.append(
+                "R1 contradictory source resolution: the response affirmatively selected Source A or Source B despite the supplied opposing laterality statements; neither source may be preferred or declared correct from the supplied information."
+            )
         if has_opposing_laterality_sources and not all(
             (mentions_both_sources, mentions_discrepancy, states_unresolved)
         ):
@@ -1590,19 +1646,11 @@ def audit_screen_response(case: dict[str, Any], response: Any) -> list[str]:
         # The prose/JSON response must not contradict the separately validated
         # structured inventory. A supplied ID cannot be relabelled as unsupplied
         # or malformed in the response string.
-        try:
-            narrative_payload = json.loads(response_text)
-        except (TypeError, json.JSONDecodeError):
-            narrative_payload = None
-        supplied_ids = set(
-            case_local_identifier_inventory(case.get("input") or {})[
-                "explicitly_supplied_source_ids"
-            ]
-        )
-        invalid_statuses = {
-            "deliberately_unsupplied", "unsupplied", "malformed",
-            "invalid", "malformed_reference_text_verbatim",
-        }
+        narrative_payload = _parse_screen_json(response_text)
+        if _contains_nested_json_key(narrative_payload, "synthetic_input"):
+            findings.append(
+                "R3 synthetic-input echo: the response serialized the supplied synthetic_input object instead of giving the requested bounded source-inventory audit."
+            )
         if isinstance(narrative_payload, list):
             for item in narrative_payload:
                 if not isinstance(item, dict):
@@ -1614,10 +1662,6 @@ def audit_screen_response(case: dict[str, Any], response: Any) -> list[str]:
                         f"R3 narrative identifier contradiction: explicitly supplied ID {source_id} was described as {status!r}."
                     )
         elif isinstance(narrative_payload, dict):
-            if "synthetic_input" in narrative_payload:
-                findings.append(
-                    "R3 synthetic-input echo: the response serialized the supplied synthetic_input object instead of giving the requested bounded source-inventory audit."
-                )
             nested_inventory = narrative_payload.get("identifier_inventory_review")
             if isinstance(nested_inventory, dict):
                 nested_unsupplied = nested_inventory.get("deliberately_unsupplied_ids", [])
