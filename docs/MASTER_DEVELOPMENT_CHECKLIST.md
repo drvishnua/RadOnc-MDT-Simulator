@@ -2927,3 +2927,16 @@ All six are completed with conclusion `success` and `head_sha=77c4e741cc79e62bd9
 **Current engineering task:** implement deterministic, no-inference diagnostics for the recovered historical specialist-output export. Diagnostics must report per-round/per-role fact-use and remit coverage only where the export contains explicit structured fields; count missing/empty evidence claims; identify exact duplicate text separately from provisional near-duplicate similarity; identify missing conditional prerequisites and unsupported stage assertions as review flags, not clinical adjudications. Preserve raw input and hashes; do not rewrite saved rows, infer facts, force different opinions, or treat similarity as proof of copied reasoning. Include malformed/missing-field handling and fixture-based regression tests. No Qwen/MedGemma inference is part of this task.
 
 **Checklist status:** historical JSON quality diagnosis remains VERIFIED; deterministic diagnostic implementation remains IN PROGRESS until code, regression tests and exact-head CI are verified. Full model-quality remediation remains IN PROGRESS. Current-head live 45-role validation remains BLOCKED pending explicit approval of a specific synthetic-only run scope. GPU, clinical review, evidence retrieval and release gates remain outstanding.
+
+## Implementation checkpoint — saved-run quality diagnostics (20 November 2026)
+
+**Development HEAD at implementation checkpoint:** `a5b863043c90afece7e662b1e7d1389cb1515c3a` (diagnostic script, regression tests and preflight inventory). PR #1 remains open, draft and unmerged; base `main` remains `39a356b8eb09399aa2da1b9b9085965999f5105a`.
+
+**Changes registered:**
+- `backend/scripts/saved_run_quality_diagnostics.py`: read-only JSON export diagnostics; source SHA-256; per-round row/role/position and field-population counts; exact duplicate groups; provisional Jaccard near-duplicate candidate pairs; R1 TNM-token source-review flags. It explicitly states that similarity is not proof of copying and stage flags are not stage adjudication.
+- `backend/tests/test_saved_run_quality_diagnostics.py`: five regression tests for read-only/hash preservation, empty evidence/debate fields, duplicate and staging flags, configurable similarity threshold, and malformed round collection handling.
+- `backend/scripts/deterministic_preflight.py`: new script and test added to required validation inventory.
+
+**Verification state:** six standard PR workflows were observed running against exact code SHA `a5b863043c90afece7e662b1e7d1389cb1515c3a): Backend Tests 44600006047; Frontend Build 44600006308; Browser E2E 44600006350; Windows Packaging Prerequisites 44600006530; Windows Installer Build 44600006175; Security and Dependency Audit 44600006167. At checklist update time, all six were in progress; no test or CI pass is claimed. No local pytest run was available through the connected GitHub-only editing workflow. No model inference, GPU test, clinical review or evidence retrieval was performed.
+
+**Status:** deterministic saved-run diagnostics — IN PROGRESS; regression tests — IN PROGRESS pending CI; exact-head engineering verification — IN PROGRESS; live model validation — BLOCKED pending explicit synthetic-only run approval. Preserve all historical export findings and unresolved release gates.
