@@ -4250,6 +4250,50 @@ Every new project requirement from the owner must be added here immediately in t
 
 ### U11 — Strict sequential execution and per-response step reporting
 
+**Status: IN PROGRESS — mandatory project operating procedure**
+
+Owner requirement: proceed one step at a time; do not skip, reorder, replace, parallelise, or introduce additional work outside the existing approved plan. Every project response must identify the exact current step and explain its implementation and verification plan.
+
+**Mandatory pre-response procedure — execute before EVERY project-related response, without exception:**
+
+1. Read this entire authoritative file, `docs/MASTER_DEVELOPMENT_CHECKLIST.md`, from the current development branch. Do not rely on a prior chat summary or an earlier copy.
+2. Inspect the current repository state available through the connected GitHub tools: confirm the development branch; confirm PR #1 state, head branch, base branch, and head commit; identify the latest relevant code commit and checklist commit; inspect applicable CI/workflow runs and their exact head SHAs.
+3. Review the current active step, its prerequisites, acceptance criteria, known failures, blockers, and all outstanding requirements. Preserve unresolved risks and historical failures.
+4. If the owner has supplied a new requirement, add it to this same checklist immediately, assign the next stable U-number, define acceptance criteria, and commit the checklist update to the development branch before reporting. Do not create another checklist.
+5. Update checklist statuses only when supported by evidence from the current repository, tests, CI, or explicitly identified validation artefacts. Record commit SHAs, workflow IDs/results, test counts, live-run IDs and artefacts where available. Do not convert historical evidence into current-head verification.
+6. Determine the exact next step strictly from the existing dependency order below and the recorded implementation plan. Do not start a later step while the current step or prerequisite remains unverified.
+7. If repository access, PR head, CI evidence, or a required verification is unavailable, mark that item BLOCKED/UNVERIFIED and state the limitation. Do not guess, silently skip, or claim completion.
+8. Before sending the response, ensure it contains the exact current step ID/name, current status, what is being done in that step, the step's implementation sequence, its verification/exit criteria, and the complete current Master Checklist — Current Status.
+9. Keep the repository checklist authoritative. A chat summary is not a substitute for a committed repository update. Never say the procedure is mandatory in the repository unless this section is present on the development branch and its current commit is verified.
+
+**Mandatory execution sequence:**
+
+A. Finish repository/branch/PR/commit/checklist/CI inspection and confirm the exact current development head.
+B. Follow the existing dependency order in this checklist. The first implementation sequence remains Section B, Clinical data contract (U09/U10), after Step A is verified.
+C. Within a step: inspect existing implementation; define/confirm acceptance criteria from this checklist; make only the minimum required change; add regression tests; run relevant checks; inspect outputs and failure cases; update this checklist with evidence; then proceed to the next listed step.
+D. Never work on later workstreams early, and do not invent additional scope or substitute a different architecture/approach. If a genuine blocker prevents the recorded order, stop and report it rather than changing the order.
+E. The next step may begin only after the current step's exit criteria are met and its status/evidence are recorded here.
+
+**Per-response required report fields:**
+- Exact current step ID and title.
+- Step status: NOT STARTED / IN PROGRESS / BLOCKED / VERIFIED / FAILED / NOT APPLICABLE.
+- Purpose and scope of this step.
+- Ordered plan to complete this step.
+- Verification/exit criteria and evidence currently available.
+- Blockers and unresolved risks.
+- “Master Checklist — Current Status”, reflecting this repository file.
+
+**Acceptance criteria:**
+1. Before every project-related response, the assistant reads this file and checks current branch/PR/commit/CI evidence.
+2. Every response identifies the exact active step and its ordered plan, with current status and exit criteria.
+3. The existing approved step order is followed; no skipped, reordered, parallel or newly introduced work.
+4. New owner requirements are recorded immediately in this same file with stable IDs and acceptance criteria.
+5. No work is marked verified without matching evidence and exact commit/run references.
+6. If current repository evidence cannot be retrieved, the response explicitly says so and does not imply the checklist was read or updated.
+7. This procedure is retained across handoffs and conversations as the repository's authoritative working rule.
+
+**Execution rule:** The next active work remains repository verification (exact PR head and exact-head CI). Only after that is complete may implementation proceed to the existing Section B clinical data-contract work (U09/U10).
+
 **Status: IN PROGRESS**
 
 Owner requirement: proceed one step at a time; do not skip, reorder, replace, or introduce additional work outside the existing approved plan. Every project response must state the exact current step and the plan to achieve and verify that step.
