@@ -491,7 +491,12 @@ try {
     "[...document.querySelectorAll('.result-card')].some(node => (node.innerText || '').includes('Case structure valid'))",
     "case validation to complete"
   );
-  await clickButton("Register new patient");
+  await clickButton("Start intake for new patient");
+  await waitForExpression(
+    "[...document.querySelectorAll('button')].some(node => (node.innerText || '').trim().startsWith('Accept intake and save'))",
+    "the explicit intake acceptance action"
+  );
+  await clickButton("Accept intake and save");
 
   const firstOption = await waitUntil(() => readPatientOption(originalName), "the newly registered patient in the registry");
   patientIdentifier = firstOption.identifier;
@@ -522,10 +527,15 @@ try {
   await waitForValidationReady();
   await submitCaseValidation();
   await waitForExpression(
-    "[...document.querySelectorAll('button')].some(node => (node.innerText || '').trim().startsWith('Save new version of " + patientIdentifier + "') && !node.disabled)",
+    "[...document.querySelectorAll('button')].some(node => (node.innerText || '').trim().startsWith('Start intake for new version of " + patientIdentifier + "') && !node.disabled)",
     "the version-save action after editing"
   );
-  await clickButton("Save new version of " + patientIdentifier);
+  await clickButton("Start intake for new version of " + patientIdentifier);
+  await waitForExpression(
+    "[...document.querySelectorAll('button')].some(node => (node.innerText || '').trim().startsWith('Accept intake and save'))",
+    "the second-version intake acceptance action"
+  );
+  await clickButton("Accept intake and save");
   await waitForExpression(
     "(() => { const label = [...document.querySelectorAll('label')].find(node => (node.innerText || '').trim().startsWith('Saved case version')); return !!label && !!label.querySelector('select') && [...label.querySelector('select').options].some(option => (option.textContent || '').includes('Version 2 ·')); })()",
     "the second immutable case version"
