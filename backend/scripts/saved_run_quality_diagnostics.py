@@ -19,7 +19,7 @@ FIELDS = {
     "R2": ("provisional_conclusion", "response_to_other_perspectives"),
     "R3": ("provisional_conclusion", "response_to_other_perspectives"),
 }
-STAGE_TOKEN = re.compile(r"\b(?:c|p)?T(?:is|[0-4][a-d]?)(?:N[0-3x](?:M[0-1x])?)?|\bN[0-3x]\b|\bM[0-1x]\b", re.I)
+STAGE_TOKEN = re.compile(r"\b(?:c|p)?T(?:is|[0-4][a-d]?)(?:N[0-3x](?:M[0-1x])?)?\b|\bN[0-3x]\b|\bM[0-1x]\b", re.I)
 STRUCTURED_STAGE_FIELDS = (
     "clinical_stage", "pathological_stage", "tnm_stage", "stage",
     "clinical_t_stage", "clinical_n_stage", "clinical_m_stage",
