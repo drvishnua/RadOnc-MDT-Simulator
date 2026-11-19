@@ -214,3 +214,15 @@ def test_preflight_rejects_medgemma_push_without_explicit_terms_attestation_befo
 
     assert failure["status"] == "failed"
     assert failure["severity"] == "critical"
+
+
+
+def test_preflight_detects_missing_clinical_field_registry_regression_suite(tmp_path):
+    backend = _minimal_repository(tmp_path)
+    (backend / "tests" / "test_clinical_fields.py").unlink()
+
+    report = preflight.run_preflight(backend)
+    failure = next(item for item in report["results"] if item["check_id"] == "REGRESSION_ASSETS_001")
+
+    assert failure["status"] == "failed"
+    assert "tests/test_clinical_fields.py" in failure["actual"]
