@@ -5,10 +5,11 @@ import hashlib
 import json
 import sqlite3
 import uuid
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any
 
-from app import run_store
+from app.services import run_store
 from app.clinical_fields import CLINICAL_FIELD_REGISTRY, CLINICAL_FIELD_REGISTRY_VERSION
 from app.schemas import SyntheticCase
 from app.services.intake_screening import screen_case_intake
@@ -28,12 +29,14 @@ def _digest(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
+@contextmanager
 def _connect():
     run_store.initialize_database()
     connection = sqlite3.connect(run_store.DB_PATH, timeout=30)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys=ON")
-    connection.execute("""
+    try:
+        connection.execute("""
         CREATE TABLE IF NOT EXISTS intake_sessions (
             session_id TEXT PRIMARY KEY,
             current_case_json TEXT NOT NULL,
@@ -46,8 +49,8 @@ def _connect():
             updated_at TEXT NOT NULL,
             accepted_at TEXT
         )
-    """)
-    connection.execute("""
+        """)
+        connection.execute("""
         CREATE TABLE IF NOT EXISTS intake_events (
             event_id TEXT PRIMARY KEY,
             session_id TEXT NOT NULL,
@@ -62,8 +65,14 @@ def _connect():
             UNIQUE(session_id, sequence_number),
             FOREIGN KEY(session_id) REFERENCES intake_sessions(session_id) ON DELETE CASCADE
         )
-    """)
-    return connection
+        """)
+        yield connection
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
 
 
 def _event_hash(
