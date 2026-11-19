@@ -75,7 +75,7 @@ def test_exact_duplicate_is_separate_from_near_duplicate_and_flagged_not_adjudic
     assert any(x["round"] == "R1" and x["field"] == "provisional_conclusion" for x in exact)
     assert result["summary"]["near_duplicate_candidate_pairs"] == 0
     assert result["staging_reference_flags"]
-    assert all(x["reason"] == "stage_token_not_found_in_structured_case_snapshot_fields"
+    assert all(x["reason"] == "no_structured_stage_field_available"
                for x in result["staging_reference_flags"])
 
 
