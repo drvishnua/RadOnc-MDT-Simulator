@@ -198,6 +198,9 @@ if ($global:RadOncMockPortableInstallCalled -or $global:RadOncMockModelPullCalle
 Write-Host "AI_BOOTSTRAP_RESTART_EXISTING_OLLAMA_WITH_EXISTING_MODEL_OK"
 
 # Reset function behaviour to model an unavailable standard Ollama endpoint.
+# The prior scenario deliberately exposed an installed executable. Clear that
+# discovery result so this scenario represents a genuinely absent installation.
+function Find-RadOncOllamaExecutable { return $null }
 $global:RadOncMockPortableStarted = $false
 $global:RadOncMockModelReady = $false
 $global:RadOncMockModelPullCalled = $false
