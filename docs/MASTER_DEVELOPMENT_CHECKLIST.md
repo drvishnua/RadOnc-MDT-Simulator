@@ -4246,3 +4246,19 @@ The uploaded 323,872-byte JSON was parsed directly. These findings are a baselin
 ### Checklist governance rule reaffirmed
 
 Every new project requirement from the owner must be added here immediately in the same work session, assigned an ID and status, with acceptance criteria. Never silently drop or merge requirements. Update this file after implementation/verification evidence is available. The chat response must display the current checklist status and must not imply this plan is already implemented.
+
+
+### U11 — Strict sequential execution and per-response step reporting
+
+**Status: IN PROGRESS**
+
+Owner requirement: proceed one step at a time; do not skip, reorder, replace, or introduce additional work outside the existing approved plan. Every project response must state the exact current step and the plan to achieve and verify that step.
+
+Acceptance criteria:
+1. Before implementation, verify the current development branch, PR, commit, authoritative checklist and applicable CI evidence.
+2. Follow the existing recorded dependency/order in this checklist. Complete and verify the current step before starting the next step.
+3. Do not introduce new features, scope, architecture choices or parallel work that are not already in the approved checklist. If a genuine blocker makes the recorded order impossible, stop and report the blocker rather than silently changing order.
+4. Every project response states: exact step ID/name; current status; actions for that step; verification/exit criteria; and the current Master Checklist status.
+5. Add future owner requirements immediately to this same checklist with stable IDs and acceptance criteria, without duplicating or reordering existing requirements.
+
+Execution rule: the first active implementation sequence remains the existing checklist's clinical data-contract work (U09/U10) after repository/checklist/PR/CI inspection. No later workstream may be started until its prerequisite step is verified.
