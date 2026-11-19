@@ -147,24 +147,11 @@ def test_cors_does_not_allow_arbitrary_origins() -> None:
     assert "access-control-allow-origin" not in response.headers
 
 
-def test_single_agent_assessment_endpoint_uses_local_generation(monkeypatch) -> None:
-    from app.agent_schemas import AgentAssessment
+def test_single_agent_assessment_rejects_unlinked_case_payload(monkeypatch) -> None:
+    def unexpected_generation(*args, **kwargs):
+        raise AssertionError("Unlinked case payload must be rejected before inference.")
 
-    async def fake_generate(profile, case, round_number):
-        assert profile["agent_id"] == "RO-01"
-        assert case.scenario_title == "Synthetic test case"
-        return AgentAssessment(
-            agent_id="RO-01",
-            round_number=round_number,
-            position="conditional",
-            provisional_conclusion="A provisional educational conclusion is conditional because important case details remain unknown.",
-            preferred_educational_option="No option can be preferred until the outstanding details are clarified.",
-            perspective_summary="A mocked educational assessment for endpoint testing.",
-            confidence=0.5,
-            evidence_gaps=["No evidence retrieval is connected in this test."],
-        )
-
-    monkeypatch.setattr("app.main.generate_agent_assessment", fake_generate)
+    monkeypatch.setattr("app.main.generate_agent_assessment", unexpected_generation)
     response = client.post(
         "/api/agents/RO-01/assess",
         json={
@@ -175,10 +162,29 @@ def test_single_agent_assessment_endpoint_uses_local_generation(monkeypatch) -> 
             },
         },
     )
-    assert response.status_code == 200
-    assert response.json()["agent_id"] == "RO-01"
-    assert response.json()["not_a_treatment_instruction"] is True
-    assert response.json()["evidence_claims"] == []
+    assert response.status_code == 409
+    assert "unlinked case" in response.json()["detail"]
+
+
+def test_legacy_batch_run_rejects_unlinked_case_payload(monkeypatch) -> None:
+    from app.services import run_store
+
+    def unexpected_create_run(*args, **kwargs):
+        raise AssertionError("Unlinked case payload must be rejected before persistence.")
+
+    monkeypatch.setattr(run_store, "create_run", unexpected_create_run)
+    response = client.post(
+        "/api/runs",
+        json={
+            "case": {
+                "scenario_title": "Synthetic direct-run case",
+                "case_summary": "A fictional case that must not bypass accepted intake.",
+            }
+        },
+    )
+    assert response.status_code == 409
+    assert "unlinked case payloads are disabled" in response.json()["detail"]
+
 
 
 def test_single_agent_assessment_rejects_unknown_profile() -> None:
