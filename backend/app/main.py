@@ -16,9 +16,10 @@ from app.config import APP_NAME, APP_VERSION
 from app.clinical_fields import require_supported_registry_version
 from app.schemas import (
     AgentAssessmentRequest, BatchRunRequest, CaseValidationResult,
-    PatientCaseUpdateRequest, PatientRegistrationRequest, PatientRunRequest, SyntheticCase,
+    PatientCaseUpdateRequest, PatientRegistrationRequest, PatientRunRequest, SyntheticCase, CaseIntakeScreenRequest,
 )
 from app.services.case_integrity import build_case_validation_warnings
+from app.services.intake_screening import screen_case_intake
 from app.services import run_store
 from app.services.batch_runner import batch_is_running, run_independent_assessments, validate_resume_state
 from app.services.mdt_rounds import prepare_round_resume, round_is_running, run_mdt_round
@@ -367,7 +368,19 @@ async def get_final_mdt_report(run_id: str) -> dict[str, object]:
         raise HTTPException(status_code=404, detail="Simulation run not found.") from exc
 
 
-@app.post("/api/cases/validate", response_model=CaseValidationResult)
+
+
+@app.post("/api/cases/screen-intake")
+async def screen_pre_mdt_intake(request: CaseIntakeScreenRequest) -> dict[str, object]:
+    """Identify missing intake information before MDT; never infer or fill values."""
+    try:
+        return screen_case_intake(
+            request.case,
+            declined_domains=request.declined_domains,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+\n\n@app.post("/api/cases/validate", response_model=CaseValidationResult)
 async def validate_case(case: SyntheticCase) -> CaseValidationResult:
     warnings = build_case_validation_warnings(case)
     if not case.known_unknowns:
