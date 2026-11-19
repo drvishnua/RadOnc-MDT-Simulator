@@ -167,7 +167,7 @@ function Start-RadOncOllamaServer {
     if ($Executable -ne $mockExistingExecutable -or $BaseUrl -ne "http://127.0.0.1:11434") {
         throw "Installed-but-stopped Ollama path did not select the existing executable and standard endpoint."
     }
-    if ($null -ne $ModelDirectory -or $ManagedRuntime) {
+    if (-not [string]::IsNullOrEmpty($ModelDirectory) -or $ManagedRuntime) {
         throw "Existing Ollama model-store configuration must not be overwritten or marked as managed."
     }
     $global:RadOncMockExistingServerStarted = $true
