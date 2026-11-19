@@ -14,6 +14,7 @@ from typing import Any
 
 from app.agents.catalog import AGENT_PROFILES
 from app.schemas import SyntheticCase
+from app.clinical_fields import CLINICAL_FIELD_REGISTRY_VERSION, LEGACY_FIELD_REGISTRY_VERSION
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 DEFAULT_DATA_DIR = BACKEND_DIR / "data"
@@ -92,7 +93,8 @@ def initialize_database() -> None:
                 case_version_number INTEGER,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
-                mdt_finished_at TEXT
+                mdt_finished_at TEXT,
+                clinical_field_registry_version TEXT NOT NULL DEFAULT 'legacy-unversioned'
             );
 
             CREATE TABLE IF NOT EXISTS synthetic_patients (
@@ -117,6 +119,7 @@ def initialize_database() -> None:
                 case_json TEXT NOT NULL,
                 case_snapshot_sha256 TEXT NOT NULL,
                 created_at TEXT NOT NULL,
+                clinical_field_registry_version TEXT NOT NULL DEFAULT 'legacy-unversioned',
                 UNIQUE(patient_id, version_number),
                 FOREIGN KEY (patient_id) REFERENCES synthetic_patients(patient_id) ON DELETE CASCADE
             );
@@ -164,6 +167,7 @@ def initialize_database() -> None:
             ("case_version_id", "TEXT"),
             ("case_version_number", "INTEGER"),
             ("mdt_finished_at", "TEXT"),
+            ("clinical_field_registry_version", "TEXT NOT NULL DEFAULT 'legacy-unversioned'"),
         ):
             if column not in run_columns:
                 db.execute(f"ALTER TABLE simulation_runs ADD COLUMN {column} {sql_type}")
@@ -177,6 +181,8 @@ def initialize_database() -> None:
         version_columns = {row["name"] for row in db.execute("PRAGMA table_info(patient_case_versions)")}
         if "patient_name" not in version_columns:
             db.execute("ALTER TABLE patient_case_versions ADD COLUMN patient_name TEXT")
+        if "clinical_field_registry_version" not in version_columns:
+            db.execute("ALTER TABLE patient_case_versions ADD COLUMN clinical_field_registry_version TEXT NOT NULL DEFAULT 'legacy-unversioned'")
         # Only insert genuinely missing allocations: INSERT OR IGNORE would still
         # advance SQLite AUTOINCREMENT for conflicts on every initialization.
         db.execute(
@@ -254,9 +260,9 @@ def create_patient(patient_name: str, case: SyntheticCase) -> dict[str, Any]:
         )
         db.execute(
             """INSERT INTO patient_case_versions
-            (case_version_id, patient_id, patient_name, version_number, case_json, case_snapshot_sha256, created_at)
-            VALUES (?, ?, ?, 1, ?, ?, ?)""",
-            (case_version_id, patient_id, patient_name, case_json, digest, now),
+            (case_version_id, patient_id, patient_name, version_number, case_json, case_snapshot_sha256, created_at, clinical_field_registry_version)
+            VALUES (?, ?, ?, 1, ?, ?, ?, ?)""",
+            (case_version_id, patient_id, patient_name, case_json, digest, now, CLINICAL_FIELD_REGISTRY_VERSION),
         )
     return get_patient(patient_id)
 
@@ -280,9 +286,9 @@ def create_case_version(patient_id: str, patient_name: str, case: SyntheticCase)
         ).fetchone()["next_version"]
         db.execute(
             """INSERT INTO patient_case_versions
-            (case_version_id, patient_id, patient_name, version_number, case_json, case_snapshot_sha256, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (case_version_id, patient_id, patient_name, version_number, case_json, digest, now),
+            (case_version_id, patient_id, patient_name, version_number, case_json, case_snapshot_sha256, created_at, clinical_field_registry_version)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (case_version_id, patient_id, patient_name, version_number, case_json, digest, now, CLINICAL_FIELD_REGISTRY_VERSION),
         )
         db.execute(
             "UPDATE synthetic_patients SET patient_name = ?, updated_at = ? WHERE patient_id = ?",
@@ -308,6 +314,7 @@ def _version_record(row: sqlite3.Row) -> dict[str, Any]:
         "version_number": row["version_number"],
         "case_snapshot_sha256": digest,
         "created_at": row["created_at"],
+        "clinical_field_registry_version": row["clinical_field_registry_version"],
         "case": case.model_dump(exclude_none=True),
     }
 
@@ -410,6 +417,7 @@ def create_run_for_case_version(patient_id: str, case_version_id: str) -> dict[s
         patient_id=patient_id,
         case_version_id=case_version_id,
         case_version_number=version["version_number"],
+        clinical_field_registry_version=version["clinical_field_registry_version"],
     )
 
 
@@ -453,7 +461,8 @@ def list_patient_assessments(patient_id: str, case_version_id: str) -> list[dict
 
 def create_run(case: SyntheticCase, *, patient_id: str | None = None,
                case_version_id: str | None = None,
-               case_version_number: int | None = None) -> dict[str, Any]:
+               case_version_number: int | None = None,
+               clinical_field_registry_version: str = CLINICAL_FIELD_REGISTRY_VERSION) -> dict[str, Any]:
     initialize_database()
     run_id = str(uuid.uuid4())
     now = _now()
@@ -463,11 +472,11 @@ def create_run(case: SyntheticCase, *, patient_id: str | None = None,
             """
             INSERT INTO simulation_runs
             (run_id, case_json, status, total_agents, current_agent_id,
-             patient_id, case_version_id, case_version_number, created_at, updated_at)
-            VALUES (?, ?, 'queued', ?, NULL, ?, ?, ?, ?, ?)
+             patient_id, case_version_id, case_version_number, created_at, updated_at, clinical_field_registry_version)
+            VALUES (?, ?, 'queued', ?, NULL, ?, ?, ?, ?, ?, ?)
             """,
             (run_id, case_json, len(AGENT_PROFILES), patient_id, case_version_id,
-             case_version_number, now, now),
+             case_version_number, now, now, clinical_field_registry_version),
         )
         db.executemany(
             """
@@ -540,6 +549,7 @@ def get_run(run_id: str) -> dict[str, Any]:
         "created_at": row["created_at"],
         "updated_at": row["updated_at"],
         "mdt_finished_at": row["mdt_finished_at"],
+        "clinical_field_registry_version": row["clinical_field_registry_version"],
         "case_snapshot_sha256": hashlib.sha256(row["case_json"].encode("utf-8")).hexdigest(),
         "all_agents_required": True,
         "independent_assessments": True,
