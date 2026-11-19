@@ -4452,3 +4452,33 @@ Implemented on `feature/four-round-mdt-and-performance`:
 - Active step U12: IN PROGRESS. Implementation files and three historical failed gate runs are recorded in the progress section above; fixes after those failures do not yet have successful latest-SHA CI evidence.
 - Branch protection remains BLOCKED: API reports unprotected; rulesets empty; read endpoint 403; no available branch-protection write action. No required-check enforcement is claimed.
 - U09/U10 remain BLOCKED pending U12 exit criteria. No main changes, merge or force-push.
+
+
+### U12 exact-SHA verification checkpoint — 20 November 2026
+
+**Application implementation commit:** `c41ead4c37f054ac01775e30728207d947f166a1` (the current application-code SHA during this checkpoint).
+
+Exact-SHA CI results on `c41ead4c37f054ac01775e30728207d947f166a1`:
+- Sequential Development Gate — SUCCESS, push run `44627666269` and PR run `44627683863`.
+- Backend Tests — SUCCESS, run `44627683181`; 553 passed; deterministic no-inference preflight 7/7.
+- Security and Dependency Audit — SUCCESS, run `44627683260`.
+- Frontend Build — SUCCESS, run `44627683420`.
+- Patient Registry and Four-Round Dashboard Browser E2E — SUCCESS, run `44627683070`.
+- GitHub-hosted Windows Packaging Prerequisites — SUCCESS, run `44627684242`.
+- Windows Installer Build — IN PROGRESS, run `44627683435`; frontend packaging stage passed, packaged application build was running at checkpoint. This workflow is not a U12 required workflow but remains outstanding for the overall PR.
+
+The dedicated gate test step completed successfully on the exact SHA. The test module currently contains 19 adversarial tests. Backend test suite and preflight are independently successful. Earlier gate failures remain preserved above and were corrected; no failure was silently erased.
+
+**Repository enforcement remains BLOCKED:** GitHub API reports `protected=false` for both `feature/four-round-mdt-and-performance` and `main`; both have required status-check enforcement off. Repository rulesets query returned an empty list. Branch-protection detail reads return 403 for the connected GitHub integration, and no branch-protection write action is exposed by the current connection. Therefore the new workflow is executing and passing, but GitHub is NOT configured to require it or prevent direct pushes/merges around it. Do not describe U12 as fully verified or claim 100% skip prevention.
+
+**U12 status: IN PROGRESS / BLOCKED ON REPOSITORY ADMIN SETTING.** The code-level sequential validator, machine plan, adversarial tests and CI workflow are implemented and passed exact-SHA CI. Remaining acceptance criteria: configure and read back required status checks / branch rules (including protecting the gate workflow and validator from unreviewed alteration), then test that an out-of-order or out-of-scope change is blocked by the repository's required-check policy. Do not start U09/U10 until this is complete.
+
+
+### U11 pre-response review checkpoint — 20 November 2026 (U12 exact-SHA CI review)
+
+- Read the complete authoritative checklist from `feature/four-round-mdt-and-performance`; fetched 653417 characters; source blob SHA `cfe508011ca5b1327a202ee8f62ea235e8e1b3c1`.
+- Development branch / PR #1 head at review: `c41ead4c37f054ac01775e30728207d947f166a1`; PR open, draft, unmerged, base `main`.
+- Step A remains VERIFIED using six successful CI runs on application SHA `986593ec8aab00b7885f1db5ff39dab2546278fc`.
+- U12 implementation code-level CI: gate, backend, security, frontend, browser E2E and packaging prerequisites all SUCCESS on exact SHA `c41ead4c37f054ac01775e30728207d947f166a1`; Windows Installer Build run `44627683435` still IN PROGRESS.
+- U12 remains IN PROGRESS / BLOCKED solely on GitHub repository protection/required-check enforcement and its adversarial repository-level verification. No branch-protection write capability is available; both main and development branch are reported unprotected.
+- U09/U10 remain BLOCKED; no work started on them. No main content change, merge or force-push.
