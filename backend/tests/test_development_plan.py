@@ -6,6 +6,7 @@ import pytest
 from scripts.validate_development_plan import (
     GateError,
     STEP_ORDER,
+    STEP_REQUIRED_WORKFLOWS,
     validate_plan,
 )
 
@@ -202,3 +203,68 @@ def test_committed_machine_plan_matches_the_validator_contract():
     assert plan["steps"][0]["status"] == "VERIFIED"
     assert plan["steps"][1]["status"] == "IN PROGRESS"
     assert [step["id"] for step in plan["steps"]] == list(STEP_ORDER)
+
+
+def test_cannot_complete_u12_using_the_old_step_a_commit_and_old_ci():
+    plan, runs = _fixture()
+    u12 = plan["steps"][1]
+    u12["status"] = "VERIFIED"
+    u12["completion_evidence"] = {
+        "commit_sha": EVIDENCE_SHA,
+        "workflow_runs": [
+            {"id": 2000 + i, "name": name}
+            for i, name in enumerate(STEP_REQUIRED_WORKFLOWS["U12"])
+        ],
+    }
+    plan["active_step"] = "U09-U10"
+    plan["steps"][2]["status"] = "IN PROGRESS"
+    plan["scope_baseline_commit"] = EVIDENCE_SHA
+    for i, name in enumerate(STEP_REQUIRED_WORKFLOWS["U12"]):
+        runs[2000 + i] = {
+            "name": name,
+            "head_sha": EVIDENCE_SHA,
+            "status": "completed",
+            "conclusion": "success",
+        }
+    with pytest.raises(GateError, match="later descendant"):
+        validate_plan(
+            plan,
+            [],
+            lambda _sha: True,
+            lambda run_id: runs[run_id],
+            lambda _base, _head: True,
+            {"U12": ["docs/development_plan.json"]},
+        )
+
+
+def test_completed_step_requires_nonempty_in_scope_code_diff():
+    plan, runs = _fixture()
+    u12 = plan["steps"][1]
+    u12_sha = "c" * 40
+    u12["status"] = "VERIFIED"
+    u12["completion_evidence"] = {
+        "commit_sha": u12_sha,
+        "workflow_runs": [
+            {"id": 2000 + i, "name": name}
+            for i, name in enumerate(STEP_REQUIRED_WORKFLOWS["U12"])
+        ],
+    }
+    plan["active_step"] = "U09-U10"
+    plan["steps"][2]["status"] = "IN PROGRESS"
+    plan["scope_baseline_commit"] = u12_sha
+    for i, name in enumerate(STEP_REQUIRED_WORKFLOWS["U12"]):
+        runs[2000 + i] = {
+            "name": name,
+            "head_sha": u12_sha,
+            "status": "completed",
+            "conclusion": "success",
+        }
+    with pytest.raises(GateError, match="no changed-file evidence"):
+        validate_plan(
+            plan,
+            ["docs/development_plan.json"],
+            lambda _sha: True,
+            lambda run_id: runs[run_id],
+            lambda _base, _head: True,
+            {"U12": []},
+        )
