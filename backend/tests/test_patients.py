@@ -607,3 +607,47 @@ def test_promoted_case_can_start_run_only_while_intake_provenance_verifies(monke
     )
     assert blocked.status_code == 409
     assert "integrity verification failed" in blocked.json()["detail"]
+
+
+def test_accepted_intake_promotes_as_new_immutable_version_for_existing_patient(monkeypatch, tmp_path):
+    monkeypatch.setattr(run_store, "DB_PATH", tmp_path / "patient_intake_new_version.sqlite3")
+    patient = _accepted_patient(_case("Initial accepted version"), "Versioned Training Example")
+    original = patient["versions"][0]
+    changed_case = _case("Second accepted version", "A second fictional intake snapshot for the same training record.")
+    intake = client.post("/api/intakes", json={"case": changed_case}).json()
+    accepted = client.post(
+        f"/api/intakes/{intake['session_id']}/accept", json={"confirmed": True}
+    )
+    assert accepted.status_code == 200
+
+    promoted = client.post(
+        f"/api/intakes/{intake['session_id']}/promote",
+        json={
+            "patient_name": "Versioned Training Example Updated",
+            "patient_id": patient["patient_id"],
+        },
+    )
+    assert promoted.status_code == 200
+    detail = promoted.json()
+    assert len(detail["versions"]) == 2
+    latest = detail["versions"][0]
+    preserved = detail["versions"][1]
+    assert latest["version_number"] == 2
+    assert latest["intake_backed"] is True
+    assert latest["intake_session_id"] == intake["session_id"]
+    assert latest["case"]["scenario_title"] == "Second accepted version"
+    assert preserved["case_version_id"] == original["case_version_id"]
+    assert preserved["case_snapshot_sha256"] == original["case_snapshot_sha256"]
+    assert preserved["intake_backed"] is True
+
+
+def test_promoted_intake_cannot_be_promoted_twice(monkeypatch, tmp_path):
+    monkeypatch.setattr(run_store, "DB_PATH", tmp_path / "patient_intake_once.sqlite3")
+    patient = _accepted_patient()
+    session_id = patient["versions"][0]["intake_session_id"]
+    duplicate = client.post(
+        f"/api/intakes/{session_id}/promote",
+        json={"patient_name": "Duplicate Training Record"},
+    )
+    assert duplicate.status_code == 409
+    assert "already been promoted" in duplicate.json()["detail"]
