@@ -22,7 +22,8 @@ from app.schemas import (
 from app.services.case_integrity import build_case_validation_warnings
 from app.services.intake_screening import screen_case_intake
 from app.services.intake_store import (
-    accept_intake_with_gaps, create_intake_session, get_intake_session, record_intake_event,\n    promote_accepted_intake_to_patient,
+    accept_intake_with_gaps, create_intake_session, get_intake_session, record_intake_event,
+    promote_accepted_intake_to_patient,
 )
 from app.services import run_store
 from app.services.batch_runner import batch_is_running, run_independent_assessments, validate_resume_state
