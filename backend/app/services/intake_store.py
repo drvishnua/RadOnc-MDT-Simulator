@@ -10,7 +10,9 @@ from datetime import datetime, timezone
 from typing import Any
 
 from app.services import run_store
-from app.clinical_fields import (\n    CLINICAL_FIELD_REGISTRY, CLINICAL_FIELD_REGISTRY_VERSION, require_supported_registry_version,\n)
+from app.clinical_fields import (
+    CLINICAL_FIELD_REGISTRY, CLINICAL_FIELD_REGISTRY_VERSION, require_supported_registry_version,
+)
 from app.schemas import SyntheticCase
 from app.services.intake_screening import screen_case_intake
 
