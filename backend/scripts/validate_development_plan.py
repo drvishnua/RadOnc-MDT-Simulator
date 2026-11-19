@@ -146,9 +146,13 @@ def validate_plan(
     changed_files: list[str],
     is_ancestor: Callable[[str], bool],
     run_lookup: Callable[[int], dict],
+    is_ancestor_pair: Callable[[str, str], bool] | None = None,
+    step_changed_files: dict[str, list[str]] | None = None,
 ) -> None:
     """Validate plan ordering, status transitions, scope and exact-SHA CI evidence."""
     errors: list[str] = []
+    is_ancestor_pair = is_ancestor_pair or (lambda _base, _head: True)
+    step_changed_files = step_changed_files or {}
     if plan.get("schema_version") != 1:
         errors.append("unsupported or missing schema_version")
 
@@ -207,6 +211,26 @@ def validate_plan(
             continue
         if not is_ancestor(evidence_sha):
             errors.append(f"{step_id}: evidence SHA is not an ancestor of the checked-out head")
+        step_index = STEP_ORDER.index(step_id)
+        if step_index > 0:
+            previous_id = STEP_ORDER[step_index - 1]
+            previous_evidence = by_id.get(previous_id, {}).get("completion_evidence") or {}
+            previous_sha = previous_evidence.get("commit_sha")
+            if not isinstance(previous_sha, str) or not SHA_RE.fullmatch(previous_sha):
+                errors.append(f"{step_id}: preceding step has no valid evidence SHA")
+            elif evidence_sha == previous_sha or not is_ancestor_pair(previous_sha, evidence_sha):
+                errors.append(f"{step_id}: evidence SHA must be a later descendant of the preceding step's evidence SHA")
+            scope_start = INITIAL_SCOPE_BASELINE if step_id == "U12" else previous_sha
+            if isinstance(scope_start, str) and SHA_RE.fullmatch(scope_start):
+                if evidence_sha == scope_start or not is_ancestor_pair(scope_start, evidence_sha):
+                    errors.append(f"{step_id}: evidence SHA must contain commits after its approved scope baseline")
+                changed_for_step = step_changed_files.get(step_id)
+                if not changed_for_step:
+                    errors.append(f"{step_id}: no changed-file evidence was supplied for the completed step")
+                else:
+                    for changed_path in changed_for_step:
+                        if not _matches(changed_path, STEP_ALLOWED_PATHS[step_id]):
+                            errors.append(f"{step_id}: completed-step scope violation: {changed_path}")
         required_names = step.get("required_workflow_names")
         records = evidence.get("workflow_runs")
         if not isinstance(required_names, list) or not required_names:
@@ -336,14 +360,44 @@ def main(argv: list[str] | None = None) -> int:
             )
             return result.returncode == 0
 
+        def is_ancestor_pair(base_sha: str, descendant_sha: str) -> bool:
+            result = subprocess.run(
+                ["git", "merge-base", "--is-ancestor", base_sha, descendant_sha],
+                cwd=root,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+            return result.returncode == 0
+
         baseline = plan.get("scope_baseline_commit", "")
         changed_text = _git(root, "diff", "--name-only", f"{baseline}..{head}") if SHA_RE.fullmatch(baseline) else ""
         changed_files = [line for line in changed_text.splitlines() if line]
+        step_changed_files: dict[str, list[str]] = {}
+        for step in plan.get("steps", []):
+            if step.get("status") != "VERIFIED" or step.get("id") == "STEP-A":
+                continue
+            step_id = step.get("id")
+            index = STEP_ORDER.index(step_id)
+            previous_id = STEP_ORDER[index - 1]
+            previous_sha = (next(item for item in plan["steps"] if item["id"] == previous_id).get("completion_evidence") or {}).get("commit_sha")
+            start_sha = INITIAL_SCOPE_BASELINE if step_id == "U12" else previous_sha
+            end_sha = (step.get("completion_evidence") or {}).get("commit_sha")
+            if isinstance(start_sha, str) and isinstance(end_sha, str):
+                diff = _git(root, "diff", "--name-only", f"{start_sha}..{end_sha}")
+                step_changed_files[step_id] = [line for line in diff.splitlines() if line]
         token = os.environ.get("GITHUB_TOKEN")
         repository = os.environ.get("GITHUB_REPOSITORY")
         if not token or not repository:
             raise GateError("GITHUB_TOKEN and GITHUB_REPOSITORY are required to verify remote CI evidence")
-        validate_plan(plan, changed_files, is_ancestor, _github_run_lookup(repository, token))
+        validate_plan(
+            plan,
+            changed_files,
+            is_ancestor,
+            _github_run_lookup(repository, token),
+            is_ancestor_pair,
+            step_changed_files,
+        )
     except (OSError, json.JSONDecodeError, GateError, urllib.error.URLError, urllib.error.HTTPError) as exc:
         print(f"SEQUENTIAL_DEVELOPMENT_GATE_BLOCKED: {exc}", file=sys.stderr)
         return 1
