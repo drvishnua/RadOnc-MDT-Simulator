@@ -2427,7 +2427,7 @@ These are exact-head engineering/build/security checks. They do not demonstrate 
 | Backend API and test suite | VERIFIED | 489/489 tests passed on exact head; preflight 7/7. |
 | Frontend build | VERIFIED | Exact-head workflow passed. |
 | Patient Registry / Four-Round Dashboard browser E2E | VERIFIED | Exact-head browser workflow passed with artifact 14455112324. |
-| Development Mission Control/monitor coverage | IN PROGRESS | This CI verifies the patient registry and saved MDT dashboard browser path; it does not establish every development-monitor view or metric. |
+| Mission Control and Development Monitor removal | VERIFIED | Both operational monitor features are removed from the product; UI/API/polling dependencies were retired and the browser E2E asserts their absence. Do not reintroduce either feature. Historical removal evidence is recorded in the 19 November section. |
 | Windows packaging and installer | VERIFIED | Exact-head prerequisite and installer workflows passed, including installation smoke test and SHA-256 artifact. |
 | Dependency audit, CodeQL and full-history secret scan | VERIFIED | Exact-head security workflow passed; both language analyses and dependency/secret checks succeeded. |
 | Authentication, authorisation and broader product security acceptance | IN PROGRESS | CI security checks are not a complete security assessment or release sign-off. |
@@ -2849,3 +2849,72 @@ The following ten requirements were explicitly recollected by the user and are n
 **Immediate priority order:** (1) inspect and diagnose the actual JSON quality failure; (2) implement pre-MDT clarification and audited case snapshot; (3) make conditional reasoning flow through R1–R4; (4) establish evidence retrieval and citations; (5) complete separate desktop UI/UX; (6) fix Ollama/model-aware installer detection; (7) complete TNM equivalence and regression coverage. This ordering does not permit bypassing safety or verification gates.
 
 **Evidence limitation at registration:** the JSON mentioned in item 9 was not retrievable through the current conversation file search. Its contents remain uninspected; obtain/recover the file before claiming a root-cause diagnosis.
+
+
+## Current resume checkpoint — repository refresh and JSON forensic review (20 November 2026)
+
+**Repository:** `drvishnua/RadOnc-MDT-Simulator`  
+**Development branch:** `feature/four-round-mdt-and-performance`  
+**PR #1:** open, draft, unmerged; targets `main` at `39a356b8eb09399aa2da1b9b9085965999f5105a`.  
+**Current branch HEAD:** `f1f9d06db9277fe08bdf6f576db37b803a0ae946` (documentation-only checklist update).  
+**Latest code-bearing commit with exact-head CI evidence:** `77c4e741cc79e62bd957b0031d3d66d0f2e84263`.  
+**Authoritative checklist:** this file; the forensic JSON findings above are now recorded here.
+
+### Exact-head CI — code-bearing commit `77c4e741`
+
+All six standard PR workflows completed successfully on this exact SHA:
+- Backend Tests — [44597448404](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44597448404).
+- Windows Packaging Prerequisites — [44597448405](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44597448405).
+- Frontend Build — [44597448681](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44597448681).
+- Security and Dependency Audit — [44597448491](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44597448491).
+- Patient Registry and Four-Round Dashboard Browser E2E — [44597448711](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44597448711).
+- Windows Installer Build — [44597448426](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44597448426).
+
+All six are completed with conclusion `success` and `head_sha=77c4e741cc79e62bd957b0031d3d66d0f2e84263`. The latest checklist-only commit `f1f9d06` has no associated PR workflow runs returned at the time of this refresh; do not label CI as having run on `f1f9d06`. The six successful runs establish engineering checks only, not live model quality, clinical accuracy, evidence verification, or GPU inference.
+
+### Current consolidated status
+
+| Area | Status | Current evidence / boundary |
+|---|---|---|
+| Four-round R1–R4 architecture and saved-round data flow | IN PROGRESS | Code and CI exist; current-head 45-role live execution and saved-output audit remain outstanding. |
+| R1 independent assessment, fact use and staging safeguards | IN PROGRESS | Current prompt explicitly forbids inferring T1 from lesion size and N0/M0; schema and mocked prompt tests exist. Live adherence remains unverified. |
+| R2 debate, structured agreement/challenge and peer provenance | IN PROGRESS | Bounded peer inputs and provenance checks exist; current full live debate and semantic quality remain unverified. |
+| R3 adversarial review and provenance audit | IN PROGRESS | Deterministic audit and source-binding logic/tests exist; historical export shows empty structured challenges in all 45 R3 rows. Live remediation is unverified. |
+| R4 Chair synthesis from actual saved R1–R3 contributions | IN PROGRESS | Deterministic reconciliation tests exist; current full 45-role saved-run reconciliation remains outstanding. |
+| Clinical safety, staging and incomplete-case handling | IN PROGRESS | Deterministic safeguards tested; historical export contains unsupported staging assertions. No clinical validation. |
+| Case integrity and deterministic audit | VERIFIED | Audit-v17 deterministic checks and exact-head backend workflow passed; historical source records remain unchanged. |
+| Provenance, source allowlists and traceability | IN PROGRESS | Source-binding and provenance regressions passed; live attribution quality remains unverified. |
+| Chair counts, consensus, dissent and minority positions | IN PROGRESS | Deterministic tests exist; current full saved 45-role Chair reconciliation remains outstanding. |
+| Missing, failed and duplicate specialist handling | VERIFIED | Regression coverage and exact-head backend workflow passed; full live orchestration remains outstanding. |
+| Backend/API and automated tests | VERIFIED | Exact-head Backend Tests workflow passed on `77c4e741`; latest checklist-only commit has no associated run. |
+| Frontend build and patient/four-round browser E2E | VERIFIED | Exact-head Frontend Build and Browser E2E workflows passed on `77c4e741`. |
+| Mission Control and Development Monitor removal | VERIFIED | Both removed; do not reintroduce. |
+| Separate native desktop UI/UX | IN PROGRESS | Browser-hosted Vite experience does not satisfy the requested separate desktop experience; native shell/lifecycle acceptance remains outstanding. |
+| Ollama installed/stopped/model-present installer detection | NOT STARTED | Installer CI passed but did not test the requested existing-install/service/model-inventory scenarios. |
+| Pre-MDT Case Clarification Agent, transcript and immutable confirmed snapshot | NOT STARTED | Dedicated backend intake, review/confirmation, provenance and skip/decline workflow remain unimplemented. |
+| Conditional reasoning through R1–R4 | IN PROGRESS | R1 typed conditional options and mocked prompt tests exist; R2/R3/R4 branch persistence, debate, audit and Chair synthesis remain NOT STARTED. |
+| Specialty-specific evidence retrieval and verifiable citations | NOT STARTED | Evidence retrieval remains disconnected; no current sources have been retrieved and verified for simulator use. |
+| Historical JSON quality diagnosis | VERIFIED | Actual export recovered and quantitatively inspected; findings are recorded above. |
+| Remediation of role-specific quality and semantic output gates | IN PROGRESS | No deterministic specialty-coverage/conditional-branch quality gate or current live quality evaluation has been demonstrated. |
+| TNM representation equivalence without source mutation | IN PROGRESS | Requirement remains registered; equivalent structured/text representation, conflict and incomplete-stage regressions still need implementation/verification. |
+| Windows packaging/installer build | VERIFIED | Exact-head installer and packaging workflows passed; requested Ollama state/model detection remains NOT STARTED. |
+| Security/dependency/CodeQL workflow | VERIFIED | Exact-head security workflow passed; this is not complete product security acceptance. |
+| Ollama effective context/truncation | NOT STARTED | No current request-time allocation/truncation measurement. |
+| RTX 4060 request-time GPU/offload verification | NOT STARTED | No inference-time GPU telemetry collected. |
+| Current performance/latency/concurrency validation | NOT STARTED | No new controlled benchmark; keep concurrency at 1. |
+| New Qwen/MedGemma inference or screening | BLOCKED | No new inference without explicit approval of a specific synthetic-only run scope. |
+| Current live four-round validation and saved artefact audit | BLOCKED | No current-head 45-role run or current live validation artefact. |
+| Independent qualified clinical review | NOT STARTED | Required before clinical-quality acceptance. |
+| Release acceptance | BLOCKED | Live validation, GPU/performance evidence, verified evidence retrieval, clinical review and broader security/governance gates remain outstanding. |
+
+### Immediate next engineering sequence
+
+1. Convert the historical JSON findings into a deterministic quality-audit script and regression fixtures, without running a model.
+2. Inspect the current R1/R2/R3 prompt and schema contracts against those fixtures; identify missing specialty-specific acceptance requirements and conditional-branch propagation.
+3. Implement the backend-connected pre-MDT clarification workflow with immutable original case, explicit user confirmation, transcript and provenance.
+4. Continue conditional branch persistence and source traceability through R1–R4.
+5. Implement verifiable specialty-specific evidence retrieval and citations.
+6. Complete desktop UX, Ollama installer state detection and TNM representation equivalence.
+
+**Inference gate:** No Qwen/MedGemma screening, full 45-role run, or new live model inference is authorised by this checkpoint. Obtain explicit approval of the exact synthetic-only run scope first. GPU, clinical and release claims remain separate acceptance gates.
+
