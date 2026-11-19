@@ -3274,3 +3274,17 @@ The three failures exposed two regressions caused by the shared prompt-context u
 - Release acceptance: BLOCKED.
 
 **No-inference boundary:** CI ran static checks and unit tests only; no Ollama inference or clinical evaluation was performed.
+
+
+## Second exact-head backend result and test-oracle correction — 20 November 2026
+
+**Backend CI on code correction SHA `e259939a2bc13c0cc12d0a33f5aa3c27247c321c`:** run [44606605967](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44606605967) completed with **506 passed, 1 failed, 0 errors, 0 skipped**. Preflight and script compilation passed. The earlier three prompt regressions were corrected. The single remaining failure was in the new registry test: it still expected the literal example `T1` in generic interpretation rules, although the corrected prompt deliberately avoids injecting hypothetical stage tokens when the field is unknown. The canonical value assertion itself passed.
+
+**Test-only correction:** commit `1fa1264fe296dfed4945db0b7a2818c3bc2d01b5` changes that assertion to check for the generic canonical-comparison rule. No production code changed in this correction. Exact-head backend CI is pending; do not claim a pass. The prior failed run remains in the audit history.
+
+### Current status
+- Registry tests: 6/7 passed on the first run; all seven passed on `d8cebc` before the separate shared-prompt regression assertions failed. On `e259939`, the one failing assertion was the new test's obsolete literal-example expectation; correction committed as `1fa1264`.
+- Shared prompt behavior: prior regressions from literal T1 leakage and shortened safety wording are corrected in `e259939`; the new test-only correction does not alter production code.
+- Backend suite: FAILED on `e259939` (506 passed / 1 failed); rerun required on current PR head.
+- Frontend/E2E/security/installer checks for the exact current head: pending; do not reuse prior-SHA results as current-head passes.
+- Release acceptance remains BLOCKED. No model inference, GPU verification, clinical review or guideline retrieval occurred.
