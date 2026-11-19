@@ -3056,3 +3056,14 @@ The first backend workflow on code/test SHA `05f6cf8782de1315b9def1e8b384540fa2c
 | Packaging/security/release | IN PROGRESS / BLOCKED | Prior workflows passed on previous SHA; current code HEAD workflows pending. Release remains BLOCKED on live validation, GPU, evidence and clinical review. |
 
 **No-inference boundary:** only static export inspection and deterministic diagnostic code/test edits were performed. No Ollama process, Qwen/MedGemma inference, GPU test, clinical review or evidence retrieval was started.
+
+
+## TNM diagnostic test correction — 20 November 2026
+
+**Branch checkpoint:** `feature/four-round-mdt-and-performance`; prior HEAD `f84e23dd9bfa91e82c4c0cdd461fbc7358885df9`; PR #1 remains open, draft, unmerged and targets `main`. No changes to `main`.
+
+**Exact-head CI failure:** Backend Tests run [44602092367](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44602092367) failed one of eight saved-run diagnostic tests. Seven diagnostic tests passed. The failing assertion expected a combined source token `T1N0` to appear as one flag token. The implementation intentionally expands combined TNM input into independently comparable T and N components; the actual flags were `T1` and `N0`, with the original `T1N0` retained in `source_token`. This is a test expectation mismatch, not evidence of an implementation defect. The workflow's deterministic preflight and script compilation passed. Other five exact-head workflows passed: Frontend 44602092362, Browser E2E 44602092485, Packaging Prerequisites 44602092423, Windows Installer 44602092336, Security Audit 44602092439.
+
+**Correction committed:** `c74f7ba3e4e1685c726ce783d83617929ef8a1e8` updates the regression assertion to require component flags `T1`, `N0`, `T1A`, `M0` and separately confirm original `T1N0` is retained as source_token. No production diagnostic code changed. The corrected test has not yet run; exact-head backend CI is pending. Prior failed run remains part of the audit history.
+
+**Current statuses:** saved-run diagnostic implementation — IN PROGRESS; diagnostic regression suite — FAILED on `f84e23d`, assertion correction committed and awaiting rerun; backend exact-head CI — IN PROGRESS; other five engineering workflows — VERIFIED on `f84e23d` only. No local pytest execution is claimed. No model inference, GPU test, clinical review or evidence retrieval was performed.
