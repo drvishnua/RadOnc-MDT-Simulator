@@ -3710,3 +3710,91 @@ Exact-head CI observed on SHA 239a0ce:
 The latest implementation remains a backend foundation, not a finished conversational intake product. The screening engine uses fixed domain prompts; LLM-led natural question generation has not been introduced. No clinical facts are inferred, no missing fields are treated as negative, and acceptance with gaps is not a clinical adequacy determination. No R1 integration, live inference, GPU verification or clinical validation has been performed.
 
 **Governance:** PR #1 remains open, draft and unmerged; base `main`; work remains on `feature/four-round-mdt-and-performance`.
+
+
+# Master Checklist — Current Status (20 November 2026; supersedes earlier status snapshots)
+
+**Current development code head:** `a02c1b995a8fcdfffae1ccf6483a8ee7a6cba037`  
+**Branch:** `feature/four-round-mdt-and-performance`  
+**PR #1:** open, draft, unmerged; base `main`. No main-branch writes, merge or force-push.
+
+## Latest implementation: accepted intake → immutable patient case version → saved-case R1
+
+**Implemented:**
+- Accepted intake can be atomically promoted into a new patient record or appended as a new immutable version under an existing patient.
+- Promotion writes the case snapshot, SHA-256, registry version, intake-session ID and promotion-event hash into the patient version.
+- Promotion appends `PROMOTED_TO_PATIENT_VERSION` to the intake hash chain in the same SQLite transaction as patient/version creation and session linkage. Duplicate promotion is rejected.
+- Saved-case R1 run creation and saved RO-01 assessment now require an accepted-intake-backed patient version.
+- Provenance verification checks accepted state, session/patient/version links, exact case snapshot hash, terminal promotion event hash/type, and the patient/version/snapshot/registry identifiers inside the hashed promotion-event payload. Tampering with the intake event chain blocks R1.
+- Legacy/manual patient case versions remain viewable but cannot enter the saved-patient R1 routes. Create a new accepted intake version instead.
+- Frontend registration and new-version actions now start a pre-MDT intake review. It displays missing-field questions and gaps, allows explicit question decline, supports explicit acceptance with gaps, and promotes into a new patient or existing patient's next immutable version. A pending intake pointer is stored locally and the saved backend session is reloaded after a browser refresh.
+- Browser dashboard fixture seeding now uses the same accepted-intake promotion path; the prior E2E fixture's direct patient creation was correctly blocked by the new gate and was updated rather than weakening the gate.
+
+**Implementation commits:**
+- `2c44be8fa850f5afacac3141838933fca8cc2807` — patient-version provenance columns, verification helper and saved-case run gate.
+- `c1f97390e597c70850bd70bd29de72bcd475baa6`, `90a173ed37828bd1fbd2a3eac17ac09569326c70`, `b053e1b992fa2edd4c0b34af58c1982196db33b3` — atomic intake promotion, schema migration and returned linkage metadata.
+- `7efd84f5345ab67dcde05a0539ca1871775b1980`, `a2b45d36c03295a3af498a7a2aacfad4700d6107` — promotion request schema, including existing-patient version target.
+- `b22ddbbd51ff40ee0cb4f4c86083b345b7bc0c02`, `478f36031647d77ba7a7cff1b2cd63a8958119a2`, `b9aeb1f6daa143fd53ec17f6a1a21722bc28119e`, `0046b3c82cfd0a0f83d9922d690e38324b23e09f` — API route, import correction, explicit R1 conflict handling and existing-patient version promotion.
+- `c4d346741b29ad28c92668988f3505b2a5eb7f74`, `bc7fbdf1cdb84909701b497bd154d3e8fae911b7` — promotion, R1 provenance, tamper and immutable-version regression tests.
+- `5ba484dfc87b7bb10207773a02b7f32c11d1b995`, `2492a746c6dc59604754f525e21e2fe0286d1e48`, `fd7e86e00632ff79f1c064881dc63077606459c3`, `f71363cf30cb2aa0d93f74da9bbb6ac24541b54d` — intake review UI, refresh recovery, R1 control gating and frontend provenance types.
+- `d88243e2494e612f46061919189cd4bd4cf2f56e` — browser E2E updated to accept intake before patient/version save.
+- `52c9be92478210cfed3505007673502617f1ca58` — dashboard browser fixture now seeds through accepted intake.
+- `a02c1b995a8fcdfffae1ccf6483a8ee7a6cba037` — promotion-event payload identity checks bind the patient version to the hashed event chain.
+
+## Exact-head validation evidence — SHA a02c1b9
+
+| Validation | Status | Evidence |
+|---|---|---|
+| Backend tests | VERIFIED | Run `44616609510`: 529 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive; deterministic preflight passed. |
+| Frontend build | VERIFIED | Run `44616609472`: success. |
+| Patient Registry + Four-Round Dashboard browser E2E | VERIFIED | Run `44616609412`: success; markers `PATIENT_REGISTRY_BROWSER_E2E_OK`, `OPERATIONAL_MONITOR_REMOVAL_E2E_OK`, `FOUR_ROUND_DASHBOARD_BROWSER_E2E_OK`. |
+| Security/dependency audit | VERIFIED | Run `44616609643`: success; Python/TypeScript CodeQL, full-history secret scan and Python/Node dependency audit completed. |
+| GitHub-hosted Windows packaging prerequisites | VERIFIED | Run `44616609511`: success. |
+| Windows installer build/install smoke test | VERIFIED | Run `44616609476`: success; installer built, silently installed, launched/smoke-tested, uninstalled, checksum generated and artifact uploaded. |
+| Installer artifact | VERIFIED | Artifact `14574617571`, `RadOnc-MDT-Simulator-Windows-x64.zip`, 14,931,859 bytes. Installer SHA-256: `202a78aa86ad6a6b0a7446805eabe669e0c9b5b3ab1db30bf2ebd9128c00645a`. |
+| Clean-host Ollama/model first-run bootstrap | NOT STARTED / SKIPPED | Installer smoke test is not evidence that an absent Ollama/model was downloaded or that an existing stopped Ollama/model store was reused. |
+| Real local Ollama inference / RTX 4060 GPU | NOT STARTED | No local device inference or request-time GPU telemetry was performed. |
+
+**Earlier browser failure and correction:** run `44616233814` on SHA `f71363c` failed because the deterministic dashboard fixture still used direct `create_patient` + `create_run_for_case_version`, which the new accepted-intake gate correctly rejected. The fixture was changed to create, accept and promote an intake (`52c9be9`). The corrected browser E2E on SHA `a02c1b9` passed. The production gate was not relaxed.
+
+## Current workstream checklist
+
+| Workstream | Status | Evidence / remaining boundary |
+|---|---|---|
+| R1–R4 separation and saved contribution flow | IN PROGRESS | Existing four-round regression/E2E coverage; live 45-role inference run still required. |
+| Clinical safety, staging and unknown-value handling | IN PROGRESS | Deterministic registry and intake gaps; edition-aware staging and independent clinical review remain. |
+| Case integrity, immutable snapshots and audit history | VERIFIED | Case/version hashes, append-only intake events, event-chain verification and tamper tests. |
+| Provenance and evidence retrieval | IN PROGRESS | Intake provenance is enforced for saved-patient R1; specialty-specific evidence retrieval remains disconnected. |
+| Chair consensus, dissent and traceability | IN PROGRESS | Deterministic Chair/report controls and browser rendering tested; real saved R1–R3 reconciliation still requires live validation. |
+| Missing/failed specialist handling | VERIFIED (software tests) | Deterministic failure-state and resume tests; live 45-role execution remains outstanding. |
+| Pre-MDT deterministic screening | VERIFIED (software tests) | Missing-field domains and declined-domain gaps tested; no clinical completeness claim. |
+| Persisted intake answers, corrections, questions and declines | VERIFIED (software tests) | Append-only event types, source text, case snapshots, hash chain and tamper detection. |
+| Explicit accept-with-gaps | VERIFIED (software tests) | Requires explicit confirmation; preserves outstanding gaps and does not imply clinical adequacy. |
+| Accepted intake → new patient immutable case version | VERIFIED (software tests) | Atomic promotion with event-chain linkage. |
+| Accepted intake → existing patient's next immutable version | VERIFIED (software tests) | Version increments; prior version and hash remain unchanged. |
+| Saved-patient R1 run / saved RO-01 gate | VERIFIED (software tests) | Both saved-version routes require accepted intake provenance and validate event payload identity. |
+| Global R1 entry-point gate | IN PROGRESS | Legacy direct `POST /api/runs` and standalone `POST /api/agents/{agent_id}/assess` still accept unlinked case payloads for compatibility/test workflows. These are remaining bypasses to remove or explicitly constrain before claiming a universal R1 gate. |
+| Frontend conversational intake UI | IN PROGRESS | Question review, decline, accept-with-gaps, new/existing patient promotion and pending-session refresh recovery are implemented. Free-text answer turns within the chat, direct answer-to-field mapping, ambiguity clarification and full WhatsApp-like conversation remain. |
+| Frontend refresh recovery for pending intake | VERIFIED (browser/software coverage) | Pending session pointer stored locally and session reloaded from backend; full conversational recovery tests remain. |
+| Semantic narrative/structured contradiction handling | IN PROGRESS | Schema validation and existing integrity warnings; broader conflict detection and user-led resolution remain. |
+| Backend tests | VERIFIED | 529/529 on SHA a02c1b9. |
+| Frontend build | VERIFIED | Run 44616609472 on SHA a02c1b9. |
+| Browser E2E | VERIFIED | Run 44616609412 on SHA a02c1b9. |
+| Dashboard/API | VERIFIED (browser regression scope) | Existing registry and four-round dashboard rendering paths passed; live inference not included. |
+| Mission Control / Development Monitor removal | VERIFIED | Browser E2E confirms retired panels absent. |
+| Separate desktop UI/UX | IN PROGRESS | Installer packages the app; installed UI still uses the local application host, not a fully native desktop shell. |
+| Ollama installed/running/stopped/absent bootstrap | IN PROGRESS | Existing/stopped/absent mocked paths have tests; custom-install discovery and clean-host real model reuse/download remain. |
+| Ollama context/truncation | NOT STARTED | No measured context-allocation/truncation acceptance checkpoint recorded here. |
+| RTX 4060 inference/GPU telemetry | NOT STARTED | No request-time `nvidia-smi` and Ollama offload evidence. |
+| Performance/latency | NOT STARTED | No current measured inference benchmark. |
+| Live four-round validation and artefacts | BLOCKED | No live model-backed 45-role run with saved R1–R4 artefacts. |
+| Specialty-specific guideline/textbook/landmark literature retrieval | NOT STARTED | Evidence retrieval is not connected; no guideline compliance claims. |
+| Copied/generic/delegated agent-response investigation | IN PROGRESS | Previously referenced JSON/export still not available in repository file search; no root cause claim. |
+| Independent clinical review | NOT STARTED | Required before any clinical validation claim. |
+| Security audit | VERIFIED | Exact-head run 44616609643. |
+| Windows packaging/installer smoke | VERIFIED | Exact-head run 44616609476; clean-host AI bootstrap still separate. |
+| Release acceptance | BLOCKED | Universal R1 gate, complete intake dialogue, clean-host Ollama bootstrap, live four-round/GPU validation and clinical review remain outstanding. |
+
+**Clinical/data boundary:** accepted-with-gaps is a workflow acceptance state, not a determination that staging or clinical information is sufficient. The intake path does not infer facts, derive TNM stage, convert unknowns into negatives or issue treatment recommendations. No real patient data, live Ollama inference, GPU verification, clinical guideline retrieval or independent clinical validation was performed.
+
+**Governance:** all development commits remain on `feature/four-round-mdt-and-performance`. PR #1 remains draft/open/unmerged and targets `main`. No main-branch modifications, merge or force-push.
