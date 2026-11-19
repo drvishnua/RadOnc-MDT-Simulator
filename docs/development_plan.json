@@ -77,11 +77,12 @@
         "U12"
       ],
       "allowed_paths": [
+        "docs/development_plan.json",
+        "docs/MASTER_DEVELOPMENT_CHECKLIST.md",
         "backend/app/clinical_fields.py",
         "backend/app/schemas.py",
         "backend/app/services/case_integrity.py",
-        "backend/tests/*",
-        "docs/*"
+        "backend/tests/*"
       ],
       "required_workflow_names": [
         "Sequential Development Gate",
@@ -98,6 +99,8 @@
         "U09-U10"
       ],
       "allowed_paths": [
+        "docs/development_plan.json",
+        "docs/MASTER_DEVELOPMENT_CHECKLIST.md",
         "backend/app/services/intake*",
         "backend/app/main.py",
         "backend/tests/*",
@@ -120,6 +123,8 @@
         "U04"
       ],
       "allowed_paths": [
+        "docs/development_plan.json",
+        "docs/MASTER_DEVELOPMENT_CHECKLIST.md",
         "backend/app/agents/*",
         "backend/app/services/mdt_generation.py",
         "backend/app/services/mdt_rounds.py",
@@ -140,6 +145,8 @@
         "U05-U06"
       ],
       "allowed_paths": [
+        "docs/development_plan.json",
+        "docs/MASTER_DEVELOPMENT_CHECKLIST.md",
         "backend/app/services/mdt_generation.py",
         "backend/app/services/mdt_rounds.py",
         "backend/app/services/chair_report_quality.py",
@@ -162,6 +169,8 @@
         "U06-U08"
       ],
       "allowed_paths": [
+        "docs/development_plan.json",
+        "docs/MASTER_DEVELOPMENT_CHECKLIST.md",
         "backend/app/*",
         "backend/tests/*",
         "docs/*"
@@ -181,6 +190,8 @@
         "U07"
       ],
       "allowed_paths": [
+        "docs/development_plan.json",
+        "docs/MASTER_DEVELOPMENT_CHECKLIST.md",
         ".github/scripts/*",
         "packaging/windows/*",
         "scripts/*",
@@ -202,6 +213,8 @@
         "U03"
       ],
       "allowed_paths": [
+        "docs/development_plan.json",
+        "docs/MASTER_DEVELOPMENT_CHECKLIST.md",
         "frontend/src/*",
         "frontend/tests/*",
         "packaging/*",
@@ -223,11 +236,12 @@
         "U01-U02"
       ],
       "allowed_paths": [
+        "docs/development_plan.json",
+        "docs/MASTER_DEVELOPMENT_CHECKLIST.md",
         "backend/*",
         "frontend/*",
         "packaging/*",
-        ".github/workflows/*",
-        "docs/*"
+        ".github/workflows/*"
       ],
       "required_workflow_names": [
         "Sequential Development Gate",
