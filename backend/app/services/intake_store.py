@@ -357,13 +357,14 @@ def accept_intake_with_gaps(session_id: str, *, confirmed: bool) -> dict[str, An
 
 
 def promote_accepted_intake_to_patient(
-    session_id: str, *, patient_name: str,
+    session_id: str, *, patient_name: str, patient_id: str | None = None,
 ) -> dict[str, Any]:
     """Atomically create a patient/version linked to the accepted intake audit chain."""
     if not isinstance(patient_name, str) or len(patient_name.strip()) < 2:
         raise ValueError("A fictional training display name of at least two characters is required.")
     patient_name = patient_name.strip()
-    patient_id = str(uuid.uuid4())
+    new_patient = patient_id is None
+    patient_id = patient_id or str(uuid.uuid4())
     case_version_id = str(uuid.uuid4())
     now = _now()
     with _connect() as db:
@@ -389,14 +390,30 @@ def promote_accepted_intake_to_patient(
         if events[-1]["event_type"] != "ACCEPTED_WITH_GAPS":
             raise ValueError("Accepted intake has no terminal acceptance event.")
 
-        db.execute(
-            "INSERT INTO synthetic_patients(patient_id, patient_name, created_at, updated_at) VALUES (?, ?, ?, ?)",
-            (patient_id, patient_name, now, now),
-        )
-        db.execute(
-            "INSERT INTO patient_registry_numbers(patient_id, created_at) VALUES (?, ?)",
-            (patient_id, now),
-        )
+        if new_patient:
+            version_number = 1
+            db.execute(
+                "INSERT INTO synthetic_patients(patient_id, patient_name, created_at, updated_at) VALUES (?, ?, ?, ?)",
+                (patient_id, patient_name, now, now),
+            )
+            db.execute(
+                "INSERT INTO patient_registry_numbers(patient_id, created_at) VALUES (?, ?)",
+                (patient_id, now),
+            )
+        else:
+            patient = db.execute(
+                "SELECT patient_id FROM synthetic_patients WHERE patient_id = ?", (patient_id,)
+            ).fetchone()
+            if patient is None:
+                raise KeyError(patient_id)
+            version_number = int(db.execute(
+                "SELECT COALESCE(MAX(version_number), 0) + 1 AS next_version "
+                "FROM patient_case_versions WHERE patient_id = ?", (patient_id,)
+            ).fetchone()["next_version"])
+            db.execute(
+                "UPDATE synthetic_patients SET patient_name = ?, updated_at = ? WHERE patient_id = ?",
+                (patient_name, now, patient_id),
+            )
         promotion_event = _append_event(
             db, session_id=session_id, event_type="PROMOTED_TO_PATIENT_VERSION",
             payload={
@@ -412,9 +429,9 @@ def promote_accepted_intake_to_patient(
             (case_version_id, patient_id, patient_name, version_number, case_json,
              case_snapshot_sha256, created_at, clinical_field_registry_version,
              intake_session_id, intake_event_chain_sha256)
-            VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?)""",
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
-                case_version_id, patient_id, patient_name, case_json, case_sha, now,
+                case_version_id, patient_id, patient_name, version_number, case_json, case_sha, now,
                 session["registry_version"], session_id, promotion_event["event_sha256"],
             ),
         )
