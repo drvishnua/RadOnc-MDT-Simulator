@@ -4415,3 +4415,40 @@ U12 implementation must be limited to its stated acceptance criteria. No unrelat
 - PR #1 open/draft/unmerged; head branch `feature/four-round-mdt-and-performance`; base `main`. No merge or main changes.
 - U12 is the active step, IN PROGRESS, following the owner's approval to place U12 before U09/U10. The dependency-order amendment is recorded above; all other existing order is preserved.
 - Branch protection remains disabled/unverified through available administrative permissions; implementation must not claim required checks are enforced until repository settings are actually configured and read back.
+
+
+### U12 implementation progress — fail-closed sequential gate
+
+**Status: IN PROGRESS — implementation exists; CI verification and repository enforcement remain incomplete.**
+
+Implemented on `feature/four-round-mdt-and-performance`:
+- `docs/development_plan.json`: machine-readable ordered plan with fixed step IDs, explicit linear prerequisites, one active step, per-step allowed paths, required workflow names and completion-evidence slots. STEP-A is recorded VERIFIED using six successful workflows on application-code SHA `986593ec8aab00b7885f1db5ff39dab2546278fc`; U12 is the only active step; later steps are BLOCKED.
+- `backend/scripts/validate_development_plan.py`: deterministic fail-closed validation for canonical step order, dependencies, active-step status, prerequisite verification, future-step blocking, evidence SHA ancestry, remote GitHub Actions run status/conclusion/name/head SHA, pinned U12 path allowlist and baseline, and changed-file scope.
+- `backend/tests/test_development_plan.py`: adversarial regression tests for skipping/reordering, missing prerequisite evidence, invalid dependencies, premature future-step activation, stale SHA, pending/failed runs, inaccessible evidence, out-of-scope files, baseline tampering, allowlist/workflow-policy tampering and plan identity.
+- `.github/workflows/sequential-development-gate.yml`: GitHub Actions check runs on development-branch pushes, PRs targeting main and manual dispatch; checks out exact PR head, runs adversarial tests and validates remote CI evidence.
+
+**CI failures found and corrected; do not hide historical failures:**
+- Run `44626710988` FAILED: validator resolved the plan path one directory above repository root. Workflow path corrected.
+- Run `44626796152` FAILED: machine plan used `IN_PROGRESS` rather than the checklist's `IN PROGRESS` status vocabulary. Plan status corrected.
+- Run `44627077099` FAILED: adversarial test fixture used a synthetic baseline instead of the pinned initial baseline. Fixture corrected.
+- Latest test-fixture correction is commit `e87e85185578c2bed33a4f6833fd5ba6988a39a9`; a subsequent empty ref-update commit is `26d21214e652651c968aa3369087672142bb532c`. No CI run has yet been retrieved for either latest SHA; fixes are NOT VERIFIED.
+- The gate test step passed on earlier runs before the later fixture/policy additions; that is not evidence that the latest 16-test suite passes.
+
+**Remaining U12 acceptance work:**
+1. Obtain a successful Sequential Development Gate run on the latest code SHA, including all current adversarial tests and live GitHub API evidence checks.
+2. Obtain successful backend and security workflows for the same implementation SHA; record exact run IDs.
+3. Confirm scope enforcement blocks an out-of-scope change and status/ordering tampering on the actual CI runner.
+4. Configure GitHub required status checks / branch protection or a repository ruleset for the development branch. Current branch API reports `protected=false`; rulesets endpoint returned an empty list; branch-protection detail API returned 403 and no branch-protection write action is available through the current connection. Therefore this repository-level enforcement is BLOCKED and is not claimed as configured.
+5. Review security boundary: repository administrators can still bypass/alter controls; the gate is designed to block ordinary PR/push workflow progression, not provide mathematical immunity against privileged administrators or compromised credentials.
+
+**Do not advance to U09/U10 until all U12 acceptance criteria are verified.**
+
+
+### U11 pre-response review checkpoint — 20 November 2026 (U12 implementation review)
+
+- Read the complete authoritative checklist from `feature/four-round-mdt-and-performance`; fetched 648701 characters; source blob SHA `04f64d8bdc8892d0fb911e6be976ce91ed530142`.
+- Current branch head at review: `26d21214e652651c968aa3369087672142bb532c`; PR #1 open/draft/unmerged; head branch `feature/four-round-mdt-and-performance`, base `main`.
+- Step A remains VERIFIED for application-code SHA `986593ec8aab00b7885f1db5ff39dab2546278fc`, with six successful workflow runs: `44625679451`, `44625679442`, `44625679759`, `44625679486`, `44625679927`, `44625679503`.
+- Active step U12: IN PROGRESS. Implementation files and three historical failed gate runs are recorded in the progress section above; fixes after those failures do not yet have successful latest-SHA CI evidence.
+- Branch protection remains BLOCKED: API reports unprotected; rulesets empty; read endpoint 403; no available branch-protection write action. No required-check enforcement is claimed.
+- U09/U10 remain BLOCKED pending U12 exit criteria. No main changes, merge or force-push.
