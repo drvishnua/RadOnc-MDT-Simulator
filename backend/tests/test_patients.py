@@ -19,6 +19,27 @@ def _registration(case=None, name="Training Example"):
     return {"patient_name": name, "case": case or _case()}
 
 
+
+def _accepted_patient(case=None, name="Accepted Training Example"):
+    intake = client.post(
+        "/api/intakes",
+        json={"case": case or _case()},
+    )
+    assert intake.status_code == 200
+    session_id = intake.json()["session_id"]
+    accepted = client.post(
+        f"/api/intakes/{session_id}/accept",
+        json={"confirmed": True},
+    )
+    assert accepted.status_code == 200
+    promoted = client.post(
+        f"/api/intakes/{session_id}/promote",
+        json={"patient_name": name},
+    )
+    assert promoted.status_code == 200
+    return promoted.json()
+
+
 def test_patient_creation_and_case_version_history_are_immutable(monkeypatch, tmp_path):
     monkeypatch.setattr(run_store, "DB_PATH", tmp_path / "patients.sqlite3")
     created = client.post("/api/patients", json=_registration())
@@ -63,7 +84,7 @@ def test_patient_run_uses_saved_version_and_keeps_legacy_runs_unlinked(monkeypat
         return None
 
     monkeypatch.setattr("app.main.run_independent_assessments", no_inference)
-    patient = client.post("/api/patients", json=_registration()).json()
+    patient = _accepted_patient()
     version = patient["versions"][0]
     response = client.post(
         f"/api/patients/{patient['patient_id']}/runs",
@@ -113,7 +134,7 @@ def test_saved_ro01_assessment_is_attached_to_exact_patient_case_version(monkeyp
         )
 
     monkeypatch.setattr("app.main.generate_agent_assessment", fake_generate)
-    patient = client.post("/api/patients", json=_registration()).json()
+    patient = _accepted_patient()
     version = patient["versions"][0]
     result = client.post(
         f"/api/patients/{patient['patient_id']}/versions/{version['case_version_id']}/assess/RO-01"
@@ -166,7 +187,7 @@ def test_patient_serials_are_sequential_never_reused_and_delete_cascades(monkeyp
         return None
 
     monkeypatch.setattr("app.main.run_independent_assessments", no_inference)
-    first = client.post("/api/patients", json=_registration(_case("First training case"))).json()
+    first = _accepted_patient(_case("First training case"), "First training case")
     second = client.post("/api/patients", json=_registration(_case("Second training case"))).json()
     assert first["patient_identifier"] == "RAD-000001"
     assert second["patient_identifier"] == "RAD-000002"
