@@ -40,6 +40,8 @@ STEP_ALLOWED_PATHS = {
         "backend/scripts/validate_development_plan.py",
         "backend/tests/test_development_plan.py",
         ".github/workflows/sequential-development-gate.yml",
+        ".github/workflows/backend-tests.yml",
+        ".github/workflows/security-audit.yml",
     ),
     "U09-U10": (
         "docs/development_plan.json",

@@ -5,6 +5,7 @@ import pytest
 
 from scripts.validate_development_plan import (
     GateError,
+    STEP_ALLOWED_PATHS,
     STEP_ORDER,
     STEP_REQUIRED_WORKFLOWS,
     validate_plan,
@@ -36,15 +37,7 @@ def _fixture():
                     ["Sequential Development Gate", "Backend Tests", "Security and Dependency Audit"] if index == 1 else
                     ["Sequential Development Gate"]
                 ),
-                "allowed_paths": (
-                    [
-                        "docs/development_plan.json",
-                        "docs/MASTER_DEVELOPMENT_CHECKLIST.md",
-                        "backend/scripts/validate_development_plan.py",
-                        "backend/tests/test_development_plan.py",
-                        ".github/workflows/sequential-development-gate.yml",
-                    ] if index == 1 else []
-                ),
+                "allowed_paths": list(STEP_ALLOWED_PATHS[step_id]),
                 "completion_evidence": (
                     {
                         "commit_sha": EVIDENCE_SHA,
@@ -202,6 +195,7 @@ def test_committed_machine_plan_matches_the_validator_contract():
     assert plan["active_step"] == "U12"
     assert plan["steps"][0]["status"] == "VERIFIED"
     assert plan["steps"][1]["status"] == "IN PROGRESS"
+    assert plan["steps"][1]["allowed_paths"] == list(STEP_ALLOWED_PATHS["U12"])
     assert [step["id"] for step in plan["steps"]] == list(STEP_ORDER)
 
 
@@ -279,3 +273,27 @@ def test_sequential_gate_runs_for_pull_requests_targeting_development_branch():
     pull_request_block = workflow.split("  pull_request:", 1)[1].split("  workflow_dispatch:", 1)[0]
     assert "- main" in pull_request_block
     assert "- feature/four-round-mdt-and-performance" in pull_request_block
+
+
+def test_backend_and_security_required_checks_run_for_development_prs_and_u12_changes():
+    from pathlib import Path
+
+    repository_root = Path(__file__).resolve().parents[2]
+    expected_paths = (
+        "docs/development_plan.json",
+        "docs/MASTER_DEVELOPMENT_CHECKLIST.md",
+        ".github/workflows/sequential-development-gate.yml",
+        ".github/workflows/backend-tests.yml",
+        ".github/workflows/security-audit.yml",
+    )
+    for relative in (
+        ".github/workflows/backend-tests.yml",
+        ".github/workflows/security-audit.yml",
+    ):
+        workflow = (repository_root / relative).read_text(encoding="utf-8")
+        push_block = workflow.split("  push:", 1)[1].split("\\n  pull_request:", 1)[0]
+        pr_block = workflow.split("  pull_request:", 1)[1].split("\\n  schedule:", 1)[0].split("\\npermissions:", 1)[0]
+        for block in (push_block, pr_block):
+            assert "- feature/four-round-mdt-and-performance" in block
+            for required_path in expected_paths:
+                assert f'      - "{required_path}"' in block
