@@ -133,6 +133,70 @@ if ($global:RadOncMockPortableInstallCalled -or $global:RadOncMockModelPullCalle
 }
 Write-Host "AI_BOOTSTRAP_REUSE_EXISTING_MODEL_OK"
 
+# Exercise the user's installed-but-stopped Ollama scenario. The executable is
+# present, the service is not listening, and the model is already in that
+# installation's existing model store. Start the existing runtime without
+# assigning OLLAMA_MODELS or provisioning a second runtime/model copy.
+$global:RadOncMockExistingServerStarted = $false
+$global:RadOncMockModelPullCalled = $false
+$global:RadOncMockPortableInstallCalled = $false
+$mockExistingExecutable = Join-Path $testRoot "existing-ollama.exe"
+Set-Content -LiteralPath $mockExistingExecutable -Value "mock existing executable" -Encoding ASCII
+
+function Get-RadOncOllamaVersion {
+    param([string]$BaseUrl)
+    if ($BaseUrl -eq "http://127.0.0.1:11434" -and $global:RadOncMockExistingServerStarted) {
+        return [PSCustomObject]@{ version = "mock-restarted-existing-ollama" }
+    }
+    return $null
+}
+function Get-RadOncOllamaTags {
+    param([string]$BaseUrl)
+    return [PSCustomObject]@{ models = @([PSCustomObject]@{ name = "qwen3.5:4b" }) }
+}
+function Find-RadOncOllamaExecutable { return $mockExistingExecutable }
+function Start-RadOncOllamaServer {
+    param(
+        [string]$Executable,
+        [string]$BaseUrl,
+        [string]$WorkingDirectory,
+        [AllowNull()][string]$ModelDirectory,
+        [string]$LogDirectory,
+        [switch]$ManagedRuntime
+    )
+    if ($Executable -ne $mockExistingExecutable -or $BaseUrl -ne "http://127.0.0.1:11434") {
+        throw "Installed-but-stopped Ollama path did not select the existing executable and standard endpoint."
+    }
+    if ($null -ne $ModelDirectory -or $ManagedRuntime) {
+        throw "Existing Ollama model-store configuration must not be overwritten or marked as managed."
+    }
+    $global:RadOncMockExistingServerStarted = $true
+}
+function Install-RadOncPortableOllama {
+    param([string]$ProductDataRoot)
+    $global:RadOncMockPortableInstallCalled = $true
+    throw "Portable Ollama must not be installed when an existing executable is available."
+}
+function Invoke-RadOncModelPull {
+    param(
+        [string]$BaseUrl,
+        [AllowNull()][string]$OllamaExecutable,
+        [string]$ProductDataRoot,
+        [switch]$RequireLocalDiskSpace
+    )
+    $global:RadOncMockModelPullCalled = $true
+    throw "The existing qwen3.5:4b model must not be downloaded again."
+}
+
+$restartedEndpoint = Ensure-RadOncAIEngine -DataDirectory $dataDirectory -LogDirectory $logDirectory
+if ($restartedEndpoint -ne "http://127.0.0.1:11434" -or -not $global:RadOncMockExistingServerStarted) {
+    throw "Installed-but-stopped Ollama was not restarted on its existing endpoint."
+}
+if ($global:RadOncMockPortableInstallCalled -or $global:RadOncMockModelPullCalled) {
+    throw "Installed-but-stopped Ollama path unexpectedly downloaded a runtime or model."
+}
+Write-Host "AI_BOOTSTRAP_RESTART_EXISTING_OLLAMA_WITH_EXISTING_MODEL_OK"
+
 # Reset function behaviour to model an unavailable standard Ollama endpoint.
 $global:RadOncMockPortableStarted = $false
 $global:RadOncMockModelReady = $false
