@@ -38,6 +38,33 @@ def _case_payload():
     }
 
 
+def _start_accepted_case_run(case_payload, patient_name="Synthetic Batch Test"):
+    intake_response = client.post("/api/intakes", json={"case": case_payload})
+    assert intake_response.status_code == 200
+    session_id = intake_response.json()["session_id"]
+
+    accepted_response = client.post(
+        f"/api/intakes/{session_id}/accept",
+        json={"confirmed": True},
+    )
+    assert accepted_response.status_code == 200
+
+    promoted_response = client.post(
+        f"/api/intakes/{session_id}/promote",
+        json={"patient_name": patient_name},
+    )
+    assert promoted_response.status_code == 200
+    patient = promoted_response.json()
+    case_version_id = patient["versions"][0]["case_version_id"]
+
+    run_response = client.post(
+        f"/api/patients/{patient['patient_id']}/runs",
+        json={"case_version_id": case_version_id},
+    )
+    assert run_response.status_code == 200
+    return run_response.json()
+
+
 def test_batch_run_executes_all_45_agents_independently(monkeypatch, tmp_path) -> None:
     monkeypatch.setattr(run_store, "DB_PATH", tmp_path / "batch.sqlite3")
     calls = []
@@ -47,10 +74,9 @@ def test_batch_run_executes_all_45_agents_independently(monkeypatch, tmp_path) -
         return _fake_assessment(profile, case, round_number)
 
     monkeypatch.setattr(batch_runner, "generate_agent_assessment", fake_generate)
-    response = client.post("/api/runs", json={"case": _case_payload()})
+    run = _start_accepted_case_run(_case_payload())
 
-    assert response.status_code == 200
-    run_id = response.json()["run_id"]
+    run_id = run["run_id"]
     run = client.get(f"/api/runs/{run_id}").json()
     assert run["status"] == "completed"
     assert run["total_agents"] == 45
@@ -92,10 +118,9 @@ def test_batch_continues_after_failure_and_resume_runs_only_failed_agent(monkeyp
         return _fake_assessment(profile, case, round_number)
 
     monkeypatch.setattr(batch_runner, "generate_agent_assessment", fake_generate)
-    response = client.post("/api/runs", json={"case": _case_payload()})
+    run = _start_accepted_case_run(_case_payload(), "Synthetic Batch Resume Test")
 
-    assert response.status_code == 200
-    run_id = response.json()["run_id"]
+    run_id = run["run_id"]
     run = client.get(f"/api/runs/{run_id}").json()
     assert run["status"] == "completed_with_errors"
     assert run["completed_count"] == 44
