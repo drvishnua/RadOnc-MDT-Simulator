@@ -209,10 +209,26 @@ async function selectOptionByText(labelText, optionText) {
 }
 
 async function waitForValidationReady() {
-  await waitForExpression(
-    "(() => { const button = [...document.querySelectorAll('button')].find(node => (node.innerText || '').trim().startsWith('Validate patient details')); return !!button && !button.disabled; })()",
-    "backend connectivity and the case-validation form to become ready"
-  );
+  const expression =
+    "(() => { const button = [...document.querySelectorAll('button')].find(node => (node.innerText || '').trim().startsWith('Validate patient details')); return !!button && !button.disabled; })()";
+  try {
+    await waitForExpression(
+      expression,
+      "backend connectivity and the case-validation form to become ready"
+    );
+  } catch (error) {
+    const diagnostics = await evaluate(
+      "(() => { " +
+      "const button = [...document.querySelectorAll('button')].find(node => (node.innerText || '').trim().startsWith('Validate patient details')); " +
+      "const cards = [...document.querySelectorAll('.status-card, [data-testid*=status]')].map(node => (node.innerText || '').trim()).filter(Boolean); " +
+      "const alerts = [...document.querySelectorAll('[role=alert], .error, .validation-error')].map(node => (node.innerText || '').trim()).filter(Boolean); " +
+      "const requests = performance.getEntriesByType('resource').filter(item => /\\/(health|api)\\//.test(item.name)).map(item => item.name); " +
+      "return JSON.stringify({url: location.href, readyState: document.readyState, buttonFound: !!button, buttonDisabled: button ? button.disabled : null, statusCards: cards, alerts, bodyText: (document.body.innerText || '').slice(0, 3000), apiResources: requests}); " +
+      "})()"
+    );
+    console.error("VALIDATION_READINESS_DIAGNOSTICS=" + diagnostics);
+    throw error;
+  }
 }
 
 async function clickButton(textPrefix) {
