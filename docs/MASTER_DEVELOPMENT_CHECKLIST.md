@@ -2940,3 +2940,14 @@ All six are completed with conclusion `success` and `head_sha=77c4e741cc79e62bd9
 **Verification state:** six standard PR workflows were observed running against exact code SHA `a5b863043c90afece7e662b1e7d1389cb1515c3a): Backend Tests 44600006047; Frontend Build 44600006308; Browser E2E 44600006350; Windows Packaging Prerequisites 44600006530; Windows Installer Build 44600006175; Security and Dependency Audit 44600006167. At checklist update time, all six were in progress; no test or CI pass is claimed. No local pytest run was available through the connected GitHub-only editing workflow. No model inference, GPU test, clinical review or evidence retrieval was performed.
 
 **Status:** deterministic saved-run diagnostics — IN PROGRESS; regression tests — IN PROGRESS pending CI; exact-head engineering verification — IN PROGRESS; live model validation — BLOCKED pending explicit synthetic-only run approval. Preserve all historical export findings and unresolved release gates.
+
+### CI update — diagnostic code SHA `a5b863043c90afece7e662b1e7d1389cb1515c3a` (20 November 2026)
+
+- Backend Tests — run 44600006047: **success**. Deterministic no-inference preflight, script compilation, backend tests, JUnit normalization and diagnostic artifact uploads all succeeded.
+- Frontend Build — run 44600006308: **success**. Launcher checks, case-draft persistence tests, type-check and production build succeeded.
+- Browser E2E — run 44600006350: **in progress** at last refresh.
+- Windows Packaging Prerequisites — run 44600006530: **in progress** at last refresh.
+- Windows Installer Build — run 44600006175: **in progress** at last refresh.
+- Security and Dependency Audit — run 44600006167: **in progress** at last refresh.
+
+The above results are tied to code SHA `a5b863043c90afece7e662b1e7d1389cb1515c3a`, not the later checklist-only HEAD. Do not mark the six-workflow gate complete until all four remaining workflows finish successfully. Backend test count was not copied into this checkpoint; consult the exact run's JUnit artifact if a numerical count is needed.
