@@ -183,7 +183,10 @@ def test_legacy_batch_run_rejects_unlinked_case_payload(monkeypatch) -> None:
         },
     )
     assert response.status_code == 409
-    assert "unlinked case payloads are disabled" in response.json()["detail"]
+    detail = response.json()["detail"]
+    assert "unlinked case payloads are disabled" in detail
+    assert "accept the pre-MDT intake" in detail
+    assert "immutable patient case version" in detail
 
 
 
