@@ -14,7 +14,7 @@ from typing import Any
 
 from app.agents.catalog import AGENT_PROFILES
 from app.schemas import SyntheticCase
-from app.clinical_fields import CLINICAL_FIELD_REGISTRY_VERSION, LEGACY_FIELD_REGISTRY_VERSION
+from app.clinical_fields import CLINICAL_FIELD_REGISTRY_VERSION
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 DEFAULT_DATA_DIR = BACKEND_DIR / "data"
