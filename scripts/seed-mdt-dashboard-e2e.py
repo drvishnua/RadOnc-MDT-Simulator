@@ -14,7 +14,7 @@ from app.agent_schemas import AgentAssessment
 from app.agents.catalog import AGENT_PROFILES
 from app.round_schemas import FinalMDTReport, RoundContribution
 from app.schemas import SyntheticCase
-from app.services import run_store
+from app.services import intake_store, run_store
 
 
 SOURCE_OPINION_EXCERPT = (
@@ -42,9 +42,11 @@ def main() -> int:
                 "Patient goals are not supplied.",
             ],
         )
-        patient = run_store.create_patient(
-            patient_name,
-            case,
+        intake = intake_store.create_intake_session(case)
+        intake_store.accept_intake_with_gaps(intake["session_id"], confirmed=True)
+        patient = intake_store.promote_accepted_intake_to_patient(
+            intake["session_id"],
+            patient_name=patient_name,
         )
         patient_id = patient["patient_id"]
         version_id = patient["versions"][0]["case_version_id"]
