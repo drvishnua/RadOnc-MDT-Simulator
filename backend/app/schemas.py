@@ -123,3 +123,9 @@ class IntakeAcceptRequest(StrictModel):
     """Explicit user confirmation to accept an incomplete intake."""
 
     confirmed: bool = False
+
+
+class IntakePromoteRequest(StrictModel):
+    """Promote an accepted intake to a fictional patient registry record."""
+
+    patient_name: str = Field(min_length=2, max_length=120)
