@@ -3509,3 +3509,20 @@ No live user-device Ollama/model operation, Qwen inference, RTX 4060 GPU verific
 6. Build evidence retrieval and claim-level citations before requiring evidence-backed wording.
 7. Implement and test the separate desktop UI, with Mission Control and Development Monitor absent.
 8. Complete exact-head CI, live synthetic four-round validation, GPU/performance verification and independent clinical review as separate milestones.
+
+
+## Windows Ollama fallback fixture diagnosis and correction — 20 November 2026
+
+**Root cause established from exact Windows job log and source inspection:** the stopped-existing-Ollama scenario correctly passed, including AI_BOOTSTRAP_RESTART_EXISTING_OLLAMA_WITH_EXISTING_MODEL_OK. The subsequent absent-installation scenario failed because the test fixture retained the previous scenario's Find-RadOncOllamaExecutable mock, which continued returning the fake installed executable. The production decision tree therefore correctly entered the installed-but-stopped branch on port 11434; the test incorrectly expected the absent-installation portable branch on port 11435.
+
+**Test-only correction:** commit eb0540a6bc50692cd242632819afdeb432814e29 explicitly resets Find-RadOncOllamaExecutable to return $null before the absent-installation scenario. No production bootstrap code was changed. This is a fixture correction supported by the call path and log, not yet a verified fix: exact-head Windows CI must pass before marking the scenario verified.
+
+| Area | Status | Current evidence |
+|---|---|---|
+| Installed Ollama, server already running, model present | VERIFIED (mocked) | Existing regression emitted AI_BOOTSTRAP_REUSE_EXISTING_MODEL_OK in Windows run 44609389615. |
+| Installed Ollama, server stopped, model present | VERIFIED (mocked) | Regression emitted AI_BOOTSTRAP_RESTART_EXISTING_OLLAMA_WITH_EXISTING_MODEL_OK in Windows run 44609389615. |
+| Ollama genuinely absent → portable runtime branch | IN PROGRESS | Previous failure traced to stale executable-discovery mock; fixture reset committed at eb0540a; rerun pending. |
+| Production Ollama bootstrap | IN PROGRESS | Existing/stopped detection and model reuse paths exist; custom/registered installation discovery and clean-host verification remain outstanding. |
+| Windows installer CI | FAILED on prior head; rerun pending | Run 44609389615 failed at portable-fallback mock assertion. Do not mark passed until a later exact-head run succeeds. |
+
+No real Ollama executable, model download, inference or user data was used in this test. No GPU activity was measured.
