@@ -142,6 +142,9 @@ def normalize_clinical_tnm_component(field_id: str, raw_value: str) -> str:
         raise ValueError(f"Unrecognised TNM component syntax: {raw_value!r}")
     prefix = (match.group("prefix") or "").upper()
     component = (match.group("component") or expected).upper()
+    # A combined TNM token is not a single component value.
+    if re.search(r"[TNM](?:[0-4]|IS|X)", match.group("value")[1:], re.IGNORECASE):
+        raise ValueError("Combined TNM tokens must be split into their individual components.")
     if prefix == "P":
         raise ValueError("Pathological staging cannot be normalized into a clinical field.")
     if component != expected:
