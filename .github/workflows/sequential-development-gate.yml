@@ -40,13 +40,13 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Validate ordered plan, scope and exact-SHA GitHub evidence
+        working-directory: backend
+        run: python scripts/validate_development_plan.py --plan docs/development_plan.json --head "$GITHUB_HEAD_SHA"
+
       - name: Install test runner
         run: python -m pip install pytest
 
       - name: Run adversarial sequential-gate tests
         working-directory: backend
         run: python -m pytest tests/test_development_plan.py -q
-
-      - name: Validate ordered plan, scope and exact-SHA GitHub evidence
-        working-directory: backend
-        run: python scripts/validate_development_plan.py --plan docs/development_plan.json --head "$GITHUB_HEAD_SHA"
