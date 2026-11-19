@@ -4306,3 +4306,15 @@ Acceptance criteria:
 5. Add future owner requirements immediately to this same checklist with stable IDs and acceptance criteria, without duplicating or reordering existing requirements.
 
 Execution rule: the first active implementation sequence remains the existing checklist's clinical data-contract work (U09/U10) after repository/checklist/PR/CI inspection. No later workstream may be started until its prerequisite step is verified.
+
+
+### U11 pre-response review checkpoint — 20 November 2026
+
+- Authoritative checklist read from `feature/four-round-mdt-and-performance` before this response.
+- Development branch existence: VERIFIED.
+- PR #1: open; PR URL https://github.com/drvishnua/RadOnc-MDT-Simulator/pull/1. Current head SHA/base/head branch details were not exposed by the available PR search result: BLOCKED/UNVERIFIED.
+- Current code HEAD: BLOCKED/UNVERIFIED; available commit-search output did not reliably identify the development branch HEAD. Do not infer it from historical checkpoint entries.
+- Current checklist commit before this checkpoint: `0c13d0d372869fbada4645a2b95e9737946e9999`.
+- Latest checklist-only commit workflow lookup returned no workflow runs. Six successful workflows were retrieved for historical commit `9ebc548788774bde645675bfd502ecde7e3c05f5`; they are not evidence for the current code HEAD. The checklist records a full Node audit failure with four HIGH picomatch findings on the historical `e9a585c` audit.
+- Active step: Step 1 — repository/branch/PR/commit/checklist/CI verification. Status: IN PROGRESS; exact PR head and exact-head CI remain unresolved.
+- No implementation status was changed. U11 is recorded as mandatory; this checkpoint is evidence of the current review only, not proof of application-code changes.
