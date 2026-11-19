@@ -2918,3 +2918,12 @@ All six are completed with conclusion `success` and `head_sha=77c4e741cc79e62bd9
 
 **Inference gate:** No Qwen/MedGemma screening, full 45-role run, or new live model inference is authorised by this checkpoint. Obtain explicit approval of the exact synthetic-only run scope first. GPU, clinical and release claims remain separate acceptance gates.
 
+## Resume checkpoint — deterministic saved-run quality diagnostics (20 November 2026)
+
+**Repository refresh:** development branch `feature/four-round-mdt-and-performance`, HEAD and PR #1 head both `c6255138e3f45d399acb6c24ef4add7de3efff04`. PR #1 remains open, draft, unmerged, targeting `main` at `39a356b8eb09399aa2da1b9b9085965999f5105a`. No changes to `main`.
+
+**Exact-head CI:** six PR workflows completed successfully on `c6255138e3f45d399acb6c24ef4add7de3efff04`: Backend Tests 44599193682; Frontend Build 44599193607; Browser E2E 44599193612; Windows Packaging Prerequisites 44599193753; Windows Installer Build 44599193656; Security and Dependency Audit 44599193624. These are engineering checks, not live model, GPU, clinical or evidence validation.
+
+**Current engineering task:** implement deterministic, no-inference diagnostics for the recovered historical specialist-output export. Diagnostics must report per-round/per-role fact-use and remit coverage only where the export contains explicit structured fields; count missing/empty evidence claims; identify exact duplicate text separately from provisional near-duplicate similarity; identify missing conditional prerequisites and unsupported stage assertions as review flags, not clinical adjudications. Preserve raw input and hashes; do not rewrite saved rows, infer facts, force different opinions, or treat similarity as proof of copied reasoning. Include malformed/missing-field handling and fixture-based regression tests. No Qwen/MedGemma inference is part of this task.
+
+**Checklist status:** historical JSON quality diagnosis remains VERIFIED; deterministic diagnostic implementation remains IN PROGRESS until code, regression tests and exact-head CI are verified. Full model-quality remediation remains IN PROGRESS. Current-head live 45-role validation remains BLOCKED pending explicit approval of a specific synthetic-only run scope. GPU, clinical review, evidence retrieval and release gates remain outstanding.
