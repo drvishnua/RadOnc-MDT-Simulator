@@ -2501,7 +2501,7 @@ These results verify engineering/build/security checks on the exact application/
 | Backend API and tests | VERIFIED | 491/491 tests passed on exact code head; deterministic preflight 7/7. |
 | Frontend build | VERIFIED | Exact-head workflow passed. |
 | Patient Registry / Four-Round Dashboard browser E2E | VERIFIED | Exact-head real-browser workflow passed. |
-| Development Mission Control/monitor coverage | IN PROGRESS | Patient registry/dashboard E2E is green; complete development-monitor views/metrics are not fully verified. |
+| Mission Control / Development Monitor removal | VERIFIED | Commit `28568ae5cb8026870cc7d8ce352bb91231bb6bbb`; exact-head backend tests and browser removal assertion passed. Patient Registry and four-round dashboard retained. |
 | Windows packaging and installer | VERIFIED | Exact-head build, install/smoke test, checksum and artifact upload passed. |
 | Dependency audit, CodeQL and full-history secret scan | VERIFIED | Exact-head audit passed; Python audit clean, npm audits 0 vulnerabilities, both CodeQL analyses and secret scan succeeded. |
 | Authentication, authorisation and broader product security acceptance | IN PROGRESS | CI security checks are not a complete security assessment or release sign-off. |
@@ -2538,14 +2538,14 @@ The workflow supports an authorised marker-based push on the development branch;
 
 | Workstream | Status | Required outcome / verification |
 |---|---|---|
-| Remove Mission Control UI | NOT STARTED | Remove Mission Control from the shipped user-facing application and navigation; retain only operational functions genuinely required internally. Verify no user-facing entry points remain. |
-| Remove Development Monitor UI | NOT STARTED | Remove Development Monitor from the shipped application/navigation; verify no user-facing entry points remain. |
+| Remove Mission Control UI | VERIFIED | Removed user-facing panel, state, polling, role drill-down and CSS in `28568ae`; browser E2E `44425051710` confirmed no panel remains. |
+| Remove Development Monitor UI | VERIFIED | Removed public GitHub polling, branch/PR/workflow state, panel and CSS in `28568ae`; browser E2E `44425051710` confirmed no panel remains. |
 | Investigate unhelpful “cannot be determined / insufficient information” full-run output | NOT STARTED | Forensic review of the actual saved run: identify which supplied case facts each role received, which it used/ignored, missing-data claims, prompt/context truncation, failed/empty responses and Chair synthesis. Improve use of supplied evidence without inventing absent facts or forcing recommendations. |
 | TNM representation equivalence | NOT STARTED | Normalise equivalent forms such as `T1` and `clinical_t_stage=1`, likewise N/M, before contradiction comparison. Add tests for equivalent forms, genuine conflicts, qualifiers, prefixes and unknown values. Do not infer missing stage. |
 | R1 independent specialist assessments | NOT STARTED | Ensure each R1 agent receives only the case input and its own role definition, never other agents' generated R1 responses. Verify orchestration inputs and saved prompt provenance. |
 | Role-specific specialist perspectives | NOT STARTED | Define and test role-specific remit, expertise boundaries, reasoning priorities, questions, risks and contribution format across all 45 roles. Avoid interchangeable generic responses and fabricated specialist credentials. |
 | Natural professional MDT dialogue | NOT STARTED | Improve R2/R3 turn-taking, concise conversational phrasing, direct responses and attribution while preserving exact source provenance, uncertainty, dissent and conditionality. Do not manufacture agreement or disagreement. |
-| Overall UI/UX redesign | NOT STARTED | Deliver a coherent, professional desktop workflow for case intake, specialist assessments, discussion, Chair report, saved runs and settings; usability review required. |
+| Overall UI/UX redesign | IN PROGRESS | Mission Control and Development Monitor have been removed. The pre-MDT clarification chat, conversational interaction, desktop shell, menus, disclaimer, branding and end-to-end usability redesign remain outstanding. |
 | Native desktop application window | NOT STARTED | Application opens in its own Windows window, not a normal browser. Evaluate desktop shell options against packaging, backend lifecycle, local data, offline use and maintainability. |
 | First-launch disclaimer dialog | NOT STARTED | Show educational/non-clinical-use disclaimer before first use; require explicit acknowledgement, persist acknowledgement/version safely, and make disclaimer accessible later. |
 | Application logo and icon | NOT STARTED | Add consistent product identity, window icon and installer/start-menu branding; verify assets in packaged build. |
@@ -2751,3 +2751,49 @@ The additional installer run [44419539369](https://github.com/drvishnua/RadOnc-M
 **R2/R3/R4 implementation boundary:** at `bec9dd8`, R2 does not yet receive or persist a structured R1 conditional-option register; R3 does not yet adversarially audit those branch records; R4 does not yet render a saved-row-derived conditional-option ledger. These workstreams remain NOT STARTED in code. Existing R2/R3 attributed source-opinion handling is a separate mechanism and must not be misrepresented as conditional-branch integration.
 
 A subsequent exploration of an R2 implementation approach was interrupted before any repository write/commit. It produced no repository change. The next implementation must resume from `bec9dd8`, recheck the live PR/head, and add a narrow R2 contract plus mocked tests before touching R3 or R4. Preserve exact source branch IDs and bind model responses back to immutable saved R1 rows; unregistered branches must be excluded and flagged. Branch support is not a vote or consensus.
+---
+
+## Product redesign correction — operational monitor removal verified (19 November 2026)
+
+**Code commit:** `28568ae5cb8026870cc7d8ce352bb91231bb6bbb`  
+**Branch:** `feature/four-round-mdt-and-performance`  
+**PR #1:** open, draft, unmerged; base `main`.  
+**Main unchanged:** `39a356b8eb09399aa2da1b9b9085965999f5105a`.
+
+### Removed from the shipped product
+
+- Mission Control UI: removed the complete recent-run panel, automatic five-second polling, role drill-down state and handlers, and its dedicated CSS.
+- Development Monitor UI: removed PR/branch/Actions polling, five-minute refresh, last-good-snapshot state and error UI, plus dedicated CSS.
+- Backend monitoring API: removed `GET /api/mission-control` and `GET /api/mission-control/{run_id}/rounds/{round_number}/roles`.
+- Backend persistence helpers used only by these panels: removed `list_recent_runs` and `list_round_role_statuses`.
+- Retired the former positive Mission Control API test suite and replaced it with route-retirement regression tests.
+- Removed monitor-only browser fixtures and positive rendering tests. The real-browser test now asserts both panels are absent.
+
+### Preserved
+
+- Patient Registry create/load/version/edit/restore/delete workflow.
+- Saved independent R1 results and R2/R3/R4 round execution/results APIs.
+- Four-round MDT dashboard and Chair report rendering.
+- Local API, Ollama runtime and 45-role catalogue status cards.
+- Existing persistence, run recovery and saved result behaviour.
+
+### Exact-head CI — commit `28568ae5cb8026870cc7d8ce352bb91231bb6bbb`
+
+| Workflow | Run ID | Result |
+|---|---:|---|
+| Backend Tests | [44425051468](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44425051468) | SUCCESS — **490 passed, 1 warning**; deterministic preflight **7 passed, 0 failed, 0 inconclusive** |
+| Frontend Build | [44425051522](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44425051522) | SUCCESS |
+| Patient Registry and Four-Round Dashboard Browser E2E | [44425051710](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44425051710) | SUCCESS — `PATIENT_REGISTRY_BROWSER_E2E_OK`, `OPERATIONAL_MONITOR_REMOVAL_E2E_OK`, `FOUR_ROUND_DASHBOARD_BROWSER_E2E_OK` |
+| Windows Packaging Prerequisites | [44425051498](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44425051498) | SUCCESS |
+| Windows Installer Build | [44425051502](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44425051502) | SUCCESS — build, install and smoke test passed; hosted Ollama/model bootstrap skipped |
+| Security and Dependency Audit | [44425051672](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44425051672) | SUCCESS — dependency audit, both CodeQL analyses and full-history secret scan passed |
+
+A redundant installer workflow [44425044197](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44425044197) also succeeded; it is not counted as a seventh standard workflow.
+
+**Validation boundary:** This verifies removal of the two operational monitor features and preservation of the browser-tested patient/four-round workflow. It does not verify the new pre-MDT chat feature, native desktop redesign or usability acceptance. No Ollama inference, RTX 4060 verification or clinical validation occurred.
+
+### Correct product requirements remain active
+
+The separate **Pre-MDT Case Clarification Agent and chat** requirement below remains NOT STARTED. It is a dedicated intake stage before R1, not a fifth round and not one of the 45 voting specialists. It must provide concise, neutral, case-aware questioning; one focused question at a time; unknown/declined/not-applicable/negative distinction; skip/decline controls; explicit review and confirmation of user additions; preserved original input; source and timestamp provenance; and a short warning about unresolved gaps before the user starts MDT.
+
+Natural professional MDT dialogue in R2/R3 and the broader user-interface/native desktop redesign remain separate outstanding workstreams. Do not treat monitor removal as completion of those requirements. No static chat box should be presented as an implemented clarification agent.
