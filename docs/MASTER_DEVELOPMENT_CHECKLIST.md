@@ -3861,3 +3861,22 @@ These requirements were explicitly restated by the project owner and must remain
 **Current application code SHA:** `fa7ecd722f01e86dc1b64b82cf6a25a5b834979e`  
 **Current checklist commit before this update:** see repository history.  
 **Next:** inspect all frontend, script, workflow and test callers of the retired routes; run exact-head backend and full CI; preserve compatibility only through accepted-intake-backed saved-version APIs. Do not mark the universal R1 gate verified until all reachable entry points have been audited.
+
+
+### Syntax regression found and corrected — 20 November 2026
+
+- Backend workflow `44618288502` on prior code/test SHA `fa7ecd7` failed deterministic Python syntax validation: obsolete `except` handlers remained after the legacy assessment route was changed to reject unlinked payloads. Pytest did not execute; the run is not a test result.
+- Commit `58c64dde9c11b309342fdfe42db0bb2af8e69736` removes the unreachable orphaned exception handlers.
+- The failure is retained in the audit history and is not downgraded or described as a pass.
+- New exact-head validation must run on the corrected code and include the new rejection tests.
+
+**Corrected application code SHA:** `58c64dde9c11b309342fdfe42db0bb2af8e69736`.
+
+| Validation | Status | Evidence |
+|---|---|---|
+| Backend tests after syntax correction | IN PROGRESS | Prior run 44618288502 failed before pytest; corrected-head run required. |
+| Frontend build | IN PROGRESS | Prior run was cancelled during overlapping PR updates; corrected-head run required. |
+| Browser E2E | IN PROGRESS | Prior run was cancelled during overlapping PR updates; corrected-head run required. |
+| Windows packaging prerequisites | IN PROGRESS | Prior run 44618288433 had not completed at last inspection. |
+| Windows installer | IN PROGRESS | Prior run 44618288475 pending at last inspection. |
+| Security/dependency audit | IN PROGRESS | Prior run 44618288679 was running at last inspection. |
