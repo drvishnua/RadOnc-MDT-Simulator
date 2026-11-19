@@ -94,3 +94,10 @@ class PatientRunRequest(StrictModel):
         max_length=36,
         pattern=r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
     )
+
+
+class CaseIntakeScreenRequest(StrictModel):
+    """Deterministic screening request; declined domains remain explicit gaps."""
+
+    case: SyntheticCase
+    declined_domains: list[str] = Field(default_factory=list, max_length=6)
