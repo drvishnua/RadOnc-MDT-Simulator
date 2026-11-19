@@ -17,12 +17,12 @@ from app.clinical_fields import require_supported_registry_version
 from app.schemas import (
     AgentAssessmentRequest, BatchRunRequest, CaseValidationResult,
     PatientCaseUpdateRequest, PatientRegistrationRequest, PatientRunRequest, SyntheticCase, CaseIntakeScreenRequest,
-    IntakeSessionCreateRequest, IntakeEventRequest, IntakeAcceptRequest,
+    IntakeSessionCreateRequest, IntakeEventRequest, IntakeAcceptRequest, IntakePromoteRequest,
 )
 from app.services.case_integrity import build_case_validation_warnings
 from app.services.intake_screening import screen_case_intake
 from app.services.intake_store import (
-    accept_intake_with_gaps, create_intake_session, get_intake_session, record_intake_event,
+    accept_intake_with_gaps, create_intake_session, get_intake_session, record_intake_event,\n    promote_accepted_intake_to_patient,
 )
 from app.services import run_store
 from app.services.batch_runner import batch_is_running, run_independent_assessments, validate_resume_state
@@ -184,7 +184,7 @@ async def assess_saved_patient_case(patient_id: str, case_version_id: str) -> di
     if batch_is_running() or round_is_running():
         raise HTTPException(status_code=409, detail="Another local model run is already active.")
     try:
-        version = run_store.get_patient_case_version(patient_id, case_version_id)
+        version = run_store.require_intake_backed_case_version(patient_id, case_version_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="Patient or saved case version not found.") from exc
     try:
@@ -420,6 +420,23 @@ async def accept_pre_mdt_intake(
     """Explicitly accept a saved case while preserving all outstanding gaps."""
     try:
         return accept_intake_with_gaps(session_id, confirmed=request.confirmed)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Intake session not found.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+
+
+@app.post("/api/intakes/{session_id}/promote")
+async def promote_pre_mdt_intake(
+    session_id: str, request: IntakePromoteRequest,
+) -> dict[str, object]:
+    """Create an immutable patient case version from an accepted, audited intake."""
+    try:
+        return promote_accepted_intake_to_patient(
+            session_id, patient_name=request.patient_name,
+        )
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="Intake session not found.") from exc
     except ValueError as exc:
