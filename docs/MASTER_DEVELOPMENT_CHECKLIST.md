@@ -4333,6 +4333,16 @@ Execution rule: the first active implementation sequence remains the existing ch
 - No application implementation status changed in this review.
 
 
+
+
+### Approved dependency-order amendment — U12 before U09/U10 (20 November 2026)
+
+The owner accepted the recommendation to implement U12 before clinical registry work. This explicit owner-authorised amendment supersedes only the earlier U11/Step A statement that Section B U09/U10 was the first implementation step. It does not authorise skipping any prerequisite or reordering any other existing workstream.
+
+Updated sequence: (1) Step A repository/branch/PR/commit/checklist/CI verification — VERIFIED for application-code checkpoint `986593ec8aab00b7885f1db5ff39dab2546278fc`; (2) U12 fail-closed sequential development gate — IN PROGRESS; (3) only after U12 acceptance criteria pass, proceed to existing Section B U09/U10 clinical data contract; then continue the previously recorded dependency order.
+
+U12 implementation must be limited to its stated acceptance criteria. No unrelated feature work is authorised.
+
 ## U12 — Fail-closed sequential development gate (user requirement, 20 November 2026)
 
 **Purpose:** Make skipping or reordering a development step impossible through the normal repository workflow. This is a technical control, not a claim that ChatGPT's conversational behaviour can be made mathematically 100% reliable.
@@ -4359,7 +4369,7 @@ Execution rule: the first active implementation sequence remains the existing ch
 - All adversarial gate tests pass; logs prove rejected transitions.
 - A documented, auditable override cannot silently manufacture verification.
 
-**Status:** NOT STARTED. Design described in response only; no gate implementation, CI enforcement or branch-protection configuration is claimed.
+**Status: IN PROGRESS.** Implementation is authorised after Step A verification. No gate implementation, CI enforcement or branch-protection configuration is claimed until evidenced.
 
 
 ### U11 pre-response review checkpoint — 20 November 2026 (fail-closed gate design)
@@ -4396,3 +4406,12 @@ Execution rule: the first active implementation sequence remains the existing ch
 - Step 1 — repository/branch/PR/commit/checklist/CI verification: VERIFIED for the application-code checkpoint `986593ec8aab00b7885f1db5ff39dab2546278fc`; current PR metadata and checklist-only descendant SHAs verified. Residual limitation: branch protection not configured and current docs-only SHA has no workflow run.
 - Per the existing ordered plan, next active step is U12 — fail-closed sequential development gate. U12 remains NOT STARTED until implementation begins; U09/U10 must not begin before U12 is implemented and verified.
 - No merge, main-branch change or force-push.
+
+
+### U11 pre-response review checkpoint — 20 November 2026 (U12 implementation start)
+
+- Full checklist reread from `feature/four-round-mdt-and-performance`; source blob `d1b5f5df130d1a1228fd2320a9e2cc8fd08e3742`; length 646711 characters.
+- Step A repository/branch/PR/commit/checklist/CI verification: VERIFIED for application-code checkpoint `986593ec8aab00b7885f1db5ff39dab2546278fc`; six applicable CI runs all SUCCESS (44625679442, 44625679759, 44625679486, 44625679927, 44625679503, 44625679451).
+- PR #1 open/draft/unmerged; head branch `feature/four-round-mdt-and-performance`; base `main`. No merge or main changes.
+- U12 is the active step, IN PROGRESS, following the owner's approval to place U12 before U09/U10. The dependency-order amendment is recorded above; all other existing order is preserved.
+- Branch protection remains disabled/unverified through available administrative permissions; implementation must not claim required checks are enforced until repository settings are actually configured and read back.
