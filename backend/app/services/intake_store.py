@@ -230,7 +230,7 @@ def record_intake_event(
     session_id: str, *, event_type: str, field_id: str | None = None,
     value: Any = None, domain: str | None = None, source_text: str | None = None,
 ) -> dict[str, Any]:
-    if event_type not in {"ANSWER", "CORRECTION", "DECLINE_DOMAIN"}:
+    if event_type not in {"ANSWER", "CORRECTION", "DECLINE_DOMAIN", "QUESTION_ASKED"}:
         raise ValueError("Unsupported intake event type.")
     with _connect() as db:
         db.execute("BEGIN IMMEDIATE")
@@ -266,7 +266,7 @@ def record_intake_event(
                 "prior_case_snapshot_sha256": before_sha,
                 "new_case_snapshot_sha256": case_sha,
             })
-        else:
+        elif event_type == "DECLINE_DOMAIN":
             if not isinstance(domain, str) or not domain.strip():
                 raise ValueError("A screening domain is required.")
             screening = screen_case_intake(SyntheticCase.model_validate(case_data))
@@ -275,6 +275,26 @@ def record_intake_event(
                 raise ValueError("Unknown intake screening domain.")
             declined.add(domain)
             payload["domain"] = domain
+        else:
+            if not isinstance(domain, str) or not domain.strip():
+                raise ValueError("A screening domain is required.")
+            screening = screen_case_intake(
+                SyntheticCase.model_validate(case_data),
+                declined_domains=sorted(declined),
+            )
+            question = next(
+                (item["question"] for item in screening["questions"] if item["domain"] == domain),
+                None,
+            )
+            if question is None:
+                raise ValueError("This domain has no outstanding question or has been declined.")
+            prior_questions = db.execute(
+                "SELECT payload_json FROM intake_events WHERE session_id = ? AND event_type = 'QUESTION_ASKED'",
+                (session_id,),
+            ).fetchall()
+            if any(json.loads(row["payload_json"]).get("domain") == domain for row in prior_questions):
+                raise ValueError("A question for this domain has already been recorded.")
+            payload.update({"domain": domain, "question": question})
 
         declined_json = _canonical_json(sorted(declined))
         event = _append_event(
