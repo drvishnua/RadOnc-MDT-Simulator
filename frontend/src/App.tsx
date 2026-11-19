@@ -143,7 +143,6 @@ type PatientCaseVersion = {
   intake_backed: boolean;
   intake_session_id: string | null;
   case: SyntheticCasePayload;
-  intake_session_id?: string | null;
 };
 
 type IntakeQuestion = { domain: string; question: string };
