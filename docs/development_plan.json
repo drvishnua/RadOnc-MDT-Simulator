@@ -2,7 +2,7 @@
   "schema_version": 1,
   "plan_id": "radonc-mdt-master-sequential-plan",
   "scope_baseline_commit": "5680dfe742c87ada5a263656f12686369d00fa6c",
-  "active_step": "U12",
+  "active_step": "U09-U10",
   "steps": [
     {
       "id": "STEP-A",
