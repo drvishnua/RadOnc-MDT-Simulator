@@ -436,6 +436,10 @@ def require_intake_backed_case_version(patient_id: str, case_version_id: str) ->
         or not events
         or events[-1]["event_sha256"] != version["intake_event_chain_sha256"]
         or events[-1]["event_type"] != "PROMOTED_TO_PATIENT_VERSION"
+        or events[-1]["payload"].get("patient_id") != patient_id
+        or events[-1]["payload"].get("case_version_id") != case_version_id
+        or events[-1]["payload"].get("case_snapshot_sha256") != version["case_snapshot_sha256"]
+        or events[-1]["payload"].get("registry_version") != version["clinical_field_registry_version"]
     ):
         raise ValueError("Accepted intake provenance does not match this immutable patient case version.")
     return version
