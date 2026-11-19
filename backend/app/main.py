@@ -241,6 +241,7 @@ async def get_run_case_snapshot(run_id: str) -> dict[str, object]:
         return {
             "run_id": run_id,
             "case_snapshot_sha256": summary["case_snapshot_sha256"],
+            "clinical_field_registry_version": summary["clinical_field_registry_version"],
             "case_snapshot_json": case_json,
             "case": case.model_dump(exclude_none=True),
         }
