@@ -3580,3 +3580,21 @@ No local Python execution was available in this remote repository session. The c
 | Clean-hosted Ollama/model bootstrap | NOT APPLICABLE (SKIPPED) | Run 44611955680; no clean-host inference evidence. |
 
 **Current development branch head when this entry was prepared:** `1f1ef243f3ca1fa02d9c2cbc551a08cd7a1ad99d`. PR #1 remains open, draft and unmerged, targeting `main`. The intake implementation remains IN PROGRESS; persistent transcript/session state, answer/correction events, explicit accept-with-gaps and R1 run gating are still outstanding. No inference, GPU verification or clinical validation was performed.
+
+
+## Follow-up exact-head backend test result — 20 November 2026
+
+On code/test head `1f1ef243f3ca1fa02d9c2cbc551a08cd7a1ad99d`, the newline syntax fix worked: the backend test workflow proceeded to pytest, and the launcher/frontend check passed. Backend pytest then reported a single assertion failure in the new intake API test. The endpoint correctly serializes the complete Pydantic case, including default empty lists; the test incorrectly compared that normalized response to the partial JSON object supplied by the caller.
+
+**Test-only correction:** commit `acac4d0e8b6a59c783c0c0c7292cd66fc81418c6` imports `SyntheticCase` and compares the response snapshot against `SyntheticCase.model_validate(case).model_dump(exclude_none=True)`. This asserts the actual schema-normalized snapshot while preserving the no-fabrication/unknown semantics. The new exact-head backend CI result is pending.
+
+| Item | Status | Evidence |
+|---|---|---|
+| Intake route Python syntax | VERIFIED (source inspection) | Literal escaped newline removed at commit 4e7258b; backend tests reached pytest on 1f1ef24. |
+| Backend pytest on 1f1ef24 | FAILED | One test assertion mismatch in tests/test_api.py:236; pytest executed; this was not a production endpoint failure. |
+| Intake snapshot test expectation | IN PROGRESS | Corrected at acac4d0; rerun pending. |
+| Launcher/frontend build on 1f1ef24 | VERIFIED | Check run 44612610956 success. |
+| Browser E2E on 1f1ef24 | IN PROGRESS at last captured check state | Run 44612610830; recheck before reporting. |
+| Windows installer on 1f1ef24 | IN PROGRESS at last captured check state | Run 44612610623; recheck before reporting. |
+
+Do not mark the intake feature verified until backend, browser E2E and Windows installer checks on the corrected code head complete successfully. No live model/GPU/clinical validation was performed.
