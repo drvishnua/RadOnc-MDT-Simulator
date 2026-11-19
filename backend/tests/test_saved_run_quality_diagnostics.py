@@ -112,6 +112,22 @@ def test_stage_audit_detects_partial_tnm_tokens():
     assert {"T1N0", "T1A", "M0"} <= tokens
 
 
+def test_component_stage_fields_keep_tnm_labels_during_source_comparison():
+    export = _export()
+    export["case_snapshot"].update({
+        "clinical_t_stage": "1",
+        "clinical_n_stage": "0",
+        "clinical_m_stage": "0",
+    })
+    result = build_diagnostics(export, b"fixture")
+    assert result["staging_reference_flags"] == []
+
+    export["case_snapshot"]["clinical_n_stage"] = "x"
+    result = build_diagnostics(export, b"fixture")
+    tokens = {item["token"].upper() for item in result["staging_reference_flags"]}
+    assert "N0" in tokens
+
+
 def test_malformed_round_collection_is_reported_as_zero_rows_not_crashing():
     result = build_diagnostics({"run": {}, "independent_assessments": "bad"}, b"fixture")
     assert result["rounds"]["R1"]["source_rows"] == 0
