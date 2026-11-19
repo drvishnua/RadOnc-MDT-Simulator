@@ -3714,7 +3714,7 @@ The latest implementation remains a backend foundation, not a finished conversat
 
 # Master Checklist — Current Status (20 November 2026; supersedes earlier status snapshots)
 
-**Current development code head:** `a02c1b995a8fcdfffae1ccf6483a8ee7a6cba037`  
+**Current code/test head:** `eac3d8963f1ebc3b1c42a31d7fe8429e007818fa`  
 **Branch:** `feature/four-round-mdt-and-performance`  
 **PR #1:** open, draft, unmerged; base `main`. No main-branch writes, merge or force-push.
 
@@ -3745,15 +3745,15 @@ The latest implementation remains a backend foundation, not a finished conversat
 
 | Validation | Status | Evidence |
 |---|---|---|
-| Backend tests | VERIFIED | Run `44616609510`: 529 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive; deterministic preflight passed. |
-| Frontend build | VERIFIED | Run `44616609472`: success. |
-| Patient Registry + Four-Round Dashboard browser E2E | VERIFIED | Run `44616609412`: success; markers `PATIENT_REGISTRY_BROWSER_E2E_OK`, `OPERATIONAL_MONITOR_REMOVAL_E2E_OK`, `FOUR_ROUND_DASHBOARD_BROWSER_E2E_OK`. |
-| Security/dependency audit | VERIFIED | Run `44616609643`: success; Python/TypeScript CodeQL, full-history secret scan and Python/Node dependency audit completed. |
-| GitHub-hosted Windows packaging prerequisites | VERIFIED | Run `44616609511`: success. |
-| Windows installer build/install smoke test | VERIFIED | Run `44616609476`: success; installer built, silently installed, launched/smoke-tested, uninstalled, checksum generated and artifact uploaded. |
-| Installer artifact | VERIFIED | Artifact `14574617571`, `RadOnc-MDT-Simulator-Windows-x64.zip`, 14,931,859 bytes. Installer SHA-256: `202a78aa86ad6a6b0a7446805eabe669e0c9b5b3ab1db30bf2ebd9128c00645a`. |
-| Clean-host Ollama/model first-run bootstrap | NOT STARTED / SKIPPED | Installer smoke test is not evidence that an absent Ollama/model was downloaded or that an existing stopped Ollama/model store was reused. |
-| Real local Ollama inference / RTX 4060 GPU | NOT STARTED | No local device inference or request-time GPU telemetry was performed. |
+| Backend tests | VERIFIED | Exact code/test SHA `eac3d89`; run `44619289090`: 530 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive; deterministic preflight 7/7. |
+| Frontend build | VERIFIED | Exact code/test SHA `eac3d89`; run `44619289155`: success. |
+| Patient Registry + Four-Round Dashboard browser E2E | VERIFIED | Exact code/test SHA `eac3d89`; run `44619289162`: success; `PATIENT_REGISTRY_BROWSER_E2E_OK`, `OPERATIONAL_MONITOR_REMOVAL_E2E_OK`, `FOUR_ROUND_DASHBOARD_BROWSER_E2E_OK`. |
+| Security/dependency audit | VERIFIED | Exact code/test SHA `eac3d89`; run `44619289734`: success; Python and Node audits report 0 vulnerabilities, Python/JS CodeQL and full-history secret scan passed. |
+| GitHub-hosted Windows packaging prerequisites | VERIFIED | Exact code/test SHA `eac3d89`; run `44619289319`: success. |
+| Windows installer build/install smoke test | VERIFIED | Exact code/test SHA `eac3d89`; run `44619289306`: build, install, smoke test, uninstall and checksum succeeded; artifact uploaded. |
+| Installer artifact | VERIFIED | Artifact `14575849010`, `RadOnc-MDT-Simulator-Windows-x64.zip`, 14,934,244 bytes; archive digest `sha256:de68d57514242de21fc551651c858eefa3fad3e2263f67d38274a3fcb169649d`; inner Setup.exe SHA-256 `d08e1dda58960e06a388cc0456b127606015c9f4e404582e3eb120e0b253c51f`. |
+| Ollama bootstrap state-path tests | VERIFIED (mocked only) | Installer run `44619289306` exercised existing running Ollama/model reuse, stopped Ollama restart with existing model, and absent portable Ollama/model pull using mocks. No real Ollama process or inference. |
+| Real local Ollama inference / RTX 4060 GPU | NOT STARTED | No user-device inference, request-time `nvidia-smi` or Ollama GPU-offload evidence. |
 
 **Earlier browser failure and correction:** run `44616233814` on SHA `f71363c` failed because the deterministic dashboard fixture still used direct `create_patient` + `create_run_for_case_version`, which the new accepted-intake gate correctly rejected. The fixture was changed to create, accept and promote an intake (`52c9be9`). The corrected browser E2E on SHA `a02c1b9` passed. The production gate was not relaxed.
 
@@ -3773,17 +3773,17 @@ The latest implementation remains a backend foundation, not a finished conversat
 | Accepted intake → new patient immutable case version | VERIFIED (software tests) | Atomic promotion with event-chain linkage. |
 | Accepted intake → existing patient's next immutable version | VERIFIED (software tests) | Version increments; prior version and hash remain unchanged. |
 | Saved-patient R1 run / saved RO-01 gate | VERIFIED (software tests) | Both saved-version routes require accepted intake provenance and validate event payload identity. |
-| Global R1 entry-point gate | IN PROGRESS | Legacy direct `POST /api/runs` and standalone `POST /api/agents/{agent_id}/assess` still accept unlinked case payloads for compatibility/test workflows. These are remaining bypasses to remove or explicitly constrain before claiming a universal R1 gate. |
+| Global R1 entry-point gate | IN PROGRESS | Legacy direct `POST /api/runs` and `POST /api/agents/{agent_id}/assess` now reject unlinked payloads with HTTP 409 before persistence/inference. Frontend starts saved-patient runs. Remaining work: audit every reachable production/internal caller and preserve historical run reads; do not yet claim universal closure. |
 | Frontend conversational intake UI | IN PROGRESS | Question review, decline, accept-with-gaps, new/existing patient promotion and pending-session refresh recovery are implemented. Free-text answer turns within the chat, direct answer-to-field mapping, ambiguity clarification and full WhatsApp-like conversation remain. |
 | Frontend refresh recovery for pending intake | VERIFIED (browser/software coverage) | Pending session pointer stored locally and session reloaded from backend; full conversational recovery tests remain. |
 | Semantic narrative/structured contradiction handling | IN PROGRESS | Schema validation and existing integrity warnings; broader conflict detection and user-led resolution remain. |
-| Backend tests | VERIFIED | 529/529 on SHA a02c1b9. |
-| Frontend build | VERIFIED | Run 44616609472 on SHA a02c1b9. |
-| Browser E2E | VERIFIED | Run 44616609412 on SHA a02c1b9. |
+| Backend tests | VERIFIED | 530/530 on code/test SHA `eac3d89`; run `44619289090`. |
+| Frontend build | VERIFIED | Run `44619289155` on code/test SHA `eac3d89`. |
+| Browser E2E | VERIFIED | Run `44619289162` on code/test SHA `eac3d89`; saved R1 readiness, R2/R3 45-role lists, completed R4 and persisted Chair report rendered. No model inference. |
 | Dashboard/API | VERIFIED (browser regression scope) | Existing registry and four-round dashboard rendering paths passed; live inference not included. |
 | Mission Control / Development Monitor removal | VERIFIED | Browser E2E confirms retired panels absent. |
 | Separate desktop UI/UX | IN PROGRESS | Installer packages the app; installed UI still uses the local application host, not a fully native desktop shell. |
-| Ollama installed/running/stopped/absent bootstrap | IN PROGRESS | Existing/stopped/absent mocked paths have tests; custom-install discovery and clean-host real model reuse/download remain. |
+| Ollama installed/running/stopped/absent bootstrap | IN PROGRESS | Run `44619289306` verifies mocked running/reuse, stopped/restart/reuse and absent/download paths; custom-install discovery and real clean-host/existing-stopped-host validation remain. |
 | Ollama context/truncation | NOT STARTED | No measured context-allocation/truncation acceptance checkpoint recorded here. |
 | RTX 4060 inference/GPU telemetry | NOT STARTED | No request-time `nvidia-smi` and Ollama offload evidence. |
 | Performance/latency | NOT STARTED | No current measured inference benchmark. |
@@ -3791,8 +3791,8 @@ The latest implementation remains a backend foundation, not a finished conversat
 | Specialty-specific guideline/textbook/landmark literature retrieval | NOT STARTED | Evidence retrieval is not connected; no guideline compliance claims. |
 | Copied/generic/delegated agent-response investigation | IN PROGRESS | Previously referenced JSON/export still not available in repository file search; no root cause claim. |
 | Independent clinical review | NOT STARTED | Required before any clinical validation claim. |
-| Security audit | VERIFIED | Exact-head run 44616609643. |
-| Windows packaging/installer smoke | VERIFIED | Exact-head run 44616609476; clean-host AI bootstrap still separate. |
+| Security audit | VERIFIED | Exact code/test SHA `eac3d89`; run `44619289734`, including full Node audit with 0 vulnerabilities. |
+| Windows packaging/installer smoke | VERIFIED | Exact code/test SHA `eac3d89`; run `44619289306`; mocked bootstrap only, no live Ollama/model. |
 | Release acceptance | BLOCKED | Universal R1 gate, complete intake dialogue, clean-host Ollama bootstrap, live four-round/GPU validation and clinical review remain outstanding. |
 
 **Clinical/data boundary:** accepted-with-gaps is a workflow acceptance state, not a determination that staging or clinical information is sufficient. The intake path does not infer facts, derive TNM stage, convert unknowns into negatives or issue treatment recommendations. No real patient data, live Ollama inference, GPU verification, clinical guideline retrieval or independent clinical validation was performed.
@@ -3817,7 +3817,7 @@ These requirements were explicitly restated by the project owner and must remain
 | Investigate copied/generic/delegated agent responses | IN PROGRESS | Obtain and inspect the referenced JSON/export; compare role outputs, prompts, source context and semantic similarity; identify root cause before changing prompts/orchestration; add regression fixtures proving distinct role-specific reasoning and no generic insufficient-information delegation. The export is not available in the repository evidence inspected so far. |
 | Canonical TNM and clinical-case terminology | IN PROGRESS | Normalize valid equivalent representations such as `T1` and `clinical_t_stage=1` to one canonical typed value only when primary site, staging system and edition are compatible. Preserve original raw input, normalized value, source and normalization trace. Reject or flag conflicts; never infer missing T/N/M or stage. |
 | Immutable central clinical schema/constants consumed by every role | IN PROGRESS | Define versioned, centrally-owned field identifiers, enumerations, units, null/unknown semantics and allowed representations for demographics, disease site, histology, laterality, subsite, T/N/M, stage group, staging system/edition, ECOG, comorbidities, investigations, pathology, treatment history, family history, patient preferences and other case domains. All roles must consume the same validated immutable case snapshot and schema version. Schema identifiers/enumerations are immutable once released; changes require an explicit new version and migration, never silent mutation. |
-| Deterministic validation and no-hallucination controls | NOT STARTED | Validate types, ranges, enum membership, required provenance and cross-field/site/edition consistency before reasoning; preserve unknown as unknown; prevent model writes to source facts; keep model interpretations/recommendations separate from source facts; attach field-level provenance; detect contradictions and block silent resolution; regression-test fabricated values, unsupported staging, invalid TNM combinations and source/value mismatch. |
+| Deterministic validation and no-hallucination controls | IN PROGRESS | Existing field registry, explicit unknown/not-reported semantics, source-fact provenance, contradiction warnings and lexical TNM checks are in place. Site/staging-system/edition-aware validation, complete typed states and broader adversarial regression coverage remain. |
 | Conditional specialist recommendations | NOT STARTED | Require structured if/then conditions, explicit missing prerequisites, alternative paths and decision impact. Example: a treatment option may be described conditionally on ECOG/comorbidity status, while explicitly retaining that ECOG/comorbidities are unknown. Never convert conditional support into unconditional support. |
 | Specialty/personality-specific evidence selection | NOT STARTED | Evidence retrieval may be tailored to a role's remit and perspective, but source selection cannot change case facts or justify cherry-picking. Record retrieval query, source identity, version/date, excerpts/locations and role-to-source use; preserve conflicting evidence and dissent. |
 
@@ -3936,3 +3936,60 @@ After commit `2474b38`, a push-triggered Windows Installer workflow [44619129875
 | Clinical constants registry | IN PROGRESS | Registry is frozen/versioned and included in shared case prompt context; site/edition-aware TNM validation and per-role consumption tests remain outstanding. |
 
 **No inference or GPU test was performed by these CI runs.** Software test results do not establish model quality, clinical accuracy, guideline concordance, or RTX 4060 GPU execution. Preserve prior failed CI runs in the audit history.
+
+
+## Current verification update — 20 November 2026
+
+**Current application/test SHA:** `eac3d8963f1ebc3b1c42a31d7fe8429e007818fa`  
+**PR #1:** open, draft, unmerged; base `main`.  
+**Branch:** `feature/four-round-mdt-and-performance`.  
+**Checklist update is documentation-only; no source changes were made to `main`.**
+
+### R1 provenance-gate implementation and regression correction
+
+- Commit `00cfdaccf761aff47d52de834d6e015c52543799` blocks direct unlinked `POST /api/runs` and `POST /api/agents/{agent_id}/assess` with HTTP 409 before persistence/inference.
+- Commit `fa7ecd722f01e86dc1b64b82cf6a25a5b834979e` added API regressions proving both legacy endpoints reject unlinked submissions.
+- Commit `58c64dde9c11b309342fdfe42db0bb2af8e69736` corrected the syntax issue found by the first backend preflight. The earlier failure is retained.
+- Backend run `44618540474` then exposed two stale test fixtures still calling the retired direct endpoint: 528 passed, 2 failed. The production gate was not reopened.
+- Commit `32ebc01fa2d00e5066cbb79bc1a3a5ca5b4fbad4` migrated four-round test fixtures to accepted intake → immutable patient version → saved-patient R1.
+- Commit `2474b389c63f5df659c03e36dd5c285e043520da` migrated batch execution/failure-resume fixtures to the same accepted-intake path.
+- Commit `eac3d8963f1ebc3b1c42a31d7fe8429e007818fa` strengthened the legacy route regression to assert the 409 response directs users to accepted intake and immutable patient-version creation.
+
+### Exact code/test-head CI — SHA `eac3d89`
+
+- Backend Tests [44619289090](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44619289090): **SUCCESS — 530 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive**. Deterministic no-inference preflight **7/7 passed**. JUnit diagnostics artifact [14576707147](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44619289090/artifacts/14576707147), digest `sha256:c27aea3d8d911ff75f837873c73eda60d6e24f226ccdbc2383aba5dc07856dcf`; preflight artifact [14576607229](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44619289090/artifacts/14576607229), digest `sha256:a62f356ff748bab4fbdb3a77fe580ee5950e0ae1f7010960023de68308d2b986`.
+- Frontend Build [44619289155](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44619289155): **SUCCESS**.
+- Patient Registry / Four-Round Dashboard Browser E2E [44619289162](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44619289162): **SUCCESS**. Headless Edge verified saved R1 readiness, R2/R3 45-role result lists, completed R4 and persisted Chair report rendering. Markers `OPERATIONAL_MONITOR_REMOVAL_E2E_OK` and `FOUR_ROUND_DASHBOARD_BROWSER_E2E_OK` present; no model inference. Log artifact [14575267800](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44619289162/artifacts/14575267800), digest `sha256:fa3e5d74ace3a146852eb2031f5cc39d6f9fd4d74ad40ef6707657f4823947d3`.
+- Windows Packaging Prerequisites [44619289319](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44619289319): **SUCCESS**.
+- Windows Installer [44619289306](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44619289306): **SUCCESS**; frontend build, backend/packaging dependency install, AI bootstrap static/mocked-path tests, packaged build, Inno Setup, installed-app smoke test, checksum and artifact upload all completed. Installer artifact [14575849010](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44619289306/artifacts/14575849010), archive digest `sha256:de68d57514242de21fc551651c858eefa3fad3e2263f67d38274a3fcb169649d`; inner Setup.exe SHA-256 `d08e1dda58960e06a388cc0456b127606015c9f4e404582e3eb120e0b253c51f`.
+- Security and Dependency Audit [44619289734](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44619289734): **SUCCESS**; Python audit reported no known vulnerabilities; full and production-only Node audits each reported 0 vulnerabilities; Python and JavaScript/TypeScript CodeQL and full-history secret scan succeeded.
+
+### Installer Ollama bootstrap test boundary
+
+The installer workflow exercised mocked cases for an already-running Ollama with the model present, a stopped Ollama restarted while reusing its existing model store, and an absent portable Ollama path that pulls/verifies the model. Static/mocked tests passed. The installed-app smoke test explicitly performed **no Ollama request or model inference**. This is not proof of real clean-host installation, real service discovery, existing local model reuse, or GPU execution.
+
+### Current status and remaining blockers
+
+| Workstream | Status | Evidence / remaining boundary |
+|---|---|---|
+| Legacy direct R1 routes | VERIFIED (route behavior) | Both known unlinked HTTP routes reject with 409; API regressions pass. |
+| Universal R1 entry-point audit | IN PROGRESS | Confirm every production entry point/caller is gated; saved patient route uses accepted-intake provenance. |
+| Accepted intake → immutable version → saved R1 | VERIFIED (software tests) | Existing provenance/hash-chain tests plus current 530-test suite. |
+| Four-round test fixture provenance | VERIFIED (software tests) | Fixtures now use accepted intake and immutable version; current full suite passed. |
+| R1–R4 live specialist execution | BLOCKED | No current live 45-role inference run or saved R1–R4 model artefacts. |
+| Clinical constants/schema shared by roles | IN PROGRESS | Frozen/versioned registry is included in shared case prompt context; per-role adherence, typed-state expansion and site/edition-aware TNM validation remain. |
+| Deterministic clinical validation | IN PROGRESS | Existing unknown-state, source-provenance, conflict and lexical TNM controls; full site/staging-edition validation remains. |
+| Conversational intake | IN PROGRESS | Screening, question/gap review, explicit declines, accept-with-gaps, immutable promotion and refresh recovery; full natural turn-by-turn answer/ambiguity dialogue remains. |
+| Desktop-native UI | IN PROGRESS | Windows installer succeeds, but installed product still uses local application host rather than a fully native desktop shell. |
+| Ollama installation/reuse | IN PROGRESS | Mocked running/stopped/absent paths passed; real host/custom-path discovery and model reuse/download remain unverified. |
+| RTX 4060 GPU inference | NOT STARTED | No local request-time `nvidia-smi`, Ollama offload or VRAM/utilisation evidence. |
+| Performance/context | NOT STARTED | No current measured live inference latency/context benchmark. |
+| Evidence retrieval | NOT STARTED | No connected role-specific guideline/literature retrieval; no evidence-verification or guideline-compliance claim. |
+| Copied/generic role-output investigation | IN PROGRESS | Prior referenced export still requires inspection; no root cause claimed. |
+| Security | VERIFIED (CI scope) | Exact-head audit passed, zero vulnerabilities reported by Python and Node audits, CodeQL and secret scan passed. |
+| Independent clinical review | NOT STARTED | Required before any clinical-validation claim. |
+| Release acceptance | BLOCKED | Universal entry-point audit, full conversational UX, real Ollama/GPU verification, live four-round run, evidence retrieval and clinical review remain. |
+
+**Clinical boundary:** the 530 passing backend tests, browser E2E and installer smoke test verify deterministic software paths only. They do not establish clinical accuracy, guideline concordance, model adherence, or clinical safety. Unknown values remain unknown; conditional options must retain prerequisites. No live inference, GPU verification or clinical validation was performed.
+
+**Historical failures remain in the audit trail:** syntax preflight failure on `fa7ecd7`; two stale fixture failures on `33d5040`; cancelled overlapping workflows. They are not relabelled as passes.
