@@ -2951,3 +2951,55 @@ All six are completed with conclusion `success` and `head_sha=77c4e741cc79e62bd9
 - Security and Dependency Audit — run 44600006167: **in progress** at last refresh.
 
 The above results are tied to code SHA `a5b863043c90afece7e662b1e7d1389cb1515c3a`, not the later checklist-only HEAD. Do not mark the six-workflow gate complete until all four remaining workflows finish successfully. Backend test count was not copied into this checkpoint; consult the exact run's JUnit artifact if a numerical count is needed.
+
+
+## Resume checkpoint — staging diagnostic correction (20 November 2026)
+
+**Repository state:** development branch `feature/four-round-mdt-and-performance`; code/test HEAD `05f6cf8782de1315b9def1e8b384540fa2c1ecb9`. PR #1 remains open, draft and unmerged; target `main`; no changes to `main`. The branch head was refreshed after each sequential file commit.
+
+**Defect found during review:** the first saved-run diagnostic compared specialist TNM tokens against `case_summary`, a narrative field, despite labelling the comparison as structured snapshot evidence. Its initial token expression also missed partial forms such as `T1N0` and `T1a`. This could suppress a source-review flag when a narrative happened to repeat a staging assertion, and could miss unsupported partial stage references.
+
+**Correction committed:**
+- `backend/scripts/saved_run_quality_diagnostics.py` now reads only explicitly named structured stage fields (`clinical_stage`, `pathological_stage`, `tnm_stage`, `stage`, and explicit T/N/M component fields); narrative `case_summary` is excluded.
+- The stage-token expression now recognises partial T/N/M references, including T-category-only, T+N and standalone M tokens.
+- Flags distinguish the absence of any structured staging field from a token not found in the available structured staging values. These remain source-review flags, not staging adjudications.
+- `backend/tests/test_saved_run_quality_diagnostics.py` now has seven tests, including narrative-versus-structured source handling and partial TNM token detection. Original exports remain read-only.
+
+**Exact-head CI for code/test SHA `05f6cf8782de1315b9def1e8b384540fa2c1ecb9`:** all six standard workflows were in progress at checkpoint:
+- Backend Tests — [44600863624](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44600863624)
+- Frontend Build — [44600864354](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44600864354)
+- Browser E2E — [44600864185](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44600864185)
+- Windows Packaging Prerequisites — [44600863829](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44600863829)
+- Windows Installer Build — [44600864223](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44600864223)
+- Security and Dependency Audit — [44600864302](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44600864302)
+
+No CI pass is claimed at this checkpoint. The six workflows that passed on prior HEAD `8630eb36b9fab77edcc2bef3307a08e6b9ef0413` are historical for that SHA only. The diagnostic code and tests have not yet been locally executed in this connected GitHub editing environment; exact-head Backend CI is the pending test evidence.
+
+### Master checklist — current statuses
+
+| Area | Status | Evidence / outstanding gate |
+|---|---|---|
+| Four-round R1–R4 data flow | IN PROGRESS | Existing code/tests; current full 45-role live reconciliation not run. |
+| Clinical safety and staging | IN PROGRESS | Prompt safeguards exist; diagnostic token flags are not clinical adjudication; live adherence and independent review outstanding. |
+| Case integrity and audit | VERIFIED | Deterministic audit and prior exact-head CI; current diagnostic regression suite pending exact-head CI. |
+| Provenance and evidence retrieval | IN PROGRESS | Source-binding tests exist; specialty evidence retrieval remains NOT STARTED and unverified. |
+| Chair consensus, dissent and traceability | IN PROGRESS | Deterministic tests exist; current live saved-contribution reconciliation outstanding. |
+| Missing/failed specialist handling | VERIFIED | Regression coverage and prior exact-head backend CI; full current live orchestration outstanding. |
+| Backend/API tests | IN PROGRESS | Current exact-head Backend workflow 44600863624 in progress. |
+| Frontend build and browser E2E | IN PROGRESS | Current exact-head runs 44600864354 and 44600864185 in progress. |
+| Dashboard / Mission Control | VERIFIED | Mission Control and Development Monitor remain removed as instructed; dashboard/API regression state as prior code. |
+| Native desktop UI/UX | IN PROGRESS | Separate native desktop acceptance remains outstanding. |
+| Ollama installer detection | NOT STARTED | Existing install/service/model inventory scenarios not tested. |
+| Pre-MDT clarification workflow | NOT STARTED | Intake transcript, explicit confirmation and immutable snapshot workflow not implemented. |
+| Conditional reasoning through R1–R4 | IN PROGRESS | R1 conditional options exist; propagation through R2/R3/R4 outstanding. |
+| TNM representation equivalence | IN PROGRESS | Preserve source values; canonical comparison and conflict/incomplete-stage tests outstanding. |
+| Ollama context/truncation | NOT STARTED | No request-time measurement. |
+| RTX 4060 request-time GPU/offload | NOT STARTED | No request-time GPU telemetry; no inference run. |
+| Performance and latency | NOT STARTED | No current benchmark; concurrency remains 1. |
+| New Qwen/MedGemma inference | BLOCKED | No explicit authorisation for a new synthetic-only run. |
+| Current live four-round validation | BLOCKED | No current-head live run or saved artefact. |
+| Independent qualified clinical review | NOT STARTED | Required before clinical-quality acceptance. |
+| Packaging and security workflows | IN PROGRESS | Current exact-head runs 44600863829, 44600864223 and 44600864302 pending. |
+| Release acceptance | BLOCKED | Live validation, GPU, evidence retrieval, clinical review and security/governance gates remain open. |
+
+**No-inference boundary:** this work is deterministic source inspection and code/test changes only. No Ollama process, Qwen/MedGemma inference, GPU test, clinical review or evidence retrieval was started.
