@@ -189,3 +189,16 @@ def test_unknown_plan_identity_is_rejected():
     plan["plan_id"] = "different-plan"
     with pytest.raises(GateError, match="plan_id"):
         _validate(plan=plan)
+
+
+def test_committed_machine_plan_matches_the_validator_contract():
+    import json
+    from pathlib import Path
+
+    repository_root = Path(__file__).resolve().parents[2]
+    plan = json.loads((repository_root / "docs" / "development_plan.json").read_text(encoding="utf-8"))
+    assert plan["plan_id"] == "radonc-mdt-master-sequential-plan"
+    assert plan["active_step"] == "U12"
+    assert plan["steps"][0]["status"] == "VERIFIED"
+    assert plan["steps"][1]["status"] == "IN PROGRESS"
+    assert [step["id"] for step in plan["steps"]] == list(STEP_ORDER)
