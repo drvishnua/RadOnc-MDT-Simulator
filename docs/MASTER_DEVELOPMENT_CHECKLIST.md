@@ -3067,3 +3067,38 @@ The first backend workflow on code/test SHA `05f6cf8782de1315b9def1e8b384540fa2c
 **Correction committed:** `c74f7ba3e4e1685c726ce783d83617929ef8a1e8` updates the regression assertion to require component flags `T1`, `N0`, `T1A`, `M0` and separately confirm original `T1N0` is retained as source_token. No production diagnostic code changed. The corrected test has not yet run; exact-head backend CI is pending. Prior failed run remains part of the audit history.
 
 **Current statuses:** saved-run diagnostic implementation — IN PROGRESS; diagnostic regression suite — FAILED on `f84e23d`, assertion correction committed and awaiting rerun; backend exact-head CI — IN PROGRESS; other five engineering workflows — VERIFIED on `f84e23d` only. No local pytest execution is claimed. No model inference, GPU test, clinical review or evidence retrieval was performed.
+
+
+## Exact-head CI and uploaded-export diagnostic checkpoint — 20 November 2026
+
+**Branch:** \`feature/four-round-mdt-and-performance\`. PR #1 remains open, draft and unmerged; \`main\` unchanged.
+
+**Exact-head CI passed on checklist/code head \`fca981c2f1b00ffa35e22af5c03d81f25c9f3eb8\`:**
+- Backend Tests [44603137304](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44603137304): SUCCESS.
+- Frontend Build [44603137034](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44603137034): SUCCESS.
+- Browser E2E [44603137059](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44603137059): SUCCESS.
+- Windows Packaging Prerequisites [44603137017](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44603137017): SUCCESS.
+- Windows Installer [44603137072](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44603137072): SUCCESS.
+- Security Audit [44603137093](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44603137093): SUCCESS.
+
+**Export examined:** uploaded run \`e4f3c5ea-476d-4962-b30a-25cd81ede2f0\`; input SHA-256 \`0ae076d2785cfdcac10b8520ecddc23e9517aaa66ba397edcb604f7388dabe10\`. Raw input was not modified. The first deterministic diagnostic pass identified a parser defect: missing trailing word boundary allowed ordinary “tissue” prose to be read as the stage token \`Tis\`. This is a false-positive parser defect, not a clinical finding.
+
+**Corrective code/test commits:** parser token boundary \`3c690d439520e7abb92c1862f5a1e817ea2a9642\`; regression test \`129fcb2db12c584728bac56912fbfed47a8688b7\`. The new regression ensures ordinary tissue-diagnosis prose is not classified as Tis. These commits have not yet completed exact-head CI. The earlier six-workflow pass on \`fca981c\` does not verify these new changes.
+
+**Preliminary export counts from a local mirror of the committed diagnostic logic (not yet an execution of the exact repository script):**
+- R1: 45/45 completed distinct roles; positions 35 insufficient-information, 10 conditional; all 45 evidence_claims empty.
+- R2: 45/45 completed distinct roles; positions 42 insufficient-information, 3 conditional; 10 populated agreements, 0 substantive challenges, 7 populated position_changes.
+- R3: 45/45 completed distinct roles; positions 43 insufficient-information, 2 conditional; 40 populated substantive_challenges, 14 populated risk_flags, 1 populated position_changes, 0 populated agreements.
+- Preliminary similarity scan: 18 exact-duplicate groups and 885 near-duplicate candidate pairs. Similarity is only triage and not evidence of copied reasoning or poor quality; the high candidate count requires threshold/boilerplate review.
+- With the corrected trailing token boundary in the local mirror, staging-reference flags fell from two false-positive \`Tis\` flags to zero. This does not establish that the model's staging is clinically correct.
+
+**Execution limitation:** the local run used a manually mirrored copy of the current diagnostic source because the connected repository workflow did not provide a checkout for direct execution. Therefore these counts are preliminary and must be reproduced by the repository script in a controlled CI or repository execution before marking the export audit VERIFIED. Do not publish the patient/run identifiers or raw export as a repository artefact.
+
+### Current checklist status update
+- Saved-run diagnostic code/tests: IN PROGRESS; trailing-boundary fix and regression committed, exact-head CI pending.
+- Export diagnostic: IN PROGRESS; preliminary mirrored run only, exact repository-script execution/reproduction pending.
+- R1–R4, clinical safety, provenance, Chair traceability: IN PROGRESS; export counts do not prove semantic or clinical correctness.
+- Backend/frontend/browser/packaging/security: VERIFIED on \`fca981c\` only; rerun required after \`3c690d4\` and \`129fcb2\`.
+- Live model inference, GPU verification and independent clinical review: NOT PERFORMED; existing inference gate remains BLOCKED pending explicit scope approval.
+- Release acceptance: BLOCKED.
+
