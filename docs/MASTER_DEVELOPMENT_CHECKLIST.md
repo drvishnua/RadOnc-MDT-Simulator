@@ -4491,3 +4491,20 @@ The dedicated gate test step completed successfully on the exact SHA. The test m
 - Exact application-code SHA `c41ead4c37f054ac01775e30728207d947f166a1`: Sequential Development Gate push/PR runs `44627666269`/`44627683863` SUCCESS; Backend Tests `44627683181` SUCCESS (553 passed; preflight 7/7); Security Audit `44627683260` SUCCESS; Frontend Build `44627683420` SUCCESS; Browser E2E `44627683070` SUCCESS; Packaging Prerequisites `44627684242` SUCCESS. Windows Installer Build `44627683435` remained IN PROGRESS at final inspection.
 - Both `main` and `feature/four-round-mdt-and-performance` are reported `protected=false`, required status checks disabled. Rulesets query empty; branch-protection read 403; no available write action. U12 remains IN PROGRESS / BLOCKED on administrator configuration and repository-level enforcement test.
 - U09/U10 remain BLOCKED; not started. No main content changes, merge or force-push.
+
+
+### U12 exact-SHA CI completion correction — 20 November 2026
+
+The Windows Installer Build that was IN PROGRESS in the preceding checkpoint has now completed SUCCESS on application-code SHA `c41ead4c37f054ac01775e30728207d947f166a1` (run `44627683435`). The installer built, installed and passed its smoke test; checksum was generated and artifact uploaded. Artifact `14580032637`, 14,932,764 bytes, digest `sha256:87923914aedde43d151a65715e060f8593e041e9a8e1fb2e151fa5b09d99eb49`. The separate clean-hosted Ollama/model bootstrap job was SKIPPED, so this does not prove real-host Ollama detection or inference.
+
+All eight applicable workflows on exact application-code SHA `c41ead4c37f054ac01775e30728207d947f166a1` are now terminal SUCCESS: Gate push `44627666269`; Gate PR `44627683863`; Backend `44627683181`; Security `44627683260`; Frontend `44627683420`; Browser E2E `44627683070`; Packaging prerequisites `44627684242`; Windows Installer `44627683435`.
+
+
+
+### U11 pre-response review checkpoint — 20 November 2026 (final exact-SHA review)
+
+- Full checklist reread from `feature/four-round-mdt-and-performance`; source blob `1736242aaa759152a8d33f7aff010718601ced44`; fetched 658389 characters.
+- Branch / PR #1 head before this checklist-only update: `1c061f9d5a890c173e2fd9e4f5d4a298135f58d3`; PR state `open`, draft `true`, unmerged; head branch `feature/four-round-mdt-and-performance`, base `main` at `39a356b8eb09399aa2da1b9b9085965999f5105a`.
+- Application-code checkpoint `c41ead4c37f054ac01775e30728207d947f166a1` has all eight applicable workflows SUCCESS (run IDs recorded above). Current branch commits after that application-code checkpoint are checklist-only; no application source changes occurred after the tested SHA.
+- Both `main` and `feature/four-round-mdt-and-performance` remain unprotected according to branch API. Required checks are not enforced; rulesets query empty; branch protection detail read 403 and no write action available.
+- U12 remains IN PROGRESS / BLOCKED on repository-admin configuration and repository-level required-check enforcement. U09/U10 remain BLOCKED and untouched. No main content change, merge or force-push.
