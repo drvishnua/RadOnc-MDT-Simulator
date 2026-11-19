@@ -3396,3 +3396,32 @@ All six standard workflows completed successfully:
 | Release acceptance | BLOCKED | Live validation, GPU, evidence retrieval and independent clinical review remain gates. |
 
 **No-inference boundary:** CI performed deterministic software tests, frontend/browser tests, packaging and static security checks only. Clean-hosted Ollama/model bootstrap was skipped. No Qwen/MedGemma inference, GPU verification, live MDT run, evidence retrieval or clinical validation was performed.
+
+
+## Latest verification and Ollama restart regression — 20 November 2026
+
+**Exact code SHA verified:** `8099cac0d13e2f48db327f4e16bad0222dce1b56`; checklist then advanced to `f7a9d930944c877dc05e7c594c1a43ea5ffd279a`.
+
+All six standard CI workflows completed successfully on `f7a9d93`:
+- Backend Tests [44608881135](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44608881135): SUCCESS; deterministic preflight and diagnostic artifacts uploaded (artifact [14572261564](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44608881135/artifacts/14572261564)). The workflow is green; do not infer a test count from the diagnostic table because the summary count was not available in the inspected log excerpt.
+- Frontend Build [44608881097](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44608881097): SUCCESS.
+- Patient Registry and Four-Round Dashboard Browser E2E [44608881235](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44608881235): SUCCESS.
+- Windows Packaging Prerequisites [44608881134](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44608881134): SUCCESS.
+- Windows Installer Build [44608881109](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44608881109): SUCCESS. The clean-hosted first-run Ollama/model bootstrap job was SKIPPED; installer build/smoke success does not verify real first-run model bootstrap on a clean Windows host.
+- Security and Dependency Audit [44608881111](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44608881111): SUCCESS; dependency audits, both CodeQL jobs and secret scan completed.
+
+**Ollama startup behavior review:** `Ensure-RadOnc-AIEngine.ps1` already checks the standard Ollama endpoint, searches PATH and the two standard Windows install paths, starts an installed executable if the service is stopped, preserves the existing model-store configuration by passing no replacement `OLLAMA_MODELS` path, and checks `/api/tags` before pulling. The existing mocked test covered an already-running service but not the installed-but-stopped case.
+
+**Regression test added:** commit `658c5084a016004446c1f249bdda290f50779586` extends `packaging/windows/Test-AiBootstrap.ps1` with a mocked installed-but-stopped Ollama scenario. It verifies the existing executable is restarted on port 11434, no alternate portable runtime is installed, no existing model-store override is applied, and an already-present `qwen3.5:4b` is not downloaded again. This test is committed but exact-head CI has not yet been observed. No real Ollama process or model was touched.
+
+### Current statuses
+- Immutable registry v1.0.0, prompt injection, database version persistence, and legacy-run isolation: IN PROGRESS overall; exact-head CI on `f7a9d93` green, but further explicit data-state and source-provenance semantics remain.
+- Four-round registry context: IN PROGRESS; code inspection confirms R1 uses `build_case_prompt_context` through `generate_agent_assessment`, R2 and R3 use it in `mdt_generation.py`, and R4 Chair generation uses it too. Dedicated round-by-round payload regression tests remain outstanding.
+- Ollama installed-but-stopped + model-already-present path: IN PROGRESS; regression test committed at `658c508`, CI pending.
+- Ollama executable discovery beyond PATH and two standard paths (e.g. registered/custom installation): NOT STARTED.
+- Backend, frontend, browser E2E, packaging prerequisites, installer smoke and security: VERIFIED on `f7a9d93` only; rerun exact-head after `658c508`.
+- Clean-hosted Ollama/model bootstrap: BLOCKED/SKIPPED in CI; no live first-run verification.
+- Current live Qwen inference, RTX 4060 request-time GPU proof, latency/context benchmark, evidence retrieval, and independent clinical review: NOT PERFORMED.
+- Release acceptance: BLOCKED.
+
+**No-inference boundary:** all CI was software/static/packaging/browser verification. No Qwen or MedGemma inference, no GPU verification, no live four-round MDT, and no clinical validation occurred.
