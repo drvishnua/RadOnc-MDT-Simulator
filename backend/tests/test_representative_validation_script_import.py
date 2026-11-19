@@ -174,7 +174,8 @@ def test_bounded_chair_records_are_saved_and_reloaded_without_bypassing_45_role_
     )
 
     assert saved["run_summary"]["total_agents"] == 45
-    assert saved["run_summary"]["patient_id"] is None
+    assert saved["run_summary"]["patient_id"] is not None
+    assert saved["run_summary"]["case_version_id"] is not None
     assert len(saved["round1_rows"]) == 45
     assert sum(row["status"] == "completed" for row in saved["round1_rows"]) == 3
     assert {row["agent_id"] for row in saved["round2_rows"]} == {

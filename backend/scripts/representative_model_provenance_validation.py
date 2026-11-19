@@ -575,7 +575,19 @@ def _persist_bounded_round_records(
             run_store.DB_PATH = temporary_db_path
             run_store.LEGACY_DB_PATH = None
 
-            run = run_store.create_run(case)
+            from app.services import intake_store
+
+            intake = intake_store.create_intake_session(case)
+            session_id = intake["session_id"]
+            intake_store.accept_intake_with_gaps(session_id, confirmed=True)
+            patient = intake_store.promote_accepted_intake_to_patient(
+                session_id,
+                patient_name="Synthetic Representative Validation",
+            )
+            version = patient["versions"][0]
+            run = run_store.create_run_for_case_version(
+                patient["patient_id"], version["case_version_id"]
+            )
             run_id = run["run_id"]
             for role in roles:
                 fixture = _r1_fixture(role["agent_id"])
@@ -693,9 +705,13 @@ def _persist_bounded_round_records(
                 )
 
             run_summary = run_store.get_run(run_id)
-            if run_summary["patient_id"] is not None or run_summary["completed_count"] != 3:
+            if (
+                run_summary["patient_id"] != patient["patient_id"]
+                or run_summary["case_version_id"] != version["case_version_id"]
+                or run_summary["completed_count"] != 3
+            ):
                 raise RuntimeError(
-                    "Temporary bounded validation run has unexpected patient linkage or R1 count."
+                    "Temporary bounded validation run has unexpected accepted-intake linkage or R1 count."
                 )
             result = {
                 "run_id": run_id,
