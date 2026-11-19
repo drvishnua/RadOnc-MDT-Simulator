@@ -28,12 +28,25 @@ STRUCTURED_STAGE_FIELDS = (
 
 
 def _structured_stage_text(snapshot: dict) -> str:
-    """Read only explicitly named structured staging fields, never narrative text."""
+    """Read only explicitly named structured staging fields, never narrative text.
+
+    Component fields store bare values (for example clinical_t_stage="1"), so
+    retain the field's T/N/M meaning when constructing comparison tokens.
+    """
     values = []
+    component_prefixes = {
+        "clinical_t_stage": "T", "clinical_n_stage": "N", "clinical_m_stage": "M",
+        "pathological_t_stage": "T", "pathological_n_stage": "N", "pathological_m_stage": "M",
+    }
     for field in STRUCTURED_STAGE_FIELDS:
         value = snapshot.get(field)
-        if isinstance(value, (str, int, float)) and not isinstance(value, bool):
-            values.append(str(value))
+        if not isinstance(value, (str, int, float)) or isinstance(value, bool):
+            continue
+        text_value = str(value).strip()
+        if not text_value:
+            continue
+        prefix = component_prefixes.get(field)
+        values.append(f"{prefix}{text_value}" if prefix else text_value)
     return " ".join(values)
 
 
