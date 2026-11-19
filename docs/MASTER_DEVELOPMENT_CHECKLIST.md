@@ -3425,3 +3425,31 @@ All six standard CI workflows completed successfully on `f7a9d93`:
 - Release acceptance: BLOCKED.
 
 **No-inference boundary:** all CI was software/static/packaging/browser verification. No Qwen or MedGemma inference, no GPU verification, no live four-round MDT, and no clinical validation occurred.
+
+
+## Ollama stopped-service regression: first CI failure and assertion correction — 20 November 2026
+
+**Test commit:** `658c5084a016004446c1f249bdda290f50779586`.
+
+Exact-head workflow results on the code at `658c508`:
+- Backend Tests [44609130776](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44609130776): SUCCESS.
+- Frontend Build [44609130877](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44609130877): SUCCESS.
+- Windows Packaging Prerequisites [44609130812](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44609130812): SUCCESS.
+- Security Audit [44609130720](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44609130720): incomplete; dependency audit, secret scan and JavaScript/TypeScript CodeQL passed, Python CodeQL was cancelled.
+- Browser E2E [44609130724](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44609130724): CANCELLED; no E2E pass claim for this SHA.
+- Windows Installer Build [44609130852](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44609130852): FAILED in the new mocked stopped-service regression assertion.
+
+**Failure analysis:** the Windows test log proves the mocked branch reached the existing Ollama restart path and recognised `qwen3.5:4b` as already present. It then failed because the test asserted `$ModelDirectory` was strictly `$null`; Windows PowerShell bound the optional null string argument as an empty string. Production code only assigns `OLLAMA_MODELS` inside `if ($ModelDirectory)`, so both null and empty string preserve the existing user-configured model store. The test oracle, not the production branch, was too strict.
+
+**Test-only correction:** commit `d964525d2d2c69f3a4836122d1575c06d57db73d` changes the assertion to `[string]::IsNullOrEmpty($ModelDirectory)`. It does not alter production bootstrap behavior. Exact-head Windows installer and full workflow reruns are pending. The failed installer run remains recorded; it is not relabelled as passed.
+
+### Current checklist statuses
+- Installed-but-stopped Ollama with pre-existing model: IN PROGRESS; mocked branch reached restart and model-present handling, but first CI attempt failed on a null-vs-empty test assertion. Corrected test committed at `d964525`; rerun pending.
+- Backend tests: VERIFIED on `658c508` (workflow `44609130776`); exact latest-head rerun pending.
+- Frontend build and Windows packaging prerequisites: VERIFIED on `658c508`; exact latest-head rerun pending.
+- Browser E2E: BLOCKED/CANCELLED on `658c508`; rerun required.
+- Security: IN PROGRESS; Python CodeQL job cancelled, other audited jobs passed on `658c508`.
+- Installer: FAILED on `658c508` due the test assertion described above; rerun required on `d964525`.
+- No live user machine, real Ollama server, model download or inference was used.
+- Current four-round live simulation, RTX 4060 request-time GPU proof, evidence retrieval and independent clinical review: NOT PERFORMED.
+- Release acceptance: BLOCKED.
