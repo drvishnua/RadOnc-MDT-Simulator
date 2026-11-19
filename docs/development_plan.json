@@ -51,7 +51,7 @@
     {
       "id": "U12",
       "title": "Fail-closed sequential development gate",
-      "status": "IN_PROGRESS",
+      "status": "IN PROGRESS",
       "depends_on": [
         "STEP-A"
       ],
