@@ -4118,3 +4118,131 @@ The code/test SHA remains `0e24dbe`; its detailed backend result is 534 passed, 
 | Release acceptance | BLOCKED | Live inference, GPU proof, evidence retrieval, role-quality review, desktop UX, security hardening and independent clinical review remain. |
 
 **Clinical boundary:** the 534 passing backend tests, browser E2E, installer and security CI verify software/build paths only. They do not prove model accuracy, guideline concordance, absence of hallucinations, active GPU inference or clinical safety. Unknown remains unknown; conditions and prerequisites must be preserved. No real Ollama inference, RTX 4060 verification or independent clinical validation is claimed.
+
+## User requirements registered immediately — detailed implementation algorithm — 20 November 2026
+
+The following ten requirements were supplied by the project owner and are now part of this single authoritative checklist. They must remain visible until individually implemented and verified. Future project requirements raised by the owner must be added to this checklist in the same work session before implementation proceeds; do not defer checklist capture to a later summary.
+
+### Requirement register and acceptance algorithm
+
+| ID | Requirement | Status | Acceptance evidence required |
+|---|---|---|---|
+| U01 | Remove Mission Control and Development Monitor from the product | IN PROGRESS | Production UI route/navigation/component/API audit proves both are absent; regression tests prove no stale entry points or dead screens. Preserve only any explicitly required internal diagnostics outside the user-facing product. |
+| U02 | Provide a separate desktop UI/UX; no browser-tab loading/application experience | IN PROGRESS | Packaged native desktop window launches directly, with native startup/progress/error/recovery states; no user-facing browser tab or exposed Vite/dev server; clean install/launch/refresh/restart/uninstall E2E. Choose shell only after inspecting current architecture and Windows packaging trade-offs. |
+| U03 | Installer distinguishes installed/running Ollama, installed/stopped Ollama, and genuinely absent Ollama | IN PROGRESS | Real Windows integration tests: discover executable/service/process/custom path; if running, query API and model inventory; if installed but stopped, start existing installation and re-query; reuse existing exact model; install Ollama only when absent; pull model only when missing; fail safely on corrupt/unreachable/ambiguous state without duplicate installation or silent model deletion. Existing mocked tests are not real-host proof. |
+| U04 | Add a pre-MDT Case Intake and Completeness Screener role with concise WhatsApp-like conversation | IN PROGRESS | Separate intake workflow before R1; structured extraction and discrepancy detection; asks for patient, disease, pathology, imaging/stage, treatment history, medicines/allergies, comorbidities/function, family/caregiver, social/resource context, patient goals/preferences/willingness/consent; concise natural turn-taking; explicit unknown/not available/declined/prefer-not-to-say/accept-as-is paths; unresolved contradictions shown to user and preserved; user can accept the available case without being forced to invent details. Screener is not counted as one of 45 MDT specialist opinions and cannot pre-write their conclusions. |
+| U05 | Once intake is accepted, specialists must provide role-specific useful analysis despite missing data, using conditional branches | IN PROGRESS | Replace blanket insufficient-information exits with required role-specific analysis: what can be concluded from known facts; what cannot be concluded; conditional alternatives and exact prerequisites; consequences if each prerequisite is absent; role-specific follow-up questions; uncertainty and source trace. Keep insufficient_information only for the specific proposition genuinely unanswerable, not as a substitute for the whole assessment. No fabricated ECOG/comorbidity/stage; no unconditional recommendation from unknown facts. |
+| U06 | Human-readable, structured, case-specific, evidence-backed argument in every round | IN PROGRESS | Round-specific output contracts require case anchor, relevant canonical facts, role-specific reasoning, option(s), benefits/risks/trade-offs, conditional branches, uncertainties, dissent/challenges and citations where retrieved. No generic template-only paragraphs. R2 addresses actual supplied R1 peers; R3 challenges actual saved R2 evidence; Chair uses saved R1–R3. Evidence claims without retrievable sources are explicitly labelled unverified/model knowledge. |
+| U07 | Role-personality-appropriate use of books, guidelines, landmark papers and recent updates | NOT STARTED | Build versioned reference catalogue and retrieval pipeline with source title, organisation, edition/version, publication/update date, URL/DOI, specialty/topic tags, evidence type and retrieval timestamp. Retrieve all relevant high-quality sources, not indiscriminately every source; rank sources to role remit/persona; verify exact supporting passage; detect superseded/conflicting guidance; cite only retrieved sources; record retrieval failures. No invented NCCN/version/page/DOI or guideline-compliance claims. Respect source licensing/copyright. |
+| U08 | Investigate copied, delegated or generic specialist responses in uploaded simulation JSON | IN PROGRESS | Baseline and regression corpus: exact duplicate detection, semantic/template similarity, peer-reference validity, case-specific fact anchoring, unsupported facts, per-role unique reasoning, output field completeness, evidence claims, R3 positive/negative controls. Separate exact duplicates from similar prose. Fail quality gates when roles merely defer, cite absent peers, repeat missing-data disclaimers, or manufacture agreement. |
+| U09 | Canonical immutable clinical constants/tags, including T/N/M, age, sex, site and stage; T1 maps to clinical_t_stage=1 | IN PROGRESS | One typed, immutable, versioned field registry with stable canonical IDs, aliases, units, enumerations, allowed states, validation rules and source metadata. Alias mapping normalises T1 to canonical T category T1 and numeric clinical_t_stage=1 only when schema semantics/edition are compatible; preserve raw source string and provenance. Every one of 45 roles receives the same canonical case object and references registry constants rather than inventing field names. Unknown is never defaulted. Registry releases are immutable: changes create a new version/migration; never mutate historical registry definitions or case snapshots. |
+| U10 | Prevent hallucination through constants and shared canonical facts | IN PROGRESS | Explicitly treat constants as consistency controls, not a guarantee against hallucinations. Combine schema validation, source-linked fact ledger, deterministic TNM/site/edition checks, model-facing allowed-facts envelope, output claim extraction/audit, contradiction checks and reject/quarantine/repair only under narrow safe rules. Test seeded false facts and unknown-to-negative conversions. |
+
+### Mandatory implementation algorithm and dependency order
+
+**A. Change intake and governance (runs for every new owner requirement)**
+1. Capture the exact request, assign a stable requirement ID, add it to this checklist immediately, and mark NOT STARTED/IN PROGRESS without implying implementation.
+2. Identify affected backend modules, schemas, prompts, UI components, installer scripts, tests, workflows and documentation.
+3. Inspect current branch, PR, exact code SHA, checklist SHA, CI and uncommitted/unrelated work. Work only on feature/four-round-mdt-and-performance; never alter main, merge or force-push without explicit permission.
+4. Define observable acceptance criteria, negative cases, rollback path and required evidence before changing code.
+
+**B. Clinical data contract (U09/U10; prerequisite for intake and model work)**
+1. Inventory every field currently used in case models, APIs, database, UI, prompts, role schemas, reports and exports.
+2. Create a single registry of stable canonical identifiers: patient demographics; age; sex; primary site/subsite/laterality; histology/grade; clinical and pathological T/N/M; stage group; staging system/edition; performance status and scale; comorbidities; medicines/allergies; investigations/findings/dates; prior treatment; family history; family/caregiver context; social/resource context; goals/preferences/willingness/consent; and role-specific fields.
+3. For every field define: canonical ID, display label, type, unit, allowed values, aliases, null semantics, validation function, applicable site/edition, source requirement, and whether it is a fact, interpretation or derived value.
+4. Define explicit states: known, unknown, not supplied, not assessed, pending, declined, not applicable, conflicting and invalid. Never map any of these states to normal/negative.
+5. Define immutable alias mappings. Examples: T1 maps to canonical T category T1; clinical_t_stage=1 is the numeric representation of the same clinical T category where schema/version confirms it. Preserve the exact original value, source and transformation record. Do not equate clinical and pathological categories or different staging editions.
+6. Make registry versions immutable and hash-addressed. A correction/addition creates a new registry version; historical case snapshots retain the original registry version and hash.
+7. Build a canonical validated case object once at intake acceptance. Persist raw input, normalized values, field states, provenance, conflicts, registry version and content hash.
+8. Pass the same read-only canonical object plus role-specific views to all 45 roles. Role views may select relevant fields but may not rewrite values.
+9. Add schema and property-based tests for alias equivalence, invalid values, missing states, contradictions, round-trip serialization and historical-version stability.
+10. Validate TNM with primary site/subsite, staging system and edition; do not infer N0/M0, stage group or resectability from absent evidence.
+
+**C. Pre-MDT screening and conversational intake (U04)**
+1. User enters free text and/or structured case details.
+2. Deterministic parser extracts candidate fields and stores each candidate with source text, source location, timestamp and confidence; extraction confidence never converts a candidate into a verified fact.
+3. Screener compares extracted values with canonical schema and checks required/important fields, contradictions, impossible combinations, date conflicts and missing evidence.
+4. Generate a prioritised question set: resolve contradictions first; then ask high-impact missing clinical details; then patient goals/willingness; then family, social, caregiver and resource context; then optional details.
+5. Ask concise, human, one-topic-at-a-time WhatsApp-style questions. Bundle only closely related fields; avoid overwhelming forms and repeated questions.
+6. Offer understandable replies: provide/correct; unknown/not available; not assessed; declined/prefer not to say; or continue with available information.
+7. On contradiction, show both values and their sources; ask which is correct. If unresolved, preserve both as conflict and mark the field conflicting.
+8. On refusal or unavailable information, record the explicit state and continue. Never pressure the user or fill a blank by inference.
+9. Show a concise final case summary with known facts, unresolved conflicts, missing fields, explicit declines and source provenance.
+10. Ask for explicit case acceptance. User may accept with gaps. Acceptance freezes a versioned snapshot; it does not certify clinical completeness or correctness.
+11. Only the accepted immutable snapshot can create the MDT run. Preserve all intake conversation and edits in the audit trail.
+12. Test typo correction, contradictory free text/structured values, repeated answers, ambiguous dates, user refusal, accept-with-gaps, refresh/reconnect and cancellation.
+
+**D. Specialist role contract and conditional reasoning (U05/U06)**
+1. Each role receives canonical case facts/states, relevant source excerpts, its role charter, its round-specific instructions and exact allowed peer contributions.
+2. Require each role to state: role remit; relevant known facts; role-specific assessment; educational option(s) or explicit reason no option can be assessed; conditional branches with trigger/prerequisite and action; consequences if prerequisites are absent; benefits/harms/trade-offs; what additional fact would change its view; uncertainty; citations/source status; questions to MDT.
+3. Distinguish a case being accepted for MDT discussion from every clinical proposition being fully answerable. Acceptance removes blanket workflow refusal, not epistemic limits.
+4. Require useful conditional analysis where possible. Example structure only: “If documented performance status and comorbidity assessment meet condition A, option X may be considered; if condition B applies, reassess option Y; because these data are unknown, neither branch is asserted as the patient's actual state.”
+5. Keep the role's specific proposition marked unknown/conditional when prerequisites are absent; do not force a treatment choice or convert uncertainty into support.
+6. Reject generic responses that only say “insufficient information” without role-specific analysis of what is known, what remains unknown and what conditional reasoning is possible.
+7. Do not allow one role to delegate its entire opinion to another role or claim peer agreement without exact supplied peer-source evidence.
+8. Validate every generated factual claim against the canonical fact ledger and retrieved source set; quarantine unsupported claims and preserve raw output for audit.
+
+**E. Round-specific orchestration and report generation (U06/U08)**
+1. R1: all 45 roles independently assess the same accepted immutable case snapshot; no peer opinions supplied. Persist each raw response, parsed response, model/version/digest, prompt/schema/registry versions, timestamps, latency, token/context metadata and errors.
+2. R2: each role receives its own R1 and only the selected/supplied peer R1 contributions; require specific agreement/disagreement against actual source statements. Server stores peer IDs; never ask model to invent peer identities.
+3. R3: each role receives its own and selected peer R2 contributions; run clean negative controls and seeded positive controls. Require source-grounded challenges, but permit zero challenges when no defect is evidenced and explicitly disclose that this is not proof of safety.
+4. R4: deterministic code loads actual saved R1–R3 records; computes distinct-role distributions, proposition-level consensus, conditional support, opposition, insufficient-information, position changes and dissent. Chair prose explains rather than overwrites these values.
+5. Compare all roles for exact duplicate text, near-duplicate templates, role/persona mismatch, unsupported facts, repeated generic disclaimers and unsupported peer citations. Similarity is a review signal, not proof of copying.
+6. Enforce completeness and quality gates before declaring a run complete. Missing/failed roles remain missing/failed; no synthetic placeholder is counted as a contribution.
+7. Preserve raw outputs and every repair attempt. Narrow repairs must retain source anchors and conditions; if repair cannot be verified, fail/quarantine rather than silently rewrite.
+8. Inspect the complete saved JSON, database integrity, report, citations and audit artefacts after live runs.
+
+**F. Evidence retrieval and role-specific reference library (U07)**
+1. Inventory legally usable books, guidelines, landmark trials, systematic reviews, consensus statements and recent updates by specialty/topic.
+2. Store bibliographic metadata, edition/version, publication and update dates, jurisdiction, URL/DOI, source type, access/licence and supersession status.
+3. Retrieve by case site/histology/stage/topic and role remit; use role persona to prioritise perspective, never to distort evidence hierarchy.
+4. Retrieve exact passages and neighbouring context; verify citation metadata and that the passage supports the claim.
+5. Present conflicting/outdated guidance with dates and jurisdiction; do not silently choose one.
+6. Each role cites source and version inline and distinguishes evidence-supported statements from model knowledge/interpretation.
+7. If retrieval fails or a source is inaccessible, state “not verified” and do not fabricate a reference or claim guideline compliance.
+8. Add retrieval relevance, stale-source, citation-support and source-unavailable regression tests.
+
+**G. Ollama installer state machine (U03)**
+1. Discover existing Ollama executable and install location using supported Windows paths, registry/uninstall metadata, process/service state and user-configured path; do not rely only on whether the API is currently responding.
+2. If executable exists and API responds: classify INSTALLED_AND_RUNNING; query version and model inventory.
+3. If executable exists but API does not respond: classify INSTALLED_BUT_STOPPED; start the existing installation, wait with bounded retries, then query version and model inventory. Do not reinstall Ollama.
+4. If model tag and expected model identity are present: reuse the existing model store; do not pull it again.
+5. If Ollama is installed/running but the required model is absent: pull only the missing model, then verify tag/digest and availability.
+6. If Ollama is genuinely absent after all supported discovery checks: install/bundle the supported Ollama runtime, start it, verify API, then pull and verify the required model.
+7. If discovery is ambiguous, permission denied, binary corrupt, API unhealthy or model store inaccessible: show a clear recoverable error and preserve existing data. Never misclassify uncertainty as absence and overwrite a working installation.
+8. Record detection decisions, paths, version, model inventory, actions, checksums, timestamps and failures in installer diagnostics without exposing secrets.
+9. Test all states on real Windows hosts in addition to mocked CI tests, including custom paths, stopped process, already-downloaded model, absent model, offline network and interrupted install.
+
+**H. Desktop UI and removal of development surfaces (U01/U02)**
+1. Inventory all routes, navigation entries, components, APIs and workflows related to Mission Control and Development Monitor.
+2. Confirm exact product requirement and remove both from production navigation/routes/components; remove obsolete API endpoints only after checking no required consumer depends on them.
+3. Inspect current local-server/Vite startup architecture and compare supported native shell choices for Windows packaging; record trade-offs before selecting one.
+4. Package the frontend inside a desktop shell so users launch an application window, not a browser tab or dev server. Keep backend loopback-only and authenticated/controlled as designed.
+5. Implement native startup splash/progress, Ollama detection, backend readiness, recoverable error, retry and shutdown states. Do not show blank browser pages or endless spinners.
+6. Test first launch, existing data migration, Ollama absent/stopped/running, backend failure, refresh, crash/restart, upgrade, uninstall and database preservation.
+7. Add UI E2E assertions proving removed surfaces cannot be reached and the desktop application opens directly.
+
+**I. Verification and release gates (all requirements)**
+1. For every change, add regression tests before marking it implemented.
+2. Run backend tests, frontend build, browser/desktop E2E, packaging and security workflows relevant to the change.
+3. Match each result to the exact code/test SHA; documentation-only checklist commits must not be represented as source-code validation.
+4. Run live Qwen tests at concurrency 1 after static gates pass; preserve resumable checkpoints and inspect every round.
+5. Run local RTX 4060 inference instrumentation separately; no GPU claim from hosted CPU jobs or model loading alone.
+6. Inspect saved JSON and report for unsupported TNM, fabricated values, blanket insufficient-information, conditionality loss, false citations, copied/delegated output, empty R3 challenges and Chair count/consensus mismatches.
+7. Obtain independent qualified clinical review before any clinical validation claim.
+8. Release remains blocked until all mandatory product, software, live-model, GPU, evidence, security and clinical gates have their own verified evidence.
+
+### Uploaded JSON baseline audit — file radonc-mdt-94819234-434b-4b77-bcf5-63ecac0cd551-simulation-export.json
+
+The uploaded 323,872-byte JSON was parsed directly. These findings are a baseline for U05–U10, not proof of current-branch behaviour:
+- The case snapshot says age 75, primary site “ca glottis”, histology “scc”, and free-text case summary “dm / shtn / smoker / 1x1 cm growth involving right vocal cord and anterior commissure”. Yet structured relevant_comorbidities is an empty list. This is a discrepancy that intake should surface, not silently resolve.
+- The snapshot contains no explicit clinical T, N or M category, no staging edition, and no performance status. Nevertheless 11/45 R1 assessment narratives explicitly mention T1N0; the R1 case-fact field in the first inspected role also states T1N0. This is unsupported staging and must be a seeded regression case. Do not assume the other 34 roles are correct merely because they did not use that exact token.
+- R1: 45/45 status completed; 44/45 had nonempty case_facts; 0/45 had nonempty evidence_claims; 15/45 had nonempty assumptions; 44/45 had nonempty unknowns. Position labels: 22 conditional, 21 insufficient-information, 2 supports.
+- R2: 45/45 completed; 45 distinct provisional_conclusion strings; positions 22 conditional, 21 insufficient-information, 2 supports. 32/45 had nonempty agreement entries and 32/45 nonempty substantive challenges. A unique string does not establish substantive originality or evidence quality.
+- R3: 45/45 completed; 45 distinct provisional conclusions; 44 distinct response_to_other_perspectives strings; positions 38 insufficient-information and 7 conditional. All 45 had risk flags, 40/45 had remaining unknowns, but 0/45 had nonempty substantive challenges. This requires both clean-record negative controls and seeded-defect positive controls; zero challenges must not be treated as success.
+- The JSON therefore does not establish literal wholesale copy/paste across every role. It does show serious quality signals: unsupported T1N0 references, absent R1 evidence claims, and a zero-challenge R3 despite a fully populated round. Similarity analysis must distinguish exact duplication from templated/generic prose and peer-delegation.
+- The run's 45/45 completion counters are execution counts only. They do not prove case fidelity, substantive completeness, clinical accuracy or a valid MDT conclusion.
+
+### Checklist governance rule reaffirmed
+
+Every new project requirement from the owner must be added here immediately in the same work session, assigned an ID and status, with acceptance criteria. Never silently drop or merge requirements. Update this file after implementation/verification evidence is available. The chat response must display the current checklist status and must not imply this plan is already implemented.
