@@ -453,3 +453,45 @@ def test_patient_create_and_version_failures_roll_back_partial_registry_writes(m
         assert db.execute("SELECT COUNT(*) FROM patient_case_versions").fetchone()[0] == 1
         db.execute("DROP TRIGGER reject_registry_profile_update")
 
+
+
+def test_legacy_case_version_cannot_start_a_new_model_run(monkeypatch, tmp_path):
+    import sqlite3
+
+    db_path = tmp_path / "legacy_case_version.sqlite3"
+    monkeypatch.setattr(run_store, "DB_PATH", db_path)
+    patient = client.post("/api/patients", json=_registration()).json()
+    version = patient["versions"][0]
+    with sqlite3.connect(db_path) as db:
+        db.execute(
+            "UPDATE patient_case_versions SET clinical_field_registry_version = ? WHERE case_version_id = ?",
+            (LEGACY_FIELD_REGISTRY_VERSION, version["case_version_id"]),
+        )
+
+    response = client.post(
+        f"/api/patients/{patient['patient_id']}/runs",
+        json={"case_version_id": version["case_version_id"]},
+    )
+    assert response.status_code == 409
+    assert "Create a new immutable case version" in response.json()["detail"]
+
+
+def test_legacy_run_cannot_resume_or_advance_into_new_registry_context(monkeypatch, tmp_path):
+    import sqlite3
+
+    db_path = tmp_path / "legacy_run.sqlite3"
+    monkeypatch.setattr(run_store, "DB_PATH", db_path)
+    run = run_store.create_run(SyntheticCase.model_validate(_case()))
+    with sqlite3.connect(db_path) as db:
+        db.execute(
+            "UPDATE simulation_runs SET clinical_field_registry_version = ? WHERE run_id = ?",
+            (LEGACY_FIELD_REGISTRY_VERSION, run["run_id"]),
+        )
+
+    resume = client.post(f"/api/runs/{run['run_id']}/resume")
+    assert resume.status_code == 409
+    assert "Create a new immutable case version" in resume.json()["detail"]
+
+    advance = client.post(f"/api/runs/{run['run_id']}/rounds/2")
+    assert advance.status_code == 409
+    assert "Create a new immutable case version" in advance.json()["detail"]
