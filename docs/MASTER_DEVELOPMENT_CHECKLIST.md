@@ -4063,3 +4063,58 @@ The installed-app smoke test explicitly reports: **no Ollama request or model in
 | Release acceptance | BLOCKED | Live inference, GPU proof, evidence retrieval, role-quality review, desktop UX and clinical review remain. |
 
 **Clinical boundary:** all current CI evidence is software/packaging validation. It does not prove model accuracy, guideline concordance, clinical safety, or absence of hallucinations. No real Ollama inference or RTX 4060 verification was performed. Preserve all prior CI failures and the intermittent browser timeout in the audit history.
+
+
+## Current checkpoint refresh — 20 November 2026 (PR head recheck)
+
+**Repository:** `drvishnua/RadOnc-MDT-Simulator`  
+**Development branch:** `feature/four-round-mdt-and-performance`  
+**PR #1:** open, draft, unmerged; base `main`; no change to `main`.  
+**PR head / checklist commit before this refresh:** `710f04d192381c4518c9c3d6d5763d68b0e10ca9`.  
+**Latest application code/test SHA represented by this documentation checkpoint:** `0e24dbe66e82281fbfcc6a736ddad9f5b2c07f7c`.
+
+### Exact PR-head workflow recheck — SHA `710f04d`
+
+All six PR-triggered workflows returned `completed / success` for this exact PR head:
+- Windows Installer Build: `44622058965`.
+- GitHub-hosted Windows Packaging Prerequisites: `44622059104`.
+- Backend Tests: `44622058858`.
+- Frontend Build: `44622059161`.
+- Patient Registry / Four-Round Dashboard Browser E2E: `44622058886`.
+- Security and Dependency Audit: `44622058868`.
+
+The code/test SHA remains `0e24dbe`; its detailed backend result is 534 passed, zero failures/errors/skips/inconclusive, with deterministic preflight 7/7. The six workflows above establish that the checklist-only PR head completed its own standard workflow set. The 534-test count is from the exact application/test SHA, not inferred from the newer documentation-only commit.
+
+### Master Development and Verification Checklist — current status
+
+| Workstream | Status | Evidence / remaining boundary |
+|---|---|---|
+| R1–R4 round separation and saved-contribution Chair inputs | VERIFIED (software path) | Four-round dashboard and saved-report browser checks pass; live full-role model run remains outstanding. |
+| Accepted intake → immutable case version → R1 provenance | VERIFIED (software path) | Case hash/version/registry provenance enforced; unlinked legacy runs remain readable but read-only. |
+| R2–R4 worker, job-creation and resume provenance gates | VERIFIED (software path) | Regression-tested before inference; no live full-role run on current code. |
+| Clinical-field registry/constants | IN PROGRESS | Frozen/versioned registry is already in shared case prompt context; ensure every role receives and uses the same typed canonical values and explicit state semantics. |
+| Typed clinical states and unknown preservation | IN PROGRESS | Existing unknown/conflict/provenance controls; expand and verify missing, unknown, not assessed, declined, not applicable and contradictory states end-to-end. |
+| TNM/stage validation | IN PROGRESS | Existing lexical controls; implement primary-site and staging-edition-aware validation. Never infer N0/M0 or stage group from absent data. |
+| R1–R4 clinical safety and conditionality | IN PROGRESS | Deterministic controls and regression tests exist; live model adherence and independent clinical review are not established. |
+| Chair counts, consensus, dissent and traceability | VERIFIED (deterministic software controls) | Distinct-role counting, proposition-level consensus and saved-source reconciliation are regression-tested; live full-run reconciliation remains unverified. |
+| Case integrity, hashes, run IDs, timestamps and audit history | IN PROGRESS | Intake/version provenance is enforced; continue end-to-end audit-artefact verification on live runs. |
+| Missing/failed-agent handling | IN PROGRESS | Software retry/resume coverage exists; verify in a current live 45-role run without fabricating missing contributions. |
+| Backend tests / deterministic preflight | VERIFIED | 534/534 tests and preflight 7/7 on application/test SHA `0e24dbe`. |
+| Frontend build | VERIFIED | PR-head workflow `44622059161` completed successfully. |
+| Browser E2E | VERIFIED (latest workflow) | PR-head workflow `44622058886` completed successfully; prior intermittent readiness timeout remains a risk with unproven root cause. |
+| Dashboard/API integration | VERIFIED (software/UI scope) | Patient registry and four-round dashboard E2E passed; semantic model correctness not implied. |
+| Windows packaging and installer | VERIFIED (CI smoke scope) | Workflows `44622059104` and `44622058965` completed successfully; mocked Ollama paths are not real-host verification. |
+| Security/dependency audit | VERIFIED (latest PR-head CI scope) | Workflow `44622058868` completed successfully; continue security review before release. |
+| Conversational intake UX | IN PROGRESS | Screening, gaps, declines, accept-with-gaps and immutable promotion exist; natural turn-by-turn answer/ambiguity handling remains. |
+| Desktop-native UI / browser-host removal | IN PROGRESS | Installer succeeds, but a fully native desktop shell and removal of the local browser host are not established. |
+| Ollama install/discovery/model reuse | IN PROGRESS | Mocked running/stopped/absent paths pass; actual clean-host/service/custom-path/model discovery and reuse/download are unverified. |
+| RTX 4060 active GPU inference | NOT STARTED | No request-time `nvidia-smi`, Ollama offload, VRAM/utilisation or per-request GPU evidence. |
+| Model context and performance | NOT STARTED | No current measured local inference latency, effective context/truncation or concurrency benchmark. Keep concurrency 1. |
+| Evidence retrieval and source verification | NOT STARTED | No connected role-specific authoritative guideline/literature retrieval; no guideline-compliance claim. |
+| Copied/generic role-output investigation | IN PROGRESS | Historical concern remains; inspect exact saved role outputs and distinguish prompt, orchestration, model and UI causes. |
+| Live 45-role R1–R4 validation | BLOCKED | No accepted current-head full live run or complete saved R1–R4 artefacts. |
+| Independent clinical validation | NOT STARTED | Requires qualified independent review; software tests do not establish clinical safety or accuracy. |
+| Security hardening / release packaging acceptance | BLOCKED | Authentication, data-at-rest/backup/restore, signing, SBOM/provenance and operational release gates remain outstanding. |
+| Release acceptance | BLOCKED | Live inference, GPU proof, evidence retrieval, role-quality review, desktop UX, security hardening and independent clinical review remain. |
+
+**Clinical boundary:** the 534 passing backend tests, browser E2E, installer and security CI verify software/build paths only. They do not prove model accuracy, guideline concordance, absence of hallucinations, active GPU inference or clinical safety. Unknown remains unknown; conditions and prerequisites must be preserved. No real Ollama inference, RTX 4060 verification or independent clinical validation is claimed.
