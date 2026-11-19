@@ -3244,3 +3244,33 @@ Captured immediately from the user's recollection. These are requirements, not c
 | Packaging/security/release | IN PROGRESS / BLOCKED | Current-head workflow state not established; release remains BLOCKED on live, GPU, evidence and clinical review gates. |
 
 **No-inference boundary:** this slice changed deterministic Python registry/context/test code only. It did not start Ollama or run Qwen/MedGemma.
+
+
+## Registry prompt regression correction — 20 November 2026
+
+**Exact-head Backend CI failure on `d8cebcdbc61a5f669584f032041895a0413b0ee8`:** run [44606400226](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44606400226) failed with **504 passed, 3 failed, 0 errors, 0 skipped**. Deterministic no-inference preflight and Python compilation passed. All seven new clinical-registry tests passed, and the new preflight-inventory regression passed.
+
+The three failures exposed two regressions caused by the shared prompt-context update:
+1. An existing test required the exact safety wording that lesion size must never be used to infer a T category. The wording had been shortened; it is restored verbatim.
+2. A generic example containing the literal token `T1` was injected into every role prompt even when the case's clinical T field was unreported. This contaminated unknown-case prompts and caused two prompt tests to fail. The example has been removed from generic instructions; the prompt now describes the normalization rule without introducing a hypothetical stage token. A supplied structured T value still receives its own canonical comparison value.
+
+**Correction commit:** `e259939a2bc13c0cc12d0a33f5aa3c27247c321c`. Source was fetched at this SHA and inspected: the required lesion-size wording is present and generic shared rules no longer contain literal `T1`. This correction is not yet test-verified. Preserve the failed run and do not label it passed.
+
+**Other workflows on the failed-test SHA `d8cebc`:**
+- Frontend Build [44606400114](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44606400114): SUCCESS.
+- Windows Packaging Prerequisites [44606400351](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44606400351): SUCCESS.
+- Security Audit [44606400181](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44606400181): Python/Node dependency audit and Python CodeQL completed successfully; JavaScript/TypeScript CodeQL was still running at the time of inspection. Overall run not yet final.
+- Browser E2E [44606400069](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44606400069): still running at the time of inspection.
+- Windows Installer [44606400386](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44606400386): pending; no completion claim.
+
+### Current checklist status correction
+- Immutable clinical field registry and shared prompt injection: IN PROGRESS; all seven new tests passed on `d8cebc`, but three existing backend assertions failed due prompt-context wording/token leakage. The correction is committed as `e259939`; exact-head rerun pending.
+- TNM lexical normalization: IN PROGRESS; dedicated normalizer regressions passed in the `d8cebc` run; full backend suite failed elsewhere. Edition-aware clinical validation remains outstanding.
+- Backend suite: FAILED on `d8cebc`; 504 passed / 3 failed. Do not erase this result.
+- Frontend build and packaging prerequisites: VERIFIED on `d8cebc`.
+- Browser E2E and overall Security Audit: IN PROGRESS at last inspection.
+- Windows installer: BLOCKED/PENDING; no result yet.
+- Live model inference, GPU verification, evidence retrieval and independent clinical review: NOT PERFORMED.
+- Release acceptance: BLOCKED.
+
+**No-inference boundary:** CI ran static checks and unit tests only; no Ollama inference or clinical evaluation was performed.
