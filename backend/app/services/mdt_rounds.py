@@ -219,6 +219,7 @@ async def run_mdt_round(run_id: str, round_number: int) -> None:
     if round_number not in (2, 3, 4):
         raise ValueError("Round number must be 2, 3, or 4.")
 
+    run_store.require_run_registry_version(run_id)
     async with MODEL_EXECUTION_LOCK:
         try:
             case = run_store.get_case(run_id)
