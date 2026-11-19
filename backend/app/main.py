@@ -380,7 +380,9 @@ async def screen_pre_mdt_intake(request: CaseIntakeScreenRequest) -> dict[str, o
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-\n\n@app.post("/api/cases/validate", response_model=CaseValidationResult)
+
+
+@app.post("/api/cases/validate", response_model=CaseValidationResult)
 async def validate_case(case: SyntheticCase) -> CaseValidationResult:
     warnings = build_case_validation_warnings(case)
     if not case.known_unknowns:
