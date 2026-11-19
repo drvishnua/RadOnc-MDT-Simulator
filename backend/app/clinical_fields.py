@@ -14,6 +14,7 @@ from typing import Final, Literal
 
 
 CLINICAL_FIELD_REGISTRY_VERSION: Final[str] = "1.0.0"
+LEGACY_FIELD_REGISTRY_VERSION: Final[str] = "legacy-unversioned"
 
 # Stable field IDs. Never rename or repurpose these identifiers.
 SCENARIO_TITLE: Final[str] = "scenario_title"
