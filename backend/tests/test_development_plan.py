@@ -10,7 +10,7 @@ from scripts.validate_development_plan import (
 )
 
 EVIDENCE_SHA = "a" * 40
-BASELINE_SHA = "b" * 40
+BASELINE_SHA = "5680dfe742c87ada5a263656f12686369d00fa6c"
 WORKFLOWS = [
     "Windows Installer Build",
     "GitHub-hosted Windows Packaging Prerequisites",
