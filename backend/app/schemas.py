@@ -101,3 +101,25 @@ class CaseIntakeScreenRequest(StrictModel):
 
     case: SyntheticCase
     declined_domains: list[str] = Field(default_factory=list, max_length=6)
+
+
+class IntakeSessionCreateRequest(StrictModel):
+    """Create a new auditable pre-MDT intake session."""
+
+    case: SyntheticCase
+
+
+class IntakeEventRequest(StrictModel):
+    """Append one answer, correction or declined-domain event."""
+
+    event_type: str
+    field_id: str | None = Field(default=None, max_length=80)
+    value: object | None = None
+    domain: str | None = Field(default=None, max_length=80)
+    source_text: str | None = Field(default=None, max_length=4000)
+
+
+class IntakeAcceptRequest(StrictModel):
+    """Explicit user confirmation to accept an incomplete intake."""
+
+    confirmed: bool = False
