@@ -4331,3 +4331,44 @@ Execution rule: the first active implementation sequence remains the existing ch
 - Assurance conclusion: 100% prevention of skipped steps is NOT GUARANTEED by a written checklist or assistant instruction. U11 documents mandatory procedural checks; an independently enforced technical gate that blocks progression without verified step completion has not been implemented or tested. Do not claim that technical enforcement exists.
 - Active step remains Step 1 — repository/branch/PR/commit/checklist/CI verification, IN PROGRESS. Exact PR head and exact-head CI remain blockers. U09/U10 implementation has not started in this sequence.
 - No application implementation status changed in this review.
+
+
+## U12 — Fail-closed sequential development gate (user requirement, 20 November 2026)
+
+**Purpose:** Make skipping or reordering a development step impossible through the normal repository workflow. This is a technical control, not a claim that ChatGPT's conversational behaviour can be made mathematically 100% reliable.
+
+**Required design:**
+1. Represent the approved development plan as machine-readable, version-controlled data: stable step IDs, explicit ordered prerequisites, scope, acceptance criteria, required tests/evidence, and permitted terminal statuses. Keep the human-readable Master Checklist as the authoritative explanatory record and prevent duplicate competing plans.
+2. Maintain exactly one active step. A deterministic validator must reject missing, duplicated, unknown, reordered, or prematurely advanced step IDs; reject a next-step transition unless every prerequisite is VERIFIED with evidence.
+3. Require each step-completion record to identify the exact source commit SHA, test command, exit code, test report/artifact, timestamp, and reviewer/approval where required. CI evidence must be tied to the same commit SHA; historical or merely queued runs do not satisfy the gate.
+4. Implement a fail-closed validator and regression tests. Missing evidence, tool/API errors, stale SHA, failed/pending CI, contradictory checklist state, or unavailable verification must block progression (BLOCKED), never default to success.
+5. Run the validator in GitHub Actions on every relevant push and pull request. Configure repository rulesets/branch protection to require the named check, prohibit force-push/deletion, restrict direct updates to protected development branches, and require review for changes to the gate, workflow, machine-readable plan and checklist. Protect workflow permissions with least privilege.
+6. Add local pre-commit/pre-push checks as convenience only; CI and repository rulesets are the authoritative enforcement. Do not treat local hooks as security boundaries.
+7. Gate scope changes: every new user requirement receives a stable ID, acceptance criteria and dependency placement before implementation; the validator prevents silently inserting work ahead of the active step or skipping prerequisites.
+8. Provide an auditable override path only if genuinely necessary: explicit human approval, reason, identity, timestamp, exact commit, and immutable log. Overrides must never be silent and must not mark tests/evidence VERIFIED.
+9. Add adversarial regression tests: attempt to skip a step, reorder steps, mark untested work VERIFIED, reuse stale CI from another SHA, omit an artifact, spoof a status, alter the gate itself, and proceed during a tool outage. Each must fail closed.
+10. Document the residual limitation: administrators or actors with sufficient repository permissions may alter protections or bypass checks; external service outages and assistant-side conversational omissions cannot be made mathematically impossible by repository code. The target is no normal-path progression without machine-verified prerequisites.
+
+**Acceptance criteria:**
+- One machine-readable plan and one human-readable Master Checklist; stable IDs match exactly.
+- Exactly one active step is enforced.
+- No step can be marked VERIFIED without all required exact-SHA evidence.
+- No transition can skip/reorder dependencies.
+- A failed, pending, stale, absent, or inaccessible verification blocks advancement.
+- Required CI check and repository ruleset are configured and independently tested on the development branch without modifying `main`, merging PR #1, or force-pushing.
+- All adversarial gate tests pass; logs prove rejected transitions.
+- A documented, auditable override cannot silently manufacture verification.
+
+**Status:** NOT STARTED. Design described in response only; no gate implementation, CI enforcement or branch-protection configuration is claimed.
+
+
+### U11 pre-response review checkpoint — 20 November 2026 (fail-closed gate design)
+
+- Read the complete authoritative checklist from `feature/four-round-mdt-and-performance`; fetched content length before this update: 637270 characters; source blob SHA: `4b62b98bdabe3c7031394cc1a870f03432cead01`.
+- Development branch existence: VERIFIED. Branch search returned `feature/four-round-mdt-and-performance`; it did not expose the branch tip SHA.
+- PR #1: open and discoverable at https://github.com/drvishnua/RadOnc-MDT-Simulator/pull/1. Available PR search does not expose head SHA/base/head branch; BLOCKED/UNVERIFIED.
+- Exact development branch HEAD and exact-head CI: BLOCKED/UNVERIFIED. Commit search results do not reliably identify the branch tip; no SHA inferred. Prior successful CI runs are historical and cannot satisfy current-head verification.
+- Current checklist commit before this update: `0cff2f70e9290dd8582c6f067045e7f7f7e7b5de` (blob `4b62b98bdabe3c7031394cc1a870f03432cead01`).
+- User asked how to make step skipping 100% impossible. Added U12 specifying a fail-closed machine-readable sequential gate, exact-SHA evidence, CI required checks, repository rulesets, adversarial tests and explicit residual limitations.
+- Active project step remains Step 1 — repository/branch/PR/commit/checklist/CI verification, IN PROGRESS. Exact PR head and exact-head CI remain blockers. U09/U10 implementation has not started in this sequence.
+- U12 status: NOT STARTED; this commit records the requirement and acceptance criteria only, not implementation.
