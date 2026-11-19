@@ -13,6 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from app.agent_schemas import AgentAssessment
 from app.agents.catalog import AGENT_PROFILES, EXPECTED_AGENT_COUNT
 from app.config import APP_NAME, APP_VERSION
+from app.clinical_fields import require_supported_registry_version
 from app.schemas import (
     AgentAssessmentRequest, BatchRunRequest, CaseValidationResult,
     PatientCaseUpdateRequest, PatientRegistrationRequest, PatientRunRequest, SyntheticCase,
@@ -181,6 +182,10 @@ async def assess_saved_patient_case(patient_id: str, case_version_id: str) -> di
         version = run_store.get_patient_case_version(patient_id, case_version_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="Patient or saved case version not found.") from exc
+    try:
+        require_supported_registry_version(version["clinical_field_registry_version"])
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     profile = next(item for item in AGENT_PROFILES if item["agent_id"] == "RO-01")
     case = SyntheticCase.model_validate(version["case"])
     try:
@@ -268,6 +273,11 @@ async def resume_independent_batch(
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="Simulation run not found.") from exc
 
+    try:
+        run_store.require_run_registry_version(run_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
     if batch_is_running():
         raise HTTPException(status_code=409, detail="Another 45-agent batch is currently running.")
     if summary["status"] == "completed":
@@ -334,11 +344,14 @@ async def resume_mdt_round(
         raise HTTPException(status_code=409, detail="Another local model run is already active.")
     try:
         summary = run_store.get_round_summary(run_id, round_number)
+        run_store.require_run_registry_version(run_id)
         if summary["status"] == "completed":
             raise HTTPException(status_code=409, detail="This round is already complete.")
         updated = prepare_round_resume(run_id, round_number)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="MDT round not found.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     background_tasks.add_task(run_mdt_round, run_id, round_number)
     return updated
 
