@@ -48,4 +48,4 @@ jobs:
 
       - name: Validate ordered plan, scope and exact-SHA GitHub evidence
         working-directory: backend
-        run: python scripts/validate_development_plan.py --plan ../docs/development_plan.json --head "$GITHUB_HEAD_SHA"
+        run: python scripts/validate_development_plan.py --plan docs/development_plan.json --head "$GITHUB_HEAD_SHA"
