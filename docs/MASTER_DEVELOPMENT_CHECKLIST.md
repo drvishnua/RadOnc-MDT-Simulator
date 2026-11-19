@@ -3673,3 +3673,40 @@ The source syntax defect was corrected and the API snapshot regression expectati
 **Clinical/data boundary:** the intake store does not infer missing facts, convert empty lists into negatives, derive TNM stage, or make treatment recommendations. Accepted-with-gaps is an intake workflow state only; it does not mean the case is clinically complete or ready for a definitive MDT conclusion. The accepted snapshot is not yet connected to R1. No real patient data, live Ollama inference, GPU verification, 45-role four-round run, guideline retrieval or independent clinical review was performed.
 
 **Governance:** PR #1 remains open, draft and unmerged, base `main`; all commits remain on `feature/four-round-mdt-and-performance`. No main-branch changes, merge or force-push.
+
+
+## Intake transcript question-event increment — 20 November 2026
+
+**Latest code/test SHA:** `239a0ce5d070d17cee0146da081f8793bea18df7`.
+
+Additional intake transcript support:
+- `25b71f5c3fb5c2547c1fdb72d9a992fc0e32cf63`: `QUESTION_ASKED` events persist the exact screening question and domain in the hash-chained event history. Duplicate questions for a domain are rejected. A declined domain cannot subsequently be asked.
+- `239a0ce5d070d17cee0146da081f8793bea18df7`: regression tests cover question persistence, duplicate prevention and declined-domain suppression.
+
+Exact-head CI observed on SHA 239a0ce:
+- Backend Tests [44614250119]: **523 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive**; deterministic preflight passed.
+- Frontend Build [44614250156]: SUCCESS.
+- Browser E2E [44614250061]: SUCCESS.
+- Windows Packaging Prerequisites [44614250215]: SUCCESS.
+- Windows Installer Build [44614250214] and duplicate workflow attempt [44614238572]: IN PROGRESS at checklist update time; no success claim yet.
+- Security and Dependency Audit [44614250099]: PENDING at checklist update time.
+
+| Intake item | Status | Evidence / remaining work |
+|---|---|---|
+| Persisted CASE_CREATED / ANSWER / CORRECTION / DECLINE_DOMAIN / ACCEPTED_WITH_GAPS events | VERIFIED (software tests) | Append-only event records, saved case snapshots, source text and SHA-256 event chain; backend 523/523. |
+| Persisted QUESTION_ASKED events | VERIFIED (software tests) | Commit 25b71f5; exact question and domain saved; duplicate and declined-domain guards tested in 239a0ce. |
+| Hash-chain and snapshot tamper detection | VERIFIED (software tests) | Event ordering, previous hash, event hash, per-snapshot hash and event count are verified on retrieval. |
+| Explicit accept-with-gaps and immutable accepted case | VERIFIED (software tests) | Explicit confirmation required; post-accept case changes rejected. |
+| Frontend conversational intake UI | NOT STARTED | API and event log only; UI turn sequencing, refresh recovery and user-facing transcript remain. |
+| Accepted intake → patient case version → R1 gate | NOT STARTED | Accepted session is not yet linked to a patient version or used as the required R1 provenance gate. |
+| Semantic contradiction/ambiguity handling | IN PROGRESS | Schema validation is deterministic; narrative/structured conflict detection and user-led correction workflow remain. |
+| Exact-head backend tests | VERIFIED | Run 44614250119: 523/523. |
+| Exact-head frontend build | VERIFIED | Run 44614250156: success. |
+| Exact-head browser E2E | VERIFIED | Run 44614250061: success. |
+| Exact-head Windows packaging prerequisites | VERIFIED | Run 44614250215: success. |
+| Exact-head Windows installer | IN PROGRESS | Runs 44614250214 and 44614238572 not complete at capture. |
+| Exact-head security/dependency audit | IN PROGRESS | Run 44614250099 pending. |
+
+The latest implementation remains a backend foundation, not a finished conversational intake product. The screening engine uses fixed domain prompts; LLM-led natural question generation has not been introduced. No clinical facts are inferred, no missing fields are treated as negative, and acceptance with gaps is not a clinical adequacy determination. No R1 integration, live inference, GPU verification or clinical validation has been performed.
+
+**Governance:** PR #1 remains open, draft and unmerged; base `main`; work remains on `feature/four-round-mdt-and-performance`.
