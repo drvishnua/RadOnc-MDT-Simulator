@@ -24,7 +24,7 @@ sys.path.insert(0, str(BACKEND_DIR))
 
 from app.agents.catalog import AGENT_PROFILES
 from app.config import OLLAMA_MODEL
-from app.services import batch_runner, mdt_rounds, run_store
+from app.services import batch_runner, intake_store, mdt_rounds, run_store
 from app.services.case_integrity import build_source_case_facts
 from app.services.ollama import get_ollama_status
 from app.services.stress_testing import audit_case_outputs, load_stress_cases
@@ -33,6 +33,22 @@ ARTIFACT_DIR = BACKEND_DIR / "validation_artifacts" / "stress_suite"
 ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
 run_store.DB_PATH = ARTIFACT_DIR / "stress_suite.sqlite3"
 EXPECTED_IDS = {item["agent_id"] for item in AGENT_PROFILES}
+
+
+def _create_accepted_run(case: SyntheticCase, patient_name: str) -> dict[str, Any]:
+    """Create a synthetic stress run through the accepted-intake provenance path."""
+    intake = intake_store.create_intake_session(case)
+    session_id = intake["session_id"]
+    intake_store.accept_intake_with_gaps(session_id, confirmed=True)
+    patient = intake_store.promote_accepted_intake_to_patient(
+        session_id,
+        patient_name=patient_name,
+    )
+    version = patient["versions"][0]
+    return run_store.create_run_for_case_version(
+        patient["patient_id"],
+        version["case_version_id"],
+    )
 
 
 def gpu_snapshot() -> str:
@@ -71,7 +87,7 @@ async def run_one(item: dict[str, Any], on_progress=None) -> dict[str, Any]:
     case_hash = hashlib.sha256(case_json.encode("utf-8")).hexdigest()
     metrics: dict[str, Any] = {"round_seconds": {}, "agent_generations_expected": 136}
     started = time.perf_counter()
-    created = run_store.create_run(case)
+    created = _create_accepted_run(case, f"Synthetic Stress {item['case_id']}")
     run_id = created["run_id"]
     output: dict[str, Any] = {
         "case_id": item["case_id"], "run_id": run_id,

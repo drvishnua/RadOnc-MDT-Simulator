@@ -27,7 +27,7 @@ sys.path.insert(0, str(BACKEND_DIR))
 from app.agents.catalog import AGENT_PROFILES
 from app.config import OLLAMA_BASE_URL, OLLAMA_MODEL
 from app.schemas import SyntheticCase
-from app.services import batch_runner, mdt_rounds, run_store
+from app.services import batch_runner, intake_store, mdt_rounds, run_store
 from app.services.gpu_telemetry import parse_nvidia_smi_csv, summarize_gpu_telemetry
 from app.services.ollama import get_ollama_status
 from app.services.case_integrity import build_source_case_facts, build_case_report_title
@@ -41,6 +41,22 @@ CPU_ONLY_VALIDATION = os.environ.get("RADONC_VALIDATION_CPU_ONLY", "").strip() =
 ARTIFACT_NAME = "live_four_round_hosted_cpu_validation.json" if CPU_ONLY_VALIDATION else "live_four_round_validation.json"
 DATABASE_NAME = "live_four_round_hosted_cpu_validation.sqlite3" if CPU_ONLY_VALIDATION else "live_four_round_validation.sqlite3"
 run_store.DB_PATH = ARTIFACT_DIR / DATABASE_NAME
+
+
+def _create_accepted_run(case: SyntheticCase, patient_name: str) -> dict:
+    """Create a synthetic validation run through the accepted-intake provenance path."""
+    intake = intake_store.create_intake_session(case)
+    session_id = intake["session_id"]
+    intake_store.accept_intake_with_gaps(session_id, confirmed=True)
+    patient = intake_store.promote_accepted_intake_to_patient(
+        session_id,
+        patient_name=patient_name,
+    )
+    version = patient["versions"][0]
+    return run_store.create_run_for_case_version(
+        patient["patient_id"],
+        version["case_version_id"],
+    )
 
 
 def gpu_snapshot() -> str:
@@ -401,7 +417,7 @@ async def main() -> int:
         gpu_sampler_task = asyncio.create_task(
             sample_gpu_during_run(stop_gpu_sampler, gpu_telemetry)
         )
-        created = run_store.create_run(case)
+        created = _create_accepted_run(case, "Synthetic Live Four-Round Validation")
         run_id = created["run_id"]
         result_payload["run_id"] = run_id
 
