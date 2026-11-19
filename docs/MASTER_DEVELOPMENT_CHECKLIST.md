@@ -3453,3 +3453,59 @@ Exact-head workflow results on the code at `658c508`:
 - No live user machine, real Ollama server, model download or inference was used.
 - Current four-round live simulation, RTX 4060 request-time GPU proof, evidence retrieval and independent clinical review: NOT PERFORMED.
 - Release acceptance: BLOCKED.
+
+
+## User-recollected product requirements — captured 20 November 2026
+
+These ten requirements were explicitly restated by the project owner and are now tracked as first-class acceptance requirements. They must not be dropped during refactoring or treated as optional suggestions.
+
+1. **Remove Mission Control:** retain the historical removal record, but verify that no route, navigation entry, dashboard component or stale link exposes it in the final desktop product.
+2. **Remove Development Monitor:** same acceptance boundary as Mission Control; no exposed route, navigation entry, component or stale link.
+3. **Separate desktop UI/UX; no browser-hosted application experience:** the user wants a dedicated desktop interface rather than opening the application in a browser. Define and implement the native desktop shell/window, startup, navigation, error/loading states and lifecycle. Do not equate a browser tab pointed at localhost with a separate desktop UI.
+4. **Ollama/model installation decision tree:** first detect whether Ollama is installed, including registered/custom locations, then determine whether its service/server is running. If installed but stopped, start the existing installation and inspect its existing model store. Reuse an already-present `qwen3.5:4b`; do not download Ollama or the model again. Install Ollama and fetch the model only when Ollama is genuinely absent or the required model is genuinely absent. Preserve the user's existing model store and data. Add mocked state-matrix tests and a clean Windows acceptance run.
+5. **Pre-MDT case-screening/intake agent:** before R1, screen patient, disease, staging/investigation, family, comorbidity, performance-status, treatment-history and patient-willingness/preferences details. Identify missing, ambiguous and contradictory entries. Ask concise, natural, WhatsApp-like follow-up questions; allow correction/addition; record declined/unavailable answers and accept the case with explicit gaps if the user does not wish to provide more. Preserve original values and the full intake transcript/audit trail. No fabricated completion.
+6. **Specialist participation after case acceptance:** once intake accepts a case, every configured specialist should provide the best supportable opinion rather than abstaining solely because data are incomplete. Explicitly state unknowns and give conditional branches with prerequisites. Never convert hypothetical values (e.g. ECOG or comorbidities) into patient facts; no invented ECOG, comorbidity, stage or treatment eligibility. Insufficient data may still limit a definitive recommendation.
+7. **Human, structured, evidence-qualified arguments in every round:** R1–R4 outputs should be readable and role-specific, with case facts, interpretation, recommendation, rationale, conditions, uncertainties and source references clearly separated. Any example guideline/version/case wording is illustrative only; the system may cite a guideline edition only when it has actually retrieved and verified that source. Never fabricate NCCN/ESMO/ASTRO version numbers or claim evidence support without provenance.
+8. **Specialty-appropriate reference materials:** establish a traceable evidence catalogue/retrieval layer for current guidelines, standard textbooks, landmark studies and relevant recent publications. Each role should retrieve and cite sources relevant to its specialty and perspective. Record title, issuing organisation/authors, publication/update date, edition/version, URL/identifier, retrieval date and the claim supported. No role may imply that all materials were checked when they were not.
+9. **Copied/delegated response quality defect:** investigate the uploaded JSON/export and reproduce why agent responses appear copy-pasted, generic or delegated and why multiple roles cite insufficient information instead of offering distinct opinions. Compare role identity, prompts, input context, outputs, source reuse, truncation and orchestration/fallback behavior. Add semantic diversity/role-specificity regression checks without forcing artificial disagreement or unsupported recommendations. The referenced JSON must be located and inspected before asserting a root cause.
+10. **TNM canonical equivalence:** normalise equivalent representations such as `T1` and `clinical_t_stage=1` to the same canonical structured concept, while retaining raw source text and provenance. Apply equivalent mapping to N, M, age, sex, site, stage and other clinical fields. Detect conflicts between structured and narrative values; do not silently choose one. Stage-group derivation must be edition/site-specific and only occur when all required inputs are known.
+
+### Current acceptance status for these requirements
+
+| Requirement | Status | Evidence / remaining work |
+|---|---|---|
+| Mission Control removal | VERIFIED (historical) | Earlier checklist records removal; final desktop route/navigation audit still required. |
+| Development Monitor removal | VERIFIED (historical) | Earlier checklist records removal; final desktop route/navigation audit still required. |
+| Separate desktop UI/UX, no browser app | IN PROGRESS | Current launcher still opens a browser at localhost; dedicated desktop shell remains outstanding. |
+| Ollama installed/stopped/absent + model reuse | IN PROGRESS | Existing/stopped mocked path now passes within run 44609389615, including recognition of the existing model and preserving its store. Same Windows job then failed a separate portable-fallback assertion at Test-AiBootstrap.ps1:237. Full decision matrix, custom install discovery and clean-host verification remain outstanding. |
+| Pre-MDT conversational screening agent | NOT STARTED | Intake workflow, question policy, transcript/provenance, user-decline acceptance and UI/API tests outstanding. |
+| No specialist abstention solely due to missing data | IN PROGRESS | Conditional schema exists, but all-role participation and safe conditional branching across all four rounds need explicit tests and live quality evaluation. |
+| Human-readable structured arguments in every round | IN PROGRESS | Existing role narratives and conditional fields exist; role-specific evidence-grounded quality and anti-template checks outstanding. |
+| Specialty-specific evidence retrieval | NOT STARTED | Retrieval/index, source metadata, citation-to-claim traceability, freshness checks and per-role evidence policy outstanding. |
+| Copied/generic/delegated response investigation | IN PROGRESS | Prior checklist notes diagnostics only; referenced JSON must be located, inspected and reproduced before root cause is declared. |
+| TNM and clinical-field canonical equivalence | IN PROGRESS | Registry v1.0.0 and lexical TNM normalization exist; structured/narrative equivalence, conflict handling, edition-aware stage derivation and broader field mappings remain. |
+| Immutable shared clinical constants/field registry | IN PROGRESS | Shared registry and version persistence exist. Expand canonical aliases/normalizers and make every specialist consume the same typed fields; add round-specific payload and alias-equivalence tests. |
+
+### Latest exact-head CI state at time of capture
+
+PR #1 remains open, draft and unmerged; base is `main`; development branch is `feature/four-round-mdt-and-performance`; PR head SHA is `9f8e3a88606856c8a01d3da82c8fa45d3c508597`. Do not modify `main`, merge or force-push.
+
+- Backend Tests [44609389751]: SUCCESS.
+- Frontend Build [44609389591]: SUCCESS.
+- Browser E2E [44609389447]: SUCCESS.
+- Windows Packaging Prerequisites [44609389694]: SUCCESS.
+- Security and Dependency Audit [44609389867]: SUCCESS.
+- Windows Installer Build [44609389615]: FAILED. The new installed-but-stopped Ollama + existing-model mock path emitted `AI_BOOTSTRAP_RESTART_EXISTING_OLLAMA_WITH_EXISTING_MODEL_OK`, but the same test script subsequently failed at line 237: `Portable fallback did not use the isolated 11435 endpoint and managed-runtime flag.` This is a separate assertion from the earlier null/empty assertion; investigate the test fixture and production portable fallback before changing either. The clean-hosted Windows first-run Ollama/model bootstrap job was SKIPPED.
+
+No live user-device Ollama/model operation, Qwen inference, RTX 4060 GPU verification, live 45-role four-round simulation, evidence retrieval or independent clinical validation was performed on this SHA. Installer acceptance remains FAILED pending diagnosis and rerun; release remains BLOCKED.
+
+### Immediate priority order
+
+1. Diagnose the Windows portable-fallback assertion without weakening the test or changing production behavior without evidence; retain the successful stopped-service/model-reuse regression.
+2. Complete Ollama discovery and installed/running/stopped/model-present/model-absent decision-matrix tests.
+3. Implement the pre-MDT conversational screening agent and explicit accept-with-gaps path.
+4. Expand immutable clinical constants/aliases and TNM normalization with raw-value preservation, structured/narrative discrepancy flags and four-round shared-payload regressions.
+5. Audit role prompts/orchestration and the referenced JSON to identify copied/generic outputs; improve role-specific human-readable reasoning and conditional participation.
+6. Build evidence retrieval and claim-level citations before requiring evidence-backed wording.
+7. Implement and test the separate desktop UI, with Mission Control and Development Monitor absent.
+8. Complete exact-head CI, live synthetic four-round validation, GPU/performance verification and independent clinical review as separate milestones.
