@@ -108,6 +108,27 @@ STEP_ALLOWED_PATHS = {
     ),
 }
 
+STEP_REQUIRED_WORKFLOWS = {
+    "STEP-A": (
+        "Windows Installer Build",
+        "GitHub-hosted Windows Packaging Prerequisites",
+        "Backend Tests",
+        "Patient Registry and Four-Round Dashboard Browser E2E",
+        "Frontend Build",
+        "Security and Dependency Audit",
+    ),
+    "U12": ("Sequential Development Gate", "Backend Tests", "Security and Dependency Audit"),
+    "U09-U10": ("Sequential Development Gate", "Backend Tests", "Security and Dependency Audit"),
+    "U04": ("Sequential Development Gate", "Backend Tests", "Frontend Build", "Patient Registry and Four-Round Dashboard Browser E2E"),
+    "U05-U06": ("Sequential Development Gate", "Backend Tests", "Security and Dependency Audit"),
+    "U06-U08": ("Sequential Development Gate", "Backend Tests", "Frontend Build", "Patient Registry and Four-Round Dashboard Browser E2E"),
+    "U07": ("Sequential Development Gate", "Backend Tests", "Security and Dependency Audit"),
+    "U03": ("Sequential Development Gate", "Backend Tests", "Windows Installer Build", "GitHub-hosted Windows Packaging Prerequisites"),
+    "U01-U02": ("Sequential Development Gate", "Frontend Build", "Patient Registry and Four-Round Dashboard Browser E2E", "Windows Installer Build"),
+    "RELEASE": ("Sequential Development Gate", "Backend Tests", "Frontend Build", "Security and Dependency Audit", "Windows Installer Build"),
+}
+INITIAL_SCOPE_BASELINE = "5680dfe742c87ada5a263656f12686369d00fa6c"
+
 VALID_STATUSES = {"NOT STARTED", "IN PROGRESS", "BLOCKED", "VERIFIED", "FAILED", "NOT APPLICABLE"}
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 
@@ -150,6 +171,8 @@ def validate_plan(
         if step.get("status") not in VALID_STATUSES:
             errors.append(f"{step_id}: invalid status {step.get('status')!r}")
 
+    if plan.get("plan_id") != "radonc-mdt-master-sequential-plan":
+        errors.append("plan_id is missing or does not match the approved plan")
     active_id = plan.get("active_step")
     if active_id not in STEP_ORDER:
         errors.append("active_step is not a recognised step ID")
@@ -213,11 +236,31 @@ def validate_plan(
             if run.get("status") != "completed" or run.get("conclusion") != "success":
                 errors.append(f"{step_id}: workflow run {run_id} is not completed successfully")
 
+    # The plan file cannot widen its own permissions or move the scope baseline
+    # forward to hide earlier out-of-scope changes.
+    if active_id in STEP_ALLOWED_PATHS:
+        active_step = by_id.get(active_id, {})
+        if active_step.get("allowed_paths") != list(STEP_ALLOWED_PATHS[active_id]):
+            errors.append(f"{active_id}: allowed_paths differ from the validator's fixed scope")
+        if active_step.get("required_workflow_names") != list(STEP_REQUIRED_WORKFLOWS[active_id]):
+            errors.append(f"{active_id}: required workflows differ from the validator's fixed list")
+    for step_id in STEP_ORDER:
+        step = by_id.get(step_id, {})
+        if step.get("status") == "VERIFIED" and step.get("required_workflow_names") != list(STEP_REQUIRED_WORKFLOWS[step_id]):
+            errors.append(f"{step_id}: required workflows differ from the validator's fixed list")
+
     baseline = plan.get("scope_baseline_commit")
     if not isinstance(baseline, str) or not SHA_RE.fullmatch(baseline):
         errors.append("scope_baseline_commit must be a full 40-character SHA")
     elif not is_ancestor(baseline):
         errors.append("scope_baseline_commit is not an ancestor of the checked-out head")
+    elif active_id == "U12" and baseline != INITIAL_SCOPE_BASELINE:
+        errors.append("U12 scope baseline cannot be moved; it must remain the approved initial baseline")
+    elif active_id in STEP_ORDER and STEP_ORDER.index(active_id) > 1:
+        previous_id = STEP_ORDER[STEP_ORDER.index(active_id) - 1]
+        previous_evidence = by_id.get(previous_id, {}).get("completion_evidence") or {}
+        if baseline != previous_evidence.get("commit_sha"):
+            errors.append(f"{active_id}: scope baseline must equal the preceding step's verified evidence SHA")
 
     if active_id in STEP_ALLOWED_PATHS:
         allowed = STEP_ALLOWED_PATHS[active_id]
