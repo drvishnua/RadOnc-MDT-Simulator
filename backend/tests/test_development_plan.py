@@ -268,3 +268,14 @@ def test_completed_step_requires_nonempty_in_scope_code_diff():
             lambda _base, _head: True,
             {"U12": []},
         )
+
+
+
+def test_sequential_gate_runs_for_pull_requests_targeting_development_branch():
+    from pathlib import Path
+
+    repository_root = Path(__file__).resolve().parents[2]
+    workflow = (repository_root / ".github" / "workflows" / "sequential-development-gate.yml").read_text(encoding="utf-8")
+    pull_request_block = workflow.split("  pull_request:", 1)[1].split("  workflow_dispatch:", 1)[0]
+    assert "- main" in pull_request_block
+    assert "- feature/four-round-mdt-and-performance" in pull_request_block

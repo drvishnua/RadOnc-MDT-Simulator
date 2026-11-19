@@ -7,6 +7,7 @@ on:
   pull_request:
     branches:
       - main
+      - feature/four-round-mdt-and-performance
   workflow_dispatch:
 
 permissions:
