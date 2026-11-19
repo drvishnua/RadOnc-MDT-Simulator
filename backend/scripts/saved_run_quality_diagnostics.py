@@ -19,7 +19,22 @@ FIELDS = {
     "R2": ("provisional_conclusion", "response_to_other_perspectives"),
     "R3": ("provisional_conclusion", "response_to_other_perspectives"),
 }
-STAGE_TOKEN = re.compile(r"\b(?:c|p)?T(?:is|[0-4][a-d]?)\s*N[0-3x]\s*M[0-1x]\b|\bM0\b", re.I)
+STAGE_TOKEN = re.compile(r"\b(?:c|p)?T(?:is|[0-4][a-d]?)(?:N[0-3x](?:M[0-1x])?)?|\bN[0-3x]\b|\bM[0-1x]\b", re.I)
+STRUCTURED_STAGE_FIELDS = (
+    "clinical_stage", "pathological_stage", "tnm_stage", "stage",
+    "clinical_t_stage", "clinical_n_stage", "clinical_m_stage",
+    "pathological_t_stage", "pathological_n_stage", "pathological_m_stage",
+)
+
+
+def _structured_stage_text(snapshot: dict) -> str:
+    """Read only explicitly named structured staging fields, never narrative text."""
+    values = []
+    for field in STRUCTURED_STAGE_FIELDS:
+        value = snapshot.get(field)
+        if isinstance(value, (str, int, float)) and not isinstance(value, bool):
+            values.append(str(value))
+    return " ".join(values)
 
 
 def _text(value: Any) -> str:
@@ -48,7 +63,7 @@ def build_diagnostics(export: dict, raw_bytes: bytes, near_duplicate_threshold: 
         raise ValueError("Export root must be a JSON object.")
     run = export.get("run") if isinstance(export.get("run"), dict) else {}
     snapshot = export.get("case_snapshot") if isinstance(export.get("case_snapshot"), dict) else {}
-    snapshot_text = " ".join(str(snapshot.get(k) or "") for k in ("primary_site", "histology", "case_summary"))
+    snapshot_text = _structured_stage_text(snapshot)
     report = {
         "schema": "radonc_saved_run_quality_diagnostics_v1",
         "scope": {
@@ -156,7 +171,8 @@ def build_diagnostics(export: dict, raw_bytes: bytes, near_duplicate_threshold: 
                     if token.casefold() not in snapshot_tokens:
                         report["staging_reference_flags"].append({
                             "round": "R1", "agent_id": role, "field": field, "token": token,
-                            "reason": "stage_token_not_found_in_structured_case_snapshot_fields",
+                            "reason": ("no_structured_stage_field_available" if not snapshot_text.strip()
+                                      else "stage_token_not_found_in_structured_case_snapshot_fields"),
                         })
     report["text_similarity"].sort(key=lambda x: (x["round"], x["field"], x["kind"], tuple(x["roles"]), x["similarity"]))
     report["staging_reference_flags"].sort(key=lambda x: (x["agent_id"], x["field"], x["token"].casefold()))
