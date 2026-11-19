@@ -155,6 +155,20 @@ def normalize_clinical_tnm_component(field_id: str, raw_value: str) -> str:
     return expected + match.group("value").upper()
 
 
+def require_supported_registry_version(version: str) -> None:
+    """Prevent a saved run from mixing a historical registry with the current one.
+
+    Historical registry payloads must be retained and explicitly added to the
+    supported-version set before they can be resumed under a future release.
+    """
+    if version != CLINICAL_FIELD_REGISTRY_VERSION:
+        raise ValueError(
+            f"This saved record uses clinical field registry version {version!r}, "
+            f"but this build supports {CLINICAL_FIELD_REGISTRY_VERSION!r}. "
+            "Create a new immutable case version before starting or resuming MDT generation."
+        )
+
+
 def build_registry_prompt_payload() -> dict[str, object]:
     """Return a JSON-serializable copy of the immutable registry for model context."""
     return {
