@@ -3550,3 +3550,33 @@ The new `POST /api/cases/screen-intake` endpoint runs deterministic completeness
 | Contradiction/ambiguity detection across narrative and structured fields | IN PROGRESS | Existing case-integrity warnings are separate; intake-level field/source discrepancy coverage outstanding. |
 
 **Verification boundary:** no live model inference, GPU activity, clinical validation or real-patient data processing was performed for this intake slice.
+
+
+## Intake screening CI failure diagnosis and syntax correction — 20 November 2026
+
+Latest failed validation checkpoint: application/test head `afbb3cb29cafac8e3faf98a6bc12982d1cebc434`; relevant workflows:
+- Backend Tests: run `44611955578`, failed before pytest execution.
+- Browser E2E: run `44611955568`, backend exited before readiness.
+- Windows Installer: run `44611955680`, installed executable failed at import.
+
+**Confirmed common root cause:** the API endpoint insertion wrote the literal characters `\\n\\n` into `backend/app/main.py` at line 383 instead of actual newline characters. Deterministic preflight reported `SyntaxError: unexpected character after line continuation character`. The backend test workflow therefore ran zero tests; browser E2E could not start FastAPI. PyInstaller's hidden import analysis did not include `app.main` because that module could not be parsed, so the installed executable later raised `ModuleNotFoundError: No module named 'app.main'`. These three failures share one source-code syntax defect; the installer log does not establish a separate packaging-path defect.
+
+**Correction committed:**
+- `4e7258b09488df3dda555b10d49eccd5ee33fc48`: replaced the literal escaped newline with actual line breaks in `backend/app/main.py`.
+- `1f1ef243f3ca1fa02d9c2cbc551a08cd7a1ad99d`: added API regression tests for ordinary gaps, declined-domain retention, and invalid declined-domain rejection.
+
+No local Python execution was available in this remote repository session. The correction and new tests require exact-head CI before they can be marked verified.
+
+| Validation | Status | Evidence |
+|---|---|---|
+| Root cause of backend/preflight failure | VERIFIED | Run 44611955578 identifies backend/app/main.py line 383 syntax error. |
+| Root cause of browser E2E startup failure | VERIFIED | Run 44611955568 shows FastAPI exits before readiness; same malformed source line. |
+| Root cause of packaged executable import failure | VERIFIED | Run 44611955680 shows app.main missing; PyInstaller analysis log skipped app.main while syntax error was present. |
+| Corrected route syntax | IN PROGRESS | Commit 4e7258b; exact-head CI pending. |
+| Intake API regression coverage | IN PROGRESS | Commit 1f1ef24; exact-head backend CI pending. |
+| Backend tests on failed head afbb3cb | FAILED / NOT EXECUTED | Preflight failed; JUnit absent; do not report zero failures as a pass. |
+| Browser E2E on failed head afbb3cb | FAILED | Backend did not start. |
+| Windows installer on failed head afbb3cb | FAILED | Packaged app could not import app.main due source parse failure. |
+| Clean-hosted Ollama/model bootstrap | NOT APPLICABLE (SKIPPED) | Run 44611955680; no clean-host inference evidence. |
+
+**Current development branch head when this entry was prepared:** `1f1ef243f3ca1fa02d9c2cbc551a08cd7a1ad99d`. PR #1 remains open, draft and unmerged, targeting `main`. The intake implementation remains IN PROGRESS; persistent transcript/session state, answer/correction events, explicit accept-with-gaps and R1 run gating are still outstanding. No inference, GPU verification or clinical validation was performed.
