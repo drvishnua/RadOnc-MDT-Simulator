@@ -4384,3 +4384,15 @@ Execution rule: the first active implementation sequence remains the existing ch
 - Active Step 1 — repository/branch/PR/commit/checklist/CI verification: IN PROGRESS until installer workflow run `44625679451` reaches a terminal successful conclusion and required checks are reviewed. U12 implementation must not begin until this prerequisite step exits, per the existing sequential plan.
 - U12 remains NOT STARTED (requirement and acceptance criteria only). No implementation or enforcement is claimed.
 - User replied “ok” to the recommendation to implement U12 before clinical registry work; continuation is authorised subject to the existing Step 1 gate. No main-branch change, merge or force-push.
+
+
+### U11 pre-response review checkpoint — 20 November 2026 (Step 1 exit review)
+
+- Read the complete authoritative checklist from `feature/four-round-mdt-and-performance`; fetched content length: 644695 characters; source blob SHA: `720569f77ba332f19427bca4b846e11452ee9acf`.
+- Development branch tip: `cb149131f39cd837f810029bc1ee3974954bd34d`. PR #1: open, draft, unmerged; head `cb149131f39cd837f810029bc1ee3974954bd34d`, base `main` at `39a356b8eb09399aa2da1b9b9085965999f5105a`.
+- Application code commit `986593ec8aab00b7885f1db5ff39dab2546278fc` (parent of the current checklist-only commits) has all six applicable workflows terminal SUCCESS: Windows Packaging Prerequisites `44625679442`; Backend Tests `44625679759`; Browser E2E `44625679486`; Frontend Build `44625679927`; Security and Dependency Audit `44625679503`; Windows Installer Build `44625679451`.
+- Current branch commits after that code commit are checklist-only. No application code change is present in those review commits. CI evidence therefore verifies the unchanged application code at `986593ec8aab00b7885f1db5ff39dab2546278fc`; the current documentation-only tip `cb149131f39cd837f810029bc1ee3974954bd34d` itself has no new workflow run.
+- Branch protection is reported disabled (`protected=false`, required checks enforcement off). Rulesets endpoint returned empty. Branch protection detail endpoint was inaccessible (403); no enforcement is claimed.
+- Step 1 — repository/branch/PR/commit/checklist/CI verification: VERIFIED for the application-code checkpoint `986593ec8aab00b7885f1db5ff39dab2546278fc`; current PR metadata and checklist-only descendant SHAs verified. Residual limitation: branch protection not configured and current docs-only SHA has no workflow run.
+- Per the existing ordered plan, next active step is U12 — fail-closed sequential development gate. U12 remains NOT STARTED until implementation begins; U09/U10 must not begin before U12 is implemented and verified.
+- No merge, main-branch change or force-push.
