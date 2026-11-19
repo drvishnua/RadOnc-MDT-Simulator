@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 import pytest
 
 from app.agent_schemas import AgentAssessment
+from app.clinical_fields import CLINICAL_FIELD_REGISTRY_VERSION, LEGACY_FIELD_REGISTRY_VERSION
 from app.main import app
 from app.schemas import SyntheticCase
 from app.services import run_store
@@ -33,6 +34,7 @@ def test_patient_creation_and_case_version_history_are_immutable(monkeypatch, tm
     assert "patient_name" not in first["case"]
     assert patient["patient_name"] == "Training Example"
     assert first["case_snapshot_sha256"]
+    assert first["clinical_field_registry_version"] == CLINICAL_FIELD_REGISTRY_VERSION
 
     changed = _case("Training patient case — updated", "A revised fictional case version for the same training patient.")
     saved = client.post(f"/api/patients/{patient_id}/versions", json=_registration(changed, "Training Example Updated"))
@@ -72,14 +74,17 @@ def test_patient_run_uses_saved_version_and_keeps_legacy_runs_unlinked(monkeypat
     assert run["patient_id"] == patient["patient_id"]
     assert run["case_version_id"] == version["case_version_id"]
     assert run["case_version_number"] == 1
+    assert run["clinical_field_registry_version"] == CLINICAL_FIELD_REGISTRY_VERSION
     restored = client.get(f"/api/runs/{run['run_id']}/case").json()
     assert restored["case_snapshot_sha256"] == version["case_snapshot_sha256"]
+    assert restored["clinical_field_registry_version"] == CLINICAL_FIELD_REGISTRY_VERSION
     assert restored["case"] == version["case"]
 
     legacy = run_store.create_run(SyntheticCase.model_validate(_case("Legacy unlinked run")))
     legacy_again = run_store.get_run(legacy["run_id"])
     assert legacy_again["patient_id"] is None
     assert legacy_again["case_version_id"] is None
+    assert legacy_again["clinical_field_registry_version"] == CLINICAL_FIELD_REGISTRY_VERSION
 
 
 def test_patient_run_rejects_a_version_owned_by_another_patient(monkeypatch, tmp_path):
@@ -151,6 +156,7 @@ def test_old_database_gets_additive_patient_columns_without_losing_runs(monkeypa
     assert restored["run_id"] == "legacy-run"
     assert restored["patient_id"] is None
     assert restored["case_version_id"] is None
+    assert restored["clinical_field_registry_version"] == LEGACY_FIELD_REGISTRY_VERSION
 
 
 def test_patient_serials_are_sequential_never_reused_and_delete_cascades(monkeypatch, tmp_path):
@@ -228,6 +234,7 @@ def test_legacy_embedded_patient_name_migrates_out_of_case_payload(monkeypatch, 
     assert restored["versions"][0]["patient_name"] == "Legacy Training Name"
     assert "patient_name" not in restored["versions"][0]["case"]
     assert restored["versions"][0]["case_snapshot_sha256"] == digest
+    assert restored["versions"][0]["clinical_field_registry_version"] == LEGACY_FIELD_REGISTRY_VERSION
 
 
 def test_existing_case_versions_migrate_with_their_best_available_registry_names(monkeypatch, tmp_path):
@@ -285,6 +292,8 @@ def test_existing_case_versions_migrate_with_their_best_available_registry_names
     assert second["patient_name"] == "Current Registry Name"
     assert "patient_name" not in first["case"]
     assert first["case_snapshot_sha256"] == hashlib.sha256(first_json.encode("utf-8")).hexdigest()
+    assert first["clinical_field_registry_version"] == LEGACY_FIELD_REGISTRY_VERSION
+    assert second["clinical_field_registry_version"] == LEGACY_FIELD_REGISTRY_VERSION
 
 
 def test_patient_registry_round_trips_every_case_field_across_versions_and_database_reopen(monkeypatch, tmp_path):
