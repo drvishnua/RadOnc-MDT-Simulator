@@ -516,3 +516,94 @@ def test_legacy_run_cannot_resume_or_advance_into_new_registry_context(monkeypat
     advance = client.post(f"/api/runs/{run['run_id']}/rounds/2")
     assert advance.status_code == 409
     assert "Create a new immutable case version" in advance.json()["detail"]
+
+
+def test_saved_patient_case_version_requires_accepted_intake_provenance(monkeypatch, tmp_path):
+    monkeypatch.setattr(run_store, "DB_PATH", tmp_path / "patient_intake_gate.sqlite3")
+    patient = client.post("/api/patients", json=_registration()).json()
+    version = patient["versions"][0]
+
+    run_response = client.post(
+        f"/api/patients/{patient['patient_id']}/runs",
+        json={"case_version_id": version["case_version_id"]},
+    )
+    assert run_response.status_code == 409
+    assert "no accepted intake provenance" in run_response.json()["detail"]
+
+    assessment_response = client.post(
+        f"/api/patients/{patient['patient_id']}/versions/{version['case_version_id']}/assess/RO-01"
+    )
+    assert assessment_response.status_code == 409
+    assert "no accepted intake provenance" in assessment_response.json()["detail"]
+
+
+def test_accepted_intake_promotion_preserves_snapshot_and_links_audit_chain(monkeypatch, tmp_path):
+    monkeypatch.setattr(run_store, "DB_PATH", tmp_path / "patient_intake_promotion.sqlite3")
+    case = _case("Accepted intake source case")
+    intake = client.post("/api/intakes", json={"case": case}).json()
+    session_id = intake["session_id"]
+    accepted = client.post(
+        f"/api/intakes/{session_id}/accept", json={"confirmed": True}
+    )
+    assert accepted.status_code == 200
+
+    promoted = client.post(
+        f"/api/intakes/{session_id}/promote",
+        json={"patient_name": "Accepted Synthetic Example"},
+    )
+    assert promoted.status_code == 200
+    patient = promoted.json()
+    version = patient["versions"][0]
+    assert version["version_number"] == 1
+    assert version["intake_backed"] is True
+    assert version["intake_session_id"] == session_id
+    assert version["case"]["scenario_title"] == case["scenario_title"]
+    assert version["case_snapshot_sha256"] == accepted.json()["case_snapshot_sha256"]
+
+    linked_session = client.get(f"/api/intakes/{session_id}").json()
+    assert linked_session["patient_id"] == patient["patient_id"]
+    assert linked_session["case_version_id"] == version["case_version_id"]
+    assert linked_session["events"][-1]["event_type"] == "PROMOTED_TO_PATIENT_VERSION"
+    assert linked_session["events"][-1]["event_sha256"] == version["intake_event_chain_sha256"]
+
+
+def test_unaccepted_intake_cannot_be_promoted(monkeypatch, tmp_path):
+    monkeypatch.setattr(run_store, "DB_PATH", tmp_path / "patient_intake_unaccepted.sqlite3")
+    intake = client.post(
+        "/api/intakes",
+        json={"case": _case("Unaccepted intake case")},
+    ).json()
+    response = client.post(
+        f"/api/intakes/{intake['session_id']}/promote",
+        json={"patient_name": "Not Accepted"},
+    )
+    assert response.status_code == 409
+    assert "Only an explicitly accepted intake" in response.json()["detail"]
+
+
+def test_promoted_case_can_start_run_only_while_intake_provenance_verifies(monkeypatch, tmp_path):
+    monkeypatch.setattr(run_store, "DB_PATH", tmp_path / "patient_intake_verified.sqlite3")
+
+    async def no_inference(run_id):
+        return None
+
+    monkeypatch.setattr("app.main.run_independent_assessments", no_inference)
+    patient = _accepted_patient(_case("Verified accepted case"))
+    version = patient["versions"][0]
+    run = client.post(
+        f"/api/patients/{patient['patient_id']}/runs",
+        json={"case_version_id": version["case_version_id"]},
+    )
+    assert run.status_code == 200
+
+    with __import__("sqlite3").connect(run_store.DB_PATH) as db:
+        db.execute(
+            "UPDATE intake_events SET payload_json = ? WHERE session_id = ? AND event_type = 'PROMOTED_TO_PATIENT_VERSION'",
+            ('{"tampered":true}', version["intake_session_id"]),
+        )
+    blocked = client.post(
+        f"/api/patients/{patient['patient_id']}/runs",
+        json={"case_version_id": version["case_version_id"]},
+    )
+    assert blocked.status_code == 409
+    assert "integrity verification failed" in blocked.json()["detail"]
