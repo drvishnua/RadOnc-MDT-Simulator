@@ -3880,3 +3880,14 @@ These requirements were explicitly restated by the project owner and must remain
 | Windows packaging prerequisites | IN PROGRESS | Prior run 44618288433 had not completed at last inspection. |
 | Windows installer | IN PROGRESS | Prior run 44618288475 pending at last inspection. |
 | Security/dependency audit | IN PROGRESS | Prior run 44618288679 was running at last inspection. |
+
+
+### Corrected-head CI cancellation record — 20 November 2026
+
+The corrected implementation commit `58c64dde9c11b309342fdfe42db0bb2af8e69736` triggered six workflows. Subsequent PR updates cancelled several in-flight jobs before validation completed. In particular, Backend Tests run `44618396432` was cancelled before pytest completion; no backend pass/fail result exists for the corrected code. Packaging run `44618396342` was still running at last inspection. Earlier failed run `44618288502` is a confirmed syntax-preflight failure on the pre-correction commit `fa7ecd7`.
+
+**Current PR branch head at this checklist update:** `521e521cfbe620a220691a034a7df443eea058c1`  
+**Corrected application source commit:** `58c64dde9c11b309342fdfe42db0bb2af8e69736`  
+**PR #1:** open, draft, unmerged; base `main`.
+
+Do not treat cancelled workflows as passes. Re-run the full validation after source changes are complete and avoid further commits while the run is active so concurrency cancellation does not invalidate the evidence.
