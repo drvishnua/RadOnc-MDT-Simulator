@@ -109,7 +109,8 @@ def test_stage_audit_detects_partial_tnm_tokens():
     export["independent_assessments"][1]["assessment"]["provisional_conclusion"] = "T1a disease; M0"
     result = build_diagnostics(export, b"fixture")
     tokens = {item["token"].upper() for item in result["staging_reference_flags"]}
-    assert {"T1N0", "T1A", "M0"} <= tokens
+    assert {"T1", "N0", "T1A", "M0"} <= tokens
+    assert any(item["source_token"].upper() == "T1N0" for item in result["staging_reference_flags"])
 
 
 def test_component_stage_fields_keep_tnm_labels_during_source_comparison():
