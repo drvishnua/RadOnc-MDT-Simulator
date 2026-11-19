@@ -108,17 +108,6 @@ async def assess_with_agent(
             "then start the assessment from that saved version."
         ),
     )
-    except OllamaUnavailable as exc:
-        raise HTTPException(
-            status_code=503,
-            detail="The local Ollama service is unavailable.",
-        ) from exc
-    except AgentGenerationError as exc:
-        logger.warning("Agent generation rejected for %s: %s", agent_id, exc)
-        raise HTTPException(
-            status_code=502,
-            detail="The local model output did not meet the required educational assessment schema.",
-        ) from exc
 
 
 
