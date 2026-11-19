@@ -221,3 +221,48 @@ def test_cors_allows_patient_delete_preflight_from_local_vite_origin() -> None:
     assert response.headers["access-control-allow-origin"] == "http://127.0.0.1:5173"
     allowed_methods = response.headers["access-control-allow-methods"]
     assert "DELETE" in allowed_methods
+
+
+def test_pre_mdt_intake_screen_endpoint_returns_questions_and_preserves_case():
+    case = {
+        "scenario_title": "Synthetic intake endpoint case",
+        "case_summary": "Fictional case summary for intake endpoint testing.",
+        "relevant_comorbidities": [],
+        "prior_treatment": [],
+    }
+    response = client.post("/api/cases/screen-intake", json={"case": case})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["case_snapshot"] == case
+    assert body["ready_to_accept_with_gaps"] is True
+    assert any(item["field_id"] == "relevant_comorbidities" for item in body["gaps"])
+    assert body["questions"]
+
+
+def test_pre_mdt_intake_screen_endpoint_records_declined_domain_as_gap():
+    case = {
+        "scenario_title": "Synthetic intake endpoint case",
+        "case_summary": "Fictional case summary for intake endpoint testing.",
+    }
+    response = client.post(
+        "/api/cases/screen-intake",
+        json={"case": case, "declined_domains": ["patient_preferences"]},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert {"domain": "patient_preferences", "field_id": "patient_goals", "status": "DECLINED"} in body["gaps"]
+    assert "patient_preferences" not in {item["domain"] for item in body["questions"]}
+
+
+def test_pre_mdt_intake_screen_endpoint_rejects_unknown_declined_domain():
+    response = client.post(
+        "/api/cases/screen-intake",
+        json={
+            "case": {
+                "scenario_title": "Synthetic intake endpoint case",
+                "case_summary": "Fictional case summary for intake endpoint testing.",
+            },
+            "declined_domains": ["unknown_domain"],
+        },
+    )
+    assert response.status_code == 422
