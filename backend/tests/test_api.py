@@ -3,6 +3,7 @@ from collections import Counter
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.schemas import SyntheticCase
 
 client = TestClient(app)
 
@@ -233,7 +234,7 @@ def test_pre_mdt_intake_screen_endpoint_returns_questions_and_preserves_case():
     response = client.post("/api/cases/screen-intake", json={"case": case})
     assert response.status_code == 200
     body = response.json()
-    assert body["case_snapshot"] == case
+    assert body["case_snapshot"] == SyntheticCase.model_validate(case).model_dump(exclude_none=True)
     assert body["ready_to_accept_with_gaps"] is True
     assert any(item["field_id"] == "relevant_comorbidities" for item in body["gaps"])
     assert body["questions"]
