@@ -27,6 +27,19 @@ STRUCTURED_STAGE_FIELDS = (
 )
 
 
+def _stage_token_components(token: str) -> set[str]:
+    """Expand a combined TNM token into independently comparable components."""
+    match = re.fullmatch(r"(?:c|p)?T(is|[0-4][a-d]?)(?:N([0-3x])(?:M([0-1x]))?)?", token, re.I)
+    if not match:
+        return {token.upper()}
+    parts = {"T" + match.group(1).upper()}
+    if match.group(2):
+        parts.add("N" + match.group(2).upper())
+    if match.group(3):
+        parts.add("M" + match.group(3).upper())
+    return parts
+
+
 def _structured_stage_text(snapshot: dict) -> str:
     """Read only explicitly named structured staging fields, never narrative text.
 
@@ -181,12 +194,16 @@ def build_diagnostics(export: dict, raw_bytes: bytes, near_duplicate_threshold: 
             if isinstance(value, str):
                 for match in STAGE_TOKEN.finditer(value):
                     token = match.group(0)
-                    if token.casefold() not in snapshot_tokens:
-                        report["staging_reference_flags"].append({
-                            "round": "R1", "agent_id": role, "field": field, "token": token,
-                            "reason": ("no_structured_stage_field_available" if not snapshot_text.strip()
-                                      else "stage_token_not_found_in_structured_case_snapshot_fields"),
-                        })
+                    components = _stage_token_components(token)
+                    unsupported = components - {item.upper() for item in snapshot_tokens}
+                    if unsupported:
+                        for unsupported_token in sorted(unsupported):
+                            report["staging_reference_flags"].append({
+                                "round": "R1", "agent_id": role, "field": field, "token": unsupported_token,
+                                "source_token": token,
+                                "reason": ("no_structured_stage_field_available" if not snapshot_text.strip()
+                                          else "stage_token_not_found_in_structured_case_snapshot_fields"),
+                            })
     report["text_similarity"].sort(key=lambda x: (x["round"], x["field"], x["kind"], tuple(x["roles"]), x["similarity"]))
     report["staging_reference_flags"].sort(key=lambda x: (x["agent_id"], x["field"], x["token"].casefold()))
     report["summary"] = {
