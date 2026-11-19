@@ -3182,3 +3182,65 @@ Captured immediately from the user's recollection. These are requirements, not c
 - Workflow runs associated with that commit: Backend Tests `44603108158` CANCELLED; Browser E2E `44603108040` CANCELLED; Frontend Build `44603108107` CANCELLED; Security Audit `44603108149` CANCELLED; Windows Packaging Prerequisites `44603108017` SUCCESS; Windows Installer `44603108090` SUCCESS. Combined commit statuses returned no entries. Do not describe the six-workflow suite as passed on this SHA.
 - PR #1 state/head/base could not be independently retrieved in this inspection; prior checklist records it open/draft/unmerged targeting main. Recheck before any PR action.
 - No application code changed in this update. No inference, GPU test, live MDT run or clinical review was performed.
+
+
+## Immutable clinical registry — first implementation slice (20 November 2026)
+
+**Current development PR head:** `f39104c01f422324fca01a2f5284ffb0b4fe0528`. PR #1 remains open, draft and unmerged, targeting `main`; base SHA remains `39a356b8eb09399aa2da1b9b9085965999f5105a`. No changes to `main`.
+
+### Implemented in this slice — NOT YET CI-VERIFIED
+- Added `backend/app/clinical_fields.py` with stable field-ID constants for every current `SyntheticCase` field, immutable frozen field definitions, a read-only registry/alias map and registry version `1.0.0`.
+- Registry definitions document field meaning, value type, aliases and distinct states: PRESENT, CONFIRMED_ABSENT, UNKNOWN, NOT_REPORTED, NOT_ASSESSED, NOT_APPLICABLE and CONFLICTING. The existence of a field does not imply a patient value exists.
+- Added lexical clinical TNM component normalization: structured clinical `clinical_t_stage="1"` and `"T1"` normalize to comparison value `"T1"`; modifiers such as T1a are retained. Clinical/pathological prefixes are not conflated. Combined TNM tokens are rejected as a single component. Raw source values remain in the prompt payload.
+- Updated the shared `build_case_prompt_context` so R1, R2, R3 and Chair prompt builders that call this shared function receive the same versioned registry, canonical field values, explicit NOT_REPORTED states, raw values and TNM normalization warnings.
+- Existing `case_snapshot` and legacy `field_status` fields are retained for compatibility. This does not rewrite saved historical cases.
+- Added `backend/tests/test_clinical_fields.py` for registry immutability, complete SyntheticCase field coverage, TNM alias normalization, pathological-stage rejection, combined-token rejection, raw-value preservation and unknown/empty-list semantics.
+- Added the new regression suite to deterministic preflight inventory and added a preflight regression for its presence.
+
+### Current code commits in this slice
+- Registry: `cd12cc9a767813bdbab756e0a9743c5487f5d45e`
+- Shared prompt-context integration: `44c54363768557bd329996b3e31e831fb3898032`
+- Registry regression tests: `4f4284091f1595c526f1750f8711d694ebcb4860`
+- Preflight regression inventory: `b3c4fbdc5b229fcc321e7df684c87513b8b56555`
+- Preflight regression test: `2fead8ce79d637474a495b8ea9ec7d16e5f3b5c6`
+- Combined TNM-token rejection correction: `f39104c01f422324fca01a2f5284ffb0b4fe0528` (current PR head at this update).
+
+### Acceptance boundary and remaining work
+- Registry + shared prompt injection: **IN PROGRESS**; source changes committed, exact-head backend tests and R1–R4 payload verification not yet confirmed.
+- TNM canonical comparison: **IN PROGRESS**; lexical alias mapping only. It is not site/edition-aware TNM validation and does not reconcile conflicting structured/free-text values.
+- Data-state expressiveness: **IN PROGRESS**; registry defines all distinct states, but current SyntheticCase schema still maps missing scalar values/empty lists to NOT_REPORTED. Explicit structured CONFIRMED_ABSENT, NOT_ASSESSED, NOT_APPLICABLE and CONFLICTING case values require a later additive schema/versioned snapshot design.
+- Registry currently covers all fields in the existing SyntheticCase schema. Explicit family-history, patient-willingness, staging-system/edition and separate pathological stage fields are not yet present in that schema and remain outstanding.
+- Pre-MDT conversational screening agent: **NOT STARTED**.
+- No local pytest, backend suite, frontend build, browser E2E, live model inference, GPU test, evidence retrieval, live MDT run or clinical review is claimed in this update.
+- Latest workflow lookup for the current PR head returned no associated run records; this is not evidence of success. Exact-head CI remains pending/unverified.
+
+### Master Checklist — Current Status (implementation update)
+| Workstream | Status | Evidence / outstanding gate |
+|---|---|---|
+| R1–R4 shared case data flow | IN PROGRESS | Shared context builder now carries registry; verify every round/Chair consumes the exact same version and snapshot. |
+| Clinical safety and staging | IN PROGRESS | Registry + lexical TNM alias normalization added; clinical edition-aware validation and independent review outstanding. |
+| Case integrity and audit | IN PROGRESS | New canonical context retains raw values; regression suite pending exact-head execution. |
+| Provenance and evidence retrieval | IN PROGRESS | Raw structured values retained; field-level source provenance and evidence retrieval remain outstanding. |
+| Chair consensus, dissent and traceability | IN PROGRESS | No Chair logic changed; verify R4 receives shared registry and saved contributions remain authoritative. |
+| Missing/failed specialist handling | VERIFIED (historical) | Prior deterministic tests/CI only; current-head suite not yet run. |
+| Backend tests | IN PROGRESS | New registry/preflight regressions committed; exact-head Backend CI not yet verified. |
+| Frontend build and browser E2E | IN PROGRESS | No frontend changes in this slice; current-head workflows not verified. |
+| Mission Control removal | VERIFIED (historical) | Prior checklist evidence; recheck release acceptance. |
+| Development Monitor removal | VERIFIED (historical) | Prior checklist evidence; recheck release acceptance. |
+| Separate native desktop UI/UX | IN PROGRESS | Native desktop acceptance outstanding. |
+| Ollama installed/stopped/absent detection | NOT STARTED | Installer state-matrix work outstanding. |
+| Pre-MDT conversational case-intake agent | NOT STARTED | Workflow, chat UI, transcript, provenance and user-decline path outstanding. |
+| Conditional specialist reasoning | IN PROGRESS | Existing R1 conditional schema; propagation and role-specific quality acceptance outstanding. |
+| Human-readable role-specific arguments | IN PROGRESS | Model-output quality and repetition audit outstanding. |
+| Specialty-specific evidence retrieval | NOT STARTED | Retrieval/source catalogue/citation verification not implemented. |
+| Repetitive/copied response diagnostics | IN PROGRESS | Existing diagnostics; exact uploaded-export script reproduction and semantic review outstanding. |
+| TNM canonical equivalence | IN PROGRESS | Lexical component normalizer and tests committed; exact-head tests and staging-edition validation outstanding. |
+| Immutable clinical field registry | IN PROGRESS | Registry v1.0.0 and shared prompt-context injection committed; exact-head tests, schema-state expansion and round-level verification outstanding. |
+| Ollama context/truncation | NOT STARTED | No current request-time measurement. |
+| RTX 4060 active GPU verification | NOT STARTED | No request-time telemetry. |
+| Performance/latency | NOT STARTED | No current controlled benchmark. |
+| Current live four-round validation | BLOCKED | No current-head live run; retain concurrency 1. |
+| Independent qualified clinical review | NOT STARTED | Required before clinical-quality acceptance. |
+| Packaging/security/release | IN PROGRESS / BLOCKED | Current-head workflow state not established; release remains BLOCKED on live, GPU, evidence and clinical review gates. |
+
+**No-inference boundary:** this slice changed deterministic Python registry/context/test code only. It did not start Ollama or run Qwen/MedGemma.
