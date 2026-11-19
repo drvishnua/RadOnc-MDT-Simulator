@@ -3798,3 +3798,44 @@ The latest implementation remains a backend foundation, not a finished conversat
 **Clinical/data boundary:** accepted-with-gaps is a workflow acceptance state, not a determination that staging or clinical information is sufficient. The intake path does not infer facts, derive TNM stage, convert unknowns into negatives or issue treatment recommendations. No real patient data, live Ollama inference, GPU verification, clinical guideline retrieval or independent clinical validation was performed.
 
 **Governance:** all development commits remain on `feature/four-round-mdt-and-performance`. PR #1 remains draft/open/unmerged and targets `main`. No main-branch modifications, merge or force-push.
+
+
+## Additional owner-recollected mandatory requirements — 20 November 2026
+
+These requirements were explicitly restated by the project owner and must remain in this authoritative checklist. They are requirements, not evidence of implementation. Do not silently remove, weaken or mark verified without implementation and tests.
+
+| Requirement | Status | Acceptance criteria / verification |
+|---|---|---|
+| Remove Mission Control | VERIFIED | Retired panel remains absent in browser E2E; prevent reintroduction. |
+| Remove Development Monitor | VERIFIED | Retired panel remains absent in browser E2E; prevent reintroduction. |
+| Separate desktop UI/UX; no browser loading experience | IN PROGRESS | Deliver and test the intended standalone desktop UX; current installer still hosts the local application and is not yet a fully native desktop shell. |
+| Ollama installer state detection | IN PROGRESS | Distinguish installed+running, installed+stopped, and absent; discover custom install/service paths; when stopped, start/reuse the existing Ollama and its existing model store; only install Ollama and download models when genuinely absent or explicitly missing. Add mocked state tests and real clean-host/existing-stopped-host smoke tests. |
+| Conversational pre-MDT screening role | IN PROGRESS | Human, concise, WhatsApp-like dialogue; ask about disease, patient, family, preferences/willingness and other relevant domains; detect missing, ambiguous and discrepant details; persist each question and answer; invite correction/additional information; permit explicit decline and acceptance-with-gaps; preserve source text and event hashes. |
+| Accepted-case specialist participation | IN PROGRESS | Intake acceptance is not permission to invent facts. Specialists must provide their own substantive assessment despite gaps, state what is unknown, and use explicit conditional branches/prerequisites instead of generic refusal. A definitive conclusion may remain impossible when decisive information is absent. |
+| Human-readable structured specialist arguments in every round | IN PROGRESS | Each role independently explains case-specific reasoning, position, alternatives, risks, prerequisites and uncertainty in R1–R3; R4 synthesises saved inputs only. Regression checks must reject empty, templated, copied or unsupported prose. |
+| Evidence-backed reasoning for each role | NOT STARTED | Connect role-appropriate current guidelines, standard textbooks, landmark trials and recent primary literature; retain exact bibliographic provenance and relevant edition/version/date/URL; distinguish retrieved evidence from model knowledge; do not claim citations or guideline compliance without retrieval verification. |
+| Investigate copied/generic/delegated agent responses | IN PROGRESS | Obtain and inspect the referenced JSON/export; compare role outputs, prompts, source context and semantic similarity; identify root cause before changing prompts/orchestration; add regression fixtures proving distinct role-specific reasoning and no generic insufficient-information delegation. The export is not available in the repository evidence inspected so far. |
+| Canonical TNM and clinical-case terminology | IN PROGRESS | Normalize valid equivalent representations such as `T1` and `clinical_t_stage=1` to one canonical typed value only when primary site, staging system and edition are compatible. Preserve original raw input, normalized value, source and normalization trace. Reject or flag conflicts; never infer missing T/N/M or stage. |
+| Immutable central clinical schema/constants consumed by every role | NOT STARTED | Define versioned, centrally-owned field identifiers, enumerations, units, null/unknown semantics and allowed representations for demographics, disease site, histology, laterality, subsite, T/N/M, stage group, staging system/edition, ECOG, comorbidities, investigations, pathology, treatment history, family history, patient preferences and other case domains. All roles must consume the same validated immutable case snapshot and schema version. Schema identifiers/enumerations are immutable once released; changes require an explicit new version and migration, never silent mutation. |
+| Deterministic validation and no-hallucination controls | NOT STARTED | Validate types, ranges, enum membership, required provenance and cross-field/site/edition consistency before reasoning; preserve unknown as unknown; prevent model writes to source facts; keep model interpretations/recommendations separate from source facts; attach field-level provenance; detect contradictions and block silent resolution; regression-test fabricated values, unsupported staging, invalid TNM combinations and source/value mismatch. |
+| Conditional specialist recommendations | NOT STARTED | Require structured if/then conditions, explicit missing prerequisites, alternative paths and decision impact. Example: a treatment option may be described conditionally on ECOG/comorbidity status, while explicitly retaining that ECOG/comorbidities are unknown. Never convert conditional support into unconditional support. |
+| Specialty/personality-specific evidence selection | NOT STARTED | Evidence retrieval may be tailored to a role's remit and perspective, but source selection cannot change case facts or justify cherry-picking. Record retrieval query, source identity, version/date, excerpts/locations and role-to-source use; preserve conflicting evidence and dissent. |
+
+### Canonical data contract — design constraints
+
+- Immutable constants apply to schema identifiers, canonical field names, enumerations, unit definitions and normalization rules. Patient values are not constants; they remain case-specific immutable snapshot data.
+- Maintain both the original representation and normalized value. For example, raw `T1` can normalize to canonical `clinical_t_stage = 1`, while the raw string and its source remain auditable.
+- A bare T1 token is not sufficient to infer a complete stage. Confirm primary site, staging system and edition before interpreting stage group or applying site-specific rules.
+- Unknown, not assessed, not applicable, declined and conflicting are distinct states; none may be collapsed into a negative or normal finding.
+- All 45 roles must receive the same read-only, schema-versioned case facts. The model may produce attributed interpretations, but cannot edit the canonical facts.
+- Constants and deterministic validation reduce schema drift and prevent classes of data-mapping error; they do not guarantee zero hallucinations or clinical correctness. Evidence retrieval, constrained outputs, provenance, adversarial checks, tests and independent clinical review remain mandatory.
+
+### Immediate development priorities after accepted-intake promotion
+
+1. Remove or explicitly constrain legacy direct `POST /api/runs` and `POST /api/agents/{agent_id}/assess` unlinked-case bypasses; retain saved-run history and legitimate test fixtures without weakening production gates.
+2. Inspect the actual previously referenced agent-response JSON/export when available and investigate copied/generic responses from saved inputs and prompt construction.
+3. Specify and implement the versioned canonical clinical data contract and deterministic normalization/validation, including T/N/M aliases and edition/site compatibility.
+4. Complete the conversational intake dialogue, contradiction resolution prompts and accept-with-gaps semantics without implying clinical completeness.
+5. Replace insufficient-information blanket refusals with substantive, role-specific conditional assessment requirements.
+6. Integrate traceable role-specific evidence retrieval before claiming evidence-backed specialist outputs.
+7. Verify exact-head CI, browser E2E, saved artefacts and live inference separately; no GPU or clinical validation claim without direct evidence.
