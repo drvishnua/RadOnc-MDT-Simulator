@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from app.services import run_store
-from app.clinical_fields import CLINICAL_FIELD_REGISTRY, CLINICAL_FIELD_REGISTRY_VERSION
+from app.clinical_fields import (\n    CLINICAL_FIELD_REGISTRY, CLINICAL_FIELD_REGISTRY_VERSION, require_supported_registry_version,\n)
 from app.schemas import SyntheticCase
 from app.services.intake_screening import screen_case_intake
 
@@ -47,7 +47,9 @@ def _connect():
             event_count INTEGER NOT NULL,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
-            accepted_at TEXT
+            accepted_at TEXT,
+            patient_id TEXT,
+            case_version_id TEXT
         )
         """)
         connection.execute("""
@@ -66,6 +68,11 @@ def _connect():
             FOREIGN KEY(session_id) REFERENCES intake_sessions(session_id) ON DELETE CASCADE
         )
         """)
+        session_columns = {row["name"] for row in connection.execute("PRAGMA table_info(intake_sessions)")}
+        if "patient_id" not in session_columns:
+            connection.execute("ALTER TABLE intake_sessions ADD COLUMN patient_id TEXT")
+        if "case_version_id" not in session_columns:
+            connection.execute("ALTER TABLE intake_sessions ADD COLUMN case_version_id TEXT")
         yield connection
         connection.commit()
     except Exception:
@@ -222,7 +229,7 @@ def get_intake_session(session_id: str) -> dict[str, Any]:
             "event_count": len(events),
             "created_at": session["created_at"],
             "updated_at": session["updated_at"],
-            "accepted_at": session["accepted_at"],
+            "accepted_at": session["accepted_at"],\n            "patient_id": session["patient_id"],\n            "case_version_id": session["case_version_id"],
         }
 
 
@@ -343,3 +350,73 @@ def accept_intake_with_gaps(session_id: str, *, confirmed: bool) -> dict[str, An
             (_now(), _now(), session_id),
         )
     return get_intake_session(session_id)
+
+
+def promote_accepted_intake_to_patient(
+    session_id: str, *, patient_name: str,
+) -> dict[str, Any]:
+    """Atomically create a patient/version linked to the accepted intake audit chain."""
+    if not isinstance(patient_name, str) or len(patient_name.strip()) < 2:
+        raise ValueError("A fictional training display name of at least two characters is required.")
+    patient_name = patient_name.strip()
+    patient_id = str(uuid.uuid4())
+    case_version_id = str(uuid.uuid4())
+    now = _now()
+    with _connect() as db:
+        db.execute("BEGIN IMMEDIATE")
+        session = db.execute(
+            "SELECT * FROM intake_sessions WHERE session_id = ?", (session_id,)
+        ).fetchone()
+        if session is None:
+            raise KeyError(session_id)
+        if session["state"] != "ACCEPTED_WITH_GAPS":
+            raise ValueError("Only an explicitly accepted intake can be promoted to a patient case version.")
+        if session["patient_id"] or session["case_version_id"]:
+            raise ValueError("This accepted intake has already been promoted; retrieve its linked patient record.")
+        require_supported_registry_version(session["registry_version"])
+        case_json = str(session["current_case_json"])
+        case_sha = str(session["current_case_sha256"])
+        if _digest(case_json) != case_sha:
+            raise ValueError("Accepted intake case snapshot hash verification failed.")
+        SyntheticCase.model_validate(json.loads(case_json))
+        events = _verified_events(db, session_id)
+        if len(events) != int(session["event_count"]) or not events:
+            raise ValueError("Accepted intake audit history is incomplete.")
+        if events[-1]["event_type"] != "ACCEPTED_WITH_GAPS":
+            raise ValueError("Accepted intake has no terminal acceptance event.")
+
+        db.execute(
+            "INSERT INTO synthetic_patients(patient_id, patient_name, created_at, updated_at) VALUES (?, ?, ?, ?)",
+            (patient_id, patient_name, now, now),
+        )
+        db.execute(
+            "INSERT INTO patient_registry_numbers(patient_id, created_at) VALUES (?, ?)",
+            (patient_id, now),
+        )
+        promotion_event = _append_event(
+            db, session_id=session_id, event_type="PROMOTED_TO_PATIENT_VERSION",
+            payload={
+                "patient_id": patient_id,
+                "case_version_id": case_version_id,
+                "case_snapshot_sha256": case_sha,
+                "registry_version": session["registry_version"],
+            },
+            case_json=case_json, case_sha256=case_sha,
+        )
+        db.execute(
+            """INSERT INTO patient_case_versions
+            (case_version_id, patient_id, patient_name, version_number, case_json,
+             case_snapshot_sha256, created_at, clinical_field_registry_version,
+             intake_session_id, intake_event_chain_sha256)
+            VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?)""",
+            (
+                case_version_id, patient_id, patient_name, case_json, case_sha, now,
+                session["registry_version"], session_id, promotion_event["event_sha256"],
+            ),
+        )
+        db.execute(
+            """UPDATE intake_sessions SET patient_id = ?, case_version_id = ?,
+            event_count = event_count + 1, updated_at = ? WHERE session_id = ?""",
+            (patient_id, case_version_id, now, session_id),
+        )
+    return run_store.get_patient(patient_id)
