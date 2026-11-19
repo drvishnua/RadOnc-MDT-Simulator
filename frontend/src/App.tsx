@@ -9,6 +9,7 @@ import { formatElapsedDuration } from "./roundTiming.js";
 const CASE_DRAFT_KEY = "radonc-mdt-case-draft-v1";
 const LEGACY_CASE_KEY = "radonc-mdt-last-case";
 const SINGLE_ASSESSMENT_KEY = "radonc-mdt-ro01-assessment-v1";
+const PENDING_INTAKE_KEY = "radonc-mdt-pending-intake-v1";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
@@ -140,7 +141,14 @@ type PatientCaseVersion = {
   case_snapshot_sha256: string;
   created_at: string;
   case: SyntheticCasePayload;
+  intake_backed?: boolean;
+  intake_session_id?: string | null;
 };
+
+type IntakeQuestion = { domain: string; question: string };
+type IntakeGap = { domain: string; field_id: string; status: string };
+type IntakeScreening = { questions: IntakeQuestion[]; gaps: IntakeGap[]; domains: { domain: string; status: string; missing_fields: string[] }[]; case_snapshot: SyntheticCasePayload; disclaimer: string };
+type PendingIntake = { session_id: string; createNewPatient: boolean; patientName: string; patientId?: string; screening: IntakeScreening | null };
 
 type PatientDetail = {
   patient_id: string;
@@ -447,6 +455,26 @@ function safeCaseDraftStorage(): Storage {
   }
 }
 
+
+function readPendingIntakePointer(): PendingIntake | null {
+  try {
+    const raw = safeCaseDraftStorage().getItem(PENDING_INTAKE_KEY);
+    if (!raw) return null;
+    const value = JSON.parse(raw) as Record<string, unknown>;
+    if (typeof value.session_id !== "string" || typeof value.createNewPatient !== "boolean" ||
+        typeof value.patientName !== "string") return null;
+    return {
+      session_id: value.session_id,
+      createNewPatient: value.createNewPatient,
+      patientName: value.patientName,
+      patientId: typeof value.patientId === "string" ? value.patientId : undefined,
+      screening: null
+    };
+  } catch {
+    return null;
+  }
+}
+
 function App() {
   const [health, setHealth] = useState<Health | null>(null);
   const [runtime, setRuntime] = useState<Runtime | null>(null);
@@ -459,6 +487,7 @@ function App() {
   const [activeSavedCase, setActiveSavedCase] = useState<ActiveSavedCase | null>(null);
   const [selectedPatientRunId, setSelectedPatientRunId] = useState("");
   const [patientBusy, setPatientBusy] = useState(false);
+  const [pendingIntake, setPendingIntake] = useState<PendingIntake | null>(() => readPendingIntakePointer());
   const [patientError, setPatientError] = useState("");
   const [form, setForm] = useState<typeof emptyForm>(() =>
     readDraft(safeCaseDraftStorage(), CASE_DRAFT_KEY, LEGACY_CASE_KEY, emptyForm, legacySavedCaseToDraft)
@@ -617,25 +646,94 @@ function App() {
     if (!validation?.valid || !validatedCase || (!createNewPatient && !loadedPatient)) return;
     setPatientBusy(true);
     setPatientError("");
+    setPendingIntake(null);
     try {
       const patientName = form.patient_name.trim();
-      if (patientName.length < 2) throw new Error("Enter a fictional training name before saving.");
-      const url = createNewPatient
-        ? API_BASE + "/api/patients"
-        : API_BASE + "/api/patients/" + loadedPatient!.patient_id + "/versions";
-      const response = await fetch(url, {
+      if (patientName.length < 2) throw new Error("Enter a fictional training name before screening.");
+      const response = await fetch(API_BASE + "/api/intakes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ patient_name: patientName, case: validatedCase })
+        body: JSON.stringify({ case: validatedCase })
       });
-      const body = await response.json() as PatientDetail & { detail?: string };
-      if (!response.ok) throw new Error(body.detail ?? "The patient case could not be saved.");
-      const latest = body.versions[0];
-      if (!latest) throw new Error("The saved patient record did not return a case version.");
-      await refreshPatients();
-      await loadPatientVersion(body, latest.case_version_id);
+      const body = await response.json() as { session_id: string; screening: IntakeScreening; detail?: string };
+      if (!response.ok) throw new Error(body.detail ?? "The pre-MDT intake could not be started.");
+      const pending: PendingIntake = {
+        session_id: body.session_id,
+        createNewPatient,
+        patientName,
+        patientId: createNewPatient ? undefined : loadedPatient!.patient_id,
+        screening: body.screening
+      };
+      setPendingIntake(pending);
+      for (const question of body.screening.questions) {
+        const questionResponse = await fetch(API_BASE + "/api/intakes/" + body.session_id + "/events", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ event_type: "QUESTION_ASKED", domain: question.domain })
+        });
+        const questionBody = await questionResponse.json() as { detail?: string };
+        if (!questionResponse.ok) throw new Error(questionBody.detail ?? "An intake question could not be recorded.");
+      }
+      const refreshed = await fetch(API_BASE + "/api/intakes/" + body.session_id);
+      const refreshedBody = await refreshed.json() as { screening: IntakeScreening; detail?: string };
+      if (!refreshed.ok) throw new Error(refreshedBody.detail ?? "The intake review could not be loaded.");
+      setPendingIntake({ ...pending, screening: refreshedBody.screening });
     } catch (error) {
-      setPatientError(error instanceof Error ? error.message : "Unable to save the patient case.");
+      setPatientError(error instanceof Error ? error.message : "Unable to start pre-MDT intake screening.");
+    } finally {
+      setPatientBusy(false);
+    }
+  }
+
+  async function declineIntakeQuestion(domain: string) {
+    if (!pendingIntake) return;
+    setPatientBusy(true);
+    setPatientError("");
+    try {
+      const response = await fetch(API_BASE + "/api/intakes/" + pendingIntake.session_id + "/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ event_type: "DECLINE_DOMAIN", domain, source_text: "User explicitly declined this intake question." })
+      });
+      const body = await response.json() as { screening: IntakeScreening; detail?: string };
+      if (!response.ok) throw new Error(body.detail ?? "The declined question could not be recorded.");
+      setPendingIntake({ ...pendingIntake, screening: body.screening });
+    } catch (error) {
+      setPatientError(error instanceof Error ? error.message : "Unable to record the declined question.");
+    } finally {
+      setPatientBusy(false);
+    }
+  }
+
+  async function acceptAndPromoteIntake() {
+    if (!pendingIntake) return;
+    setPatientBusy(true);
+    setPatientError("");
+    try {
+      const acceptedResponse = await fetch(API_BASE + "/api/intakes/" + pendingIntake.session_id + "/accept", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmed: true })
+      });
+      const acceptedBody = await acceptedResponse.json() as { detail?: string };
+      if (!acceptedResponse.ok) throw new Error(acceptedBody.detail ?? "The intake could not be accepted.");
+      const promotionResponse = await fetch(API_BASE + "/api/intakes/" + pendingIntake.session_id + "/promote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          patient_name: pendingIntake.patientName,
+          ...(pendingIntake.patientId ? { patient_id: pendingIntake.patientId } : {})
+        })
+      });
+      const patient = await promotionResponse.json() as PatientDetail & { detail?: string };
+      if (!promotionResponse.ok) throw new Error(patient.detail ?? "The accepted intake could not be saved as a patient case version.");
+      const latest = patient.versions[0];
+      if (!latest) throw new Error("The accepted intake did not return a saved case version.");
+      setPendingIntake(null);
+      await refreshPatients();
+      await loadPatientVersion(patient, latest.case_version_id);
+    } catch (error) {
+      setPatientError(error instanceof Error ? error.message : "Unable to accept and save the intake.");
     } finally {
       setPatientBusy(false);
     }
@@ -647,6 +745,7 @@ function App() {
     setValidatedCase(null);
     setValidationError("");
     setPatientError("");
+    setPendingIntake(null);
     setSelectedPatientId("");
     setLoadedPatient(null);
     setSelectedCaseVersionId("");
@@ -703,6 +802,37 @@ function App() {
       setPatientBusy(false);
     }
   }
+
+
+  useEffect(() => {
+    const storage = safeCaseDraftStorage();
+    if (!pendingIntake) {
+      storage.removeItem(PENDING_INTAKE_KEY);
+      return;
+    }
+    storage.setItem(PENDING_INTAKE_KEY, JSON.stringify({
+      session_id: pendingIntake.session_id,
+      createNewPatient: pendingIntake.createNewPatient,
+      patientName: pendingIntake.patientName,
+      patientId: pendingIntake.patientId
+    }));
+  }, [pendingIntake?.session_id, pendingIntake?.createNewPatient, pendingIntake?.patientName, pendingIntake?.patientId]);
+
+  useEffect(() => {
+    if (!pendingIntake || pendingIntake.screening) return;
+    let active = true;
+    void fetch(API_BASE + "/api/intakes/" + pendingIntake.session_id)
+      .then(async (response) => {
+        const body = await response.json() as { screening?: IntakeScreening; detail?: string };
+        if (!response.ok || !body.screening) throw new Error(body.detail ?? "Pending intake could not be restored.");
+        if (active) setPendingIntake((current) => current?.session_id === pendingIntake.session_id
+          ? { ...current, screening: body.screening! } : current);
+      })
+      .catch((error) => {
+        if (active) setPatientError(error instanceof Error ? error.message : "Pending intake could not be restored.");
+      });
+    return () => { active = false; };
+  }, [pendingIntake?.session_id, pendingIntake?.screening]);
 
   useEffect(() => {
     void refreshStatus();
@@ -1375,6 +1505,41 @@ function App() {
                       Save new version of {loadedPatient.patient_identifier}
                     </button>
                   )}
+                </div>
+              </div>
+            )}
+
+
+            {pendingIntake && (
+              <div className="result-card intake-review-card" aria-label="Pre-MDT intake review">
+                <strong>Pre-MDT intake review</strong>
+                <p>Review the missing information below. You can return to the case form, add documented details, validate again and start a revised intake. Accepting with gaps preserves them as unknown; it does not make the case clinically complete.</p>
+                {pendingIntake.screening ? (
+                  <>
+                    {pendingIntake.screening.questions.length > 0 ? (
+                      <div className="intake-question-list">
+                        {pendingIntake.screening.questions.map((question) => (
+                          <div className="intake-question" key={question.domain}>
+                            <strong>{question.question}</strong>
+                            <p>Missing fields: {pendingIntake.screening!.gaps.filter((gap) => gap.domain === question.domain).map((gap) => gap.field_id).join(", ") || "Review required"}</p>
+                            <button className="button button-quiet" type="button" onClick={() => void declineIntakeQuestion(question.domain)} disabled={patientBusy}>I cannot provide this information</button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p>No outstanding screening questions remain in the listed domains.</p>
+                    )}
+                    {pendingIntake.screening.gaps.length > 0 && (
+                      <p className="result-footnote">Outstanding gaps: {pendingIntake.screening.gaps.map((gap) => gap.field_id + (gap.status === "DECLINED" ? " (declined)" : "")).join(", ")}.</p>
+                    )}
+                    <p className="result-footnote">{pendingIntake.screening.disclaimer}</p>
+                  </>
+                ) : <p>Restoring the saved intake review…</p>}
+                <div className="batch-actions">
+                  <button className="button button-secondary" type="button" onClick={() => setPendingIntake(null)} disabled={patientBusy}>Return to case form</button>
+                  <button className="button button-primary" type="button" onClick={() => void acceptAndPromoteIntake()} disabled={patientBusy || !pendingIntake.screening}>
+                    {patientBusy ? "Saving…" : pendingIntake.screening?.gaps.length ? "Accept with gaps and save" : "Accept intake and save"}
+                  </button>
                 </div>
               </div>
             )}
