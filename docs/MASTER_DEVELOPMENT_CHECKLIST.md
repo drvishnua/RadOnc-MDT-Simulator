@@ -3338,3 +3338,61 @@ The earlier failed backend runs remain in the audit history: `d8cebc` had 3 fail
 | Release acceptance | BLOCKED | Live validation, GPU, evidence retrieval and independent clinical review remain gates. |
 
 **No-inference boundary:** this exact-head CI performed software tests, packaging and static security checks only. The hosted Ollama/model bootstrap was skipped. No Qwen/MedGemma inference, GPU verification, live MDT run, guideline retrieval or clinical validation was performed.
+
+
+## Registry-version persistence and legacy-run isolation — 20 November 2026
+
+**Verified code/test SHA:** `8099cac0d13e2f48db327f4e16bad0222dce1b56`. PR #1 remains open, draft and unmerged, targeting `main`; base SHA unchanged. No changes to `main`.
+
+### Implemented
+- Added `clinical_field_registry_version` to SQLite `simulation_runs` and `patient_case_versions` through additive migrations. New records store registry version `1.0.0`.
+- Existing rows without registry metadata are preserved and explicitly labelled `legacy-unversioned`; original case JSON bytes and snapshot hashes are not rewritten.
+- Run summaries, saved patient-version records and `GET /api/runs/{run_id}/case` expose the registry version.
+- Patient-linked run creation carries forward the exact version stored on its immutable case version.
+- Added a supported-version guard. Legacy/unavailable registry records cannot start a new model run, generate a saved RO-01 assessment, resume R1, or advance/resume R2–R4 under a different prompt context. The user must create a new immutable case version before starting a new MDT run. Historical records remain viewable.
+- Added regression coverage for new-record version persistence, legacy migration defaults, legacy case-version rejection and legacy run resume/round-advance rejection.
+- This is metadata and safety isolation; registry v1.0.0 definitions are still the only supported prompt registry. Future registry versions must retain old definitions and explicitly add them to the supported-version map before historical runs can be resumed.
+
+### Exact-head CI — commit `8099cac0d13e2f48db327f4e16bad0222dce1b56`
+All six standard workflows completed successfully:
+- Backend Tests [44608374393](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44608374393): **509 passed, 0 failed, 0 errors, 0 skipped**. Deterministic preflight and script compilation passed.
+- Frontend Build [44608372997](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44608372997): SUCCESS.
+- Browser E2E [44608373045](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44608373045): SUCCESS.
+- Windows Packaging Prerequisites [44608373062](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44608373062): SUCCESS.
+- Windows Installer [44608372969](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44608372969): SUCCESS; package, install, smoke test, checksum and artifact upload succeeded. Artifact [14571911368](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/artifacts/14571911368), digest `sha256:00fef3b777cba82bd9417baa66de235eb698ee8e9d04a61ac5b305c8a48d53b5`. Clean-hosted first-run Ollama/model bootstrap was SKIPPED.
+- Security and Dependency Audit [44608373024](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44608373024): SUCCESS; dependency audit, both CodeQL scans and full-history secret scan passed.
+
+### Updated Master Checklist — Current Status
+| Workstream | Status | Evidence / outstanding gate |
+|---|---|---|
+| R1–R4 shared case data flow | IN PROGRESS | All rounds use the shared registry context builder; explicit per-round payload identity/snapshot equality test remains outstanding. |
+| Clinical safety and staging | IN PROGRESS | Registry and TNM lexical normalization covered by 509 backend tests; edition-aware clinical validation and independent review outstanding. |
+| Case integrity and audit | VERIFIED | Exact-head 509 backend tests and preflight passed on `8099cac`. |
+| Provenance and evidence retrieval | IN PROGRESS | Raw values retained; per-field source provenance and evidence retrieval remain outstanding. |
+| Chair consensus, dissent and traceability | IN PROGRESS | Chair logic unchanged in this slice; live saved-contribution reconciliation remains outstanding. |
+| Missing/failed specialist handling | VERIFIED (software tests) | Existing deterministic regression suite included in exact-head backend pass; live 45-role orchestration outstanding. |
+| Backend tests | VERIFIED | 509/509 passed on `8099cac`; preflight passed. |
+| Frontend build | VERIFIED | Exact-head run `44608372997`. |
+| Browser E2E | VERIFIED | Exact-head run `44608373045`. |
+| Packaging prerequisites | VERIFIED | Exact-head run `44608373062`. |
+| Windows installer build/install smoke | VERIFIED | Exact-head run `44608372969`; artifact `14571911368`. Clean-hosted model bootstrap skipped. |
+| Security audit | VERIFIED | Exact-head run `44608373024`. |
+| Mission Control removal | VERIFIED (historical) | Recheck final release acceptance. |
+| Development Monitor removal | VERIFIED (historical) | Recheck final release acceptance. |
+| Separate native desktop UI/UX | IN PROGRESS | Current launcher still opens the browser at localhost; native desktop shell/UI remains outstanding. |
+| Ollama installed/stopped/absent detection | NOT STARTED | Existing bootstrap only searches PATH and two standard install paths; registry/service/custom model-store discovery and behavioral state-matrix tests remain outstanding. |
+| Pre-MDT conversational case-intake agent | NOT STARTED | Workflow, chat UI, transcript, provenance and user-decline path outstanding. |
+| Conditional specialist reasoning | IN PROGRESS | Existing R1 conditional schema; R2/R3/R4 branch propagation and live quality acceptance outstanding. |
+| Human-readable role-specific arguments | IN PROGRESS | Per-role narrative quality and anti-repetition audit outstanding. |
+| Specialty-specific evidence retrieval | NOT STARTED | Retrieval/source catalogue/citation verification not implemented. |
+| Repetitive/copied response diagnostics | IN PROGRESS | Existing export diagnostics; exact source-script reproduction and semantic review outstanding. |
+| TNM canonical equivalence | IN PROGRESS | Lexical T/N/M normalization tested; staging-system/edition validation and structured-vs-narrative conflict audit outstanding. |
+| Immutable clinical field registry | IN PROGRESS | v1.0.0 registry, shared context, DB version persistence, legacy isolation and regressions verified; richer explicit state schema and additional clinical fields outstanding. |
+| Ollama context/truncation | NOT STARTED | No request-time context measurement. |
+| RTX 4060 active GPU verification | NOT STARTED | No request-time GPU telemetry. |
+| Performance/latency | NOT STARTED | No current controlled benchmark. |
+| Current live four-round validation | BLOCKED | No current-head live run; concurrency remains 1. |
+| Independent qualified clinical review | NOT STARTED | Required before clinical-quality acceptance. |
+| Release acceptance | BLOCKED | Live validation, GPU, evidence retrieval and independent clinical review remain gates. |
+
+**No-inference boundary:** CI performed deterministic software tests, frontend/browser tests, packaging and static security checks only. Clean-hosted Ollama/model bootstrap was skipped. No Qwen/MedGemma inference, GPU verification, live MDT run, evidence retrieval or clinical validation was performed.
