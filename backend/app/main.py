@@ -438,7 +438,7 @@ async def promote_pre_mdt_intake(
     """Create an immutable patient case version from an accepted, audited intake."""
     try:
         return promote_accepted_intake_to_patient(
-            session_id, patient_name=request.patient_name,
+            session_id, patient_name=request.patient_name, patient_id=request.patient_id,
         )
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="Intake session not found.") from exc
