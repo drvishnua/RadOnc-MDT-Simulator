@@ -3839,3 +3839,25 @@ These requirements were explicitly restated by the project owner and must remain
 5. Replace insufficient-information blanket refusals with substantive, role-specific conditional assessment requirements.
 6. Integrate traceable role-specific evidence retrieval before claiming evidence-backed specialist outputs.
 7. Verify exact-head CI, browser E2E, saved artefacts and live inference separately; no GPU or clinical validation claim without direct evidence.
+
+
+## Legacy R1 bypass closure increment — 20 November 2026
+
+**Implementation commits:**
+- `00cfdaccf761aff47d52de834d6e015c52543799` — legacy standalone agent assessment and direct batch-run routes now reject unlinked case payloads with HTTP 409 and direct the user to accepted intake → immutable patient version → saved-case R1.
+- `fa7ecd722f01e86dc1b64b82cf6a25a5b834979e` — API regression tests assert both routes reject before model inference or run persistence.
+
+**Behavioral boundary:** existing saved-run read, result, report and history routes are unchanged. The saved-patient run and saved RO-01 routes continue to use accepted-intake provenance verification. This change does not yet establish that every other internal/test-only call path is constrained; audit those separately before claiming a universal gate.
+
+| Workstream | Status | Evidence / boundary |
+|---|---|---|
+| Legacy `POST /api/runs` unlinked R1 bypass | IN PROGRESS | Route now returns 409 before persistence; regression test added. Await exact-head backend CI and audit of all callers. |
+| Legacy `POST /api/agents/{agent_id}/assess` unlinked assessment bypass | IN PROGRESS | Known profile now returns 409 before inference; unknown profile remains 404; malformed request remains schema-rejected. Regression test added. |
+| Saved-patient R1 provenance gate | VERIFIED (prior exact-head software tests) | Accepted intake promotion and hashed provenance verification were tested on prior code SHA `a02c1b9`; rerun full suite on current head. |
+| Historical saved-run readability | IN PROGRESS | Read routes were not modified; regression validation still required. |
+| Backend regression suite on new code | IN PROGRESS | CI triggered by implementation commits; no passing result recorded yet. |
+| Frontend build / browser E2E / installer / security on new code | IN PROGRESS | Exact-head CI required; prior `a02c1b9` results do not validate this change. |
+
+**Current application code SHA:** `fa7ecd722f01e86dc1b64b82cf6a25a5b834979e`  
+**Current checklist commit before this update:** see repository history.  
+**Next:** inspect all frontend, script, workflow and test callers of the retired routes; run exact-head backend and full CI; preserve compatibility only through accepted-intake-backed saved-version APIs. Do not mark the universal R1 gate verified until all reachable entry points have been audited.
