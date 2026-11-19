@@ -148,3 +148,31 @@ def test_non_verified_step_cannot_carry_fake_completion_evidence():
     plan["steps"][1]["completion_evidence"] = {"commit_sha": EVIDENCE_SHA, "workflow_runs": []}
     with pytest.raises(GateError, match="non-verified step"):
         _validate(plan=plan)
+
+
+def test_active_allowlist_cannot_be_widened_in_the_json_plan():
+    plan, _ = _fixture()
+    plan["steps"][1]["allowed_paths"].append("backend/app/*")
+    with pytest.raises(GateError, match="allowed_paths differ"):
+        _validate(plan=plan)
+
+
+def test_required_workflows_cannot_be_removed_from_the_json_plan():
+    plan, _ = _fixture()
+    plan["steps"][0]["required_workflow_names"].pop()
+    with pytest.raises(GateError, match="required workflows differ"):
+        _validate(plan=plan)
+
+
+def test_active_step_scope_baseline_cannot_be_advanced_to_hide_changes():
+    plan, _ = _fixture()
+    plan["scope_baseline_commit"] = "c" * 40
+    with pytest.raises(GateError, match="scope baseline cannot be moved"):
+        _validate(plan=plan)
+
+
+def test_unknown_plan_identity_is_rejected():
+    plan, _ = _fixture()
+    plan["plan_id"] = "different-plan"
+    with pytest.raises(GateError, match="plan_id"):
+        _validate(plan=plan)
