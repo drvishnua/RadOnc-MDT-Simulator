@@ -79,7 +79,7 @@ def test_shared_case_context_includes_registry_and_canonical_tnm_but_preserves_r
     assert context["canonical_field_values"][CLINICAL_T_STAGE]["raw_value"] == "1"
     assert context["canonical_field_values"][CLINICAL_T_STAGE]["canonical_comparison_value"] == "T1"
     assert context["canonical_field_values"][CLINICAL_N_STAGE]["canonical_comparison_value"] == "N0"
-    assert any("clinical_t_stage" in rule and "T1" in rule for rule in context["interpretation_rules"])
+    assert any("clinical T component" in rule and "canonical comparison value" in rule for rule in context["interpretation_rules"])
 
 
 def test_unknown_and_empty_lists_are_not_converted_to_negative_findings():
