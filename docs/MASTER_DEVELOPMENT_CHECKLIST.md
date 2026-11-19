@@ -3894,3 +3894,45 @@ Do not treat cancelled workflows as passes. Re-run the full validation after sou
 
 
 **Code inspection correction:** `backend/app/clinical_fields.py` already contains `Final` field-name constants, short T/N/M/AGE/SEX/SITE/STAGE aliases, a frozen field-definition registry and mapping-proxy lookups. It also provides lexical TNM component normalization (for example, bare `1` and `T1` to canonical `T1`) while explicitly not claiming site/edition-aware staging validation. Therefore the constants workstream is **IN PROGRESS**, not NOT STARTED. Remaining work is to prove every role consumes the same schema-versioned read-only case, expand typed values/provenance and validation, and add site/staging-system/edition-aware checks without mutating raw inputs.
+
+
+## R1 provenance gate — batch fixture migration and fresh validation — 20 November 2026
+
+### Findings from exact-head CI
+
+Backend workflow `44618540474` on PR head `33d50400d066c99824727354f866e5d55d7f09e8` completed with **528 passed, 2 failed**, 0 errors, 0 skipped, 1 warning. Both failures were test-fixture assumptions: `tests/test_batch_runs.py` still called the retired unlinked `POST /api/runs` endpoint and received the intended HTTP 409. The same run confirmed the updated four-round fixture in `tests/test_mdt_rounds.py` passed after it was migrated to accepted intake and immutable-version creation. No production route was reopened.
+
+### Corrective test-only commits
+
+- `32ebc01fa2d00e5066cbb79bc1a3a5ca5b4fbad4`: four-round test fixture now creates an accepted intake, promotes it to an immutable case version, and starts R1 through the saved-patient route.
+- `2474b389c63f5df659c03e36dd5c285e043520da`: batch-run tests now use the same accepted-intake-backed fixture flow. This covers both the all-45 independent execution test and failed-agent/resume test. Direct `POST /api/runs` remains explicitly tested as rejected in `test_api.py`.
+
+**Current code/test commit:** `2474b389c63f5df659c03e36dd5c285e043520da`  
+**Current branch:** `feature/four-round-mdt-and-performance`  
+**PR #1:** open, draft, unmerged; base `main`.
+
+### Current validation evidence
+
+On the prior PR head `33d5040`:
+- Backend run [44618540474](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44618540474): FAILED, 528 passed / 2 failed. Failures were the two stale direct-run fixtures described above; the two four-round retry/resume tests passed after their fixture migration.
+- Frontend Build [44618540400](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44618540400): SUCCESS.
+- Browser E2E [44618540231](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44618540231): SUCCESS.
+- Windows Packaging Prerequisites [44618540033](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44618540033): SUCCESS.
+- Security Audit [44618540034](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44618540034): SUCCESS, including Python/JS CodeQL, dependency audit and secret scan.
+- Windows Installer [44618539859](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44618539859): still in progress at the time of this record; no pass is claimed.
+
+After commit `2474b38`, a push-triggered Windows Installer workflow [44619129875](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44619129875) was observed pending. The PR-triggered exact-head workflows for this code/test tree have not yet been confirmed. Do not infer a backend pass from the earlier 528/2 run.
+
+| Workstream | Status | Current evidence |
+|---|---|---|
+| Direct unlinked R1 API bypasses | IN PROGRESS | Both legacy endpoints reject with 409; full reachable-entry-point audit still required. |
+| Four-round test fixtures | IN PROGRESS | Fixture now enters through accepted intake and immutable version; passed in run 44618540474. |
+| Batch R1 test fixtures | IN PROGRESS | Both failing tests migrated to accepted intake and immutable version in 2474b38; exact-head backend rerun pending. |
+| Backend tests on current code/test SHA | IN PROGRESS | No completed exact-head run yet. |
+| Frontend build / browser E2E | IN PROGRESS | Prior tree passed; rerun on current exact PR head required. |
+| Windows packaging prerequisites | IN PROGRESS | Prior tree passed; current exact-head verification pending. |
+| Windows installer | IN PROGRESS | Prior run 44618539859 was in progress; push run 44619129875 pending. |
+| Security/dependency audit | IN PROGRESS | Prior tree passed; rerun on current exact PR head required. |
+| Clinical constants registry | IN PROGRESS | Registry is frozen/versioned and included in shared case prompt context; site/edition-aware TNM validation and per-role consumption tests remain outstanding. |
+
+**No inference or GPU test was performed by these CI runs.** Software test results do not establish model quality, clinical accuracy, guideline concordance, or RTX 4060 GPU execution. Preserve prior failed CI runs in the audit history.
