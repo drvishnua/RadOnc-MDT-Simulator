@@ -443,8 +443,9 @@ def require_intake_backed_case_version(patient_id: str, case_version_id: str) ->
 
 def create_run_for_case_version(patient_id: str, case_version_id: str) -> dict[str, Any]:
     """Create a run only from an accepted-intake-backed immutable case version."""
-    version = require_intake_backed_case_version(patient_id, case_version_id)
+    version = get_patient_case_version(patient_id, case_version_id)
     require_supported_registry_version(version["clinical_field_registry_version"])
+    version = require_intake_backed_case_version(patient_id, case_version_id)
     case = SyntheticCase.model_validate(version["case"])
     return create_run(
         case,
