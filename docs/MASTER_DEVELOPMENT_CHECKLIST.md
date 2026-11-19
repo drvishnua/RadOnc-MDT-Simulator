@@ -3526,3 +3526,27 @@ No live user-device Ollama/model operation, Qwen inference, RTX 4060 GPU verific
 | Windows installer CI | FAILED on prior head; rerun pending | Run 44609389615 failed at portable-fallback mock assertion. Do not mark passed until a later exact-head run succeeds. |
 
 No real Ollama executable, model download, inference or user data was used in this test. No GPU activity was measured.
+
+
+## Pre-MDT intake screening — implementation started 20 November 2026
+
+**Code commits on the development branch:**
+- Deterministic screening service: `e24214d1bf439ef88039846c833abda1a9334df8`
+- Regression tests: `8705dda8921736ea6e20580a42e5cd4986fe6660`
+- Request schema: `69631934c1b055f0896c9b00a6ac8df868797a93`
+- API endpoint: `87d74a25619eef2e6d011ece770bb50c5d28a639`
+
+The new `POST /api/cases/screen-intake` endpoint runs deterministic completeness screening across patient/disease, staging/investigations, comorbidity/medications, performance/function, prior treatment and patient preferences. It returns field-level gaps and concise follow-up questions. A declined domain suppresses its question but retains each missing field as a DECLINED gap. Empty lists remain unconfirmed/not reported; the service returns the original validated case snapshot and never fills missing values.
+
+**Boundary:** this is the first screening slice, not the completed conversational intake workflow. Transcript/session persistence, incremental answer/correction handling, explicit accept-with-gaps action, discrepancy reconciliation and frontend integration remain outstanding. It does not validate clinical adequacy or authorise treatment. The four commits above have not yet had CI results checked at the time of this entry.
+
+| Intake requirement | Status | Evidence / remaining work |
+|---|---|---|
+| Deterministic field/domain completeness screening | IN PROGRESS | Service and API committed; exact-head CI pending. |
+| Concise follow-up questions | IN PROGRESS | Static domain prompts implemented; conversational question sequencing and answer capture outstanding. |
+| User declines questions; retain gaps | IN PROGRESS | Declined domains produce DECLINED field gaps and no repeated question; persistent transcript/action audit outstanding. |
+| Case transcript and immutable intake history | NOT STARTED | Database persistence and append-only answer/correction events outstanding. |
+| Accept case with gaps and continue to R1 | NOT STARTED | Explicit acceptance state and run gate outstanding. |
+| Contradiction/ambiguity detection across narrative and structured fields | IN PROGRESS | Existing case-integrity warnings are separate; intake-level field/source discrepancy coverage outstanding. |
+
+**Verification boundary:** no live model inference, GPU activity, clinical validation or real-patient data processing was performed for this intake slice.
