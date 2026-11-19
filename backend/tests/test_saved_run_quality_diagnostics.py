@@ -90,6 +90,28 @@ def test_near_duplicate_threshold_is_configurable_and_similarity_is_not_a_qualit
     assert result["scope"]["near_duplicate_interpretation"] == "triage_signal_only_not_proof_of_copying"
 
 
+def test_stage_audit_ignores_narrative_and_uses_only_structured_stage_fields():
+    export = _export()
+    export["case_snapshot"]["case_summary"] = "The narrative mentions T1N0M0 but this is not structured staging."
+    result = build_diagnostics(export, b"fixture")
+    assert result["staging_reference_flags"]
+    assert all(item["reason"] == "no_structured_stage_field_available"
+               for item in result["staging_reference_flags"])
+
+    export["case_snapshot"]["clinical_stage"] = "T1N0M0"
+    result = build_diagnostics(export, b"fixture")
+    assert result["staging_reference_flags"] == []
+
+
+def test_stage_audit_detects_partial_tnm_tokens():
+    export = _export()
+    export["independent_assessments"][0]["assessment"]["provisional_conclusion"] = "T1N0 glottic cancer"
+    export["independent_assessments"][1]["assessment"]["provisional_conclusion"] = "T1a disease; M0"
+    result = build_diagnostics(export, b"fixture")
+    tokens = {item["token"].upper() for item in result["staging_reference_flags"]}
+    assert {"T1N0", "T1A", "M0"} <= tokens
+
+
 def test_malformed_round_collection_is_reported_as_zero_rows_not_crashing():
     result = build_diagnostics({"run": {}, "independent_assessments": "bad"}, b"fixture")
     assert result["rounds"]["R1"]["source_rows"] == 0
