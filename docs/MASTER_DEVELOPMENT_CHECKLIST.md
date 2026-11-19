@@ -3012,3 +3012,47 @@ The first backend workflow on code/test SHA `05f6cf8782de1315b9def1e8b384540fa2c
 **Current branch HEAD at this checklist update:** `4cf70cb953e12921bd4dbf88ca2fffdef40573fe`. PR #1 remains open, draft and unmerged; main unchanged.
 
 **Current status:** saved-run diagnostic implementation — IN PROGRESS; diagnostic regression tests — FAILED on prior SHA, correction committed and awaiting rerun; exact-head CI — IN PROGRESS/PENDING for new HEAD; all clinical, live-model, GPU and release gates remain as recorded above. Do not erase the failed run from the audit history.
+
+
+## Resume checkpoint — structured TNM component comparison (20 November 2026)
+
+**Repository state before checklist update:** development branch `feature/four-round-mdt-and-performance`; code HEAD `340a73e33e23c250779247b1b7a55a47e6d1e494`. PR #1 remains open, draft and unmerged, targeting `main`; no changes to `main`.
+
+**Verified prior checkpoint:** all six standard workflows succeeded on previous checklist HEAD `389e9e898f5dd2e8fc9896af075a618c8ac1981d`: Backend Tests 44601078059; Frontend Build 44601078060; Browser E2E 44601078140; Windows Packaging Prerequisites 44601078106; Windows Installer Build 44601078064; Security and Dependency Audit 44601078083. The backend test job and browser E2E job both completed successfully. This prior success verifies the previous code, not the new TNM component changes below.
+
+**New export schema inspected:** the newly attached export uses structured `clinical_t_stage`, `clinical_n_stage`, and `clinical_m_stage` fields containing bare component values (for example `"1"`, `"0"`, `"0"`). The previous diagnostic helper retained these values but omitted their field semantics, so an R1 combined token such as `T1N0M0` could be falsely flagged as absent. This was identified by inspecting the actual uploaded JSON, not by assuming its schema.
+
+**Code changes now committed (pending verification):**
+- `backend/scripts/saved_run_quality_diagnostics.py`: prefixes bare structured component values with their field meaning (T/N/M); expands combined TNM strings into independently comparable T, N and M components; compares specialist combined tokens against the structured components; continues to exclude narrative `case_summary`.
+- `backend/tests/test_saved_run_quality_diagnostics.py`: adds a regression test for component-stage fields and an incomplete/mismatching N component. The suite now contains eight tests.
+- Latest code commit: `340a73e33e23c250779247b1b7a55a47e6d1e494`. These changes have not yet been executed successfully in CI or locally. Do not claim the new diagnostic is verified until exact-head Backend Tests succeeds.
+
+**Export observation boundary:** the newly attached export is a separate run from the previously analysed historical export. Its snapshot contains age 10, head-and-neck case labels, structured clinical T/N/M component fields and performance status; investigation and several other structured case arrays are empty. These are recorded input properties only. This checkpoint makes no clinical stage validation, treatment recommendation, or quality adjudication.
+
+### Master Checklist — Current Status
+
+| Workstream | Status | Evidence / outstanding gate |
+|---|---|---|
+| R1–R4 architecture and saved data flow | IN PROGRESS | Existing architecture/tests; current full live 45-role reconciliation not run. |
+| Clinical safety and staging | IN PROGRESS | Structured TNM source comparison being corrected; no clinical adjudication or independent review. |
+| Case integrity and deterministic audit | VERIFIED | Prior exact-head CI passed; new diagnostic comparison changes await exact-head backend tests. |
+| Provenance and evidence retrieval | IN PROGRESS | Existing source binding tests; live evidence retrieval remains NOT STARTED. |
+| Chair consensus, dissent and traceability | IN PROGRESS | Deterministic tests exist; current live Chair reconciliation outstanding. |
+| Missing/failed specialist handling | VERIFIED | Prior regression and backend CI; current full live orchestration outstanding. |
+| Backend/API and diagnostic tests | IN PROGRESS | New TNM changes pending exact-head backend workflow. |
+| Frontend build and browser E2E | VERIFIED | Prior exact-head success on `389e9e8`; rerun will be required for current code HEAD. |
+| Dashboard / Mission Control | VERIFIED | Mission Control and Development Monitor remain removed. |
+| Native desktop UI/UX | IN PROGRESS | Separate native desktop acceptance outstanding. |
+| Pre-MDT clarification agent | NOT STARTED | Intake, transcript, explicit confirmation and immutable snapshot workflow outstanding. |
+| Conditional reasoning through R1–R4 | IN PROGRESS | R1 conditional options exist; downstream branch propagation outstanding. |
+| TNM representation equivalence | IN PROGRESS | Structured component labels and combined-token comparison now implemented, pending regression verification; broader conflict/incomplete-stage cases outstanding. |
+| Ollama installer detection | NOT STARTED | Existing install/service/model inventory scenarios not tested. |
+| Ollama context/truncation | NOT STARTED | No request-time measurement. |
+| RTX 4060 request-time GPU/offload | NOT STARTED | No inference-time telemetry. |
+| Performance/latency | NOT STARTED | No current controlled benchmark; concurrency remains 1. |
+| New Qwen/MedGemma inference | BLOCKED | No explicit approval for a new synthetic-only run. |
+| Current live four-round validation | BLOCKED | No current-head live run or saved artefact. |
+| Independent qualified clinical review | NOT STARTED | Required before clinical-quality acceptance. |
+| Packaging/security/release | IN PROGRESS / BLOCKED | Prior workflows passed on previous SHA; current code HEAD workflows pending. Release remains BLOCKED on live validation, GPU, evidence and clinical review. |
+
+**No-inference boundary:** only static export inspection and deterministic diagnostic code/test edits were performed. No Ollama process, Qwen/MedGemma inference, GPU test, clinical review or evidence retrieval was started.
