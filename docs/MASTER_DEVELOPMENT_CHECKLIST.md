@@ -3003,3 +3003,12 @@ No CI pass is claimed at this checkpoint. The six workflows that passed on prior
 | Release acceptance | BLOCKED | Live validation, GPU, evidence retrieval, clinical review and security/governance gates remain open. |
 
 **No-inference boundary:** this work is deterministic source inspection and code/test changes only. No Ollama process, Qwen/MedGemma inference, GPU test, clinical review or evidence retrieval was started.
+
+
+### Backend regression correction — 20 November 2026
+
+The first backend workflow on code/test SHA `05f6cf8782de1315b9def1e8b384540fa2c1ecb9`, run [44600863624](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44600863624), **FAILED** in one test: `test_exact_duplicate_is_separate_from_near_duplicate_and_flagged_not_adjudicated`. The implementation intentionally changed the flag reason to `no_structured_stage_field_available`, but the pre-existing assertion still expected the previous generic reason. The failure is a stale test expectation, not evidence that the stage-token detector passed. The assertion has been corrected in commit `4cf70cb953e12921bd4dbf88ca2fffdef40573fe`. The corrected test has not yet run successfully; wait for exact-head CI.
+
+**Current branch HEAD at this checklist update:** `4cf70cb953e12921bd4dbf88ca2fffdef40573fe`. PR #1 remains open, draft and unmerged; main unchanged.
+
+**Current status:** saved-run diagnostic implementation — IN PROGRESS; diagnostic regression tests — FAILED on prior SHA, correction committed and awaiting rerun; exact-head CI — IN PROGRESS/PENDING for new HEAD; all clinical, live-model, GPU and release gates remain as recorded above. Do not erase the failed run from the audit history.
