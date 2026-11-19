@@ -273,7 +273,14 @@ def main(argv: list[str] | None = None) -> int:
         head = args.head or _git(root, "rev-parse", "HEAD")
         if not SHA_RE.fullmatch(head):
             raise GateError("--head must be a full commit SHA")
-        if _git(root, "cat-file", "-e", f"{head}^{{commit}}", check=False) == "":
+        head_check = subprocess.run(
+            ["git", "cat-file", "-e", f"{head}^{{commit}}"],
+            cwd=root,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+        if head_check.returncode != 0:
             raise GateError(f"head commit is not available locally: {head}")
 
         def is_ancestor(sha: str) -> bool:
