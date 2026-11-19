@@ -79,7 +79,32 @@ def _create_complete_round1(monkeypatch, tmp_path):
         return _assessment(profile, case, round_number)
 
     monkeypatch.setattr(batch_runner, "generate_agent_assessment", fake_assess)
-    response = client.post("/api/runs", json={"case": _case_payload()})
+
+    # Round-orchestration fixtures must enter through the same accepted-intake
+    # and immutable-version boundary as production. Do not use the retired
+    # unlinked POST /api/runs compatibility endpoint in tests.
+    intake_response = client.post("/api/intakes", json={"case": _case_payload()})
+    assert intake_response.status_code == 200
+    session_id = intake_response.json()["session_id"]
+
+    accepted_response = client.post(
+        f"/api/intakes/{session_id}/accept",
+        json={"confirmed": True},
+    )
+    assert accepted_response.status_code == 200
+
+    promoted_response = client.post(
+        f"/api/intakes/{session_id}/promote",
+        json={"patient_name": "Synthetic MDT Round Test"},
+    )
+    assert promoted_response.status_code == 200
+    patient = promoted_response.json()
+    case_version_id = patient["versions"][0]["case_version_id"]
+
+    response = client.post(
+        f"/api/patients/{patient['patient_id']}/runs",
+        json={"case_version_id": case_version_id},
+    )
     assert response.status_code == 200
     run_id = response.json()["run_id"]
     assert client.get(f"/api/runs/{run_id}").json()["completed_count"] == 45
