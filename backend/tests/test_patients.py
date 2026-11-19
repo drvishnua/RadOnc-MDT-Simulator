@@ -537,6 +537,24 @@ def test_current_registry_unlinked_run_is_read_only_but_remains_viewable(monkeyp
     assert advance.status_code == 409
     assert "no accepted intake provenance" in advance.json()["detail"]
 
+
+def test_run_with_missing_patient_version_link_is_read_only(monkeypatch, tmp_path):
+    monkeypatch.setattr(run_store, "DB_PATH", tmp_path / "missing_run_version_link.sqlite3")
+    run = run_store.create_run(
+        SyntheticCase.model_validate(_case()),
+        patient_id="missing-patient",
+        case_version_id="missing-case-version",
+        case_version_number=1,
+    )
+
+    resume = client.post(f"/api/runs/{run['run_id']}/resume")
+    assert resume.status_code == 409
+    assert "case version linked to this run is unavailable" in resume.json()["detail"]
+
+    advance = client.post(f"/api/runs/{run['run_id']}/rounds/2")
+    assert advance.status_code == 409
+    assert "case version linked to this run is unavailable" in advance.json()["detail"]
+
 def test_saved_patient_case_version_requires_accepted_intake_provenance(monkeypatch, tmp_path):
     monkeypatch.setattr(run_store, "DB_PATH", tmp_path / "patient_intake_gate.sqlite3")
     patient = client.post("/api/patients", json=_registration()).json()

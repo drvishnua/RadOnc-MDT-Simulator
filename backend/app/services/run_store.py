@@ -815,7 +815,12 @@ def require_run_intake_provenance(run_id: str) -> dict[str, Any]:
             "patient case version, and start a new R1 run."
         )
 
-    version = require_intake_backed_case_version(patient_id, case_version_id)
+    try:
+        version = require_intake_backed_case_version(patient_id, case_version_id)
+    except KeyError as exc:
+        raise ValueError(
+            "The patient case version linked to this run is unavailable; the run is read-only."
+        ) from exc
     if (
         run.get("case_snapshot_sha256") != version.get("case_snapshot_sha256")
         or run.get("case_version_number") != version.get("version_number")
