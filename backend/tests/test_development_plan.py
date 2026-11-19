@@ -291,8 +291,8 @@ def test_backend_and_security_required_checks_run_for_development_prs_and_u12_ch
         ".github/workflows/security-audit.yml",
     ):
         workflow = (repository_root / relative).read_text(encoding="utf-8")
-        push_block = workflow.split("  push:", 1)[1].split("\\n  pull_request:", 1)[0]
-        pr_block = workflow.split("  pull_request:", 1)[1].split("\\n  schedule:", 1)[0].split("\\npermissions:", 1)[0]
+        push_block = workflow.split("  push:", 1)[1].split("\n  pull_request:", 1)[0]
+        pr_block = workflow.split("  pull_request:", 1)[1].split("\n  schedule:", 1)[0].split("\npermissions:", 1)[0]
         for block in (push_block, pr_block):
             assert "- feature/four-round-mdt-and-performance" in block
             for required_path in expected_paths:
