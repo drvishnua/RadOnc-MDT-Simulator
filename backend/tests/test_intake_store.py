@@ -93,3 +93,30 @@ def test_intake_event_hash_chain_detects_tampering(isolated_intake_database):
         )
     with pytest.raises(ValueError, match="integrity verification"):
         intake_store.get_intake_session(session["session_id"])
+
+
+def test_question_asked_is_saved_once_and_declined_domain_cannot_be_asked(isolated_intake_database):
+    session = intake_store.create_intake_session(make_case())
+    session_id = session["session_id"]
+    asked = intake_store.record_intake_event(
+        session_id,
+        event_type="QUESTION_ASKED",
+        domain="patient_preferences",
+    )
+    event = asked["events"][-1]
+    assert event["event_type"] == "QUESTION_ASKED"
+    assert event["payload"]["domain"] == "patient_preferences"
+    assert "patient's stated goals" in event["payload"]["question"]
+
+    with pytest.raises(ValueError, match="already been recorded"):
+        intake_store.record_intake_event(
+            session_id, event_type="QUESTION_ASKED", domain="patient_preferences"
+        )
+
+    intake_store.record_intake_event(
+        session_id, event_type="DECLINE_DOMAIN", domain="staging_and_investigations"
+    )
+    with pytest.raises(ValueError, match="declined"):
+        intake_store.record_intake_event(
+            session_id, event_type="QUESTION_ASKED", domain="staging_and_investigations"
+        )
