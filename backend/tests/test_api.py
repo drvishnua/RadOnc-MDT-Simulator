@@ -267,3 +267,71 @@ def test_pre_mdt_intake_screen_endpoint_rejects_unknown_declined_domain():
         },
     )
     assert response.status_code == 422
+
+
+def test_persisted_intake_api_records_answer_and_explicit_acceptance(monkeypatch, tmp_path):
+    from app.services import run_store
+
+    monkeypatch.setattr(run_store, "DB_PATH", tmp_path / "intake-api.sqlite3")
+    created = client.post(
+        "/api/intakes",
+        json={
+            "case": {
+                "scenario_title": "Synthetic persisted intake API case",
+                "case_summary": "Fictional case used to exercise the intake API.",
+            }
+        },
+    )
+    assert created.status_code == 200
+    session = created.json()
+    session_id = session["session_id"]
+    assert session["state"] == "SCREENING"
+    assert session["event_count"] >= 1
+
+    answer = client.post(
+        f"/api/intakes/{session_id}/events",
+        json={
+            "event_type": "ANSWER",
+            "field_id": "age_years",
+            "value": 63,
+            "source_text": "User supplied age 63.",
+        },
+    )
+    assert answer.status_code == 200
+    assert answer.json()["case"]["age_years"] == 63
+    assert answer.json()["events"][-1]["event_type"] == "ANSWER"
+
+    accepted = client.post(
+        f"/api/intakes/{session_id}/accept",
+        json={"confirmed": True},
+    )
+    assert accepted.status_code == 200
+    assert accepted.json()["state"] == "ACCEPTED_WITH_GAPS"
+    assert accepted.json()["screening"]["gaps"]
+
+    rejected_change = client.post(
+        f"/api/intakes/{session_id}/events",
+        json={"event_type": "CORRECTION", "field_id": "age_years", "value": 64},
+    )
+    assert rejected_change.status_code == 422
+
+
+def test_persisted_intake_api_requires_explicit_acceptance(monkeypatch, tmp_path):
+    from app.services import run_store
+
+    monkeypatch.setattr(run_store, "DB_PATH", tmp_path / "intake-api-accept.sqlite3")
+    created = client.post(
+        "/api/intakes",
+        json={
+            "case": {
+                "scenario_title": "Synthetic intake acceptance case",
+                "case_summary": "Fictional case used to verify explicit acceptance.",
+            }
+        },
+    )
+    session_id = created.json()["session_id"]
+    response = client.post(
+        f"/api/intakes/{session_id}/accept",
+        json={"confirmed": False},
+    )
+    assert response.status_code == 409
