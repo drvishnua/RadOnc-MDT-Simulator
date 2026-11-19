@@ -220,6 +220,7 @@ async def run_mdt_round(run_id: str, round_number: int) -> None:
         raise ValueError("Round number must be 2, 3, or 4.")
 
     run_store.require_run_registry_version(run_id)
+    run_store.require_run_intake_provenance(run_id)
     async with MODEL_EXECUTION_LOCK:
         try:
             case = run_store.get_case(run_id)
@@ -342,6 +343,8 @@ async def run_mdt_round(run_id: str, round_number: int) -> None:
 
 
 def prepare_round_resume(run_id: str, round_number: int) -> dict[str, object]:
+    run_store.require_run_registry_version(run_id)
+    run_store.require_run_intake_provenance(run_id)
     summary = run_store.get_round_summary(run_id, round_number)
     if summary["status"] == "completed":
         return summary

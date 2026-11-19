@@ -518,6 +518,25 @@ def test_legacy_run_cannot_resume_or_advance_into_new_registry_context(monkeypat
     assert "Create a new immutable case version" in advance.json()["detail"]
 
 
+
+
+def test_current_registry_unlinked_run_is_read_only_but_remains_viewable(monkeypatch, tmp_path):
+    monkeypatch.setattr(run_store, "DB_PATH", tmp_path / "current_registry_unlinked.sqlite3")
+    run = run_store.create_run(SyntheticCase.model_validate(_case()))
+
+    # Historical data remains available for audit and review.
+    assert client.get(f"/api/runs/{run['run_id']}").status_code == 200
+    assert client.get(f"/api/runs/{run['run_id']}/case").status_code == 200
+    assert client.get(f"/api/runs/{run['run_id']}/results").status_code == 200
+
+    resume = client.post(f"/api/runs/{run['run_id']}/resume")
+    assert resume.status_code == 409
+    assert "no accepted intake provenance" in resume.json()["detail"]
+
+    advance = client.post(f"/api/runs/{run['run_id']}/rounds/2")
+    assert advance.status_code == 409
+    assert "no accepted intake provenance" in advance.json()["detail"]
+
 def test_saved_patient_case_version_requires_accepted_intake_provenance(monkeypatch, tmp_path):
     monkeypatch.setattr(run_store, "DB_PATH", tmp_path / "patient_intake_gate.sqlite3")
     patient = client.post("/api/patients", json=_registration()).json()

@@ -281,6 +281,7 @@ async def resume_independent_batch(
 
     try:
         run_store.require_run_registry_version(run_id)
+        run_store.require_run_intake_provenance(run_id)
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 

@@ -297,47 +297,57 @@ def test_retried_or_failed_round_record_cannot_retain_stale_payload(monkeypatch,
     import json
     from app.agents.catalog import AGENT_PROFILES
 
-    monkeypatch.setattr(run_store, "DB_PATH", tmp_path / "stale_round_payload.sqlite3")
-    case = SyntheticCase(
-        scenario_title="Synthetic stale-payload test",
-        case_summary="Fictional case used to validate failed-record cleanup.",
-    )
-    run = run_store.create_run(case)
-    for profile in AGENT_PROFILES:
-        run_store.save_agent_success(
-            run["run_id"],
-            profile["agent_id"],
-            json.dumps({"position": "insufficient_information"}),
-            0.01,
-        )
+    run_id = _create_complete_round1(monkeypatch, tmp_path)
+    run = run_store.get_run(run_id)
 
-    run_store.create_round_job(run["run_id"], 2)
+    run_store.create_round_job(run_id, 2)
     stale = json.dumps({"position": "supports", "provisional_conclusion": "STALE"})
-    run_store.save_round_success(run["run_id"], 2, "RO-01", stale, 0.01)
-    run_store.mark_round_agent_running(run["run_id"], 2, "RO-01")
-    row = next(item for item in run_store.list_round_results(run["run_id"], 2) if item["agent_id"] == "RO-01")
+    run_store.save_round_success(run_id, 2, "RO-01", stale, 0.01)
+    run_store.mark_round_agent_running(run_id, 2, "RO-01")
+    row = next(item for item in run_store.list_round_results(run_id, 2) if item["agent_id"] == "RO-01")
     assert row["status"] == "running"
     assert row["result"] is None
     assert row["duration_seconds"] is None
 
-    run_store.save_round_success(run["run_id"], 2, "RO-01", stale, 0.01)
-    run_store.save_round_failure(run["run_id"], 2, "RO-01", "intentional test failure", 0.01)
-    row = next(item for item in run_store.list_round_results(run["run_id"], 2) if item["agent_id"] == "RO-01")
+    run_store.save_round_success(run_id, 2, "RO-01", stale, 0.01)
+    run_store.save_round_failure(run_id, 2, "RO-01", "intentional test failure", 0.01)
+    row = next(item for item in run_store.list_round_results(run_id, 2) if item["agent_id"] == "RO-01")
     assert row["status"] == "failed"
     assert row["result"] is None
 
 
-def test_round_cannot_start_before_all_45_independent_assessments(monkeypatch, tmp_path):
+def _create_accepted_run_without_inference(monkeypatch, tmp_path):
     monkeypatch.setattr(run_store, "DB_PATH", tmp_path / "incomplete.sqlite3")
-    run_store.initialize_database()
-    # Create an incomplete run directly; its 45 agent rows remain queued.
-    from app.schemas import SyntheticCase
-    case = SyntheticCase(
-        scenario_title="Synthetic incomplete test",
-        case_summary="Fictional case with an incomplete first round for validation.",
+
+    async def no_inference(run_id):
+        return None
+
+    monkeypatch.setattr("app.main.run_independent_assessments", no_inference)
+    intake = client.post("/api/intakes", json={"case": _case_payload()})
+    assert intake.status_code == 200
+    session_id = intake.json()["session_id"]
+    accepted = client.post(
+        f"/api/intakes/{session_id}/accept",
+        json={"confirmed": True},
     )
-    run = run_store.create_run(case)
-    response = client.post(f"/api/runs/{run['run_id']}/rounds/2")
+    assert accepted.status_code == 200
+    promoted = client.post(
+        f"/api/intakes/{session_id}/promote",
+        json={"patient_name": "Synthetic Incomplete R1"},
+    )
+    assert promoted.status_code == 200
+    patient = promoted.json()
+    response = client.post(
+        f"/api/patients/{patient['patient_id']}/runs",
+        json={"case_version_id": patient["versions"][0]["case_version_id"]},
+    )
+    assert response.status_code == 200
+    return response.json()["run_id"]
+
+
+def test_round_cannot_start_before_all_45_independent_assessments(monkeypatch, tmp_path):
+    run_id = _create_accepted_run_without_inference(monkeypatch, tmp_path)
+    response = client.post(f"/api/runs/{run_id}/rounds/2")
     assert response.status_code == 409
 
 
@@ -353,6 +363,23 @@ def test_final_report_not_found_before_chair_synthesis(monkeypatch, tmp_path):
     assert response.status_code == 404
 
  
+
+
+
+def test_internal_round_worker_rejects_unlinked_run_before_generation(monkeypatch, tmp_path):
+    monkeypatch.setattr(run_store, "DB_PATH", tmp_path / "unlinked_round_worker.sqlite3")
+    run = run_store.create_run(
+        SyntheticCase(
+            scenario_title="Synthetic unlinked round worker",
+            case_summary="Fictional case used to verify the internal R2-R4 worker gate.",
+        )
+    )
+    try:
+        asyncio.run(mdt_rounds.run_mdt_round(run["run_id"], 2))
+    except ValueError as exc:
+        assert "no accepted intake provenance" in str(exc)
+    else:
+        raise AssertionError("Unlinked run must be rejected before round inference.")
 
 def test_chair_retry_uses_higher_output_budget():
     budgets = []

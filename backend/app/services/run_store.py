@@ -800,12 +800,41 @@ def require_run_registry_version(run_id: str) -> None:
     require_supported_registry_version(run["clinical_field_registry_version"])
 
 
+def require_run_intake_provenance(run_id: str) -> dict[str, Any]:
+    """Require an immutable run to remain linked to its accepted intake source.
+
+    Historical unlinked runs remain readable, but cannot be resumed or advanced.
+    """
+    run = get_run(run_id)
+    patient_id = run.get("patient_id")
+    case_version_id = run.get("case_version_id")
+    if not patient_id or not case_version_id:
+        raise ValueError(
+            "This historical run has no accepted intake provenance and is read-only. "
+            "Complete and accept a new pre-MDT intake, promote it to an immutable "
+            "patient case version, and start a new R1 run."
+        )
+
+    version = require_intake_backed_case_version(patient_id, case_version_id)
+    if (
+        run.get("case_snapshot_sha256") != version.get("case_snapshot_sha256")
+        or run.get("case_version_number") != version.get("version_number")
+        or run.get("clinical_field_registry_version")
+        != version.get("clinical_field_registry_version")
+    ):
+        raise ValueError(
+            "Run snapshot or version metadata does not match its accepted intake provenance."
+        )
+    return version
+
+
 def create_round_job(run_id: str, round_number: int) -> dict[str, Any]:
     """Create a round only when the preceding required stage is fully complete."""
     if round_number not in (2, 3, 4):
         raise ValueError("Only rounds 2, 3, and 4 can be advanced here.")
     run = get_run(run_id)
     require_supported_registry_version(run["clinical_field_registry_version"])
+    require_run_intake_provenance(run_id)
     if round_number == 2:
         first = get_run(run_id)
         if first["completed_count"] != first["total_agents"] or first["failed_count"]:

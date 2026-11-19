@@ -138,6 +138,23 @@ def test_batch_continues_after_failure_and_resume_runs_only_failed_agent(monkeyp
     assert all(calls[p["agent_id"]] == 1 for p in AGENT_PROFILES if p["agent_id"] != "RO-01")
 
 
+
+
+def test_internal_batch_worker_rejects_unlinked_run_before_inference(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(run_store, "DB_PATH", tmp_path / "unlinked_batch_worker.sqlite3")
+    run = run_store.create_run(SyntheticCase.model_validate(_case_payload()))
+
+    async def unexpected_generation(*args, **kwargs):
+        raise AssertionError("Unlinked runs must be rejected before model inference.")
+
+    monkeypatch.setattr(batch_runner, "generate_agent_assessment", unexpected_generation)
+    try:
+        asyncio.run(batch_runner.run_independent_assessments(run["run_id"]))
+    except ValueError as exc:
+        assert "no accepted intake provenance" in str(exc)
+    else:
+        raise AssertionError("Unlinked run must be rejected before batch inference.")
+
 def test_batch_status_for_unknown_run_returns_404(monkeypatch, tmp_path) -> None:
     monkeypatch.setattr(run_store, "DB_PATH", tmp_path / "missing.sqlite3")
     response = client.get("/api/runs/not-a-real-run")
