@@ -231,7 +231,9 @@ def get_intake_session(session_id: str) -> dict[str, Any]:
             "event_count": len(events),
             "created_at": session["created_at"],
             "updated_at": session["updated_at"],
-            "accepted_at": session["accepted_at"],\n            "patient_id": session["patient_id"],\n            "case_version_id": session["case_version_id"],
+            "accepted_at": session["accepted_at"],
+            "patient_id": session["patient_id"],
+            "case_version_id": session["case_version_id"],
         }
 
 
