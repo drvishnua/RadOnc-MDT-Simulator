@@ -4372,3 +4372,15 @@ Execution rule: the first active implementation sequence remains the existing ch
 - User asked how to make step skipping 100% impossible. Added U12 specifying a fail-closed machine-readable sequential gate, exact-SHA evidence, CI required checks, repository rulesets, adversarial tests and explicit residual limitations.
 - Active project step remains Step 1 — repository/branch/PR/commit/checklist/CI verification, IN PROGRESS. Exact PR head and exact-head CI remain blockers. U09/U10 implementation has not started in this sequence.
 - U12 status: NOT STARTED; this commit records the requirement and acceptance criteria only, not implementation.
+
+
+### U11 pre-response review checkpoint — 20 November 2026 (user authorised continuation)
+
+- Read the complete authoritative checklist from `feature/four-round-mdt-and-performance`; fetched content length: 642739 characters; source blob SHA: `7b1f8134a77ca549496ebb7b7039fb03b499e574`.
+- Development branch: VERIFIED. Exact branch tip at inspection: `986593ec8aab00b7885f1db5ff39dab2546278fc`.
+- PR #1: VERIFIED open, draft, unmerged; head branch `feature/four-round-mdt-and-performance`; head SHA `986593ec8aab00b7885f1db5ff39dab2546278fc`; base `main`; base SHA `39a356b8eb09399aa2da1b9b9085965999f5105a`.
+- Exact-head CI for `986593ec8aab00b7885f1db5ff39dab2546278fc`: Windows Packaging Prerequisites run `44625679442` SUCCESS; Backend Tests `44625679759` SUCCESS; Patient Registry/Four-Round Dashboard Browser E2E `44625679486` SUCCESS; Frontend Build `44625679927` SUCCESS; Security and Dependency Audit `44625679503` SUCCESS; Windows Installer Build `44625679451` IN_PROGRESS. Combined commit status endpoint returned no status entries. Exact-head CI therefore remains IN PROGRESS, not complete.
+- Branch API reported `protected=false` and protection disabled. Direct branch-protection read returned 403 (permission unavailable); repository rulesets endpoint returned an empty list. Do not claim branch protection is configured.
+- Active Step 1 — repository/branch/PR/commit/checklist/CI verification: IN PROGRESS until installer workflow run `44625679451` reaches a terminal successful conclusion and required checks are reviewed. U12 implementation must not begin until this prerequisite step exits, per the existing sequential plan.
+- U12 remains NOT STARTED (requirement and acceptance criteria only). No implementation or enforcement is claimed.
+- User replied “ok” to the recommendation to implement U12 before clinical registry work; continuation is authorised subject to the existing Step 1 gate. No main-branch change, merge or force-push.
