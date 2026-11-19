@@ -22,7 +22,7 @@ def test_run_one_persists_partial_state_and_exception_details(monkeypatch):
         scenario_title="Synthetic checkpoint test",
         case_summary="Fictional case used only to test stress-run recovery.",
     )
-    monkeypatch.setattr(stress.run_store, "create_run", lambda _case: {"run_id": "synthetic-run"})
+    monkeypatch.setattr(stress, "_create_accepted_run", lambda _case, _patient_name: {"run_id": "synthetic-run"})
     monkeypatch.setattr(stress, "gpu_snapshot", lambda: "test GPU snapshot")
 
     async def fail_r1(_run_id):
