@@ -140,8 +140,9 @@ type PatientCaseVersion = {
   version_number: number;
   case_snapshot_sha256: string;
   created_at: string;
+  intake_backed: boolean;
+  intake_session_id: string | null;
   case: SyntheticCasePayload;
-  intake_backed?: boolean;
   intake_session_id?: string | null;
 };
 
@@ -710,13 +711,29 @@ function App() {
     setPatientBusy(true);
     setPatientError("");
     try {
-      const acceptedResponse = await fetch(API_BASE + "/api/intakes/" + pendingIntake.session_id + "/accept", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ confirmed: true })
-      });
-      const acceptedBody = await acceptedResponse.json() as { detail?: string };
-      if (!acceptedResponse.ok) throw new Error(acceptedBody.detail ?? "The intake could not be accepted.");
+      const sessionResponse = await fetch(API_BASE + "/api/intakes/" + pendingIntake.session_id);
+      const sessionBody = await sessionResponse.json() as {
+        state?: string; patient_id?: string | null; case_version_id?: string | null; detail?: string
+      };
+      if (!sessionResponse.ok) throw new Error(sessionBody.detail ?? "The saved intake could not be restored.");
+      if (sessionBody.patient_id && sessionBody.case_version_id) {
+        const patientResponse = await fetch(API_BASE + "/api/patients/" + sessionBody.patient_id);
+        const patient = await patientResponse.json() as PatientDetail & { detail?: string };
+        if (!patientResponse.ok) throw new Error(patient.detail ?? "The promoted patient record could not be restored.");
+        setPendingIntake(null);
+        await refreshPatients();
+        await loadPatientVersion(patient, sessionBody.case_version_id);
+        return;
+      }
+      if (sessionBody.state !== "ACCEPTED_WITH_GAPS") {
+        const acceptedResponse = await fetch(API_BASE + "/api/intakes/" + pendingIntake.session_id + "/accept", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ confirmed: true })
+        });
+        const acceptedBody = await acceptedResponse.json() as { detail?: string };
+        if (!acceptedResponse.ok) throw new Error(acceptedBody.detail ?? "The intake could not be accepted.");
+      }
       const promotionResponse = await fetch(API_BASE + "/api/intakes/" + pendingIntake.session_id + "/promote", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
