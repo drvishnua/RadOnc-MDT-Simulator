@@ -16,7 +16,8 @@ from app.config import APP_NAME, APP_VERSION
 from app.clinical_fields import require_supported_registry_version
 from app.schemas import (
     AgentAssessmentRequest, BatchRunRequest, CaseValidationResult,
-    PatientCaseUpdateRequest, PatientRegistrationRequest, PatientRunRequest, SyntheticCase, CaseIntakeScreenRequest,\n    IntakeSessionCreateRequest, IntakeEventRequest, IntakeAcceptRequest,
+    PatientCaseUpdateRequest, PatientRegistrationRequest, PatientRunRequest, SyntheticCase, CaseIntakeScreenRequest,
+    IntakeSessionCreateRequest, IntakeEventRequest, IntakeAcceptRequest,
 )
 from app.services.case_integrity import build_case_validation_warnings
 from app.services.intake_screening import screen_case_intake
@@ -423,7 +424,9 @@ async def accept_pre_mdt_intake(
         raise HTTPException(status_code=404, detail="Intake session not found.") from exc
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-\n\n@app.post("/api/cases/screen-intake")
+
+
+@app.post("/api/cases/screen-intake")
 async def screen_pre_mdt_intake(request: CaseIntakeScreenRequest) -> dict[str, object]:
     """Identify missing intake information before MDT; never infer or fill values."""
     try:
