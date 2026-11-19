@@ -16,10 +16,13 @@ from app.config import APP_NAME, APP_VERSION
 from app.clinical_fields import require_supported_registry_version
 from app.schemas import (
     AgentAssessmentRequest, BatchRunRequest, CaseValidationResult,
-    PatientCaseUpdateRequest, PatientRegistrationRequest, PatientRunRequest, SyntheticCase, CaseIntakeScreenRequest,
+    PatientCaseUpdateRequest, PatientRegistrationRequest, PatientRunRequest, SyntheticCase, CaseIntakeScreenRequest,\n    IntakeSessionCreateRequest, IntakeEventRequest, IntakeAcceptRequest,
 )
 from app.services.case_integrity import build_case_validation_warnings
 from app.services.intake_screening import screen_case_intake
+from app.services.intake_store import (
+    accept_intake_with_gaps, create_intake_session, get_intake_session, record_intake_event,
+)
 from app.services import run_store
 from app.services.batch_runner import batch_is_running, run_independent_assessments, validate_resume_state
 from app.services.mdt_rounds import prepare_round_resume, round_is_running, run_mdt_round
@@ -370,7 +373,57 @@ async def get_final_mdt_report(run_id: str) -> dict[str, object]:
 
 
 
-@app.post("/api/cases/screen-intake")
+
+
+@app.post("/api/intakes")
+async def create_pre_mdt_intake(request: IntakeSessionCreateRequest) -> dict[str, object]:
+    """Start a new persisted, auditable pre-MDT intake session."""
+    return create_intake_session(request.case)
+
+
+@app.get("/api/intakes/{session_id}")
+async def get_pre_mdt_intake(session_id: str) -> dict[str, object]:
+    """Return current intake snapshot, screening and verified append-only event history."""
+    try:
+        return get_intake_session(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Intake session not found.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=500, detail="Intake audit integrity verification failed.") from exc
+
+
+@app.post("/api/intakes/{session_id}/events")
+async def append_pre_mdt_intake_event(
+    session_id: str, request: IntakeEventRequest,
+) -> dict[str, object]:
+    """Record an answer, correction or explicit domain decline without overwriting history."""
+    try:
+        return record_intake_event(
+            session_id,
+            event_type=request.event_type,
+            field_id=request.field_id,
+            value=request.value,
+            domain=request.domain,
+            source_text=request.source_text,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Intake session not found.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/api/intakes/{session_id}/accept")
+async def accept_pre_mdt_intake(
+    session_id: str, request: IntakeAcceptRequest,
+) -> dict[str, object]:
+    """Explicitly accept a saved case while preserving all outstanding gaps."""
+    try:
+        return accept_intake_with_gaps(session_id, confirmed=request.confirmed)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Intake session not found.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+\n\n@app.post("/api/cases/screen-intake")
 async def screen_pre_mdt_intake(request: CaseIntakeScreenRequest) -> dict[str, object]:
     """Identify missing intake information before MDT; never infer or fill values."""
     try:
