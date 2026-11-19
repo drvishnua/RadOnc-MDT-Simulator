@@ -30,7 +30,20 @@ def _fixture():
                 "title": step_id,
                 "status": "VERIFIED" if index == 0 else ("IN PROGRESS" if index == 1 else "BLOCKED"),
                 "depends_on": [] if index == 0 else [STEP_ORDER[index - 1]],
-                "required_workflow_names": WORKFLOWS if index == 0 else ["Sequential Development Gate"],
+                "required_workflow_names": (
+                    WORKFLOWS if index == 0 else
+                    ["Sequential Development Gate", "Backend Tests", "Security and Dependency Audit"] if index == 1 else
+                    ["Sequential Development Gate"]
+                ),
+                "allowed_paths": (
+                    [
+                        "docs/development_plan.json",
+                        "docs/MASTER_DEVELOPMENT_CHECKLIST.md",
+                        "backend/scripts/validate_development_plan.py",
+                        "backend/tests/test_development_plan.py",
+                        ".github/workflows/sequential-development-gate.yml",
+                    ] if index == 1 else []
+                ),
                 "completion_evidence": (
                     {
                         "commit_sha": EVIDENCE_SHA,
