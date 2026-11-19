@@ -133,3 +133,16 @@ def test_malformed_round_collection_is_reported_as_zero_rows_not_crashing():
     result = build_diagnostics({"run": {}, "independent_assessments": "bad"}, b"fixture")
     assert result["rounds"]["R1"]["source_rows"] == 0
     assert result["rounds"]["R1"]["completed_payload_rows"] == 0
+
+
+
+def test_stage_audit_does_not_treat_tissue_as_tis_stage():
+    export = _export()
+    export["independent_assessments"][0]["assessment"]["provisional_conclusion"] = (
+        "Confirm tissue diagnosis before treatment selection"
+    )
+    export["independent_assessments"][0]["assessment"]["perspective_summary"] = (
+        "Tissue diagnosis and imaging are required"
+    )
+    result = build_diagnostics(export, b"fixture")
+    assert all(item["token"].upper() != "TIS" for item in result["staging_reference_flags"])
