@@ -97,12 +97,17 @@ async def assess_with_agent(
     if profile is None:
         raise HTTPException(status_code=404, detail="Unknown agent profile.")
 
-    try:
-        return await generate_agent_assessment(
-            profile=profile,
-            case=request.case,
-            round_number=request.round_number,
-        )
+    # This compatibility endpoint accepts only raw case payloads and therefore
+    # cannot prove accepted-intake provenance. All new R1 assessments must use
+    # a saved immutable patient case version created from an accepted intake.
+    raise HTTPException(
+        status_code=409,
+        detail=(
+            "Direct assessment of an unlinked case is disabled. Complete and accept "
+            "the pre-MDT intake, promote it to an immutable patient case version, "
+            "then start the assessment from that saved version."
+        ),
+    )
     except OllamaUnavailable as exc:
         raise HTTPException(
             status_code=503,
@@ -229,11 +234,15 @@ async def create_independent_batch(
     request: BatchRunRequest,
     background_tasks: BackgroundTasks,
 ) -> dict[str, object]:
-    """Queue all 45 independent first-round assessments and return immediately."""
-    run_store.initialize_database()
-    record = run_store.create_run(request.case)
-    background_tasks.add_task(run_independent_assessments, record["run_id"])
-    return record
+    """Reject unlinked case payloads; R1 must start from a verified saved version."""
+    raise HTTPException(
+        status_code=409,
+        detail=(
+            "Direct runs from unlinked case payloads are disabled. Complete and accept "
+            "the pre-MDT intake, promote it to an immutable patient case version, "
+            "then start R1 from that saved version."
+        ),
+    )
 
 
 @app.get("/api/runs/{run_id}")
