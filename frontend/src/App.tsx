@@ -924,6 +924,10 @@ function App() {
 
   async function runAgentAssessment() {
     if (!activeSavedCase) return;
+    if (!activeSavedCase.intake_backed) {
+      setAssessmentError("This saved version has no accepted pre-MDT intake. Start and accept an intake before running R1.");
+      return;
+    }
     setAssessing(true);
     setAssessmentError("");
     setAssessmentPersistenceWarning("");
@@ -1102,6 +1106,10 @@ function App() {
 
   async function startAllAgents() {
     if (!activeSavedCase) return;
+    if (!activeSavedCase.intake_backed) {
+      setBatchError("This saved version has no accepted pre-MDT intake. Start and accept an intake before running R1.");
+      return;
+    }
     setBatchStarting(true);
     setBatchError("");
     try {
@@ -1511,15 +1519,15 @@ function App() {
 
             {validation && validatedCase && (
               <div className="patient-save-actions result-card">
-                <strong>Save patient record</strong>
-                <p>MDT simulation is enabled only for a saved patient record. Saving changes creates a new immutable version; previous versions and results remain unchanged.</p>
+                <strong>Pre-MDT intake required before saving</strong>
+                <p>Start a persisted completeness review first. You can review missing information, explicitly decline questions, or accept with gaps. Acceptance creates an immutable patient case version; it does not certify clinical completeness.</p>
                 <div className="batch-actions">
                   <button className="button button-primary" type="button" onClick={() => void savePatientCase(true)} disabled={patientBusy}>
-                    Register new patient
+                    Start intake for new patient
                   </button>
                   {loadedPatient && (
                     <button className="button button-secondary" type="button" onClick={() => void savePatientCase(false)} disabled={patientBusy || selectedPatientId !== loadedPatient.patient_id || activeSavedCase !== null}>
-                      Save new version of {loadedPatient.patient_identifier}
+                      Start intake for new version of {loadedPatient.patient_identifier}
                     </button>
                   )}
                 </div>
@@ -1576,12 +1584,13 @@ function App() {
                 <div>
                   <strong>Try one local agent</strong>
                   <p>Run the guideline-focused Radiation Oncology perspective (RO-01) on {activeSavedCase.patient_identifier}, case version {activeSavedCase.version_number}. The result is saved in the patient record.</p>
+                  {!activeSavedCase.intake_backed && <p className="error-text">This older/manual case version has no accepted intake provenance. Create a new accepted intake version before running an agent.</p>}
                 </div>
                 <button
                   className="button button-secondary"
                   type="button"
                   onClick={() => void runAgentAssessment()}
-                  disabled={assessing || !runtime?.reachable || (batchRun !== null && ["queued", "running"].includes(batchRun.status))}
+                  disabled={!activeSavedCase.intake_backed || assessing || !runtime?.reachable || (batchRun !== null && ["queued", "running"].includes(batchRun.status))}
                 >
                   {assessing ? "Generating locally…" : "Run RO-01 assessment"}
                   <span aria-hidden="true">→</span>
@@ -1674,14 +1683,14 @@ function App() {
                       className="button button-primary"
                       type="button"
                       onClick={() => void startAllAgents()}
-                      disabled={batchStarting || batchResuming || assessing || !runtime?.reachable || (batchRun !== null && ["queued", "running"].includes(batchRun.status))}
+                      disabled={!activeSavedCase.intake_backed || batchStarting || batchResuming || assessing || !runtime?.reachable || (batchRun !== null && ["queued", "running"].includes(batchRun.status))}
                     >
                       {batchStarting ? "Starting…" : "Run all 45 agents"}
                       <span aria-hidden="true">→</span>
                     </button>
                   )}
                   {!activeSavedCase && !batchRun && (
-                    <p className="batch-estimate-note">Save a validated patient record, or load an existing patient and case version, before starting a new 45-agent run.</p>
+                    <p className="batch-estimate-note">Complete and accept a pre-MDT intake to create an immutable patient case version before starting a new 45-agent run.</p>
                   )}
                   {batchRun && batchResults.length > 0 && (
                     <button className="button button-quiet" type="button" onClick={downloadBatchResults}>
