@@ -3102,3 +3102,33 @@ The first backend workflow on code/test SHA `05f6cf8782de1315b9def1e8b384540fa2c
 - Live model inference, GPU verification and independent clinical review: NOT PERFORMED; existing inference gate remains BLOCKED pending explicit scope approval.
 - Release acceptance: BLOCKED.
 
+
+
+## TNM token-boundary correction — CI update (20 November 2026)
+
+**Code/test checkpoint:** \`129fcb2db12c584728bac56912fbfed47a8688b7\`. The staging token regex now requires a word boundary after a T-category, preventing ordinary words beginning with “tis” (notably “tissue”) from being treated as \`Tis\`. Regression test \`test_stage_audit_does_not_treat_tissue_as_tis_stage\` is included.
+
+**Backend exact-code CI:** [44604045271](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44604045271) SUCCESS; **499 passed, 0 failed, 0 errors, 0 skipped**, 1 warning. Deterministic preflight **7/7 passed**. The new false-positive regression passed. This is software validation, not clinical staging validation.
+
+**Other exact-code workflow state at update:**
+- Frontend Build [44604045394](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44604045394): SUCCESS.
+- Windows Packaging Prerequisites [44604045290](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44604045290): SUCCESS.
+- Browser E2E [44604045256](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44604045256): IN PROGRESS.
+- Security Audit [44604045539](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44604045539): IN PROGRESS.
+- Windows Installer [44604045275](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44604045275): CANCELLED before job execution when the next documentation commit superseded the push. This is not a pass or failure. Prior installer success on code/checklist SHA \`fca981c\` remains historical evidence only.
+
+The code-triggered backend/frontend/packaging workflows were partially cancelled by the subsequent checklist-only commit. Backend and frontend jobs were explicitly rerun on code SHA \`129fcb2\`; do not treat cancelled attempts as passed. Current code test evidence is 499 backend tests and frontend build success. E2E/security were still running at this checkpoint; installer needs a fresh run.
+
+**Diagnostic interpretation:** local mirrored audit found two apparent \`Tis\` flags caused by the missing token boundary; after applying the same boundary correction, those flags disappeared. Because the uploaded export was evaluated using a manually mirrored script rather than the exact repository checkout, its aggregate results remain preliminary and are not a verified repository-script validation artefact. Preserve source export SHA-256 \`0ae076d2785cfdcac10b8520ecddc23e9517aaa66ba397edcb604f7388dabe10\`; raw export was not modified or committed.
+
+### Checklist status
+- Saved-run diagnostic implementation and regression suite: VERIFIED by Backend CI on \`129fcb2\` (499 passed; new test passed).
+- Export audit against the exact repository script: IN PROGRESS; local mirror only, reproduction still required.
+- Frontend build: VERIFIED on \`129fcb2\`.
+- Packaging prerequisites: VERIFIED on \`129fcb2\`.
+- Browser E2E: IN PROGRESS at this checkpoint.
+- Security audit: IN PROGRESS at this checkpoint.
+- Windows Installer: BLOCKED pending fresh workflow execution; previous cancellation is retained.
+- Live inference/GPU/clinical review: NOT PERFORMED; existing inference gate remains BLOCKED.
+- Release acceptance: BLOCKED.
+
