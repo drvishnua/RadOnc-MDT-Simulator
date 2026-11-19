@@ -4,6 +4,15 @@ from __future__ import annotations
 import re
 from typing import Any
 from app.schemas import SyntheticCase
+from app.clinical_fields import (
+    CLINICAL_FIELD_REGISTRY,
+    CLINICAL_FIELD_REGISTRY_VERSION,
+    CLINICAL_M_STAGE,
+    CLINICAL_N_STAGE,
+    CLINICAL_T_STAGE,
+    build_registry_prompt_payload,
+    normalize_clinical_tnm_component,
+)
 
 
 def is_empty_challenge_placeholder(value: object) -> bool:
@@ -102,30 +111,78 @@ def _source_laterality_integrity_warnings(case_summary: str) -> list[str]:
 
 
 def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
-    """Serialize the immutable snapshot with explicit present/not-reported semantics."""
+    """Build the one canonical, versioned case context shared by every round."""
     snapshot = case.model_dump(exclude_none=True)
     field_status: dict[str, dict[str, Any]] = {}
+    canonical_field_values: dict[str, dict[str, Any]] = {}
+    normalization_warnings: list[str] = []
+
     for field, label in _SINGLE_FIELDS.items():
         value = getattr(case, field)
         provided = value is not None and value != ""
-        field_status[field] = {"label": label, "status": "provided" if provided else "not_reported", "value": value if provided else None}
+        field_status[field] = {
+            "label": label,
+            "status": "provided" if provided else "not_reported",
+            "value": value if provided else None,
+        }
     for field, label in _LIST_FIELDS.items():
         values = getattr(case, field) or []
-        field_status[field] = {"label": label, "status": "reported" if values else "not_reported", "value": values if values else None}
+        field_status[field] = {
+            "label": label,
+            "status": "reported" if values else "not_reported",
+            "value": values if values else None,
+        }
+    field_status["scenario_title"] = {
+        "label": "Scenario title", "status": "provided", "value": case.scenario_title,
+    }
     field_status["case_summary"] = {
         "label": "User-provided free-text case summary",
         "status": "provided_verbatim_unparsed",
         "value": case.case_summary,
     }
+
+    for field_id, definition in CLINICAL_FIELD_REGISTRY.items():
+        value = getattr(case, field_id)
+        if field_id == "case_summary":
+            status = "PRESENT"
+        elif isinstance(value, list):
+            status = "PRESENT" if value else "NOT_REPORTED"
+        else:
+            status = "PRESENT" if value is not None and value != "" else "NOT_REPORTED"
+
+        item: dict[str, Any] = {
+            "field_id": field_id,
+            "label": definition.label,
+            "status": status,
+            "raw_value": value,
+        }
+        if field_id in (CLINICAL_T_STAGE, CLINICAL_N_STAGE, CLINICAL_M_STAGE) and value not in (None, ""):
+            try:
+                item["canonical_comparison_value"] = normalize_clinical_tnm_component(field_id, value)
+            except ValueError as exc:
+                item["canonical_comparison_value"] = None
+                item["normalization_warning"] = str(exc)
+                normalization_warnings.append(f"{field_id}: {exc}")
+        else:
+            item["canonical_comparison_value"] = value
+        canonical_field_values[field_id] = item
+
     return {
+        "clinical_field_registry": build_registry_prompt_payload(),
+        "clinical_field_registry_version": CLINICAL_FIELD_REGISTRY_VERSION,
         "case_snapshot": snapshot,
+        "canonical_field_values": canonical_field_values,
         "field_status": field_status,
+        "tnm_normalization_warnings": normalization_warnings,
         "source_integrity_warnings": _source_laterality_integrity_warnings(case.case_summary),
         "interpretation_rules": [
             "not_reported means unknown/not supplied; it never means confirmed absent or negative.",
             "The case_summary is user-provided free text. Preserve its wording and do not silently normalise shorthand into confirmed structured diagnoses.",
             "Only explicitly provided clinical_t_stage, clinical_n_stage, clinical_m_stage and stage_group fields establish recorded staging.",
-            "A lesion's size or anatomical subsite alone does not establish a T category or stage group; never infer a T category from lesion size or infer nodal/metastatic status from missing data.",
+            "A structured clinical_t_stage value of 1 and the explicitly labelled clinical token T1 share the lexical comparison value T1; preserve the raw source value and do not infer T1 from lesion size or site.",
+            "Clinical and pathological staging are distinct. Never copy a pT/pN/pM value into a clinical field.",
+            "TNM lexical normalization does not validate stage; cancer site, staging system and edition are still required.",
+            "A lesion's size or anatomical subsite alone does not establish a T category or stage group; never infer nodal/metastatic status from missing data.",
             "Do not infer age, sex, T/N/M stage, stage group, nodal status, metastatic status, performance status, prior treatment, patient goals or comorbidity negatives.",
             "Separate source facts, clinical interpretations, hypotheses/assumptions and unknowns.",
             "If free text and structured fields differ, explicitly flag the discrepancy; do not silently reconcile it.",
