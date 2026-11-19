@@ -188,6 +188,8 @@ async def assess_saved_patient_case(patient_id: str, case_version_id: str) -> di
         version = run_store.require_intake_backed_case_version(patient_id, case_version_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="Patient or saved case version not found.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     try:
         require_supported_registry_version(version["clinical_field_registry_version"])
     except ValueError as exc:
