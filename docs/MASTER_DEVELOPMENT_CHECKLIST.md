@@ -3598,3 +3598,32 @@ On code/test head `1f1ef243f3ca1fa02d9c2cbc551a08cd7a1ad99d`, the newline syntax
 | Windows installer on 1f1ef24 | IN PROGRESS at last captured check state | Run 44612610623; recheck before reporting. |
 
 Do not mark the intake feature verified until backend, browser E2E and Windows installer checks on the corrected code head complete successfully. No live model/GPU/clinical validation was performed.
+
+
+## Corrected intake screening validation — 20 November 2026
+
+Code/test checkpoint: `acac4d0e8b6a59c783c0c0c7292cd66fc81418c6`. Latest checklist-only branch commit before this entry: `a00904b4fc576ebf523c9c5ff45740d9074a7c5d`.
+
+The source syntax defect was corrected and the API snapshot regression expectation was aligned to the Pydantic-normalized case representation. The backend and browser reruns on the corrected code checkpoint completed successfully:
+
+- Backend Tests run `44612778252`, attempt 2: **516 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive**. Deterministic preflight PASSED.
+- Patient Registry and Four-Round Dashboard Browser E2E run `44612778272`, attempt 2: **SUCCESS**. Logs include `PATIENT_REGISTRY_BROWSER_E2E_OK`, `OPERATIONAL_MONITOR_REMOVAL_E2E_OK` and `FOUR_ROUND_DASHBOARD_BROWSER_E2E_OK`.
+- Frontend/launcher run `44612610956` on syntax-corrected code commit `1f1ef243f3ca1fa02d9c2cbc551a08cd7a1ad99d`: **SUCCESS**. Its later rerun on acac4d0 was cancelled by subsequent branch activity.
+- Windows Installer run `44612610623` on syntax-corrected code commit `1f1ef243f3ca1fa02d9c2cbc551a08cd7a1ad99d`: **SUCCESS**; the earlier `app.main` import failure was eliminated when the source syntax was fixed. Its later rerun on acac4d0 was cancelled; no claim of exact acac4d0 installer validation.
+- Windows Installer run `44612778249` on acac4d0 was cancelled. Security/dependency and packaging-prerequisite reruns on that checkpoint were also cancelled or not completed. Clean-hosted Ollama/model bootstrap remains skipped.
+
+| Area | Updated status | Evidence / remaining boundary |
+|---|---|---|
+| Intake deterministic screening API + service | VERIFIED (software/CI) | Backend suite 516/516 on acac4d0; endpoint regression coverage included. |
+| Intake declined-domain gap semantics | VERIFIED (software/CI) | Backend tests cover declined field gap and suppressed question. |
+| Backend test suite | VERIFIED | Run 44612778252 attempt 2, exact code/test SHA acac4d0: 516/516. |
+| Browser E2E | VERIFIED | Run 44612778272 attempt 2, code/test SHA acac4d0: success. |
+| Frontend build/launcher | VERIFIED on prior syntax-corrected SHA; exact acac rerun CANCELLED | Run 44612610956 on 1f1ef24. |
+| Windows installer | VERIFIED on prior syntax-corrected SHA; exact acac rerun CANCELLED | Run 44612610623 on 1f1ef24. |
+| Security/dependency audit and packaging prerequisites | IN PROGRESS | Latest acac4d0 attempts cancelled; re-run on next stable code checkpoint. |
+| Clean-host Ollama/model bootstrap | NOT STARTED / SKIPPED | No clean-host first-run model download or inference evidence. |
+| Conversational transcript persistence and immutable intake events | NOT STARTED | Next implementation slice. |
+| Answer/correction application to a new immutable case snapshot | NOT STARTED | Must preserve source values, before/after hashes and conflicts. |
+| Explicit accept-with-gaps and R1 run gate | NOT STARTED | Must require recorded acceptance and use the exact accepted snapshot/version. |
+
+**Current branch governance:** PR #1 remains open, draft and unmerged, targeting `main`; all work remains on `feature/four-round-mdt-and-performance`. No live Ollama inference, RTX 4060 GPU verification, 45-role four-round run, evidence verification or independent clinical validation was performed.
