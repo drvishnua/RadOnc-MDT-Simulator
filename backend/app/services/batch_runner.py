@@ -45,6 +45,7 @@ async def _generate_with_schema_retry(profile, case: SyntheticCase):
 
 async def run_independent_assessments(run_id: str) -> None:
     """Run every unfinished role against the same case, without sharing agent outputs."""
+    run_store.require_run_registry_version(run_id)
     async with _batch_lock:
         try:
             case = run_store.get_case(run_id)
