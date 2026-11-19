@@ -40,6 +40,7 @@ REQUIRED_VALIDATION_SCRIPTS = (
     "scripts/run_medgemma_screening.py",
     "scripts/run_mdt_stress_suite.py",
     "scripts/run_mdt_stress_with_telemetry.py",
+    "scripts/saved_run_quality_diagnostics.py",
 )
 REQUIRED_REGRESSION_TESTS = (
     "tests/test_deterministic_preflight.py",
@@ -52,6 +53,7 @@ REQUIRED_REGRESSION_TESTS = (
     "tests/test_medgemma_screening.py",
     "tests/test_medgemma_screening_corpus.py",
     "tests/test_medgemma_screening_workflow.py",
+    "tests/test_saved_run_quality_diagnostics.py",
 )
 PYTHON_SCAN_DIRECTORIES = ("app", "scripts", "tests")
 
