@@ -14,7 +14,7 @@ from typing import Any
 
 from app.agents.catalog import AGENT_PROFILES
 from app.schemas import SyntheticCase
-from app.clinical_fields import CLINICAL_FIELD_REGISTRY_VERSION
+from app.clinical_fields import CLINICAL_FIELD_REGISTRY_VERSION, require_supported_registry_version
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 DEFAULT_DATA_DIR = BACKEND_DIR / "data"
@@ -411,6 +411,7 @@ def delete_patient(patient_id: str) -> None:
 def create_run_for_case_version(patient_id: str, case_version_id: str) -> dict[str, Any]:
     """Create a run only from the stored, hash-verified patient case version."""
     version = get_patient_case_version(patient_id, case_version_id)
+    require_supported_registry_version(version["clinical_field_registry_version"])
     case = SyntheticCase.model_validate(version["case"])
     return create_run(
         case,
@@ -755,11 +756,18 @@ def _ensure_round_tables(db: sqlite3.Connection) -> None:
             db.execute(f"ALTER TABLE round_runs ADD COLUMN {column} TEXT")
 
 
+def require_run_registry_version(run_id: str) -> None:
+    """Reject resuming a run whose original registry version is unavailable."""
+    run = get_run(run_id)
+    require_supported_registry_version(run["clinical_field_registry_version"])
+
+
 def create_round_job(run_id: str, round_number: int) -> dict[str, Any]:
     """Create a round only when the preceding required stage is fully complete."""
     if round_number not in (2, 3, 4):
         raise ValueError("Only rounds 2, 3, and 4 can be advanced here.")
-    get_run(run_id)
+    run = get_run(run_id)
+    require_supported_registry_version(run["clinical_field_registry_version"])
     if round_number == 2:
         first = get_run(run_id)
         if first["completed_count"] != first["total_agents"] or first["failed_count"]:
