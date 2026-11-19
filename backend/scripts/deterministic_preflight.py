@@ -46,6 +46,7 @@ REQUIRED_REGRESSION_TESTS = (
     "tests/test_deterministic_preflight.py",
     "tests/test_pytest_junit_diagnostics.py",
     "tests/test_case_integrity.py",
+    "tests/test_clinical_fields.py",
     "tests/test_chair_report_quality.py",
     "tests/test_mdt_rounds.py",
     "tests/test_representative_model_provenance_validation.py",
