@@ -3714,7 +3714,7 @@ The latest implementation remains a backend foundation, not a finished conversat
 
 # Master Checklist — Current Status (20 November 2026; supersedes earlier status snapshots)
 
-**Current code/test head:** `eac3d8963f1ebc3b1c42a31d7fe8429e007818fa`  
+**Current code/test head:** `0e24dbe66e82281fbfcc6a736ddad9f5b2c07f7c`  
 **Branch:** `feature/four-round-mdt-and-performance`  
 **PR #1:** open, draft, unmerged; base `main`. No main-branch writes, merge or force-push.
 
@@ -3745,13 +3745,13 @@ The latest implementation remains a backend foundation, not a finished conversat
 
 | Validation | Status | Evidence |
 |---|---|---|
-| Backend tests | VERIFIED | Exact code/test SHA `eac3d89`; run `44619289090`: 530 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive; deterministic preflight 7/7. |
+| Backend tests | VERIFIED | Exact code/test SHA `0e24dbe`; run `44621579516`: 534 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive; deterministic preflight 7/7. |
 | Frontend build | VERIFIED | Exact code/test SHA `eac3d89`; run `44619289155`: success. |
 | Patient Registry + Four-Round Dashboard browser E2E | VERIFIED | Exact code/test SHA `eac3d89`; run `44619289162`: success; `PATIENT_REGISTRY_BROWSER_E2E_OK`, `OPERATIONAL_MONITOR_REMOVAL_E2E_OK`, `FOUR_ROUND_DASHBOARD_BROWSER_E2E_OK`. |
-| Security/dependency audit | VERIFIED | Exact code/test SHA `eac3d89`; run `44619289734`: success; Python and Node audits report 0 vulnerabilities, Python/JS CodeQL and full-history secret scan passed. |
+| Security/dependency audit | VERIFIED | Exact code/test SHA `0e24dbe`; run `44621579531`: success; Python/Node dependency audit, Python/JS CodeQL and full-history secret scan passed. |
 | GitHub-hosted Windows packaging prerequisites | VERIFIED | Exact code/test SHA `eac3d89`; run `44619289319`: success. |
 | Windows installer build/install smoke test | VERIFIED | Exact code/test SHA `eac3d89`; run `44619289306`: build, install, smoke test, uninstall and checksum succeeded; artifact uploaded. |
-| Installer artifact | VERIFIED | Artifact `14575849010`, `RadOnc-MDT-Simulator-Windows-x64.zip`, 14,934,244 bytes; archive digest `sha256:de68d57514242de21fc551651c858eefa3fad3e2263f67d38274a3fcb169649d`; inner Setup.exe SHA-256 `d08e1dda58960e06a388cc0456b127606015c9f4e404582e3eb120e0b253c51f`. |
+| Installer artifact | VERIFIED | Artifact `14576874589`, `RadOnc-MDT-Simulator-Windows-x64.zip`, 14,931,930 bytes; archive digest `sha256:d314d6fa57c016a69914d7859e9560d8657a06677e757a9ce73c83d0b30932ae`; inner Setup.exe SHA-256 `01bae47048b8e7b49fd199837cd059cee40e421d61b967436c42630ef0333a57`. |
 | Ollama bootstrap state-path tests | VERIFIED (mocked only) | Installer run `44619289306` exercised existing running Ollama/model reuse, stopped Ollama restart with existing model, and absent portable Ollama/model pull using mocks. No real Ollama process or inference. |
 | Real local Ollama inference / RTX 4060 GPU | NOT STARTED | No user-device inference, request-time `nvidia-smi` or Ollama GPU-offload evidence. |
 
@@ -3773,17 +3773,17 @@ The latest implementation remains a backend foundation, not a finished conversat
 | Accepted intake → new patient immutable case version | VERIFIED (software tests) | Atomic promotion with event-chain linkage. |
 | Accepted intake → existing patient's next immutable version | VERIFIED (software tests) | Version increments; prior version and hash remain unchanged. |
 | Saved-patient R1 run / saved RO-01 gate | VERIFIED (software tests) | Both saved-version routes require accepted intake provenance and validate event payload identity. |
-| Global R1 entry-point gate | IN PROGRESS | Legacy direct `POST /api/runs` and `POST /api/agents/{agent_id}/assess` now reject unlinked payloads with HTTP 409 before persistence/inference. Frontend starts saved-patient runs. Remaining work: audit every reachable production/internal caller and preserve historical run reads; do not yet claim universal closure. |
+| Global R1/R2–R4 provenance gate | VERIFIED (software paths) | Legacy raw R1 routes reject with 409; saved-patient R1 requires accepted intake; internal R1/R2–R4 workers, round creation and resume verify accepted-intake linkage, case hash, version number and registry version. Historical unlinked runs remain readable but are read-only. |
 | Frontend conversational intake UI | IN PROGRESS | Question review, decline, accept-with-gaps, new/existing patient promotion and pending-session refresh recovery are implemented. Free-text answer turns within the chat, direct answer-to-field mapping, ambiguity clarification and full WhatsApp-like conversation remain. |
 | Frontend refresh recovery for pending intake | VERIFIED (browser/software coverage) | Pending session pointer stored locally and session reloaded from backend; full conversational recovery tests remain. |
 | Semantic narrative/structured contradiction handling | IN PROGRESS | Schema validation and existing integrity warnings; broader conflict detection and user-led resolution remain. |
-| Backend tests | VERIFIED | 530/530 on code/test SHA `eac3d89`; run `44619289090`. |
+| Backend tests | VERIFIED | 534/534 on code/test SHA `0e24dbe`; run `44621579516`. |
 | Frontend build | VERIFIED | Run `44619289155` on code/test SHA `eac3d89`. |
 | Browser E2E | VERIFIED | Run `44619289162` on code/test SHA `eac3d89`; saved R1 readiness, R2/R3 45-role lists, completed R4 and persisted Chair report rendered. No model inference. |
 | Dashboard/API | VERIFIED (browser regression scope) | Existing registry and four-round dashboard rendering paths passed; live inference not included. |
 | Mission Control / Development Monitor removal | VERIFIED | Browser E2E confirms retired panels absent. |
 | Separate desktop UI/UX | IN PROGRESS | Installer packages the app; installed UI still uses the local application host, not a fully native desktop shell. |
-| Ollama installed/running/stopped/absent bootstrap | IN PROGRESS | Run `44619289306` verifies mocked running/reuse, stopped/restart/reuse and absent/download paths; custom-install discovery and real clean-host/existing-stopped-host validation remain. |
+| Ollama installed/running/stopped/absent bootstrap | IN PROGRESS | Run `44621579505` verifies mocked running/reuse, stopped/restart/reuse and absent/download paths; custom-install discovery and real clean-host/existing-stopped-host validation remain. |
 | Ollama context/truncation | NOT STARTED | No measured context-allocation/truncation acceptance checkpoint recorded here. |
 | RTX 4060 inference/GPU telemetry | NOT STARTED | No request-time `nvidia-smi` and Ollama offload evidence. |
 | Performance/latency | NOT STARTED | No current measured inference benchmark. |
@@ -3791,8 +3791,8 @@ The latest implementation remains a backend foundation, not a finished conversat
 | Specialty-specific guideline/textbook/landmark literature retrieval | NOT STARTED | Evidence retrieval is not connected; no guideline compliance claims. |
 | Copied/generic/delegated agent-response investigation | IN PROGRESS | Previously referenced JSON/export still not available in repository file search; no root cause claim. |
 | Independent clinical review | NOT STARTED | Required before any clinical validation claim. |
-| Security audit | VERIFIED | Exact code/test SHA `eac3d89`; run `44619289734`, including full Node audit with 0 vulnerabilities. |
-| Windows packaging/installer smoke | VERIFIED | Exact code/test SHA `eac3d89`; run `44619289306`; mocked bootstrap only, no live Ollama/model. |
+| Security audit | VERIFIED | Exact code/test SHA `0e24dbe`; run `44621579531`; all security jobs succeeded. |
+| Windows packaging/installer smoke | VERIFIED | Exact code/test SHA `0e24dbe`; run `44621579505`; mocked bootstrap paths passed, no live Ollama/model inference. |
 | Release acceptance | BLOCKED | Universal R1 gate, complete intake dialogue, clean-host Ollama bootstrap, live four-round/GPU validation and clinical review remain outstanding. |
 
 **Clinical/data boundary:** accepted-with-gaps is a workflow acceptance state, not a determination that staging or clinical information is sufficient. The intake path does not infer facts, derive TNM stage, convert unknowns into negatives or issue treatment recommendations. No real patient data, live Ollama inference, GPU verification, clinical guideline retrieval or independent clinical validation was performed.
@@ -3854,7 +3854,7 @@ These requirements were explicitly restated by the project owner and must remain
 | Legacy `POST /api/runs` unlinked R1 bypass | IN PROGRESS | Route now returns 409 before persistence; regression test added. Await exact-head backend CI and audit of all callers. |
 | Legacy `POST /api/agents/{agent_id}/assess` unlinked assessment bypass | IN PROGRESS | Known profile now returns 409 before inference; unknown profile remains 404; malformed request remains schema-rejected. Regression test added. |
 | Saved-patient R1 provenance gate | VERIFIED (prior exact-head software tests) | Accepted intake promotion and hashed provenance verification were tested on prior code SHA `a02c1b9`; rerun full suite on current head. |
-| Historical saved-run readability | IN PROGRESS | Read routes were not modified; regression validation still required. |
+| Historical saved-run readability | VERIFIED | Regression confirms unlinked runs remain readable through summary, case snapshot and results APIs while resume and round advancement return HTTP 409. |
 | Backend regression suite on new code | IN PROGRESS | CI triggered by implementation commits; no passing result recorded yet. |
 | Frontend build / browser E2E / installer / security on new code | IN PROGRESS | Exact-head CI required; prior `a02c1b9` results do not validate this change. |
 
@@ -3993,3 +3993,73 @@ The installer workflow exercised mocked cases for an already-running Ollama with
 **Clinical boundary:** the 530 passing backend tests, browser E2E and installer smoke test verify deterministic software paths only. They do not establish clinical accuracy, guideline concordance, model adherence, or clinical safety. Unknown values remain unknown; conditional options must retain prerequisites. No live inference, GPU verification or clinical validation was performed.
 
 **Historical failures remain in the audit trail:** syntax preflight failure on `fa7ecd7`; two stale fixture failures on `33d5040`; cancelled overlapping workflows. They are not relabelled as passes.
+
+
+## Historical run read-only gate and exact-head validation — 20 November 2026
+
+**Current code/test SHA:** `0e24dbe66e82281fbfcc6a736ddad9f5b2c07f7c`  
+**Current branch:** `feature/four-round-mdt-and-performance`  
+**PR #1:** open, draft, unmerged; base `main`.
+
+### Provenance enforcement changes
+
+- `54680219113f110eee0a3d1165f70fef8d6760f6`: added `run_store.require_run_intake_provenance`; it requires an accepted-intake-backed patient/case-version link and checks the saved run's case snapshot hash, case-version number and clinical-field registry version. Missing or mismatched links are rejected.
+- The same change gates the R1 batch worker, R2–R4 worker, round-job creation and round-resume preparation. The legacy R1 resume endpoint now checks provenance before scheduling inference.
+- `f3366362cac19c17506de7928d5439086e19872a`: converts missing patient/version links into an explicit read-only 409 condition and adds regression coverage.
+- `5f1a3201ddeb2e3ee94e24c3949f4e07019c55b5`: updates the bounded representative Chair validation harness to use accepted intake and immutable case-version creation.
+- `b9e3de3c2e77025c87c4b1bbdfedf21a664bcac1`: updates live four-round and stress-run harnesses to create synthetic runs through accepted intake rather than unlinked direct run creation.
+- `a8b05f53efe6bd12122538cd54c3fdb4a870dc47`: fixes the stress checkpoint test to mock the accepted-run helper.
+- `0e24dbe66e82281fbfcc6a736ddad9f5b2c07f7c`: adds browser E2E readiness diagnostics for future intermittent failures.
+
+### Historical run behavior
+
+Historical unlinked runs are intentionally **read-only**, not deleted or hidden. Regression tests confirm their summary, original case snapshot and results remain accessible. Resume and R2–R4 advancement return HTTP 409. The accepted-intake guard is applied at API routes, internal inference workers, round-job creation and round-resume preparation. A full live 45-role run has not been performed.
+
+### Exact-head CI — SHA `0e24dbe`
+
+- Backend Tests [44621579516](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44621579516): **SUCCESS — 534 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive**. Deterministic no-inference preflight **7/7 passed**. JUnit artifact [14575419325](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44621579516/artifacts/14575419325); preflight artifact [14576754442](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44621579516/artifacts/14576754442).
+- Frontend Build [44621579934](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44621579934): **SUCCESS**.
+- Browser E2E [44621579344](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44621579344): **SUCCESS**. Markers `PATIENT_REGISTRY_BROWSER_E2E_OK`, `OPERATIONAL_MONITOR_REMOVAL_E2E_OK`, `FOUR_ROUND_DASHBOARD_BROWSER_E2E_OK` present. Saved R1 readiness, R2/R3 role lists, completed R4 and persisted Chair report rendering verified; fixture performs no model inference. Artifact [14576604807](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44621579344/artifacts/14576604807).
+- Windows Packaging Prerequisites [44621579497](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44621579497): **SUCCESS**.
+- Windows Installer [44621579505](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44621579505): **SUCCESS**; package build, install, smoke test, uninstall, checksum and artifact upload passed. Artifact [14576874589](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44621579505/artifacts/14576874589), archive digest `sha256:d314d6fa57c016a69914d7859e9560d8657a06677e757a9ce73c83d0b30932ae`; inner Setup.exe SHA-256 `01bae47048b8e7b49fd199837cd059cee40e421d61b967436c42630ef0333a57`.
+- Security and Dependency Audit [44621579531](https://github.com/drvishnua/RadOnc-MDT-Simulator/actions/runs/44621579531): **SUCCESS**; Python and Node dependency audits, Python/JavaScript CodeQL and full-history secret scan passed.
+  
+### E2E failure history
+
+A preceding exact-head browser run `44620976028` failed with a timeout waiting for backend connectivity and the enabled case-validation button. Its artifact showed FastAPI started, Vite became ready, and `/health`, `/api/runtime`, `/api/agents` and `/api/patients` returned HTTP 200; no case-validation request was made. Diagnostic instrumentation was added in `0e24dbe`. The next exact-head browser run `44621579344` passed without entering the diagnostic failure path. The cause of the earlier intermittent timeout is not proven; retain it as an intermittent E2E risk rather than declaring a root-cause fix.
+
+### Installer bootstrap boundary
+
+The Windows installer workflow verified mocked scenarios:
+- Existing Ollama already running with `qwen3.5:4b`: reuse existing model store.
+- Ollama stopped with the model already installed: restart Ollama and reuse the model.
+- Portable Ollama/model absent: pull and verify `qwen3.5:4b`.
+
+The installed-app smoke test explicitly reports: **no Ollama request or model inference was performed**. Real clean-host discovery, custom install path handling, actual model reuse/download and local inference remain unverified.
+
+### Current Master Checklist — Current Status
+
+| Workstream | Status | Evidence / remaining work |
+|---|---|---|
+| Direct unlinked R1 API routes | VERIFIED | Legacy raw `POST /api/runs` and standalone agent assessment reject with HTTP 409 before persistence/inference. |
+| Saved-patient R1 provenance | VERIFIED (software path) | Accepted intake → immutable case version → run; intake chain and case hash/version/registry are checked. |
+| R2–R4 provenance and internal worker gates | VERIFIED (software path) | Worker, round-job creation and round-resume guards reject unlinked runs before inference. |
+| Historical run readability | VERIFIED | Legacy unlinked run summaries, case snapshots and results remain readable; resume/advance is read-only HTTP 409. |
+| Test/validation harness provenance | IN PROGRESS | Representative, live and stress harnesses now use accepted intake; hosted resume harness intentionally rejects unlinked historical checkpoints. Live scripts have not been run against Ollama. |
+| Backend tests and deterministic preflight | VERIFIED | 534/534; preflight 7/7 on SHA `0e24dbe`. |
+| Frontend build | VERIFIED | Run `44621579934`. |
+| Browser registry and four-round dashboard E2E | VERIFIED (latest run) | Run `44621579344`; prior intermittent timeout `44620976028` remains an unresolved risk. |
+| Windows packaging prerequisites and installer smoke | VERIFIED | Runs `44621579497` and `44621579505`; artifact `14576874589`. |
+| Security/dependency audit | VERIFIED | Run `44621579531`; all security jobs passed. |
+| Conversational intake UX | IN PROGRESS | Screening, questions, explicit declines, accept-with-gaps, immutable promotion and persistence exist; natural answer/clarification flow still needs completion. |
+| Desktop-native UI | IN PROGRESS | Windows installer passes; full native desktop shell and browser-host removal are not established. |
+| Ollama installation/reuse | IN PROGRESS | Mocked running/stopped/absent bootstrap paths passed; real host/service/model discovery and reuse/download remain unverified. |
+| RTX 4060 GPU inference | NOT STARTED | No local request-time `nvidia-smi`, Ollama offload, VRAM or utilisation evidence. |
+| Model context/performance | NOT STARTED | No current real inference latency/context benchmark. |
+| Evidence retrieval | NOT STARTED | No connected authoritative guideline/literature retrieval; no guideline-compliance claim. |
+| Copied/generic role-output investigation | IN PROGRESS | Historical export findings remain unresolved; no new live role-quality evidence. |
+| R1–R4 live 45-role validation | BLOCKED | No new real Ollama run or saved live R1–R4 artefacts. |
+| Clinical validation | NOT STARTED | Independent clinical review required; software tests do not establish clinical accuracy or safety. |
+| Release acceptance | BLOCKED | Live inference, GPU proof, evidence retrieval, role-quality review, desktop UX and clinical review remain. |
+
+**Clinical boundary:** all current CI evidence is software/packaging validation. It does not prove model accuracy, guideline concordance, clinical safety, or absence of hallucinations. No real Ollama inference or RTX 4060 verification was performed. Preserve all prior CI failures and the intermittent browser timeout in the audit history.
