@@ -3627,3 +3627,49 @@ The source syntax defect was corrected and the API snapshot regression expectati
 | Explicit accept-with-gaps and R1 run gate | NOT STARTED | Must require recorded acceptance and use the exact accepted snapshot/version. |
 
 **Current branch governance:** PR #1 remains open, draft and unmerged, targeting `main`; all work remains on `feature/four-round-mdt-and-performance`. No live Ollama inference, RTX 4060 GPU verification, 45-role four-round run, evidence verification or independent clinical validation was performed.
+
+
+## Persisted intake event workflow — implementation and CI checkpoint, 20 November 2026
+
+**Latest code/test commit:** `49301cd9145db24525ab1567e3fe60d1f1d1b71a`  
+**Intake implementation commits:**
+- `c5ad80efbae241cf042620529702cbafc4614b2f` — initial append-only intake store.
+- `9ef85b6debffdc7d2bef51bb3296c1104dadb8bb` — corrected module import and guaranteed SQLite connection close/rollback.
+- `a1cd91e83981b196cb98b9e774b5d4b68a24f206` — request schemas for intake session/events/acceptance.
+- `f6a0acf258087108c830457da4ba932c7d7f18c6` — create/read/event/accept API routes.
+- `8f306a30732c347f1338dec4a2110cb3f5774a6e` — corrected actual newline separators in route/import insertion.
+- `79c1d6fbaf497fb8cc017f1d08ae8e517a6e5959` — unit tests for event append, correction, decline, acceptance immutability and hash-chain tampering.
+- `49301cd9145db24525ab1567e3fe60d1f1d1b71a` — API integration tests for answer recording, explicit acceptance and post-accept mutation rejection.
+
+**Implemented behavior:** `POST /api/intakes` creates a screening session and initial event. `GET /api/intakes/{session_id}` returns the current case snapshot, deterministic screening, declined domains and verified event history. `POST /api/intakes/{session_id}/events` appends ANSWER, CORRECTION or DECLINE_DOMAIN events. Answer/correction events validate against the Pydantic case schema, retain submitted raw value/source text and append the resulting case snapshot with SHA-256. Event hashes chain to the preceding event. Retrieval verifies event order, previous hashes, event hashes, each saved snapshot hash and session event count. `POST /api/intakes/{session_id}/accept` requires explicit confirmation, records ACCEPTED_WITH_GAPS and freezes further case-changing events.
+
+**Exact-head CI on code/test SHA `49301cd`:**
+- Backend Tests [44613834252]: **522 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive**; deterministic preflight passed.
+- Frontend Build [44613834368]: SUCCESS.
+- Patient Registry / Four-Round Dashboard Browser E2E [44613834300]: SUCCESS; existing UI workflows and monitor-removal assertions passed.
+- Windows Installer Build [44613834372]: SUCCESS; package built, installed-app smoke test passed, checksum generated and artifact uploaded.
+- GitHub-hosted Windows Packaging Prerequisites [44613834314]: SUCCESS.
+- Security and Dependency Audit [44613834258]: PENDING at time of capture; do not mark passed until completed.
+
+| Intake / validation item | Status | Evidence / outstanding work |
+|---|---|---|
+| Deterministic screening and gap detection | VERIFIED | Backend regression suite, run 44613834252. |
+| Append-only answer/correction/decline events | VERIFIED (software tests) | Unit and API tests included in 522/522 backend pass. |
+| Snapshot hashing and event hash-chain integrity | VERIFIED (software tests) | Tamper-detection regression and event-chain tests included. |
+| Explicit accept-with-gaps confirmation | VERIFIED (software tests) | API rejects unconfirmed acceptance; accepted session freezes case-changing events. |
+| Question-asked transcript events and WhatsApp-like turn sequencing | NOT STARTED | Current event store records case creation, answer, correction, decline and acceptance; question-display/asked events are not yet persisted. |
+| Ambiguous/contradictory answer adjudication | IN PROGRESS | Pydantic validation rejects invalid shapes; cross-source semantic conflicts must be flagged, not silently reconciled. |
+| Accepted intake → immutable patient case version | NOT STARTED | No conversion/link endpoint yet. |
+| Accepted intake → R1 run gate | NOT STARTED | Existing patient-version run route is not yet gated by accepted intake provenance. |
+| Frontend conversational intake UI | NOT STARTED | Backend APIs exist; UI integration and refresh/recovery behavior remain. |
+| Backend tests | VERIFIED | Run 44613834252, 522/522. |
+| Frontend build | VERIFIED | Run 44613834368. |
+| Browser E2E | VERIFIED | Run 44613834300. |
+| Windows installer build/install smoke test | VERIFIED | Run 44613834372. |
+| Windows packaging prerequisites | VERIFIED | Run 44613834314. |
+| Security/dependency audit | IN PROGRESS | Run 44613834258 pending. |
+| Clean-host Ollama/model bootstrap | NOT STARTED / SKIPPED | No real clean-host model setup or inference. |
+
+**Clinical/data boundary:** the intake store does not infer missing facts, convert empty lists into negatives, derive TNM stage, or make treatment recommendations. Accepted-with-gaps is an intake workflow state only; it does not mean the case is clinically complete or ready for a definitive MDT conclusion. The accepted snapshot is not yet connected to R1. No real patient data, live Ollama inference, GPU verification, 45-role four-round run, guideline retrieval or independent clinical review was performed.
+
+**Governance:** PR #1 remains open, draft and unmerged, base `main`; all commits remain on `feature/four-round-mdt-and-performance`. No main-branch changes, merge or force-push.
