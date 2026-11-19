@@ -3132,3 +3132,53 @@ The code-triggered backend/frontend/packaging workflows were partially cancelled
 - Live inference/GPU/clinical review: NOT PERFORMED; existing inference gate remains BLOCKED.
 - Release acceptance: BLOCKED.
 
+
+
+## User-recalled product requirements and immutable clinical data dictionary — 20 November 2026
+
+Captured immediately from the user's recollection. These are requirements, not claims of implementation.
+
+### Product and workflow requirements
+1. Remove Mission Control.
+2. Remove Development Monitor.
+3. Replace the browser-loading experience with a separate native desktop UI/UX; do not treat a browser wrapper or loading screen as completion.
+4. Installer must distinguish Ollama absent from Ollama installed but stopped. Detect installed Ollama and existing model inventory even when the service/process is not running; start/reuse the installation and locally cached Qwen model where possible. Download/install Ollama and models only when genuinely absent or missing. Add tests for installed+running, installed+stopped, absent, model-present and model-missing states; never trigger unnecessary model downloads.
+5. Add a pre-MDT case-intake/screening agent before R1. It checks patient, disease, family, preferences/willingness and other relevant case details for missing, ambiguous or discrepant information. Ask concise, natural chat-style clarification questions, preferably grouped sensibly; record answers and provenance. The user may decline or be unable to provide details; accept the case with explicit unknown/unreported states rather than blocking indefinitely or inventing values.
+6. Once intake is accepted, specialists must still provide their own best defensible assessment. They must not use generic insufficient-information boilerplate to avoid reasoning. Require conditional/branch-based recommendations when prerequisites are missing, with explicit branches and no invented ECOG/comorbidity values. Preserve residual uncertainty and dissent.
+7. Every role and every round must provide an individual, well-structured, human-readable argument: case facts, interpretation, position, rationale, conditional branches, risks and missing information. Evidence citations must be traceable and verified before guideline/version claims are made.
+8. Provide specialty-appropriate access to standard textbooks, current guidelines, landmark primary research and relevant updates. Retrieval must be auditable by title, organisation/authors, publication/version/date and URL; distinguish retrieved evidence from model knowledge and disclose unavailable/outdated/conflicting evidence. Do not claim every source was consulted unless logs prove it.
+9. Investigate uploaded JSON showing copy-pasted/delegated or repetitive specialist responses. Add per-role/per-round quality diagnostics and regression fixtures for generic refusals, templated repetition, duplicate reasoning, empty evidence, role mismatch and failure to address specialty-specific questions. Similarity scores are triage signals, not proof of copying. Do not fabricate role opinions.
+10. TNM normalization: e.g. combined T1 must be semantically equivalent to structured clinical_t_stage=1 when context and staging system make that mapping valid. Preserve raw source strings and field provenance; distinguish clinical from pathological stage, prefixes/suffixes, Tis/TX and staging editions. Do not equate ambiguous values or silently resolve contradictions.
+
+### Immutable canonical clinical field registry — new architectural requirement
+- Create a centrally owned, versioned registry for stable field IDs, labels, definitions, types, allowed states, validation rules, aliases and provenance requirements. IDs and meanings must never be repurposed; schema evolution creates a new version and preserves historical run interpretation.
+- Cover at minimum T, N, M; age, sex, primary site, histology, grade, clinical stage, pathological stage, performance status, investigations, comorbidities, medications, family history, patient goals/preferences/willingness, treatment history and relevant social/family context.
+- Separate field definitions from case-specific values. Use explicit states such as UNKNOWN, NOT_REPORTED, NOT_ASSESSED, NOT_APPLICABLE and documented positive/negative findings; never coerce one state into another.
+- All R1–R3 specialists and R4 Chair receive the same validated, immutable, versioned case snapshot and registry through the shared backend boundary. Each role references canonical field IDs; prompt text alone is not enforcement.
+- Validate field references, value types, staging system/edition and aliases deterministically. Preserve original values, source, timestamps and hashes. Flag conflicts and unsupported values; never silently repair them.
+- T1 and clinical_t_stage=1 may normalize to the same canonical clinical-T concept only when the context supports that interpretation. Do not conflate cT1 with pT1 or erase modifiers.
+- Add regression tests proving every role receives identical canonical values; unknown is not negative; missing is not normal; conflicting values remain flagged; historical registry versions remain reproducible; and TNM alias normalization preserves raw provenance.
+- Constants reduce avoidable inconsistency but do not eliminate LLM hallucinations. Deterministic validation, provenance checks and output audits remain mandatory.
+
+### Master checklist status additions / updates
+| Workstream | Status | Evidence / acceptance gate |
+|---|---|---|
+| Mission Control removal | VERIFIED (historical) | Existing checklist records removal; recheck current UI acceptance before release. |
+| Development Monitor removal | VERIFIED (historical) | Existing checklist records removal; recheck current UI acceptance before release. |
+| Separate native desktop UI/UX; no browser loading | IN PROGRESS | Native desktop acceptance and launch/refresh/error-state tests outstanding. |
+| Ollama installed/stopped/absent and model inventory detection | NOT STARTED | Installer state-matrix tests and no-unnecessary-download verification outstanding. |
+| Pre-MDT conversational case-intake agent | NOT STARTED | Clarification state machine, chat UI, transcript/provenance, user-decline path and snapshot acceptance outstanding. |
+| Conditional specialist reasoning after intake acceptance | IN PROGRESS | R1 conditional options exist; enforce useful independent assessments and propagate branches through R2/R3/R4. |
+| Human-readable, role-specific reasoning in every round | IN PROGRESS | Existing outputs require live JSON quality audit and regression coverage for repetition/refusal. |
+| Specialty-specific evidence library/retrieval | NOT STARTED | Source catalogue, retrieval, versioning, citation verification and audit trail outstanding. |
+| Repetitive/copied specialist response diagnostics | IN PROGRESS | Uploaded-export diagnostic work exists; exact repository-script reproduction and semantic quality checks outstanding. |
+| TNM canonical equivalence and provenance | IN PROGRESS | Component comparison diagnostics exist; clinical-field registry, safe alias mapping and full regression coverage outstanding. |
+| Immutable canonical clinical field registry | NOT STARTED | Registry design, schema versioning, shared role injection and deterministic enforcement outstanding. |
+
+### Current repository/CI checkpoint reviewed before this update
+- Development branch exists: `feature/four-round-mdt-and-performance`.
+- Checklist fetched from that branch; existing checklist blob SHA: `1d2c47d9150d4f545c1b2f9bbe16e3ce97a3bf4a`.
+- Latest commit independently inspected in this review: `c74f7ba3e4e1685c726ce783d83617929ef8a1e8`, a TNM diagnostic test-only correction. It does not prove the branch HEAD is necessarily this SHA.
+- Workflow runs associated with that commit: Backend Tests `44603108158` CANCELLED; Browser E2E `44603108040` CANCELLED; Frontend Build `44603108107` CANCELLED; Security Audit `44603108149` CANCELLED; Windows Packaging Prerequisites `44603108017` SUCCESS; Windows Installer `44603108090` SUCCESS. Combined commit statuses returned no entries. Do not describe the six-workflow suite as passed on this SHA.
+- PR #1 state/head/base could not be independently retrieved in this inspection; prior checklist records it open/draft/unmerged targeting main. Recheck before any PR action.
+- No application code changed in this update. No inference, GPU test, live MDT run or clinical review was performed.
