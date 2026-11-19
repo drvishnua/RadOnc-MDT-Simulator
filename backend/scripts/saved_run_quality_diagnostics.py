@@ -179,7 +179,7 @@ def build_diagnostics(export: dict, raw_bytes: bytes, near_duplicate_threshold: 
                         "similarity": round(score, 4), "text_sha256": None,
                     })
 
-    snapshot_tokens = {x.casefold() for x in STAGE_TOKEN.findall(snapshot_text)}
+    snapshot_tokens = {part.casefold() for token in STAGE_TOKEN.findall(snapshot_text) for part in _stage_token_components(token)}
     rows = export.get("independent_assessments")
     rows = rows if isinstance(rows, list) else []
     for row in rows:
