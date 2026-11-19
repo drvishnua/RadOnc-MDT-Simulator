@@ -120,6 +120,8 @@ def initialize_database() -> None:
                 case_snapshot_sha256 TEXT NOT NULL,
                 created_at TEXT NOT NULL,
                 clinical_field_registry_version TEXT NOT NULL DEFAULT 'legacy-unversioned',
+                intake_session_id TEXT,
+                intake_event_chain_sha256 TEXT,
                 UNIQUE(patient_id, version_number),
                 FOREIGN KEY (patient_id) REFERENCES synthetic_patients(patient_id) ON DELETE CASCADE
             );
@@ -183,6 +185,10 @@ def initialize_database() -> None:
             db.execute("ALTER TABLE patient_case_versions ADD COLUMN patient_name TEXT")
         if "clinical_field_registry_version" not in version_columns:
             db.execute("ALTER TABLE patient_case_versions ADD COLUMN clinical_field_registry_version TEXT NOT NULL DEFAULT 'legacy-unversioned'")
+        if "intake_session_id" not in version_columns:
+            db.execute("ALTER TABLE patient_case_versions ADD COLUMN intake_session_id TEXT")
+        if "intake_event_chain_sha256" not in version_columns:
+            db.execute("ALTER TABLE patient_case_versions ADD COLUMN intake_event_chain_sha256 TEXT")
         # Only insert genuinely missing allocations: INSERT OR IGNORE would still
         # advance SQLite AUTOINCREMENT for conflicts on every initialization.
         db.execute(
@@ -315,6 +321,9 @@ def _version_record(row: sqlite3.Row) -> dict[str, Any]:
         "case_snapshot_sha256": digest,
         "created_at": row["created_at"],
         "clinical_field_registry_version": row["clinical_field_registry_version"],
+        "intake_session_id": row["intake_session_id"],
+        "intake_event_chain_sha256": row["intake_event_chain_sha256"],
+        "intake_backed": bool(row["intake_session_id"] and row["intake_event_chain_sha256"]),
         "case": case.model_dump(exclude_none=True),
     }
 
@@ -408,9 +417,33 @@ def delete_patient(patient_id: str) -> None:
         db.execute("DELETE FROM synthetic_patients WHERE patient_id = ?", (patient_id,))
 
 
-def create_run_for_case_version(patient_id: str, case_version_id: str) -> dict[str, Any]:
-    """Create a run only from the stored, hash-verified patient case version."""
+def require_intake_backed_case_version(patient_id: str, case_version_id: str) -> dict[str, Any]:
+    """Require a hash-verified accepted intake as the source of every saved-case R1 run."""
     version = get_patient_case_version(patient_id, case_version_id)
+    if not version.get("intake_session_id") or not version.get("intake_event_chain_sha256"):
+        raise ValueError(
+            "This case version has no accepted intake provenance. Complete and accept a pre-MDT intake, then promote it to a patient case version before starting R1."
+        )
+    from app.services.intake_store import get_intake_session
+
+    session = get_intake_session(version["intake_session_id"])
+    events = session["events"]
+    if (
+        session["state"] != "ACCEPTED_WITH_GAPS"
+        or session.get("patient_id") != patient_id
+        or session.get("case_version_id") != case_version_id
+        or session["case_snapshot_sha256"] != version["case_snapshot_sha256"]
+        or not events
+        or events[-1]["event_sha256"] != version["intake_event_chain_sha256"]
+        or events[-1]["event_type"] != "PROMOTED_TO_PATIENT_VERSION"
+    ):
+        raise ValueError("Accepted intake provenance does not match this immutable patient case version.")
+    return version
+
+
+def create_run_for_case_version(patient_id: str, case_version_id: str) -> dict[str, Any]:
+    """Create a run only from an accepted-intake-backed immutable case version."""
+    version = require_intake_backed_case_version(patient_id, case_version_id)
     require_supported_registry_version(version["clinical_field_registry_version"])
     case = SyntheticCase.model_validate(version["case"])
     return create_run(
