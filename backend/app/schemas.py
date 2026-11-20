@@ -163,7 +163,9 @@ class SyntheticCase(StrictModel):
     """
 
     scenario_title: str = Field(min_length=3, max_length=160)
-    case_summary: str = Field(min_length=10, max_length=12000)
+    # These registry free-text fields are source narratives; preserve their
+    # exact supplied boundaries instead of inheriting StrictModel trimming.
+    case_summary: PreservedSourceText = Field(min_length=10, max_length=12000)
     age_years: int | None = Field(default=None, ge=0, le=120)
     sex_at_birth: str | None = Field(default=None, max_length=40)
     primary_site: str | None = Field(default=None, max_length=160)
@@ -185,8 +187,8 @@ class SyntheticCase(StrictModel):
     performance_status: str | None = Field(default=None, max_length=80)
     performance_status_scale: str | None = Field(default=None, max_length=80)
     diagnosis_date: date | None = None
-    pathology_summary: str | None = Field(default=None, max_length=6000)
-    imaging_summary: str | None = Field(default=None, max_length=6000)
+    pathology_summary: PreservedSourceText | None = Field(default=None, max_length=6000)
+    imaging_summary: PreservedSourceText | None = Field(default=None, max_length=6000)
     current_medications: list[PreservedListText] = Field(default_factory=list, max_length=40)
     known_allergies: list[PreservedListText] = Field(default_factory=list, max_length=40)
     relevant_investigations: list[PreservedListText] = Field(default_factory=list, max_length=60)
