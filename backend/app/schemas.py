@@ -219,10 +219,11 @@ class SyntheticCase(StrictModel):
     )
     @classmethod
     def reject_blank_list_items(cls, values: list[str]) -> list[str]:
-        cleaned = [item.strip() for item in values]
-        if any(not item for item in cleaned):
+        # Validate blankness without normalising the supplied clinical text.
+        # Exact values must remain available for provenance and audit.
+        if any(not item.strip() for item in values):
             raise ValueError("List items must not be blank.")
-        return cleaned
+        return values
 
     @model_validator(mode="after")
     def validate_clinical_field_metadata(self) -> "SyntheticCase":
