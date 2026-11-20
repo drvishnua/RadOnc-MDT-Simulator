@@ -535,3 +535,58 @@ def test_registry_aliases_are_unique_and_resolve_to_declared_field(registry, ali
     assert dict(alias_lookup) == expected_lookup
     assert set(alias_lookup.values()).issubset(set(registry))
 
+def test_conflict_candidates_are_immutable_and_keep_json_shape():
+    """Conflicting raw values and their nested JSON containers remain source-faithful."""
+    first_raw = [{
+        "investigation_name": "MRI",
+        "result_summary": "Synthetic MRI source excerpt.",
+        "status": "COMPLETED",
+    }]
+    second_raw = [{
+        "investigation_name": "CT",
+        "result_summary": "Synthetic CT source excerpt.",
+        "status": "COMPLETED",
+    }]
+    case = _case(
+        clinical_field_states={"investigation_records": "CONFLICTING"},
+        clinical_field_conflicts={
+            "investigation_records": [
+                {
+                    "raw_value": first_raw,
+                    "provenance": {
+                        "source_type": "IMAGING_REPORT",
+                        "source_reference": "synthetic-mri-report",
+                        "source_excerpt": "Synthetic MRI source excerpt.",
+                    },
+                },
+                {
+                    "raw_value": second_raw,
+                    "provenance": {
+                        "source_type": "IMAGING_REPORT",
+                        "source_reference": "synthetic-ct-report",
+                        "source_excerpt": "Synthetic CT source excerpt.",
+                    },
+                },
+            ]
+        },
+    )
+
+    first_candidate = case.clinical_field_conflicts["investigation_records"][0]
+    with pytest.raises(ValidationError, match="frozen"):
+        first_candidate.raw_value = []
+
+    with pytest.raises((AttributeError, TypeError)):
+        first_candidate.raw_value.append({"investigation_name": "US"})
+
+    with pytest.raises(TypeError):
+        first_candidate.raw_value[0]["result_summary"] = "Altered after validation."
+
+    # JSON serialization remains an ordinary object/list shape and preserves
+    # the original competing source values for the model-facing audit context.
+    serialized = case.model_dump(mode="json")["clinical_field_conflicts"]["investigation_records"]
+    assert [item["raw_value"] for item in serialized] == [first_raw, second_raw]
+    context_candidates = build_case_prompt_context(case)["canonical_field_values"][
+        "investigation_records"
+    ]["conflict_candidates"]
+    assert [item["raw_value"] for item in context_candidates] == [first_raw, second_raw]
+
