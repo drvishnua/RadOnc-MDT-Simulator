@@ -2836,3 +2836,52 @@ def test_unknown_investigation_records_state_cannot_support_a_finding():
     })
     assert any("investigation_records" in item and "UNKNOWN" in item for item in flags)
 
+def test_unknown_pathological_tnm_fields_cannot_use_matching_case_summary_fallback():
+    case = _case(
+        case_summary="Synthetic pathology report records pT2N1M0.",
+        pathological_t_stage=None,
+        pathological_n_stage=None,
+        pathological_m_stage=None,
+        clinical_field_states={
+            "pathological_t_stage": "UNKNOWN",
+            "pathological_n_stage": "UNKNOWN",
+            "pathological_m_stage": "UNKNOWN",
+        },
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "Pathological staging is pT2N1M0.",
+    })).casefold()
+    assert "pathological_t_stage" in flags
+    assert "pathological_n_stage" in flags
+    assert "pathological_m_stage" in flags
+
+
+def test_unknown_pathological_stage_group_cannot_use_matching_case_summary_fallback():
+    case = _case(
+        case_summary="Synthetic pathology report records pathological stage group III.",
+        stage_group=None,
+        clinical_stage_group=None,
+        pathological_stage_group=None,
+        clinical_field_states={"pathological_stage_group": "UNKNOWN"},
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The pathological stage group is III.",
+    })
+    assert any("unsupported or type-conflicting stage group" in item for item in flags)
+
+
+def test_unknown_staging_edition_blocks_clinical_stage_group_context():
+    case = _case(
+        primary_site="lung",
+        clinical_stage_group="IIA",
+        staging_system="AJCC",
+        staging_edition=None,
+        clinical_field_states={"staging_edition": "UNKNOWN"},
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has clinical stage group IIA disease.",
+    })).casefold()
+    assert "staging context" in flags
+    assert "staging edition" in flags
+    assert "unknown" in flags
+
