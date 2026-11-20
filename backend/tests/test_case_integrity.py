@@ -2403,7 +2403,7 @@ def test_structured_histological_grade_overrides_conflicting_free_text_grade():
         "provisional_conclusion": "The biopsy is histological grade G3.",
     })).casefold()
 
-    assert "pathology/biomarker" in flags
+    assert "histological grade" in flags
     assert "g3" in flags
 
 
@@ -2419,7 +2419,7 @@ def test_unknown_histological_grade_cannot_use_case_summary_as_selected_grade():
         "provisional_conclusion": "The biopsy is histological grade G2.",
     })).casefold()
 
-    assert "pathology/biomarker" in flags
+    assert "histological grade" in flags
 
 
 def test_conflicting_histological_grade_cannot_select_matching_summary_grade():
@@ -2454,5 +2454,5 @@ def test_conflicting_histological_grade_cannot_select_matching_summary_grade():
         "provisional_conclusion": "The biopsy is histological grade G2.",
     })).casefold()
 
-    assert "pathology/biomarker" in flags
+    assert "histological grade" in flags
 
