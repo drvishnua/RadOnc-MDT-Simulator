@@ -5870,3 +5870,53 @@ For positive patient-history assertions concerning comorbidities, prior treatmen
 
 **Next action:** implement the narrow social/resource source-aware assertion gates, then run exact-head backend tests, deterministic preflight, Sequential Development Gate and Security Audit. Do not activate U04 or change the machine plan.
 
+## U10 social/resource assertion audit — implementation and verification
+
+- Application commit: `5571074532da610120014e6c2c44f63bfc5897d7` (only `backend/app/services/case_integrity.py` changed).
+- Added field-specific high-specificity assertion checks for patient living arrangements / social or caregiver support under `social_context`, and documented financial, transport, travel, accommodation, housing, insurance, access or logistics constraints under `resource_context`.
+- Both checks use the same state-aware positive-source helper as the other history fields. A matching PRESENT structured item can support only that field's assertion. A verbatim case-summary fallback is allowed only when the field has no explicit state and its structured list is empty. Explicit UNKNOWN, NOT_REPORTED, NOT_ASSESSED, PENDING, DECLINED, CONFLICTING and INVALID states block fallback.
+- Positive-claim helper now treats `CONFIRMED_ABSENT` provenance as ineligible for positive facts; such provenance remains available to the separate negative/absence checks. This prevents an absence attestation from being reused to support a positive assertion.
+- Exact-head Backend Tests run `44741865637`, job `136307257745`, on `5571074532da610120014e6c2c44f63bfc5897d7`: **683 passed, 0 failed, 0 errors, 0 skipped** (one pytest warning).
+- All six social/resource tests passed, including both UNKNOWN-state failures from test checkpoint `8cbd1c3`, the structured-source positive controls, and summary fallback only where no explicit state exists.
+- Deterministic no-inference preflight completed in run `44741865637`; artifact `14630079717`, SHA-256 `9ae19a57ea029d8df97d161d8744f524be8a711310bde5f549ae08d7be96a699`.
+- Pytest diagnostic artifact `14632075061`, SHA-256 `fd541b032c1a2b06d5ab5e5cfd604ff68158db7dd5f29bf9e6cf0edd2699b390`.
+- Exact-head Sequential Development Gate run `44741865641`: SUCCESS.
+- Exact-head Security and Dependency Audit run `44741865647`: SUCCESS; all four jobs passed (Python CodeQL, JavaScript/TypeScript CodeQL, dependency audit, full-history secret scan).
+- Failed test-only checkpoint `8cbd1c3` and backend run `44741338019` (681/683, two failures) remain preserved as historical evidence. The later passing run does not erase the earlier failure.
+- Clinical correctness and live-model compliance are not established by these software checks.
+
+### Master Checklist — Current Status
+
+| Workstream | Status | Current evidence / outstanding boundary |
+|---|---|---|
+| Repository, PR and protected branch | VERIFIED | PR #5 OPEN/unmerged; application head `5571074`; base `feature/four-round-mdt-and-performance`; no main modification or merge. |
+| Approved order / machine plan | VERIFIED | `active_step=U09-U10`; plan SHA `7c4bd894af1ef21f8bf54d48ad7e09353fd6471a`; Sequential Gate `44741865641` SUCCESS. |
+| U09 immutable clinical registry v2 / typed contract | IN PROGRESS | Registry v2, immutable definitions, aliases, stable identifiers, version hash and type/state schema exist; complete alias/state/source/migration/backward-compatibility acceptance remains. |
+| U10 staging site/system/edition gate | VERIFIED | Missing context and explicit UNKNOWN system/edition regressions pass; Backend run `44740837167` 677/677. |
+| U10 clinical/pathological T/N/M and stage-group separation | IN PROGRESS | Cross-namespace and pathological UNKNOWN fallback controls pass; remaining field-state/provenance matrix and registry migration cases remain. |
+| U10 diagnosis-date and family/caregiver assertions | VERIFIED | Application `9b0d4cf`; Backend `44737660862`, 661/661 including date and caregiver controls. |
+| U10 investigation-record completion/state gate | VERIFIED | Application `c4d5c63`; Backend `44738779218`, 666/666; only COMPLETED records support findings and UNKNOWN blocks summary fallback. |
+| U10 positive history claims (comorbidities, prior treatment, family history, allergies, medications) | VERIFIED | Application `25635e9`; Backend `44740400697`, 674/674. |
+| U10 social/resource context claim audit | VERIFIED | Application `5571074`; Backend `44741865637`, 683/683; all six social/resource tests passed; explicit UNKNOWN blocks summary fallback. |
+| U10 negative/absence claims and CONFIRMED_ABSENT provenance | IN PROGRESS | Existing absence checks and positive/negative separation are present; broad cross-field state/source mismatch matrix remains open. |
+| U10 patient preference, willingness and educational consent | IN PROGRESS | Dedicated checks and state tests exist; full value-mismatch, conflicting source and summary-fallback coverage remains under audit. Treatment-specific consent remains distinct from educational-scenario consent. |
+| U10 known-unknowns and remaining registry fields | IN PROGRESS | Canonical registry and prompt projection preserve the fields; generated assertions, field-by-field source matching and state controls remain to be audited. |
+| Backend suite | VERIFIED | Exact application head `5571074`; run `44741865637`; 683/683. |
+| Deterministic preflight | VERIFIED | Run `44741865637`; artifact `14630079717`, SHA-256 recorded above. |
+| Sequential Development Gate | VERIFIED | Exact application head; run `44741865641` SUCCESS. |
+| Security/dependency/secret scan/CodeQL | VERIFIED | Exact application head; run `44741865647` SUCCESS; all four jobs passed. |
+| R1–R4 saved contributions and Chair reconciliation | IN PROGRESS | Mocked provenance/context coverage exists; live saved 45-role R1–R3 and Chair R4 audit remains outstanding. |
+| Case snapshot/run hashes and audit history | IN PROGRESS | Deterministic protections exist; full saved-run tamper, partial/failure and resume acceptance remains open. |
+| Evidence/reference retrieval and claim-to-passage validation | IN PROGRESS | Independent current-source retrieval and exact support verification remain outstanding; no guideline compliance claimed. |
+| Missing/failed specialist handling | IN PROGRESS | Deterministic coverage exists; live 45-role failure/resume and saved-artifact inspection remain outstanding. |
+| U04 Case Intake and Completeness Screener | BLOCKED | Must not activate until all U09–U10 acceptance checks are complete. |
+| U05–U08 | BLOCKED | Remain in approved order after U04. |
+| U03 intelligent Ollama installer | BLOCKED | Remains after U08. |
+| U01–U02 desktop experience / remove development screens | BLOCKED | Remain after U03. |
+| Live 45-role R1–R4 | NOT STARTED | No live run ID or saved MDT artefact claimed. |
+| RTX 4060 request-time GPU inference | NOT STARTED | No request-time GPU telemetry or Ollama offload trace claimed. |
+| Independent clinical validation | NOT STARTED | No qualified independent clinical review claimed. |
+| Integrated release acceptance | BLOCKED | U09–U10 field-state/provenance audit and all ordered downstream/live/GPU/clinical gates remain. |
+
+**Next action:** continue U09–U10 field-by-field audit for `known_unknowns`, social/resource mismatch states and remaining clinical fields; then complete deterministic positive/negative source/state matrices. Do not modify intake code, change `active_step` or activate U04.
+
