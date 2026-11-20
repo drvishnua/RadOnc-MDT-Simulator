@@ -4779,7 +4779,7 @@ This is the latest authoritative status. Earlier entries above are retained as h
 | Registry aliases are unique and preserve canonical IDs | VERIFIED | Regression checks v1 and v2 alias maps for duplicates, exact declared mappings and valid canonical target IDs.
 | Explicit source-excerpt hashes, exact whitespace and immutable provenance records | VERIFIED | SHA-256 is calculated from the exact preserved UTF-8 excerpt; actual newlines/tabs are not trimmed, blank excerpts are rejected, provenance records are frozen, and verification status remains `user_supplied_not_independently_verified`. |
 | Source-specific conflict candidate immutability and source identity | VERIFIED | Conflict records and nested JSON lists/objects are immutable after validation; JSON-mode serialization preserves normal JSON shape. Conflicts require at least two distinct raw values and distinct source type/reference/excerpt-hash provenance identities. |
-| `INVALID` epistemic state requires preserved raw input | VERIFIED | An `INVALID` state cannot be stored without a supplied value; the original raw value remains visible for audit but canonical comparison stays unset. |
+| `INVALID` epistemic state and audit quarantine | VERIFIED | An `INVALID` state requires a preserved raw value; canonical comparison stays unset; the shared prompt explicitly says the value is not a valid clinical fact, and deterministic TNM audits describe it as INVALID rather than as a conflicting value. |
 | R1–R4 saved contribution data flow | IN PROGRESS | Must continue to preserve round separation and use actual saved R1–R3 inputs for R4. Full live execution has not been verified by this CI. |
 | Chair consensus, conditional positions, dissent, minority views and source traceability | IN PROGRESS | Deterministic safeguards/tests exist; end-to-end saved-run synthesis and audit remain outstanding. |
 | Missing/failed-agent handling and partial-run integrity | IN PROGRESS | Unit/regression coverage exists; live failure-path execution and saved artefact inspection remain outstanding. |
@@ -4911,4 +4911,17 @@ This is the latest authoritative status. Earlier entries above are retained as h
 - Preflight explicitly states model inference was not performed and clinical accuracy was not evaluated. These tests verify data-contract behavior only.
 - U09–U10 remains `IN PROGRESS`; machine plan and U12 scope baseline remain unchanged. PR #5 remains open and unmerged pending independent review.
 - **Next U09–U10 work:** continue review of state/provenance consistency and audit projections for any state that could expose a raw value as a selected fact. Keep the separately recorded intake snapshot/event binding concern blocked for U04; do not modify `intake_store.py` in this step.
+
+### U09–U10 INVALID-state prompt and deterministic audit consistency — 20 November 2026
+
+- Regression commit `83a73b49abc7c11452a0af0b341dae44f37dd0c9` added an assertion requiring the shared canonical context to instruct the model that an `INVALID` raw value is preserved for audit but is not a valid clinical fact. Backend run `44713170342` reproduced the missing rule: **606 passed, 1 failed**.
+- Fix commit `b914a9ce3c50937e0c2066e740147d474d56251a` added the explicit interpretation rule to `build_case_prompt_context`. Exact-head Backend Tests run `44713296588`: **607 passed**, preflight **7 passed**; Sequential Gate `44713296591` SUCCESS; Security Audit `44713296628` SUCCESS.
+- A separate regression commit `83840c51556eb36307ca4406ad3e4a4b4eb2e305` checked deterministic audit wording when generated text repeats an INVALID structured T-stage token. Backend run `44713707278` reproduced inaccurate wording: **607 passed, 1 failed** because the audit described the invalid raw value as a conflict with the structured field.
+- Fix commit `545cc020f846ccfe554fffc63ff60bb23fb1d99d` now reports INVALID and CONFLICTING separately for both clinical and pathological TNM assertions. INVALID values are described as retained for audit but unable to support a staging assertion; conflicting values are described as unresolved with no single value selectable.
+- Exact-head Backend Tests run `44713857722`: **608 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive**; deterministic preflight **7 passed, 0 failed, 0 inconclusive**.
+- Exact-head Sequential Development Gate run `44713857682`: SUCCESS.
+- Exact-head Security and Dependency Audit run `44713857704`: SUCCESS (Python and JavaScript/TypeScript CodeQL, full-history secret scan, Python/Node dependency audit).
+- Exact preflight explicitly reports model inference was not performed and clinical accuracy was not evaluated. This verifies prompt and deterministic software safeguards only.
+- U09–U10 remains `IN PROGRESS`; machine plan, U12 scope baseline and approved step order remain unchanged. PR #5 remains open and unmerged pending independent review.
+- **Next U09–U10 work:** continue case-integrity audit coverage for non-PRESENT states and other typed fields; keep the deferred current-snapshot/terminal-event check in U04 and do not modify intake services during U09–U10.
 
