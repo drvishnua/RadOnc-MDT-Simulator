@@ -1048,7 +1048,9 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         """Build positive-claim support without bypassing an explicit field state."""
         state = field_state(field_id)
         if state == "CONFIRMED_ABSENT":
-            return field_provenance_text(field_id)
+            # Provenance for confirmed absence can support a negative claim,
+            # never a positive patient-history/social/resource assertion.
+            return ""
         if state not in (None, "PRESENT"):
             return ""
         if not values:
@@ -1874,6 +1876,60 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             + ", ".join(unsupported_family_caregiver_claims[:3])
             + "), but "
             + reason
+        )
+
+    social_context_values = case.social_context or []
+    social_context_pattern = re.compile(
+        r"\b(?:the\s+)?patient\s+(?:currently\s+)?"
+        r"(?:lives?|resides?)\s+(?:alone|with\s+[^.!?;\n]{1,80})|"
+        r"\b(?:the\s+)?patient\s+(?:has|receives?|gets?)\s+"
+        r"(?:documented\s+)?(?:family|social|caregiver)\s+(?:support|assistance)\b",
+        re.IGNORECASE,
+    )
+    unsupported_social_context = _unsupported_matches(
+        social_context_pattern,
+        text,
+        positive_list_field_source(
+            "social_context",
+            social_context_values,
+            ("The patient {value}.",),
+        ),
+    )
+    if unsupported_social_context:
+        flags.append(
+            "Generated narrative asserts unsupported social_context fact(s) ("
+            + "; ".join(unsupported_social_context[:3])
+            + "), but "
+            + positive_list_field_reason("social_context", social_context_values)
+        )
+
+    resource_context_values = case.resource_context or []
+    resource_context_pattern = re.compile(
+        r"\b(?:the\s+)?patient\s+"
+        r"(?:has|faces|reports|experiences|encounters)\s+(?!no\b)"
+        r"[^.!?;\n]{0,55}\b(?:financial|economic|transport(?:ation)?|travel|"
+        r"accommodation|housing|insurance|access|resource|logistic(?:al)?)\b"
+        r"[^.!?;\n]{0,55}\b(?:constraint|barrier|limitation|difficulty|"
+        r"hardship|issue|problem|obstacle)s?\b|"
+        r"\b(?:the\s+)?patient\s+(?:cannot|can't|is unable to)\s+"
+        r"afford\s+[^.!?;\n]{1,80}",
+        re.IGNORECASE,
+    )
+    unsupported_resource_context = _unsupported_matches(
+        resource_context_pattern,
+        text,
+        positive_list_field_source(
+            "resource_context",
+            resource_context_values,
+            ("The patient has {value}.",),
+        ),
+    )
+    if unsupported_resource_context:
+        flags.append(
+            "Generated narrative asserts unsupported resource_context constraint(s) ("
+            + "; ".join(unsupported_resource_context[:3])
+            + "), but "
+            + positive_list_field_reason("resource_context", resource_context_values)
         )
 
     # High-specificity assertion checks. Questions and qualified uncertainty are not
