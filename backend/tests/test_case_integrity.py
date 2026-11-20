@@ -2378,3 +2378,81 @@ def test_laterality_can_fall_back_to_case_summary_only_when_state_is_not_explici
 
     assert not any("laterality" in item.casefold() for item in flags)
 
+def test_structured_histological_grade_supports_matching_grade_claim():
+    case = _case(
+        histological_grade="G2",
+        case_summary="Synthetic case; a separate structured histological grade is supplied.",
+        pathology_summary=None,
+    )
+
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The biopsy is histological grade G2.",
+    })
+
+    assert not any("pathology/biomarker" in item for item in flags)
+
+
+def test_structured_histological_grade_overrides_conflicting_free_text_grade():
+    case = _case(
+        histological_grade="G2",
+        case_summary="Synthetic referral describes histological grade G3.",
+        pathology_summary=None,
+    )
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The biopsy is histological grade G3.",
+    })).casefold()
+
+    assert "pathology/biomarker" in flags
+    assert "g3" in flags
+
+
+def test_unknown_histological_grade_cannot_use_case_summary_as_selected_grade():
+    case = _case(
+        histological_grade=None,
+        case_summary="Synthetic referral describes histological grade G2.",
+        pathology_summary=None,
+        clinical_field_states={"histological_grade": "UNKNOWN"},
+    )
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The biopsy is histological grade G2.",
+    })).casefold()
+
+    assert "pathology/biomarker" in flags
+
+
+def test_conflicting_histological_grade_cannot_select_matching_summary_grade():
+    case = _case(
+        histological_grade=None,
+        case_summary="Synthetic referral describes histological grade G2.",
+        pathology_summary=None,
+        clinical_field_states={"histological_grade": "CONFLICTING"},
+        clinical_field_conflicts={
+            "histological_grade": [
+                {
+                    "raw_value": "G2",
+                    "provenance": {
+                        "source_type": "PATHOLOGY_REPORT",
+                        "source_reference": "grade-a",
+                        "source_excerpt": "Histological grade G2.",
+                    },
+                },
+                {
+                    "raw_value": "G3",
+                    "provenance": {
+                        "source_type": "PATHOLOGY_REPORT",
+                        "source_reference": "grade-b",
+                        "source_excerpt": "Histological grade G3.",
+                    },
+                },
+            ]
+        },
+    )
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The biopsy is histological grade G2.",
+    })).casefold()
+
+    assert "pathology/biomarker" in flags
+
