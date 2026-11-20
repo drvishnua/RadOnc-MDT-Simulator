@@ -5920,3 +5920,58 @@ For positive patient-history assertions concerning comorbidities, prior treatmen
 
 **Next action:** continue U09–U10 field-by-field audit for `known_unknowns`, social/resource mismatch states and remaining clinical fields; then complete deterministic positive/negative source/state matrices. Do not modify intake code, change `active_step` or activate U04.
 
+## U10 social/resource mismatch and state-vocabulary test reconciliation
+
+### Test-first failure retained
+
+- Test-only checkpoint 01d3721706ea8e8336f4b37bba9360d160d43370, changed only backend/tests/test_case_integrity.py.
+- Backend run 44742414877, job 136309109312: **685 passed, 2 failed, 0 errors, 0 skipped**.
+- Both positive mismatch tests passed:
+  - PRESENT social context "Lives with a daughter" did not support the different assertion "lives with a spouse".
+  - PRESENT resource context "Financial constraints" did not support the different assertion "transport barriers".
+- The two CONFIRMED_ABSENT tests failed before entering the audit because the registry correctly does not allow that state for social_context or resource_context. This was an invalid test fixture, not an application failure. No schema change was made.
+- Run 44742414877 preflight artifact 14632145811 (SHA-256 45aee0674c13a768f9ed268ce5a090c78268be677d942e54ad0a5cfac5ec7c2e); pytest artifact 14631118143 (SHA-256 815098f8e645738a398f7b79040a60a78662edc788f32ba7d313e02615097831).
+- Sequential Gate 44742414886: SUCCESS. Security Audit 44742414876: SUCCESS; all four jobs passed.
+
+### Corrected test checkpoint
+
+- Test-only commit a08434a9de317d8129f2afd154c010723fe6f594 corrected social/resource state fixtures from invalid CONFIRMED_ABSENT to allowed NOT_REPORTED, preserving the intended explicit non-PRESENT summary-fallback test.
+- Added a distinct CONFIRMED_ABSENT positive-claim regression for relevant_comorbidities, a field whose registry state vocabulary permits it.
+- Exact-head Backend Tests run 44742778202, job 136310331844: **688 passed, 0 failed, 0 errors, 0 skipped** (one warning).
+- Confirmed passing controls include social/resource structured mismatch, NOT_REPORTED summary-fallback blocking, structured source support, and positive-claim blocking under permitted CONFIRMED_ABSENT comorbidity state.
+- Preflight artifact 14632101208, SHA-256 17cda4f98afeb0c6ee69735e3cce3c72b9bc074d211984fb206ff90699af51cf; pytest artifact 14631188326, SHA-256 9fe6712d5cb656170fe759194d4326eea780899ec2ff07cf7a948f074ea0264e.
+- Sequential Gate 44742778198: SUCCESS.
+- Security Audit 44742777994: SUCCESS; all four jobs passed (Python CodeQL, JavaScript/TypeScript CodeQL, dependency audit, full-history secret scan).
+- No application code or clinical schema was changed in either test-only increment.
+
+### Master Checklist — Current Status
+
+| Workstream | Status | Current evidence / outstanding boundary |
+|---|---|---|
+| Repository, PR and protected branch | VERIFIED | PR #5 OPEN/unmerged; current corrected test head a08434a; target remains feature/four-round-mdt-and-performance; no main-branch modification. |
+| Approved algorithm / machine plan | VERIFIED | active_step=U09-U10; plan SHA 7c4bd894af1ef21f8bf54d48ad7e09353fd6471a; Sequential Gate 44742778198 SUCCESS. |
+| U09 immutable registry v2 and typed state contract | IN PROGRESS | Registry v1/v2 immutability, 40 field IDs, aliases, hashes and SyntheticCase field coverage exist; complete migration/legacy compatibility and full per-field state/provenance acceptance remain. |
+| U10 positive history assertion audit | VERIFIED | Application 25635e9; Backend 44740400697, 674/674; comorbidity, prior treatment, family history, allergy and medication positive assertions source-gated. |
+| U10 social/resource claim audit | VERIFIED | Application 5571074; Backend 44741865637, 683/683; UNKNOWN and NOT_REPORTED block fallback; structured source support and mismatched-value flags pass. |
+| U10 social/resource structured mismatch and summary fallback | VERIFIED | Test-only a08434a; Backend 44742778202, 688/688; PRESENT mismatch and allowed NOT_REPORTED controls pass. |
+| U10 CONFIRMED_ABSENT positive/negative separation | VERIFIED | Generic positive-source helper rejects CONFIRMED_ABSENT provenance; allowed-field regression for relevant_comorbidities passed in 44742778202. Social/resource do not permit CONFIRMED_ABSENT per their registry definitions; schema unchanged. |
+| U10 staging site/system/edition | VERIFIED | Missing-context and explicit UNKNOWN system/edition regressions pass; Backend 44740837167, 677/677. |
+| U10 clinical/pathological T/N/M and stage-group separation | IN PROGRESS | Pathological component/group UNKNOWN summary fallback tests pass; full state/provenance matrix and version migration cases remain open. |
+| U10 diagnosis date and family/caregiver | VERIFIED | Code 9b0d4cf; Backend 44737660862, 661/661. |
+| U10 investigation-record status and source fallback | VERIFIED | Code c4d5c63; Backend 44738779218, 666/666; only COMPLETED records support findings. |
+| U10 preference, willingness and treatment/educational consent | IN PROGRESS | Separate state/source tests exist; full mismatched values, conflict and conditionality audit remains. |
+| U10 known-unknowns and remaining canonical fields | IN PROGRESS | Registry and prompt context preservation exist; generated assertion-to-field mapping and per-field state coverage not yet fully verified. |
+| Backend, preflight, Sequential Gate and Security | VERIFIED | Corrected test head a08434a: Backend 688/688 run 44742778202; preflight completed; Sequential 44742778198 SUCCESS; Security 44742777994 SUCCESS/all four jobs. |
+| R1–R4 saved contribution/Chair reconciliation | IN PROGRESS | Mocked provenance/context tests exist; no live saved 45-role R1–R3 / Chair R4 audit yet. |
+| Evidence retrieval and claim-to-passage checks | IN PROGRESS | Independent current source retrieval and exact claim-to-passage verification remain outstanding. |
+| Case integrity/hash and failure/resume audit | IN PROGRESS | Deterministic controls exist; full saved-run tamper and failure-path acceptance remains. |
+| U04–U08 | BLOCKED | Do not activate until all U09–U10 acceptance criteria are verified. |
+| U03 | BLOCKED | Remains after U08 in approved sequence. |
+| U01–U02 | BLOCKED | Remain after U03 in approved sequence. |
+| Live 45-role R1–R4 | NOT STARTED | No live run ID or saved simulation artefact claimed. |
+| RTX 4060 request-time inference | NOT STARTED | No request-time utilisation/offload telemetry claimed. |
+| Independent clinical review | NOT STARTED | No qualified clinical review claimed. |
+| Integrated release acceptance | BLOCKED | U09–U10 field coverage and all ordered downstream/live/GPU/clinical gates remain. |
+
+**Next action:** continue the U09–U10 audit of preference, willingness, consent, known-unknowns, and remaining clinical fields. Keep every state allowed by the canonical registry; do not generalise CONFIRMED_ABSENT to fields whose registry vocabulary excludes it. Do not change machine-plan step or activate U04.
+
