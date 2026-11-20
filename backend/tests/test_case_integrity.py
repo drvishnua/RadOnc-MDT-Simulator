@@ -1988,3 +1988,36 @@ def test_conflicting_prior_treatment_list_cannot_support_no_prior_treatment_clai
         "provisional_conclusion": "The patient has received no prior treatment."
     })).casefold()
     assert "absence is not explicitly supported" in flags
+
+
+
+def test_conflicting_stage_group_state_cannot_be_supported_by_the_matching_free_text_summary():
+    case = _case(
+        case_summary="Referral summary records clinical stage group II.",
+        clinical_stage_group="II",
+        clinical_field_states={"clinical_stage_group": "CONFLICTING"},
+        clinical_field_conflicts={
+            "clinical_stage_group": [
+                {
+                    "raw_value": "II",
+                    "provenance": {
+                        "source_type": "CLINICIAN_NOTE",
+                        "source_reference": "stage-note-a",
+                        "source_excerpt": "Clinical stage group II.",
+                    },
+                },
+                {
+                    "raw_value": "III",
+                    "provenance": {
+                        "source_type": "IMAGING_REPORT",
+                        "source_reference": "stage-note-b",
+                        "source_excerpt": "Clinical stage group III.",
+                    },
+                },
+            ]
+        },
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The clinical stage group is II."
+    })).casefold()
+    assert "unsupported or type-conflicting stage group" in flags
