@@ -2021,3 +2021,18 @@ def test_conflicting_stage_group_state_cannot_be_supported_by_the_matching_free_
         "provisional_conclusion": "The clinical stage group is II."
     })).casefold()
     assert "unsupported or type-conflicting stage group" in flags
+
+def test_invalid_structured_tnm_value_is_not_presented_as_a_conflict():
+    case = _case(
+        clinical_t_stage="T1",
+        clinical_field_states={"clinical_t_stage": "INVALID"},
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The supplied case establishes clinical T1 disease."
+    })).casefold()
+
+    assert "clinical_t_stage" in flags
+    assert "invalid" in flags
+    assert "cannot support" in flags
+    assert "conflict with structured clinical_t_stage" not in flags
+
