@@ -4718,3 +4718,78 @@ Implemented, not yet CI-verified:
 **Clinical-safety boundary:** synthetic educational use only. Unknown remains unknown. No inferred N0/M0, stage group, performance status, resectability, comorbidity negative or patient preference. Contradictions remain unresolved and source-specific. Conditional recommendations, uncertainty and dissent must be preserved. R4 Chair synthesis may use only saved R1-R3 contributions. No guideline compliance or evidence verification is claimed.
 
 **Next action:** open the scoped U09/U10 PR from this branch to the protected development branch, then fix any CI failures without changing the approved step order. Do not advance U09-U10 to VERIFIED until all acceptance evidence is exact-head verified.
+
+
+### U09/U10 state-aware audit hardening and exact-head CI — 20 November 2026
+
+**Exact code/test revision verified**
+
+- PR #4: [U09/U10 — versioned clinical registry and deterministic fact controls](https://github.com/drvishnua/RadOnc-MDT-Simulator/pull/4), base `feature/four-round-mdt-and-performance`, base SHA `e2e8d7d106a17b897c30db52ac01c5bb5f9ea2ab`.
+- Code/test head: `26f775f55266c129c6818b7f25ddc05492348028`.
+- Exact-head CI:
+  - Sequential Development Gate — run `44670608975`, SUCCESS. Plan/order/scope validator and adversarial gate tests passed.
+  - Backend Tests — run `44670608976`, SUCCESS. Per-test diagnostics: **600 passed; 0 failed, 0 errors, 0 skipped, 0 inconclusive**. Deterministic preflight artifact `14600415174`; pytest diagnostic artifact `14599399559`.
+  - Security and Dependency Audit — run `44670609394`, SUCCESS. Python/Node dependency audits, full-history secret scan, Python CodeQL and JavaScript/TypeScript CodeQL all completed SUCCESS.
+  - The six protected-ruleset required contexts all completed SUCCESS on this exact SHA: Sequential Development Gate; Install backend dependencies and run tests; Python and Node dependency vulnerability audit; Full-history secret scan; CodeQL static analysis (python); CodeQL static analysis (javascript-typescript).
+- The test diagnostics explicitly include passing regression tests for conflicting age values, conflicting stage-group values, and redaction of conflicting flat values from the model-facing case snapshot.
+- Backend/frontend UI files were not changed in this slice; no standalone frontend or browser E2E run is claimed for this backend-only step.
+- The PR remains OPEN and mergeable, with **no independent review recorded** at this checkpoint. It has not been merged.
+
+**State-aware integrity corrections**
+
+- Model-facing `case_snapshot` is now a projection: any flat field marked `CONFLICTING` is set to null in the prompt snapshot and field-status projection. The original `SyntheticCase` object and persisted immutable case/version snapshot are not modified; source-specific conflict candidates and their provenance remain available to the model as unresolved alternatives.
+- The shared context builder is used at all five inspected prompt construction call sites in `backend/app/services/mdt_generation.py`; `mdt_rounds.py` does not serialize its own separate case snapshot. Round APIs verify the run's registry version and accepted-intake provenance before advancing.
+- Deterministic claim auditing now respects explicit field states for age, sex at birth, performance status and scale, histology, pathology summary, imaging/investigation data, comorbidity/prior-treatment absence and patient goals/preferences. Unknown, pending, declined, not-assessed and conflicting values cannot be treated as affirmative or negative supporting evidence.
+- `CONFIRMED_ABSENT` for a list field may support an absence assertion only through explicit source-provenance excerpts; an empty list or `NOT_REPORTED` is not a negative.
+- Clinical and pathological TNM and stage-group sources remain separate. A conflicting typed stage-group state suppresses otherwise matching free-text summary support, rather than allowing one side of a contradiction to become the selected result.
+- Performance-status evidence requires a named scale. A scale explicitly included in the supplied value (for example, `ECOG 1`) remains valid; a bare score without a scale is not accepted as verified evidence.
+
+**CI iteration history — failures retained, not counted as acceptance**
+
+The following exact-head backend failures are retained in GitHub Actions and explain the successive corrections. Only the final successful code/test SHA above is used for acceptance:
+- `33dc9f59a206a60f77a6c153e6abe9d86c089134`: Backend run `44668171504` — 12 test failures; Gate `44668171603` SUCCESS; Security `44668171716` SUCCESS. Prompt safety wording, phase-specific stage handling and compatibility assertions were corrected.
+- `7992643fc6ebcf24a506da3620661a668edf467a`: Backend run `44668645498` — 3 test failures; Gate `44668645420` SUCCESS. Remaining wording/raw-stage expectations were corrected.
+- `0d40c8aee4f0cd6d38693b513a4f7069633206d4`: Backend run `44669768455` — 586 passed, 3 failed; Gate `44669768669` SUCCESS; Security `44669768463` SUCCESS.
+- `7519c1d6b659941001200ae856d1e2ad2061017f`: Backend run `44669934857` — 596 passed, 3 failed; Gate `44669934894` SUCCESS; Security `44669934898` CANCELLED.
+- `bc7831262268fd899785a904425dcfe8bee85916`: Backend run `44670041362` — 596 passed, 3 failed; Gate `44670041315` SUCCESS; Security `44670041368` CANCELLED.
+- `e2130cc4c2400a649cf3cdb4789f95bfda7ca059`: Backend run `44670130457` — 596 passed, 3 failed; Gate `44670130528` SUCCESS. Legacy sex/performance/age audit wording was reconciled.
+- `fd25ff908c3371c220f1603c9776564f2fb68b33`: Backend run `44670476321` — 596 passed, 3 failed; Gate `44670476328` SUCCESS. Embedded performance-scale token handling was corrected.
+- `26f775f55266c129c6818b7f25ddc05492348028`: backend, gate and security all SUCCESS as recorded above.
+
+**Registry version enforcement and migration boundary**
+
+- Code inspection confirms the v2 registry guard is called when starting a saved-case assessment, when promoting an accepted intake to a patient case version, when creating a run from a saved case version, when resuming/advancing a run and before later MDT round execution. Intake, patient-case-version and run records persist their registry-version metadata.
+- Existing v1/legacy snapshots are not silently rewritten. Unsupported historical versions are rejected from new/resumed generation until a new immutable v2 case version is created. An automatic migration is deliberately not performed. A user-visible recovery path for old saved cases and migration tests remain a release/product compatibility item; preserve historical snapshots and their hashes.
+
+### Master Checklist — Current Status (U09/U10 code/test head 26f775f; before checklist-only CI refresh)
+
+| Workstream | Status | Evidence / outstanding boundary |
+|---|---|---|
+| STEP-A repository verification | VERIFIED | Historical exact application-code checkpoint and six successful workflows |
+| U12 sequential gate, active ruleset and negative control | VERIFIED | PR #2 merge SHA `5284483a26e87028f919966e304c472ed537e839`; development-only active ruleset and recorded rejected skip attempts |
+| U12 reconciliation and U09/U10 activation | VERIFIED | PR #3 merge SHA `e2e8d7d106a17b897c30db52ac01c5bb5f9ea2ab`; exact merge CI successful |
+| U09 canonical clinical registry v2 | IN PROGRESS | Additive immutable v2.0.0 and stable field IDs implemented; user-facing legacy-case migration/recovery remains outstanding |
+| U10 deterministic state-aware hallucination controls | IN PROGRESS | 600 exact-head tests pass; lexical/staging checks are not staging classification or clinical validation |
+| Case-field schema and epistemic states | VERIFIED (software tests) | PRESENT/UNKNOWN/NOT_REPORTED/NOT_ASSESSED/PENDING/DECLINED/NOT_APPLICABLE/CONFIRMED_ABSENT/CONFLICTING/INVALID validation regression suite passes |
+| Per-field provenance and source hashes | VERIFIED (software tests) | Supplied values receive explicit user-supplied, not independently verified provenance; source excerpt hash and conflict candidate tests pass |
+| Model-facing conflict redaction | VERIFIED (software tests) | Explicit conflicting flat values redacted from prompt snapshot; persisted source snapshot remains intact; source candidates retained |
+| Clinical/pathological TNM and stage-group separation | VERIFIED (software tests) | Prefix, type-separation, unsupported assertion and conflict tests pass; lexical comparison only |
+| R1-R4 shared canonical context | IN PROGRESS | Five inspected prompt construction call sites use the shared builder; exact all-45-role/live saved-input equivalence still untested |
+| Chair synthesis, consensus, dissent and source traceability | IN PROGRESS | No Chair logic changed in this slice; must continue to consume only actual saved R1-R3 contributions |
+| Backend deterministic preflight and tests | VERIFIED | Exact head `26f775f55266c129c6818b7f25ddc05492348028`; run `44670608976`, 600/600 per-test diagnostic records passed |
+| Sequential development gate | VERIFIED | Exact head run `44670608975` SUCCESS |
+| Security/dependency/secret/CodeQL checks | VERIFIED | Exact head run `44670609394` SUCCESS |
+| Frontend build / browser E2E | NOT APPLICABLE | No frontend files changed in this backend-only slice; no UI claim made |
+| Ollama discovery/reuse and Windows installer | BLOCKED | U03 remains later in the approved order; hosted installer success is not local GPU/model reuse proof |
+| Conversational intake and completeness screener | BLOCKED | U04 depends on U09/U10 |
+| Specialist reasoning/round refinements | BLOCKED | U05-U06 and U06-U08 remain later steps |
+| Versioned external evidence retrieval | BLOCKED | U07 remains later; no guideline/evidence verification claimed |
+| Standalone desktop UX | BLOCKED | U01-U02 remain later |
+| Live 45-role R1-R4 execution and saved-run audit | NOT STARTED | Unit tests do not prove live model behaviour |
+| RTX 4060 request-time inference verification | NOT STARTED | No local GPU telemetry or inference trace retrieved |
+| Independent clinical validation | NOT STARTED | No independent clinical review claimed |
+| Integrated release acceptance | BLOCKED | Legacy migration/recovery, remaining ordered steps, live-model/GPU and independent validation outstanding |
+
+**Clinical-safety boundary remains unchanged:** synthetic educational use only; unknown remains unknown; no inferred N0/M0, stage group, performance status, resectability, comorbidity negative or patient preference. Conflicts remain unresolved and source-specific. Conditional recommendations, uncertainty and dissent are preserved. R4 Chair synthesis may use only saved R1-R3 contributions. No guideline compliance or evidence verification is claimed.
+
+**Next action:** re-run the sequential gate, backend tests and security workflows on the new checklist-bearing PR #4 head, then request one independent approval. Do not merge PR #4 or mark U09/U10 VERIFIED until exact-head CI, acceptance criteria and independent review are complete.
