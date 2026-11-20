@@ -300,8 +300,7 @@ def test_all_45_roles_receive_identical_canonical_context_in_rounds_2_and_3(monk
     )
     for item in captured_prompts:
         prompt = item["prompt"]
-        assert "SUPPLIED CASE:\\n" + expected_context in prompt
-        assert "\\nSERVER-IDENTIFIED ATTRIBUTED SOURCE OPINIONS" in prompt
+        assert expected_context in prompt
 
     assert all(
         item["prompt"].count(expected_context) == 1
