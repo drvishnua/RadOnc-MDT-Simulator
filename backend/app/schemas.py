@@ -272,6 +272,19 @@ class SyntheticCase(StrictModel):
                 }
                 if len(distinct) < 2:
                     raise ValueError(f"{field_id} CONFLICTING requires at least two distinct raw values.")
+                distinct_sources = {
+                    (
+                        item.provenance.source_type,
+                        item.provenance.source_reference,
+                        item.provenance.source_sha256,
+                    )
+                    for item in conflicts
+                }
+                if len(distinct_sources) < 2:
+                    raise ValueError(
+                        f"{field_id} CONFLICTING requires at least two distinct "
+                        "source-specific provenance records."
+                    )
 
         for field_id, conflicts in self.clinical_field_conflicts.items():
             if self.clinical_field_states.get(field_id) != "CONFLICTING":
