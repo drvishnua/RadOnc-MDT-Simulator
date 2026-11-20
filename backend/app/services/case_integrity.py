@@ -1850,7 +1850,9 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         )
 
     investigation_pattern = re.compile(
-        r"\b(?:CT|MRI|PET(?:[- ]CT)?|ultrasound|USG|X[- ]ray|radiograph|bone scan|colonoscopy|endoscopy|bronchoscopy|cystoscopy|biopsy)\s+(?:scan\s+)?(?:shows?|demonstrates?|reveals?|confirms?|identifies?|detected|reported)\s+[^.!?;\n]{1,100}",
+        r"\b(?:CT|MRI|PET(?:[- ]CT)?|ultrasound|USG|X[- ]ray|radiograph|bone scan|colonoscopy|endoscopy|bronchoscopy|cystoscopy|biopsy)\b"
+        r"(?:\s+(?:scan|chest|thorax|abdomen|pelvis|brain|head|neck|cervical|thoracic|lumbar|spine|whole[- ]body|skeletal|bone|liver|of|with|without|contrast)){0,4}"
+        r"\s+(?:shows?|demonstrates?|reveals?|confirms?|identifies?|detected|reported)\s+[^.!?;\n]{1,100}",
         re.IGNORECASE,
     )
     imaging_state = field_state("imaging_summary")
@@ -1928,7 +1930,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
                 "COMPLETED investigation record, or permitted verbatim case-summary source."
             )
         flags.append(
-            "Generated narrative asserts investigation_records finding(s) / imaging-investigation result(s) ("
+            "Generated narrative asserts imaging/investigation result(s) / investigation_records finding(s) ("
             + "; ".join(unsupported_investigations[:2])
             + "), but "
             + investigation_reason
