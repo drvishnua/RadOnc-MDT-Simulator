@@ -5470,3 +5470,53 @@ This entry supersedes the staging-context attribution and current-status stateme
 
 **Clinical/verification boundary:** these results verify deterministic software tests and CI controls only. They do not establish correct patient-specific staging, guideline compliance, LLM adherence, live 45-role execution, GPU inference or clinical validity.
 
+## U09–U10 follow-on field audit — diagnosis date and family/caregiver context
+
+### Test-first checkpoint
+
+- Test-only commit: `d7f59631e6f12a406086256737420807091162ea` (changed only `backend/tests/test_case_integrity.py`).
+- Exact-head Backend Tests run `44736929764`, job `136290556882`: **656 passed, 5 failed, 0 errors, 0 skipped**.
+- Reproduced failures:
+  1. `test_unreported_diagnosis_date_assertion_is_flagged`: generated diagnosis date accepted without an assertable date source.
+  2. `test_generated_diagnosis_date_must_match_the_structured_value`: generated date mismatch not flagged.
+  3. `test_explicit_unknown_diagnosis_date_cannot_use_summary_fallback`: explicit UNKNOWN diagnosis-date state did not block fallback to an unverified summary date.
+  4. `test_unreported_family_caregiver_support_assertion_is_flagged`: unsupported caregiver availability assertion not flagged.
+  5. `test_unknown_family_caregiver_state_cannot_use_summary_fallback`: explicit UNKNOWN family/caregiver state did not block fallback to the free-text summary.
+- Positive controls passed: matching structured diagnosis date and matching PRESENT family/caregiver context were not flagged.
+- Exact-head Sequential Development Gate run `44736929934`: SUCCESS.
+- Exact-head Security and Dependency Audit run `44736929700`: SUCCESS; all four jobs passed.
+- These failures are deterministic test findings against the pre-fix application code; no application fix is included in `d7f5963`. Preserve the failed checkpoint and its artifact `14628548324` (SHA-256 `c687ea5dec315a79bf93daa645b81050230967f1e88b74a27d3a489c52560430`).
+
+### Required narrow correction
+
+- Add a deterministic diagnosis-date assertion audit. Compare generated ISO diagnosis-date claims with the assertable structured date; allow verbatim-summary fallback only when no explicit epistemic state exists; explicit UNKNOWN/NOT_REPORTED/NOT_ASSESSED/PENDING/DECLINED/CONFLICTING/INVALID states must not silently resolve the field. Preserve the original date value and provenance.
+- Add a deterministic family/caregiver support assertion audit using `family_caregiver_context` only when implicit/explicit PRESENT; otherwise permit verbatim case-summary fallback only where no explicit state exists. A non-PRESENT state must not be bypassed by matching free text. Do not infer caregiver availability, family support or absence from empty lists.
+- Preserve the positive matching-source controls. Avoid broad matching that turns questions, uncertainty statements or hypothetical examples into patient facts.
+
+### Master Checklist — Current Status
+
+| Workstream | Status | Current evidence / outstanding boundary |
+|---|---|---|
+| Repository, PR and protected branch | VERIFIED | PR #5 OPEN/unmerged; current test-only head `d7f5963`; target remains `feature/four-round-mdt-and-performance`; no main-branch change. |
+| Approved sequence / machine plan | VERIFIED | `active_step=U09-U10`; plan SHA `7c4bd894af1ef21f8bf54d48ad7e09353fd6471a`; no dependency-order change. |
+| U09 immutable registry and typed data contract | IN PROGRESS | Registry v2 definitions and typed schema exist; remaining full-field, alias, immutability and legacy compatibility acceptance is open. |
+| U10 deterministic clinical claim audit | IN PROGRESS | Existing field-state, TNM, stage context, laterality, grade, site/subsite, negative claims and source-state protections retained; newly reproduced date and caregiver audit gaps require correction. |
+| Clinical stage-group context prerequisite | VERIFIED | Current code checkpoint `3a271d8` and later exact-head Backend runs `44730496450` and `44736470518` passed both targeted staging-context tests. |
+| Historical staging-context pre-gate failure | FAILED | Run `44729275307`, workflow head `66b3821`, 652/654; preserved as historical pre-gate failure, not misattributed to `3a271d8`. |
+| Diagnosis-date and family/caregiver assertion audit | FAILED | Test-only checkpoint `d7f5963`; run `44736929764`: five focused failures; code correction and exact-head retest required. |
+| Backend regression suite | FAILED | Exact test-only head `d7f5963`; run `44736929764`: 656/661 passed, 5 failed. |
+| Sequential Development Gate | VERIFIED | Exact test-only head; run `44736929934` SUCCESS. |
+| Security/dependency/secret scan/CodeQL | VERIFIED | Exact test-only head; run `44736929700` SUCCESS; all four jobs passed. |
+| R1–R4 shared canonical context and Chair source reconciliation | IN PROGRESS | Mocked role-context tests exist; complete live saved R1–R3 and Chair R4 verification remains outstanding. |
+| Case integrity, hashes and audit | IN PROGRESS | Existing provenance and conflict preservation tested; full saved case/run tamper and failure-path acceptance remains open. |
+| Evidence retrieval and citation provenance | IN PROGRESS | No independently verified external evidence/retrieval library acceptance yet. |
+| Missing/failed specialist handling | IN PROGRESS | Deterministic regression coverage exists; full live 45-role failure/resume inspection remains outstanding. |
+| Deferred intake snapshot/terminal-event binding | BLOCKED | Outside U09–U10 scope; hold for U04. |
+| U04–U08, U03 and U01–U02 | BLOCKED | Must remain in the approved order; do not activate before U09–U10 acceptance. |
+| Live 45-role R1–R4 and saved-run audit | NOT STARTED | No live run ID or saved MDT artefact claimed. |
+| RTX 4060 request-time GPU inference | NOT STARTED | No request-time GPU telemetry or Ollama offload trace claimed. |
+| Independent clinical validation | NOT STARTED | No independent clinical review or guideline concordance claimed. |
+| Integrated release acceptance | BLOCKED | U09–U10 still has open audit defects; all ordered downstream and independent verification requirements remain. |
+
+**Next action within U09–U10:** correct only the two reproducible audit gaps above, preserve raw facts and state semantics, then run exact-head backend tests, deterministic preflight, Sequential Development Gate and Security Audit. Do not modify intake code, alter the machine plan or advance to U04.
+
