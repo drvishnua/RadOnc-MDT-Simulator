@@ -1582,3 +1582,87 @@ def test_opposite_laterality_is_flagged_but_matching_or_unattributed_values_are_
         "opposing laterality statements" in item
         for item in build_case_validation_warnings(unattributed)
     )
+
+
+
+def test_pathological_tnm_in_case_summary_does_not_support_clinical_tnm_claims():
+    case = _case(
+        case_summary="Synthetic case; pathology reports pT1N0M0.",
+        clinical_t_stage=None,
+        clinical_n_stage=None,
+        clinical_m_stage=None,
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The clinical stage is T1N0M0."
+    })).casefold()
+    assert "t-stage value(s) t1" in flags
+    assert "n-stage value(s) n0" in flags
+    assert "m-stage value(s) m0" in flags
+
+
+def test_structured_pathological_stage_cannot_support_clinical_stage_claim():
+    case = _case(
+        clinical_t_stage=None,
+        pathological_t_stage="pT1",
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The tumour is T1."
+    })).casefold()
+    assert "t-stage value(s) t1" in flags
+
+
+def test_structured_clinical_stage_cannot_support_pathological_stage_claim():
+    case = _case(
+        clinical_t_stage="T1",
+        pathological_t_stage=None,
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The pathological tumour category is pT1."
+    })).casefold()
+    assert "unsupported pathological t-stage value(s)" in flags
+
+
+def test_prefix_on_combined_pathological_tnm_applies_to_all_components():
+    case = _case(
+        case_summary="Synthetic case; pathological staging documented as pT2N1M0.",
+        clinical_t_stage=None,
+        clinical_n_stage=None,
+        clinical_m_stage=None,
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "Clinical staging is T2N1M0."
+    })).casefold()
+    assert "t-stage value(s) t2" in flags
+    assert "n-stage value(s) n1" in flags
+    assert "m-stage value(s) m0" in flags
+
+
+def test_conflicting_clinical_stage_field_cannot_become_supporting_evidence():
+    case = _case(
+        clinical_t_stage="T1",
+        clinical_field_states={"clinical_t_stage": "CONFLICTING"},
+        clinical_field_conflicts={
+            "clinical_t_stage": [
+                {
+                    "raw_value": "T1",
+                    "provenance": {
+                        "source_type": "CLINICIAN_NOTE",
+                        "source_reference": "stage-note-a",
+                        "source_excerpt": "Clinical T component recorded as T1.",
+                    },
+                },
+                {
+                    "raw_value": "T2",
+                    "provenance": {
+                        "source_type": "IMAGING_REPORT",
+                        "source_reference": "stage-report-b",
+                        "source_excerpt": "Clinical T component recorded as T2.",
+                    },
+                },
+            ]
+        },
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The clinical T stage is T1."
+    })).casefold()
+    assert "t-stage value(s) t1" in flags
