@@ -2576,3 +2576,53 @@ def test_structured_anatomical_subsite_flags_contradictory_generated_subsite():
     assert "upper lobe" in flags
     assert "lower lobe" in flags
 
+def test_clinical_stage_group_is_not_presented_as_validated_without_site_system_edition():
+    case = _case(
+        primary_site=None,
+        clinical_stage_group="IIA",
+        staging_system=None,
+        staging_edition=None,
+    )
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has clinical stage group IIA disease.",
+    })).casefold()
+
+    assert "staging context" in flags
+    assert "primary site" in flags
+    assert "staging system" in flags
+    assert "staging edition" in flags
+
+
+def test_explicit_unknown_staging_system_cannot_validate_clinical_stage_group():
+    case = _case(
+        primary_site="lung",
+        clinical_stage_group="IIA",
+        staging_system=None,
+        staging_edition="8",
+        clinical_field_states={"staging_system": "UNKNOWN"},
+    )
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has clinical stage group IIA disease.",
+    })).casefold()
+
+    assert "staging context" in flags
+    assert "staging system" in flags
+    assert "unknown" in flags
+
+
+def test_clinical_stage_group_with_explicit_site_system_and_edition_has_context():
+    case = _case(
+        primary_site="lung",
+        clinical_stage_group="IIA",
+        staging_system="AJCC",
+        staging_edition="8",
+    )
+
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has clinical stage group IIA disease.",
+    })
+
+    assert not any("staging context" in item.casefold() for item in flags)
+
