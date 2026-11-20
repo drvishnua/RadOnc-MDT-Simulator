@@ -5768,3 +5768,49 @@ For positive patient-history assertions concerning comorbidities, prior treatmen
 
 **Next U09–U10 action:** continue field-by-field source audit. Prioritise pathology T/N/M explicit UNKNOWN and edition states, then social context, resource context and known-unknowns. Add only reproducible regression tests. Do not modify intake code, change the machine plan or activate U04.
 
+## U10 pathological staging and edition-state regression checkpoint
+
+- Test-only commit `f11b55fa8b4f2062bc7c0dae13d4873d7d9924bd` changes only `backend/tests/test_case_integrity.py`.
+- Added three regressions:
+  - pathological T/N/M explicit UNKNOWN states cannot use matching case-summary tokens as field evidence;
+  - pathological stage-group UNKNOWN cannot use a case-summary stage-group fallback;
+  - explicit UNKNOWN staging edition blocks a generated clinical stage-group classification even when site, stage group and staging system are otherwise present.
+- Exact-head Backend Tests run `44740837167`, job `136303788460`, on `f11b55f`: **677 passed, 0 failed, 0 errors, 0 skipped** (one pytest warning). All three new regressions explicitly passed in the normalized diagnostics.
+- Deterministic no-inference preflight completed; artifact `14629988865`, SHA-256 `d3b29c601ecde30c9feaa22ec045c62d6f1f7cb7aecb12d35db9d97fedacbc42`.
+- Pytest diagnostics artifact `14630063618`, SHA-256 `3a0af43242908490ff1da2839dbc3fd12956d0f689108a6980540df70ca6f5fe`.
+- Exact-head Sequential Development Gate run `44740837114`: SUCCESS.
+- Exact-head Security and Dependency Audit run `44740837080`: SUCCESS; all four jobs passed (Python CodeQL, JavaScript/TypeScript CodeQL, dependency audit, full-history secret scan).
+- These tests verify the current deterministic state-gating paths. They do not establish staging correctness, AJCC/UICC edition applicability, clinical validity or model compliance.
+- No application code changed in this test-only increment.
+
+### Master Checklist — Current Status
+
+| Workstream | Status | Current evidence / outstanding boundary |
+|---|---|---|
+| PR/head and protected branch | VERIFIED | PR #5 OPEN/unmerged; current test head `f11b55f`; base remains `feature/four-round-mdt-and-performance`; no main changes. |
+| Approved algorithm and machine plan | VERIFIED | `active_step=U09-U10`; machine plan SHA `7c4bd894af1ef21f8bf54d48ad7e09353fd6471a`; Sequential Gate `44740837114` SUCCESS. |
+| U09 immutable clinical registry v2 / typed contract | IN PROGRESS | Registry immutability, stable identifiers, aliases, hash-addressed payload and SyntheticCase field coverage are tested; complete field/state/source/migration acceptance remains. |
+| U10 clinical/pathological T/N/M namespace separation | VERIFIED | Existing cross-namespace tests plus new pathological T/N/M UNKNOWN fallback test pass on exact head; Backend `44740837167`, 677/677. |
+| U10 pathological T/N/M complete state matrix | IN PROGRESS | UNKNOWN state across all three pathological components is covered. NOT_REPORTED, NOT_ASSESSED, PENDING, DECLINED, INVALID and CONFLICTING provenance combinations still need field-by-field review. |
+| U10 clinical/pathological stage-group separation | VERIFIED | Existing cross-type and conflicting clinical stage-group tests plus new pathological-group UNKNOWN fallback test passed on `f11b55f`. |
+| U10 staging context (primary site/system/edition) | VERIFIED | Existing missing-context and unknown-system tests plus new explicit UNKNOWN edition test passed on `f11b55f`; exact Backend run `44740837167`. |
+| U10 diagnosis date and family/caregiver support | VERIFIED | Code `9b0d4cf`; Backend `44737660862`, 661/661 with seven focused regression controls. |
+| U10 investigation-record status/fallback gate | VERIFIED | Code `c4d5c63`; Backend `44738779218`, 666/666; only COMPLETED records support findings; UNKNOWN blocks fallback. |
+| U10 positive comorbidity/prior-treatment/family-history/allergy/medication claims | VERIFIED | Code `25635e9`; Backend `44740400697`, 674/674 with eight new positive claim tests. |
+| U10 other negative/positive clinical-history combinations | IN PROGRESS | Existing absence controls remain; broad mismatch, explicit state, source-summary fallback, and CONFIRMED_ABSENT coverage across all list fields remain to be reviewed. |
+| U10 patient preference/willingness/consent | IN PROGRESS | Dedicated fields and some source-aware controls exist; exhaustive state, mismatch, summary fallback and conditionality tests remain. |
+| U10 social/resource/known-unknown context | IN PROGRESS | Registry and prompt preservation coverage exists; generated assertion/source matching remains to be audited. |
+| Backend suite | VERIFIED | Exact test head `f11b55f`; run `44740837167`; 677/677. |
+| Deterministic preflight | VERIFIED | Run `44740837167`; artifact `14629988865`, SHA-256 recorded above. |
+| Sequential Development Gate | VERIFIED | Exact test head; run `44740837114` SUCCESS. |
+| Security/dependency/secret scan/CodeQL | VERIFIED | Exact test head; run `44740837080` SUCCESS; all four jobs passed. |
+| U04–U08 | BLOCKED | Do not start until U09–U10 acceptance is complete. |
+| U03 | BLOCKED | Remains after U08 in the approved sequence. |
+| U01–U02 | BLOCKED | Remain after U03 in the approved sequence. |
+| Live 45-role R1–R4 | NOT STARTED | No live run ID or saved MDT artefact claimed. |
+| RTX 4060 request-time inference verification | NOT STARTED | No request-time telemetry/offload trace claimed. |
+| Independent clinical validation | NOT STARTED | No qualified independent clinical review claimed. |
+| Integrated release acceptance | BLOCKED | U09–U10 full field/state acceptance and all downstream verification gates remain outstanding. |
+
+**Next action:** continue U09–U10 field/state audit for preference, willingness, consent, social context, resource context and known-unknowns; test only demonstrable claim-audit gaps. No activation of U04 or other later workstreams.
+
