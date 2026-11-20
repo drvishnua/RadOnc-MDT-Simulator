@@ -143,19 +143,19 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
         value = getattr(case, field)
         explicit_state = case.clinical_field_states.get(field)
         provided = value is not None and value != ""
-        status = explicit_state or ("PRESENT" if provided else "NOT_REPORTED")
+        status = explicit_state.casefold() if explicit_state else ("provided" if provided else "not_reported")
         field_status[field] = {
             "label": label,
-            "status": status.casefold(),
+            "status": status,
             "value": snapshot.get(field) if provided else None,
         }
     for field, label in _LIST_FIELDS.items():
         values = getattr(case, field) or []
         explicit_state = case.clinical_field_states.get(field)
-        status = explicit_state or ("PRESENT" if values else "NOT_REPORTED")
+        status = explicit_state.casefold() if explicit_state else ("reported" if values else "not_reported")
         field_status[field] = {
             "label": label,
-            "status": status.casefold(),
+            "status": status,
             "value": snapshot.get(field) if values else None,
         }
     field_status["scenario_title"] = {
@@ -201,6 +201,7 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
             "label": definition.label,
             "value_type": definition.value_type,
             "state": state,
+            "status": state,
             "raw_value": snapshot.get(field_id),
             "canonical_comparison_value": None,
             "unit": definition.unit,
