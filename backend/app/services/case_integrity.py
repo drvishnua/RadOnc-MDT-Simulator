@@ -1092,19 +1092,19 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         )
 
     primary_site_claim_pattern = re.compile(
-        r"\\bprimary\\s+(?:anatomical\\s+)?site\\s*(?:is|:|=)\\s*[^.!?;,\\n]{1,100}",
+        r"\bprimary\s+(?:anatomical\s+)?site\s*(?:is|:|=)\s*[^.!?;,\n]{1,100}",
         re.IGNORECASE,
     )
     primary_site_value_pattern = re.compile(
-        r"\\bprimary\\s+(?:anatomical\\s+)?site\\s*(?:is|:|=)\\s*(.+)$",
+        r"\bprimary\s+(?:anatomical\s+)?site\s*(?:is|:|=)\s*(.+)$",
         re.IGNORECASE,
     )
     anatomical_subsite_claim_pattern = re.compile(
-        r"\\b(?:anatomical\\s+)?subsite\\s*(?:is|:|=)\\s*[^.!?;,\\n]{1,100}",
+        r"\b(?:anatomical\s+)?subsite\s*(?:is|:|=)\s*[^.!?;,\n]{1,100}",
         re.IGNORECASE,
     )
     anatomical_subsite_value_pattern = re.compile(
-        r"\\b(?:anatomical\\s+)?subsite\\s*(?:is|:|=)\\s*(.+)$",
+        r"\b(?:anatomical\s+)?subsite\s*(?:is|:|=)\s*(.+)$",
         re.IGNORECASE,
     )
 
