@@ -1136,7 +1136,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         else:
             reason = "but age_years is not supplied as an assertable value or explicitly recorded in the source summary."
         flags.append(
-            "Generated narrative assigns age(s) ("
+            "Generated narrative assigns an age(s) ("
             + ", ".join(str(age) for age in unsupported_ages[:4])
             + "), "
             + reason
