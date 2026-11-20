@@ -306,7 +306,7 @@ def test_stage_group_normalizer_is_lexical_and_does_not_assign_stage_type():
 def test_context_keeps_clinical_and_pathological_stage_groups_separate():
     case = _case(
         clinical_stage_group="IIA",
-        pathological_stage_group="pStage III",
+        pathological_stage_group="pathological stage III",
     )
     context = build_case_prompt_context(case)
     values = context["canonical_field_values"]
