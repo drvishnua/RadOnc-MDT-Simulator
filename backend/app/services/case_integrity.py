@@ -1034,7 +1034,10 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         if state == "CONFIRMED_ABSENT":
             return field_provenance_text(field_id)
         if state in (None, "PRESENT"):
-            return "\n".join([case_summary_text, *values])
+            # A populated structured list cannot be overridden by a negative
+            # statement in the free-text summary. Only an empty, unclassified
+            # list may use an explicit summary statement as absence evidence.
+            return "\n".join(values) if values else case_summary_text
         return ""
 
     # Compare generated stage components with the exact structured value when
@@ -1301,6 +1304,53 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         flags.append(
             "Generated narrative treats prior treatment as absent ("
             + ", ".join(unsupported_prior_treatment_absence[:3])
+            + "), but that absence is not explicitly supported by the supplied case."
+        )
+
+    allergy_absence_pattern = re.compile(
+        r"\\b(?:no (?:known )?(?:drug )?allergies|denies? (?:any )?(?:known )?(?:drug )?allergies)\\b",
+        re.IGNORECASE,
+    )
+    allergy_source = list_field_source("known_allergies", case.known_allergies or [])
+    unsupported_allergy_absence = _unsupported_matches(
+        allergy_absence_pattern, text, allergy_source
+    )
+    if unsupported_allergy_absence:
+        flags.append(
+            "Generated narrative treats known allergies as absent ("
+            + ", ".join(unsupported_allergy_absence[:3])
+            + "), but that absence is not explicitly supported by the supplied case."
+        )
+
+    current_medication_absence_pattern = re.compile(
+        r"\\b(?:no (?:current )?medications?|taking no (?:current )?medications?|"
+        r"not taking any (?:current )?medications?)\\b",
+        re.IGNORECASE,
+    )
+    medication_source = list_field_source("current_medications", case.current_medications or [])
+    unsupported_medication_absence = _unsupported_matches(
+        current_medication_absence_pattern, text, medication_source
+    )
+    if unsupported_medication_absence:
+        flags.append(
+            "Generated narrative treats current medications as absent ("
+            + ", ".join(unsupported_medication_absence[:3])
+            + "), but that absence is not explicitly supported by the supplied case."
+        )
+
+    family_history_absence_pattern = re.compile(
+        r"\\b(?:no (?:known )?family history(?: of [^.!?;\\n]{1,100})?|"
+        r"negative family history(?: of [^.!?;\\n]{1,100})?)\\b",
+        re.IGNORECASE,
+    )
+    family_history_source = list_field_source("family_history", case.family_history or [])
+    unsupported_family_history_absence = _unsupported_matches(
+        family_history_absence_pattern, text, family_history_source
+    )
+    if unsupported_family_history_absence:
+        flags.append(
+            "Generated narrative treats family history as absent ("
+            + ", ".join(unsupported_family_history_absence[:3])
             + "), but that absence is not explicitly supported by the supplied case."
         )
 
