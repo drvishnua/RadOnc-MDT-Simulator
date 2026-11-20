@@ -382,6 +382,7 @@ def test_patient_registry_round_trips_every_case_field_across_versions_and_datab
         "patient_consent_status": "PENDING",
     }
     expected_original = SyntheticCase.model_validate(original_case).model_dump(mode="json", exclude_none=True)
+    expected_original_python = SyntheticCase.model_validate(original_case).model_dump(exclude_none=True)
     original_hash = hashlib.sha256(
         SyntheticCase.model_validate(original_case).model_dump_json(exclude_none=True).encode("utf-8")
     ).hexdigest()
@@ -438,7 +439,7 @@ def test_patient_registry_round_trips_every_case_field_across_versions_and_datab
     assert reloaded_first["case_version_id"] == first["case_version_id"]
 
     restored_original = run_store.get_patient_case_version(patient_id, first["case_version_id"])
-    assert restored_original["case"] == expected_original
+    assert restored_original["case"] == expected_original_python
     assert restored_original["case_snapshot_sha256"] == original_hash
     assert restored_original["case"] != reloaded_second["case"]
 
