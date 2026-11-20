@@ -2036,3 +2036,83 @@ def test_invalid_structured_tnm_value_is_not_presented_as_a_conflict():
     assert "cannot support" in flags
     assert "conflict with structured clinical_t_stage" not in flags
 
+def test_invalid_case_summary_is_not_used_as_supporting_evidence():
+    case = _case(
+        case_summary=(
+            "Synthetic case: cT1N0M0, 64-year-old male; "
+            "no known comorbidities and no prior treatment."
+        ),
+        age_years=None,
+        clinical_t_stage=None,
+        clinical_n_stage=None,
+        clinical_m_stage=None,
+        sex_at_birth=None,
+        relevant_comorbidities=[],
+        prior_treatment=[],
+        clinical_field_states={"case_summary": "INVALID"},
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": (
+            "The patient has cT1N0M0, is a 64-year-old male, "
+            "has no known comorbidities and received no prior treatment."
+        )
+    })).casefold()
+
+    assert "t-stage value" in flags
+    assert "n-stage value" in flags
+    assert "m-stage value" in flags
+    assert "assigns an age" in flags
+    assert "sex/gender descriptor" in flags
+    assert "comorbidities as absent" in flags
+    assert "prior treatment as absent" in flags
+
+
+def test_invalid_case_summary_is_labelled_invalid_in_prompt_projection():
+    case = _case(
+        case_summary="Synthetic case summary retained for audit only.",
+        clinical_field_states={"case_summary": "INVALID"},
+    )
+
+    context = build_case_prompt_context(case)
+
+    assert context["field_status"]["case_summary"]["status"] == "invalid"
+    assert context["field_status"]["case_summary"]["value"] == case.case_summary
+    assert context["canonical_field_values"]["case_summary"]["state"] == "INVALID"
+    assert context["canonical_field_values"]["case_summary"]["canonical_comparison_value"] is None
+
+
+def test_conflicting_case_summary_is_not_exposed_as_a_selected_prompt_value():
+    case = _case(
+        case_summary="Synthetic case summary: right-sided primary.",
+        clinical_field_states={"case_summary": "CONFLICTING"},
+        clinical_field_conflicts={
+            "case_summary": [
+                {
+                    "raw_value": "Synthetic case summary: right-sided primary.",
+                    "provenance": {
+                        "source_type": "CLINICIAN_NOTE",
+                        "source_reference": "summary-a",
+                        "source_excerpt": "Primary is right-sided.",
+                    },
+                },
+                {
+                    "raw_value": "Synthetic case summary: left-sided primary.",
+                    "provenance": {
+                        "source_type": "MEDICAL_RECORD",
+                        "source_reference": "summary-b",
+                        "source_excerpt": "Primary is left-sided.",
+                    },
+                },
+            ]
+        },
+    )
+
+    context = build_case_prompt_context(case)
+
+    assert "case_summary" in context["case_snapshot_redacted_conflicting_fields"]
+    assert context["case_snapshot"]["case_summary"] is None
+    assert context["field_status"]["case_summary"]["status"] == "conflicting"
+    assert context["field_status"]["case_summary"]["value"] is None
+    assert context["canonical_field_values"]["case_summary"]["raw_value"] is None
+    assert len(context["canonical_field_values"]["case_summary"]["conflict_candidates"]) == 2
+
