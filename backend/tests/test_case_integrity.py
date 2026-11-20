@@ -2885,3 +2885,62 @@ def test_unknown_staging_edition_blocks_clinical_stage_group_context():
     assert "staging edition" in flags
     assert "unknown" in flags
 
+def test_unknown_social_context_cannot_support_generated_living_arrangement():
+    statement = "The patient lives with a spouse."
+    case = _case(
+        case_summary="Referral text: " + statement,
+        social_context=[],
+        clinical_field_states={"social_context": "UNKNOWN"},
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert any("social_context" in item for item in flags)
+
+
+def test_structured_social_context_supports_matching_living_arrangement():
+    case = _case(social_context=["Lives with a spouse"])
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient lives with a spouse.",
+    })
+    assert not any("social_context" in item for item in flags)
+
+
+def test_social_context_may_use_summary_fallback_only_without_explicit_state():
+    statement = "The patient lives with a spouse."
+    case = _case(case_summary="Referral text: " + statement)
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert not any("social_context" in item for item in flags)
+
+
+def test_unknown_resource_context_cannot_support_generated_financial_constraint():
+    statement = "The patient has financial constraints."
+    case = _case(
+        case_summary="Referral text: " + statement,
+        resource_context=[],
+        clinical_field_states={"resource_context": "UNKNOWN"},
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert any("resource_context" in item for item in flags)
+
+
+def test_structured_resource_context_supports_matching_financial_constraint():
+    case = _case(resource_context=["Financial constraints"])
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has financial constraints.",
+    })
+    assert not any("resource_context" in item for item in flags)
+
+
+def test_resource_context_may_use_summary_fallback_only_without_explicit_state():
+    statement = "The patient has financial constraints."
+    case = _case(case_summary="Referral text: " + statement)
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert not any("resource_context" in item for item in flags)
+
