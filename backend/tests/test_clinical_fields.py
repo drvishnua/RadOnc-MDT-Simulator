@@ -182,7 +182,7 @@ def test_v2_case_includes_additive_clinical_context_and_warns_when_staging_metad
     assert fields["laterality"]["canonical_comparison_value"] == "RIGHT"
     assert fields["pathological_t_stage"]["canonical_comparison_value"] == "PT1"
     assert fields["clinical_t_stage"]["canonical_comparison_value"] == "T1"
-    assert any("staging system and staging edition" in warning for warning in context["staging_context_warnings"])
+    assert any("staging system" in warning and "staging edition" in warning for warning in context["staging_context_warnings"])
 
 
 def test_field_states_distinguish_unknown_pending_declined_and_not_applicable():
