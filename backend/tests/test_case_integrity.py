@@ -3739,6 +3739,79 @@ def test_known_unknowns_list_maps_patient_willingness_to_its_matching_field():
     assert any("patient_willingness" in item for item in flags)
 
 
+@pytest.mark.parametrize(
+    ("field_id", "case_values", "known_unknown", "generated_claim", "expected_flag"),
+    [
+        (
+            "age_years",
+            {"age_years": 68},
+            "Patient age has not been confirmed.",
+            "The patient is 68 years old.",
+            "assigns an age",
+        ),
+        (
+            "sex_at_birth",
+            {"sex_at_birth": "female"},
+            "Sex at birth is not reported.",
+            "The female patient needs further assessment.",
+            "sex/gender",
+        ),
+        (
+            "diagnosis_date",
+            {"diagnosis_date": "2024-02-10"},
+            "Diagnosis date has not been reported.",
+            "The diagnosis date was 2024-02-10.",
+            "diagnosis_date",
+        ),
+        (
+            "histology",
+            {"histology": "adenocarcinoma"},
+            "Histology has not been confirmed.",
+            "The biopsy confirms adenocarcinoma.",
+            "histological diagnosis",
+        ),
+        (
+            "histological_grade",
+            {"histological_grade": "G2"},
+            "Histological grade has not been confirmed.",
+            "The tumour is histological grade G2.",
+            "histological grade",
+        ),
+        (
+            "performance_status",
+            {"performance_status": "1", "performance_status_scale": "ECOG"},
+            "Performance status has not been assessed.",
+            "The patient has ECOG 1.",
+            "performance-status",
+        ),
+        (
+            "performance_status_scale",
+            {"performance_status": "1", "performance_status_scale": "ECOG"},
+            "Performance status scale has not been reported.",
+            "The patient has ECOG 1.",
+            "performance-status",
+        ),
+    ],
+)
+def test_known_unknown_for_demographic_diagnosis_histology_and_status_blocks_structured_claim(
+    field_id, case_values, known_unknown, generated_claim, expected_flag
+):
+    case = _case(
+        case_summary="Synthetic source narrative; the corresponding detail is separately structured.",
+        known_unknowns=[known_unknown],
+        **case_values,
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": generated_claim,
+    })).casefold()
+
+    assert expected_flag in flags
+    assert field_id in flags or expected_flag in flags
+    assert "known_unknowns" in flags or "unresolved" in flags
+
+
+
+
 def test_non_present_known_unknowns_state_is_not_used_as_gap_evidence_even_if_memory_is_corrupt():
     case = _case(
         case_summary="Synthetic source summary records clinical cT2 disease.",
