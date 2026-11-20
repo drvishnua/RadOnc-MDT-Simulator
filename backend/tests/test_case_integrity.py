@@ -3585,3 +3585,92 @@ def test_present_typed_stage_group_supports_only_its_matching_value(
     assert field_id in mismatched
     assert getattr(case, field_id) == supported_value
 
+def test_known_unknown_clinical_t_stage_blocks_matching_case_summary_claim():
+    case = _case(
+        case_summary="Synthetic source summary records clinical cT2 disease.",
+        clinical_t_stage=None,
+        known_unknowns=["Clinical T stage is not reported."],
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The clinical T component is cT2.",
+    })
+    assert any("clinical_t_stage" in item and "known_unknowns" in item for item in flags)
+
+
+def test_known_unknown_pathological_n_stage_blocks_matching_case_summary_claim():
+    case = _case(
+        case_summary="Synthetic pathology summary records pN1 disease.",
+        pathological_n_stage=None,
+        known_unknowns=["Pathological N component remains unresolved."],
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The pathological N component is pN1.",
+    })
+    assert any("pathological_n_stage" in item and "known_unknowns" in item for item in flags)
+
+
+def test_known_unknown_clinical_stage_group_blocks_matching_case_summary_claim():
+    case = _case(
+        case_summary="Synthetic referral records clinical stage group III.",
+        clinical_stage_group=None,
+        known_unknowns=["Clinical stage group has not been confirmed."],
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The clinical stage group is III.",
+    })
+    assert any("clinical_stage_group" in item and "known_unknowns" in item for item in flags)
+
+
+def test_known_unknown_staging_edition_blocks_structured_value_from_validating_group():
+    case = _case(
+        primary_site="lung",
+        clinical_stage_group="IIIA",
+        staging_system="AJCC",
+        staging_edition="8",
+        known_unknowns=["The staging edition has not been verified."],
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has clinical stage group IIIA disease.",
+    })).casefold()
+    assert "staging edition" in flags
+    assert "known_unknowns" in flags
+
+
+def test_known_unknown_comorbidity_history_blocks_matching_summary_positive_claim():
+    statement = "The patient has diabetes mellitus."
+    case = _case(
+        case_summary="Referral summary: " + statement,
+        relevant_comorbidities=[],
+        known_unknowns=["Relevant comorbidity history is not reported."],
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert any("relevant_comorbidities" in item and "known_unknowns" in item for item in flags)
+
+
+def test_unrelated_known_unknown_does_not_block_supported_clinical_t_stage():
+    case = _case(
+        case_summary="Synthetic source summary records clinical cT2 disease.",
+        clinical_t_stage=None,
+        known_unknowns=["Diagnosis date has not been reported."],
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The clinical T component is cT2.",
+    })
+    assert not any("clinical_t_stage" in item for item in flags)
+
+
+def test_unknown_known_unknowns_field_state_does_not_authorise_its_list_contents():
+    statement = "The patient is willing to undergo surgery."
+    case = _case(
+        case_summary="Referral text: " + statement,
+        patient_willingness=None,
+        known_unknowns=["Patient willingness has not been established."],
+        clinical_field_states={"known_unknowns": "UNKNOWN"},
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert any("patient_willingness" in item for item in flags)
+
