@@ -13,6 +13,7 @@ from app.clinical_fields import (
     CLINICAL_FIELD_REGISTRY_VERSION,
     HISTORICAL_CLINICAL_FIELD_REGISTRY_VERSION,
     CLINICAL_FIELD_REGISTRY_V1,
+    DataState,
     CLINICAL_M_STAGE,
     PATHOLOGICAL_T_STAGE,
     PATHOLOGICAL_N_STAGE,
@@ -70,6 +71,36 @@ def test_registry_covers_every_synthetic_case_value_field():
         "clinical_field_conflicts",
     }
     assert set(CLINICAL_FIELD_REGISTRY) == set(SyntheticCase.model_fields) - metadata_fields
+
+
+def test_v2_registry_allowed_states_match_the_schema_state_literal_for_every_field():
+    from typing import get_args
+
+    schema_states = set(get_args(DataState))
+    assert schema_states == {
+        "PRESENT",
+        "CONFIRMED_ABSENT",
+        "UNKNOWN",
+        "NOT_REPORTED",
+        "NOT_ASSESSED",
+        "PENDING",
+        "DECLINED",
+        "NOT_APPLICABLE",
+        "CONFLICTING",
+        "INVALID",
+    }
+
+    registry_states = set()
+    for field_id, definition in CLINICAL_FIELD_REGISTRY.items():
+        declared = set(definition.allowed_states)
+        assert declared, field_id
+        assert len(declared) == len(definition.allowed_states), field_id
+        assert declared <= schema_states, field_id
+        registry_states.update(declared)
+
+    # Every state accepted by the metadata schema must be declared by at
+    # least one v2 field; every field-level state must be schema-representable.
+    assert registry_states == schema_states
 
 
 def test_every_registry_value_type_matches_its_synthetic_case_schema_annotation():
