@@ -4774,7 +4774,10 @@ This is the latest authoritative status. Earlier entries above are retained as h
 | U10 deterministic state-aware hallucination controls | IN PROGRESS | Merged code and test suite pass; remaining acceptance and role-wide/live validation are not complete. |
 | Explicit epistemic states, per-field provenance, source hashes, conflict preservation/redaction, TNM type separation | VERIFIED | Regression coverage includes the PR #4 merge baseline and follow-up U09 tests; source excerpts are now always SHA-256-addressed. Software verification only, not clinical validation. |
 | Canonical case context across all 45 specialist roles | IN PROGRESS | Mocked regression tests now exercise all 45 profiles in R1, R2 and R3 and assert identical canonical v2 context in every prompt, preserving UNKNOWN / NOT_ASSESSED TNM states. Live saved-case R1–R4 model execution remains unverified. |
-| Explicit source-excerpt hashes and immutable provenance records | VERIFIED | SHA-256 is generated when omitted and checked when supplied; provenance records are frozen after construction. Exact-head regressions cover explicit field provenance, conflict candidates, hash mismatch and mutation rejection. Verification status remains unverified. |
+| Exact source-excerpt whitespace preservation | VERIFIED | Regression verifies real newline/tab characters survive Pydantic validation exactly and the SHA-256 matches the stored excerpt; whitespace-only excerpts remain invalid. |
+| Pathological TNM requires explicit p/yp prefix | VERIFIED | Unprefixed T/N/M values in pathological fields are rejected; explicit p/yp prefixes are retained. This prevents silently defaulting to p and does not perform staging interpretation. |
+| Registry aliases are unique and preserve canonical IDs | VERIFIED | Regression checks v1 and v2 alias maps for duplicates, exact declared mappings and valid canonical target IDs.
+| Explicit source-excerpt hashes, exact whitespace and immutable provenance records | VERIFIED | SHA-256 is calculated from the exact preserved UTF-8 excerpt; actual newlines/tabs are not trimmed, blank excerpts are rejected, provenance records are frozen, and verification status remains `user_supplied_not_independently_verified`. |
 | R1–R4 saved contribution data flow | IN PROGRESS | Must continue to preserve round separation and use actual saved R1–R3 inputs for R4. Full live execution has not been verified by this CI. |
 | Chair consensus, conditional positions, dissent, minority views and source traceability | IN PROGRESS | Deterministic safeguards/tests exist; end-to-end saved-run synthesis and audit remain outstanding. |
 | Missing/failed-agent handling and partial-run integrity | IN PROGRESS | Unit/regression coverage exists; live failure-path execution and saved artefact inspection remain outstanding. |
@@ -4846,4 +4849,24 @@ This is the latest authoritative status. Earlier entries above are retained as h
 - These tests verify application data integrity behaviour. They do not independently authenticate source documents or upgrade `user_supplied_not_independently_verified` to verified evidence.
 - U09–U10 remains `IN PROGRESS`; machine plan and U12 scope baseline are unchanged. PR #5 remains open and unmerged pending independent review.
 - **Next U09–U10 work:** continue canonical alias/normalization edge cases and audit saved-case/run provenance plus failure-path handling. Legacy records remain read-only; no historical snapshot is relabelled as v2.
+
+### U09–U10 exact source-excerpt whitespace integrity — 20 November 2026
+
+- Regression commit `5d79ff82ce7957c65548ceb0d6615e9a12932f63` initially tested literal escaped characters rather than actual newline/tab characters. The test was strengthened in commit `1607ae4013eb536d85d015569864546c0292713c` to contain a real newline and trailing tab. Backend run `44709663547` then reproduced a production issue: **597 passed, 1 failed** because the shared `StrictModel` configuration trimmed the source excerpt after its pre-validation SHA-256 had been calculated.
+- Fix commit `3cea8a3009d41b3f0cfa0e17f66e10e0436e79e2` sets `ClinicalFieldProvenance` to preserve source-excerpt whitespace while explicitly trimming only the source type/reference identifiers and rejecting whitespace-only excerpts. Corrected test fixtures are in `da3c58feaf2727bfe2fc5f73698719d7061a778c`.
+- Exact-head Backend Tests run `44709930490`: **599 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive**; preflight **7 passed, 0 failed, 0 inconclusive**. The exact-whitespace and whitespace-only rejection tests passed.
+- Exact-head Sequential Development Gate run `44709930514`: SUCCESS.
+- Exact-head Security and Dependency Audit run `44709930520`: SUCCESS (Python and JavaScript/TypeScript CodeQL, full-history secret scan, Python/Node dependency audit).
+
+### U09–U10 pathological TNM prefix and registry alias checks — 20 November 2026
+
+- Inspection found `normalize_pathological_tnm_component` used `match.group("prefix") or "P"`, silently converting unprefixed values such as `T1`, `N0` and `M0` to `pT1`, `pN0` and `pM0`. This default could incorrectly choose the non-post-therapy pathological class instead of requiring explicit evidence for `p` or `yp`.
+- Regression-first commit `e188c609314fce9aedf90647171db939ca9f7e67` added T/N/M tests and reproduced the issue: **599 passed, 3 failed** out of 602. Fix commit `d540d4a01222d8fcf29df21dfe517d201c5731e5` now requires the input token to include an explicit `p` or `yp` prefix. Existing valid p/yp normalizations remain covered.
+- Added a v1/v2 alias-registry regression to ensure aliases are unique, each resolves to its declared canonical field, and no duplicate alias is silently overwritten by the lookup mapping.
+- Exact-head Backend Tests run `44710484527`: **604 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive**; preflight **7 passed, 0 failed, 0 inconclusive**.
+- Exact-head Sequential Development Gate run `44710484537`: SUCCESS.
+- Exact-head Security and Dependency Audit run `44710485017`: SUCCESS (Python and JavaScript/TypeScript CodeQL, full-history secret scan, Python/Node dependency audit).
+- Preflight reports model inference was not performed and clinical accuracy was not evaluated. These are deterministic software checks only; they do not validate AJCC/site-specific staging or clinical conclusions.
+- U09–U10 remains `IN PROGRESS`; machine plan and U12 scope baseline are unchanged. PR #5 remains open and unmerged pending independent review.
+- **Next U09–U10 work:** continue audit of accepted-intake → immutable patient case version → saved run provenance, including tamper/mismatch and failed-agent paths. Keep historical legacy snapshots read-only; do not relabel or silently migrate them.
 
