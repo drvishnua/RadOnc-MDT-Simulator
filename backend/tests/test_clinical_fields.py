@@ -354,6 +354,20 @@ def test_context_remains_json_serializable_with_typed_investigations_and_dates()
     assert context["field_status"]["age_years"]["status"] == "not_reported"
 
 
+def test_typed_investigation_source_excerpt_preserves_exact_text():
+    excerpt = "\\n  Original investigation report excerpt.  \\t"
+    case = _case(
+        investigation_records=[{
+            "investigation_name": "MRI",
+            "result_summary": "Finding recorded.",
+            "source_excerpt": excerpt,
+        }],
+    )
+
+    assert case.investigation_records[0].source_excerpt == excerpt
+    assert build_case_prompt_context(case)["canonical_field_values"]["investigation_records"]["raw_value"][0]["source_excerpt"] == excerpt
+
+
 def test_field_status_legacy_aliases_are_preserved_for_unannotated_values():
     case = _case(age_years=70, relevant_comorbidities=["diabetes"])
     context = build_case_prompt_context(case)
