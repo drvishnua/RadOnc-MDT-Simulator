@@ -1283,7 +1283,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     scale_state = field_state("performance_status_scale")
     embedded_scale = bool(
         case.performance_status
-        and re.search(r"\\b(?:ECOG|WHO|KPS|Karnofsky)\\b", str(case.performance_status), re.IGNORECASE)
+        and re.search(r"\b(?:ECOG|WHO|KPS|Karnofsky)\b", str(case.performance_status), re.IGNORECASE)
     )
     scale_is_assertable = (
         (case.performance_status_scale not in (None, "") and scale_state in (None, "PRESENT"))
