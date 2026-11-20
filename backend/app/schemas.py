@@ -6,15 +6,20 @@ import hashlib
 import json
 import re
 from datetime import date, datetime
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_serializer, field_validator, model_validator
 
 from app.clinical_fields import CLINICAL_FIELD_REGISTRY, DataState
 
 
 class StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+
+# Clinical list entries are source text, not normalised identifiers. Override
+# shared-model whitespace stripping so supplied strings remain faithful.
+PreservedListText = Annotated[str, StringConstraints(strip_whitespace=False)]
 
 
 class ClinicalFieldProvenance(StrictModel):
@@ -181,21 +186,21 @@ class SyntheticCase(StrictModel):
     diagnosis_date: date | None = None
     pathology_summary: str | None = Field(default=None, max_length=6000)
     imaging_summary: str | None = Field(default=None, max_length=6000)
-    current_medications: list[str] = Field(default_factory=list, max_length=40)
-    known_allergies: list[str] = Field(default_factory=list, max_length=40)
-    relevant_investigations: list[str] = Field(default_factory=list, max_length=60)
+    current_medications: list[PreservedListText] = Field(default_factory=list, max_length=40)
+    known_allergies: list[PreservedListText] = Field(default_factory=list, max_length=40)
+    relevant_investigations: list[PreservedListText] = Field(default_factory=list, max_length=60)
     investigation_records: list[InvestigationRecord] = Field(default_factory=list, max_length=60)
-    relevant_comorbidities: list[str] = Field(default_factory=list, max_length=30)
-    prior_treatment: list[str] = Field(default_factory=list, max_length=30)
-    family_history: list[str] = Field(default_factory=list, max_length=40)
-    family_caregiver_context: list[str] = Field(default_factory=list, max_length=30)
-    patient_goals: list[str] = Field(default_factory=list, max_length=30)
-    patient_preferences: list[str] = Field(default_factory=list, max_length=30)
+    relevant_comorbidities: list[PreservedListText] = Field(default_factory=list, max_length=30)
+    prior_treatment: list[PreservedListText] = Field(default_factory=list, max_length=30)
+    family_history: list[PreservedListText] = Field(default_factory=list, max_length=40)
+    family_caregiver_context: list[PreservedListText] = Field(default_factory=list, max_length=30)
+    patient_goals: list[PreservedListText] = Field(default_factory=list, max_length=30)
+    patient_preferences: list[PreservedListText] = Field(default_factory=list, max_length=30)
     patient_willingness: str | None = Field(default=None, max_length=1000)
     patient_consent_status: Literal["NOT_ASKED", "PENDING", "GIVEN", "DECLINED", "WITHDRAWN"] | None = None
-    social_context: list[str] = Field(default_factory=list, max_length=30)
-    resource_context: list[str] = Field(default_factory=list, max_length=30)
-    known_unknowns: list[str] = Field(default_factory=list, max_length=40)
+    social_context: list[PreservedListText] = Field(default_factory=list, max_length=30)
+    resource_context: list[PreservedListText] = Field(default_factory=list, max_length=30)
+    known_unknowns: list[PreservedListText] = Field(default_factory=list, max_length=40)
 
     # Metadata maps are intentionally not registry fields: they describe the
     # epistemic state and lineage of the clinical values above.
@@ -218,7 +223,7 @@ class SyntheticCase(StrictModel):
         "relevant_investigations",
     )
     @classmethod
-    def reject_blank_list_items(cls, values: list[str]) -> list[str]:
+    def reject_blank_list_items(cls, values: list[PreservedListText]) -> list[PreservedListText]:
         # Validate blankness without normalising the supplied clinical text.
         # Exact values must remain available for provenance and audit.
         if any(not item.strip() for item in values):
