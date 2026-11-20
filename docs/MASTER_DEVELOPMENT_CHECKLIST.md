@@ -7930,3 +7930,61 @@ Application and test code is unchanged from `4a44b3e8d6796dee21d25e396d611091c79
 | Integrated release acceptance | BLOCKED | Remaining U09–U10 acceptance, live/GPU, evidence, clinical and packaging gates remain |
 
 **Next approved action:** continue only the remaining U09–U10 source/provenance and legacy-version boundary checks that have not already been verified. Add a narrowly scoped regression only for a demonstrated gap, then verify against the exact head. Preserve all historical records, raw source values, unknown states, conflicts, hashes and audit history. Do not edit the machine plan, start U04, merge PR #5, or modify the protected development branch or main.
+
+
+---
+
+## U09–U10 update — INVALID/CONFLICTING generation-projection audit (21 November 2026)
+
+**Approved sequence position:** the machine plan remains `active_step=U09-U10`. This update closes one demonstrated model-projection defect for the tested field/context paths only. It does not complete U09–U10 and does not authorise U04 or any later step.
+
+### Change and exact verification evidence
+
+- The model-facing case-context projection now withholds fields explicitly marked `INVALID` as well as `CONFLICTING` from the flat case snapshot, scalar/list field-status values and canonical raw-value slots.
+- For `INVALID` fields, model-facing provenance retains source identity and the original SHA-256 but removes the source excerpt and marks it `source_excerpt_redacted=true`.
+- The server-built source-fact register now includes only unannotated/PRESENT case-summary and structured field values. INVALID, CONFLICTING and other explicit non-PRESENT states are not promoted as source facts.
+- The immutable input case and its stored audit provenance remain unchanged; original raw values and source excerpts are retained for audit.
+- Added focused tests for INVALID case summary, scalar TNM value, list value, source excerpt redaction, conflicting candidates, no-leak checks in the projection/source-fact register, and unchanged original case data.
+- Code/test head verified: `a0341769820836408065b753ad53322143835193`.
+- Backend Tests run `44800666560`: SUCCESS. Deterministic no-inference preflight: 7 passed, 0 failed, 0 inconclusive. This did not perform model inference or assess clinical accuracy.
+- Sequential Development Gate run `44800666940`: SUCCESS.
+- Security and Dependency Audit run `44800666561`: SUCCESS, including Python/JavaScript CodeQL, dependency audits and full-history secret scan.
+- An earlier backend run on `ea68680b8fd40fdd60847a3dbe295dae344fcf33` failed with 857 passed and 2 outdated assertions. Those assertions were corrected to expect redaction and audit preservation; the failed run remains part of the audit trail and was not overwritten.
+
+### Remaining acceptance blocker found by caller trace
+
+`backend/app/services/mdt_generation.py` directly reads `case.case_summary` for source-opinion extraction and review in R2/R3 and for Chair source-opinion retention in R4. Those paths can consume INVALID/CONFLICTING case-summary text without consulting the redacted case-context projection. This file is outside the current U09–U10 `allowed_paths` in `docs/development_plan.json`; no out-of-scope edit or plan change was made. This integration boundary is therefore **BLOCKED** and must be resolved only through the approved development algorithm/authorized scope before U09–U10 can be accepted as complete.
+
+A SHA-256 hash establishes integrity of the supplied text, not authenticity or correctness of the source document. Source authenticity remains unverified unless the source itself is retrieved and independently checked.
+
+### Master Checklist — Current Status (21 November 2026)
+
+| Workstream | Status | Evidence / outstanding requirement |
+|---|---|---|
+| STEP-A repository/branch/PR/CI baseline | VERIFIED | Current PR #5 and branch inspected; PR remains open and unmerged |
+| U12 fail-closed sequential gate | VERIFIED | Exact-head sequential gate run 44800666940 passed |
+| U09 stable registry IDs, aliases and declared types | VERIFIED for tested contract | 40 registry fields, 7 declared types and schema checks remain covered by existing regressions |
+| U09 state vocabulary and field-level allowed-state contract | VERIFIED for tested cases | Existing schema/registry tests cover the declared states and field-specific restrictions |
+| U09 source text, provenance hashes and immutable audit data | VERIFIED for tested cases | Original text and hash round-trips covered; hashes do not establish source authenticity |
+| U09 field-state/provenance/conflict persistence and legacy boundaries | VERIFIED for tested combinations | Existing persistence, database reopen and v1-to-v2 immutability regressions remain recorded |
+| U09 INVALID/CONFLICTING generation-context redaction | VERIFIED for tested cases | Commit a034176; backend run 44800666560 passed; raw audit data remains preserved |
+| R2/R3/R4 direct case-summary source-opinion reads for INVALID/CONFLICTING states | BLOCKED | Direct reads in backend/app/services/mdt_generation.py bypass the central redaction; file is outside current U09–U10 allowed_paths |
+| Broader U09–U10 field/state/source/provenance acceptance | IN PROGRESS | Complete matrix and remaining reproducible cases still need evidence; do not mark overall step complete |
+| R1 independent assessments and shared context across 45 roles | IN PROGRESS | Mocked tests exist; full live saved-run coverage remains unverified |
+| R2 specialist debate and source-opinion provenance | IN PROGRESS | Direct case-summary state bypass above remains unresolved |
+| R3 adversarial review and source-opinion provenance | IN PROGRESS | Direct case-summary state bypass above remains unresolved |
+| R4 Chair reconciliation, consensus, dissent and traceability | IN PROGRESS | Live saved R1–R3 to R4 reconciliation remains unverified; source-summary bypass above remains unresolved |
+| Missing/failed agent handling and saved contribution provenance | IN PROGRESS | Deterministic coverage exists; live 45-role failure scenarios remain unverified |
+| Backend API/persistence and backend test suite | VERIFIED for this code slice | Exact code head a034176 backend workflow passed; this is not live MDT validation |
+| Frontend build/browser E2E | NOT APPLICABLE | No frontend files changed in this U09–U10 backend-only increment |
+| Dashboard/API integration | IN PROGRESS | Full integrated dashboard/API and saved-run acceptance remains downstream |
+| Evidence retrieval and claim-to-passage verification | IN PROGRESS | Current authoritative source retrieval and live claim verification remain unverified |
+| Ollama model discovery/reuse and context limits | BLOCKED | Later ordered work; not changed or tested in this increment |
+| RTX 4060 request-time GPU inference verification | BLOCKED | No local inference or request-time GPU telemetry performed |
+| Live 45-role R1–R4 execution and saved artefacts | NOT STARTED | No live four-round run performed |
+| Independent clinical validation | NOT STARTED | No external clinical validation performed |
+| Mission Control/Development Monitor removal and standalone desktop UX | BLOCKED | U01–U02 remain downstream and blocked |
+| Installer Ollama/Qwen reuse, security and packaging acceptance | BLOCKED | U03 and release gates remain downstream; no installer changes in this increment |
+| Integrated release acceptance | BLOCKED | U09–U10 acceptance, downstream work, live/GPU, evidence and independent validation remain |
+
+**Next approved action:** continue only the remaining U09–U10 field/state/source/provenance acceptance in the existing order. The caller-traced R2/R3/R4 source-summary bypass remains an explicit acceptance blocker because its implementation path is outside current allowed_paths. Do not edit the machine plan, begin U04, merge PR #5, or modify the protected development branch or main.
