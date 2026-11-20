@@ -3661,6 +3661,30 @@ def test_unrelated_known_unknown_does_not_block_supported_clinical_t_stage():
     assert not any("clinical_t_stage" in item for item in flags)
 
 
+def test_not_unknown_wording_does_not_mark_a_field_unresolved():
+    case = _case(
+        case_summary="Synthetic source summary records clinical cT2 disease.",
+        clinical_t_stage=None,
+        known_unknowns=["Clinical T stage is not unknown."],
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The clinical T component is cT2.",
+    })
+    assert not any("clinical_t_stage" in item for item in flags)
+
+
+def test_known_unknown_mapping_is_clause_local():
+    case = _case(
+        case_summary="Synthetic source summary records clinical cT2 disease.",
+        clinical_t_stage=None,
+        known_unknowns=["Clinical T stage is documented, but diagnosis date is not reported."],
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The clinical T component is cT2.",
+    })
+    assert not any("clinical_t_stage" in item for item in flags)
+
+
 def test_known_unknowns_list_maps_patient_willingness_to_its_matching_field():
     statement = "The patient is willing to undergo surgery."
     case = _case(
