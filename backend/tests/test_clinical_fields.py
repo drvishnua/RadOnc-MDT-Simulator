@@ -590,3 +590,22 @@ def test_conflict_candidates_are_immutable_and_keep_json_shape():
     ]["conflict_candidates"]
     assert [item["raw_value"] for item in context_candidates] == [first_raw, second_raw]
 
+def test_invalid_state_requires_raw_value_without_canonicalizing_it():
+    with pytest.raises(ValueError, match="INVALID requires a supplied raw value"):
+        _case(
+            clinical_t_stage=None,
+            clinical_field_states={"clinical_t_stage": "INVALID"},
+        )
+
+    case = _case(
+        clinical_t_stage="T9",
+        clinical_field_states={"clinical_t_stage": "INVALID"},
+    )
+    field = build_case_prompt_context(case)["canonical_field_values"]["clinical_t_stage"]
+    assert field["state"] == "INVALID"
+    assert field["raw_value"] == "T9"
+    assert field["canonical_comparison_value"] is None
+    assert field["provenance"][0]["verification_status"] == (
+        "user_supplied_not_independently_verified"
+    )
+
