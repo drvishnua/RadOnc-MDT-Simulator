@@ -4778,7 +4778,8 @@ This is the latest authoritative status. Earlier entries above are retained as h
 | Pathological TNM requires explicit p/yp prefix | VERIFIED | Unprefixed T/N/M values in pathological fields are rejected; explicit p/yp prefixes are retained. This prevents silently defaulting to p and does not perform staging interpretation. |
 | Registry aliases are unique and preserve canonical IDs | VERIFIED | Regression checks v1 and v2 alias maps for duplicates, exact declared mappings and valid canonical target IDs.
 | Explicit source-excerpt hashes, exact whitespace and immutable provenance records | VERIFIED | SHA-256 is calculated from the exact preserved UTF-8 excerpt; actual newlines/tabs are not trimmed, blank excerpts are rejected, provenance records are frozen, and verification status remains `user_supplied_not_independently_verified`. |
-| Source-specific conflict candidate immutability | VERIFIED | Conflict records are frozen and nested JSON lists/objects are recursively immutable after validation; JSON-mode serialization restores ordinary arrays/objects without changing the saved conflict values. |
+| Source-specific conflict candidate immutability and source identity | VERIFIED | Conflict records and nested JSON lists/objects are immutable after validation; JSON-mode serialization preserves normal JSON shape. Conflicts require at least two distinct raw values and distinct source type/reference/excerpt-hash provenance identities. |
+| `INVALID` epistemic state requires preserved raw input | VERIFIED | An `INVALID` state cannot be stored without a supplied value; the original raw value remains visible for audit but canonical comparison stays unset. |
 | R1–R4 saved contribution data flow | IN PROGRESS | Must continue to preserve round separation and use actual saved R1–R3 inputs for R4. Full live execution has not been verified by this CI. |
 | Chair consensus, conditional positions, dissent, minority views and source traceability | IN PROGRESS | Deterministic safeguards/tests exist; end-to-end saved-run synthesis and audit remain outstanding. |
 | Missing/failed-agent handling and partial-run integrity | IN PROGRESS | Unit/regression coverage exists; live failure-path execution and saved artefact inspection remain outstanding. |
@@ -4891,4 +4892,23 @@ This is the latest authoritative status. Earlier entries above are retained as h
 - These are deterministic software integrity tests. They do not authenticate the source documents, verify clinical facts, establish staging accuracy or replace live-model validation.
 - U09–U10 remains `IN PROGRESS`; the machine plan and U12 scope baseline remain unchanged. PR #5 remains open and unmerged pending independent review.
 - **Next U09–U10 work:** continue reviewing field-state/provenance transitions and prompt/audit projections for contradictions, while preserving the deferred U04 intake snapshot/event finding. Keep production changes within the active allowed paths.
+
+### U09–U10 INVALID-state value requirement — 20 November 2026
+
+- Regression-first commit `50e207d7faaf67987fa02a2c7f7eaeaa8847f96e` added `test_invalid_state_requires_raw_value_without_canonicalizing_it`. Backend run `44712293783` reproduced the gap: **605 passed, 1 failed** because `clinical_field_states[clinical_t_stage]="INVALID"` was accepted with no supplied raw value.
+- Fix commit `894d8206ec66d2fcfa78cd7f088d08281039d0b2` now requires a non-empty supplied raw value for `INVALID`. This does not turn that value into a valid clinical fact: prompt context retains `state="INVALID"`, preserves its raw value for review, and leaves `canonical_comparison_value=null`.
+- Exact-head Backend Tests run `44712421971`: **606 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive**; deterministic preflight **7 passed, 0 failed, 0 inconclusive**.
+- Exact-head Sequential Development Gate run `44712421883`: SUCCESS.
+- Exact-head Security and Dependency Audit run `44712421756`: SUCCESS (Python and JavaScript/TypeScript CodeQL, full-history secret scan, Python/Node dependency audit).
+
+### U09–U10 distinct provenance identity for conflicting values — 20 November 2026
+
+- Regression-first commit `9e07cfb839bc7cf7f2f6fbc3400d208aa3d0642d` added `test_conflicting_values_require_distinct_source_excerpt_provenance`. Backend run `44712586677` reproduced the gap: **606 passed, 1 failed** because two different raw values could reuse the same source type, source reference and exact excerpt/hash.
+- Fix commit `d2f4439329b6f11118b7f2e5084d993eaa0d28c6` requires every `CONFLICTING` field to have at least two distinct raw values and at least two distinct provenance identities, each defined by source type, source reference and SHA-256 of the exact excerpt. Different excerpts within the same referenced source remain distinguishable by their hashes.
+- Exact-head Backend Tests run `44712740675`: **607 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive**; deterministic preflight **7 passed, 0 failed, 0 inconclusive**.
+- Exact-head Sequential Development Gate run `44712740652`: SUCCESS.
+- Exact-head Security and Dependency Audit run `44712740656`: SUCCESS (Python and JavaScript/TypeScript CodeQL, full-history secret scan, Python/Node dependency audit).
+- Preflight explicitly states model inference was not performed and clinical accuracy was not evaluated. These tests verify data-contract behavior only.
+- U09–U10 remains `IN PROGRESS`; machine plan and U12 scope baseline remain unchanged. PR #5 remains open and unmerged pending independent review.
+- **Next U09–U10 work:** continue review of state/provenance consistency and audit projections for any state that could expose a raw value as a selected fact. Keep the separately recorded intake snapshot/event binding concern blocked for U04; do not modify `intake_store.py` in this step.
 
