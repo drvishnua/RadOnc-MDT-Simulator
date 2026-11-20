@@ -1072,6 +1072,23 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             r"\b(?:typed\s+)?investigation\s+records?\b",
             r"\binvestigation\s+record\s+(?:entries|details)\b",
         ),
+        "patient_goals": (
+            r"\bpatient(?:['’]s)?\s+goals?\b",
+            r"\bpatient[- ]stated\s+goals?\b",
+        ),
+        "patient_preferences": (
+            r"\bpatient(?:['’]s)?\s+preferences?\b",
+            r"\bpreferences?\s+expressed\s+by\s+the\s+patient\b",
+        ),
+        "social_context": (
+            r"\bsocial\s+context\b",
+            r"\bsocial\s+history\b",
+            r"\bliving\s+(?:arrangement|situation)\b",
+        ),
+        "resource_context": (
+            r"\bresource\s+context\b",
+            r"\bresource\s+and\s+access\s+context\b",
+        ),
         "relevant_comorbidities": (r"relevant\s+comorbidit(?:y|ies)\s+history", r"comorbidit(?:y|ies)\s+history", r"medical\s+history"),
         "patient_willingness": (r"patient\s+willingness", r"patient\s+preference(?:s)?", r"patient\s+decision", r"willingness\s+to\s+(?:undergo|accept|receive)\s+treatment"),
     }
@@ -2562,17 +2579,25 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     )
     goals_state = field_state("patient_goals")
     preferences_state = field_state("patient_preferences")
+    goals_gap = known_unknown_blocks_field("patient_goals")
+    preferences_gap = known_unknown_blocks_field("patient_preferences")
     preference_sources: list[str] = []
-    if goals_state in (None, "PRESENT"):
+    # Goals and preferences are separate source fields. A matching unresolved
+    # note suppresses only its own structured field; it must not suppress the
+    # other field when that field independently supports the same statement.
+    if goals_state in (None, "PRESENT") and not goals_gap:
         preference_sources.extend(f"patient {goal}" for goal in (case.patient_goals or []))
-    if preferences_state in (None, "PRESENT"):
+    if preferences_state in (None, "PRESENT") and not preferences_gap:
         preference_sources.extend(f"patient {item}" for item in (case.patient_preferences or []))
 
-    # Use the verbatim case summary for preference claims only when neither
-    # preference field has an explicit non-PRESENT state or structured value.
-    if not preference_sources and all(
-        state in (None, "PRESENT")
-        for state in (goals_state, preferences_state)
+    # A generic case-summary statement cannot resolve a matching known-unknown
+    # for either source field because the summary does not identify which field
+    # it is resolving.
+    if (
+        not preference_sources
+        and all(state in (None, "PRESENT") for state in (goals_state, preferences_state))
+        and not goals_gap
+        and not preferences_gap
     ):
         preference_sources.append(case_summary_text)
 
@@ -2583,11 +2608,30 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         preference_source_text,
     )
     if unsupported_preferences:
+        unresolved_preference_fields = [
+            field_id
+            for field_id, is_unresolved in (
+                ("patient_goals", goals_gap),
+                ("patient_preferences", preferences_gap),
+            )
+            if is_unresolved
+        ]
+        if unresolved_preference_fields:
+            preference_reason = (
+                ", ".join(unresolved_preference_fields)
+                + " is explicitly unresolved in known_unknowns; "
+                "neither that field nor generic case-summary fallback may support a positive goal/preference claim."
+            )
+        else:
+            preference_reason = (
+                "the statement is not explicitly supported by PRESENT structured patient_goals "
+                "or patient_preferences, or an assertable case summary."
+            )
         flags.append(
             "Generated narrative attributes unsupported patient preference/decision or goal statement(s) ("
             + "; ".join(unsupported_preferences[:2])
-            + "), which are not explicitly supported by PRESENT structured patient_goals "
-            "or patient_preferences, or an assertable case summary."
+            + "), but "
+            + preference_reason
         )
 
     # Direct willingness, agreement, acceptance and refusal claims are checked
