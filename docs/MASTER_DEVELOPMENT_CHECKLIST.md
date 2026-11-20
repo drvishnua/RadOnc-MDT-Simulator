@@ -7741,3 +7741,72 @@ Application and test code is unchanged from `4a44b3e8d6796dee21d25e396d611091c79
 | Integrated release acceptance | BLOCKED | Remaining U09–U10, live/GPU, evidence, clinical, security and packaging gates remain |
 
 **Next approved action:** continue registry-wide U09–U10 field/state/source/provenance acceptance against the existing canonical registry and immutable case contract. Add tests only for demonstrated mismatches or missing controls; preserve original values, unknown states, provenance and hashes. Do not alter `docs/development_plan.json`, begin U04, merge PR #5, or modify the protected development branch or main.
+
+### U09 registry-wide persistence acceptance — full v2 fields plus state/provenance/conflict metadata — 20 November 2026
+
+**Approved-sequence position:** still within machine-plan `active_step=U09-U10`. This action closes a demonstrated gap in the *tests*, not application behaviour: the earlier “every case field” database round-trip fixture covered legacy/v1 fields but omitted the additive v2 fields; the preceding persistence test did not round-trip state, provenance and conflict maps together. U04 and every later step remain blocked.
+
+**Existing metadata persistence regression**
+- Test-only commit: `9716885f10f2feae650ab3952514f3b7e9644cf6`.
+- Added `test_patient_registry_round_trips_field_states_provenance_and_conflicts_after_database_reopen` in `backend/tests/test_patients.py`.
+- Verified API persistence and database reopen for `CONFLICTING`, `INVALID`, `PRESENT`, `CONFIRMED_ABSENT`, explicit source excerpts/source hashes and two distinct age conflict candidates.
+- Exact backend run `44783470539`: **856/856 passed**, deterministic preflight 7/7, diagnostic errors 0.
+- JUnit artifact `14651083968`, SHA-256 `82ef26ae1cc0c196d1ea23d3f913069d8c08a3d020d824532bb2eb6efd0b1afb`; preflight artifact `14653151379`, SHA-256 `9123f86e25c15fe788b4b9dbce0b6d3a4257d987d746bdffcf8f2652a0d8dcd8`.
+- All checks on that exact head succeeded: backend, sequential gate, dependency audit, secret scan and both CodeQL scans.
+
+**Complete v2 field round-trip and explicit UNKNOWN-state regression**
+- First test commit: `d93c283dc6bc9953e263298ff6aadd0226b8f6d4`.
+- Extended the existing all-fields patient registry test with all 18 additive v2 fields, including typed investigation records, diagnosis date, pathological TNM, typed stage groups, staging metadata, family/caregiver context, preferences, willingness and consent status. Also added an explicit `UNKNOWN` state to the metadata test.
+- This first iteration failed only at a test comparison: the API JSON response serializes `diagnosis_date` as an ISO date string, while direct Python store return data contains a `datetime.date`. The metadata/state/provenance/conflict test passed. Backend run `44783828145`: **855 passed, 1 failed**. Sequential gate `44783826774`: SUCCESS. The fixture-only failure is retained as audit history; it is not a product-code failure.
+- Test-only fixture correction: `3bb7e33b41c5b4726b50e328972439afadc03d63`. The API assertion uses JSON-mode output; the direct-store assertion uses Python-mode output. No application code changed.
+- Exact corrected-head backend run `44784074225`: **856/856 passed**, deterministic no-inference preflight **7/7 passed**, **0 diagnostic errors**, 1 warning. Both the 40-field patient round-trip and state/provenance/conflict metadata round-trip passed.
+- JUnit artifact `14654275151`, SHA-256 `49c25d4dcfb53a58f70e52c98a6bb5b141efd797877fe0e0bec11a7366b7fb8b`; deterministic preflight artifact `14654110260`, SHA-256 `a649330c74a2f94fdd17e6d7f40705ba1fd8edda85715f8c331a32312c7c26f8`.
+- Exact-head sequential gate `44784073795`: SUCCESS.
+- Exact-head security/dependency run `44784073642`: SUCCESS for Python/Node dependency audit, full-history secret scan, Python CodeQL and JavaScript/TypeScript CodeQL. The combined CodeQL check also completed successfully.
+
+**Verified interpretation and boundary**
+- The existing 40-field v2 registry/schema mapping remains consistent; the expanded database round-trip now exercises the full registry case payload across immutable patient versions and database reopen.
+- Field-state, provenance and conflict metadata survive persistence/reopen in the tested state combinations; supplied source excerpts remain hash-addressed; conflicting raw candidates remain preserved.
+- The API uses JSON-mode date serialization while direct Python store returns use Python date objects. This is an intentional serialization distinction, not a source rewrite.
+- These are deterministic software and persistence checks. They do not independently verify source documents or clinical claims, and they do not establish clinical validity.
+- No application code or patient data was changed in this persistence-coverage slice.
+- Prior failure records remain retained above. Do not count failed fixture iterations as passing milestones.
+
+### Master Checklist — Current Status (20 November 2026; verified code/test head 3bb7e33)
+
+| Workstream | Status | Evidence / outstanding boundary |
+|---|---|---|
+| PR #5 / branch protection | VERIFIED | PR #5 OPEN, NOT MERGED; source `docs/reconcile-master-checklist-after-pr4-merge`; base `feature/four-round-mdt-and-performance` at `df90e4a380bef06a7d37def753b385db4ae86c30`; protected dev and main untouched |
+| Approved machine-plan sequence | VERIFIED | `docs/development_plan.json` `active_step=U09-U10`; U04 and all later plan steps remain BLOCKED |
+| Single repository master checklist | VERIFIED | Existing `docs/MASTER_DEVELOPMENT_CHECKLIST.md` appended in place; no duplicate checklist |
+| U09 immutable clinical registry v2 / stable IDs | VERIFIED for tested contract | 40 declared fields, 7 declared value types, immutable definitions/aliases/version hash and schema field/type checks; broader acceptance still IN PROGRESS |
+| U09 full v2 patient-case field persistence | VERIFIED for tested round-trip | Commit `3bb7e33`; backend `44784074225` 856/856; all additive v2 fields added to existing version/reopen fixture |
+| U09 field-state/provenance/conflict persistence | VERIFIED for tested combinations | Commits `9716885`, `3bb7e33`; exact backend 856/856; tested UNKNOWN, INVALID, PRESENT, CONFLICTING, CONFIRMED_ABSENT; hashes and distinct conflict candidates survive reopen |
+| U09 source-text/hash/frozen provenance controls | VERIFIED for tested cases | Preserved source excerpts, SHA-256 verification and immutable provenance record tests; no independent source verification claimed |
+| U09 empty provenance-list fallback | VERIFIED | Existing PRESENT/INVALID fallback tests remain green; empty provenance list does not suppress required hash-bound user-input record |
+| U09 legacy/v1 read-only compatibility | VERIFIED for tested cases | Historical v1/unversioned records remain hash-verified and reviewable; new/resumed generation fails closed on unsupported registry versions |
+| U10 TNM and typed stage-group separation | VERIFIED for tested cases | Clinical/pathological components and groups are separate; token normalization is lexical only; missing site/system/edition prevents staging interpretation |
+| U10 known_unknowns own-state gate | VERIFIED | Non-PRESENT known_unknowns list values are not consumed |
+| U10 known_unknowns — staging/comorbidity/willingness | VERIFIED for tested cases | Matching field, clause-local and unrelated-field controls retained |
+| U10 known_unknowns — primary site/subsite/laterality | VERIFIED for tested cases | Matching/unrelated controls passed; source laterality contradictions are not auto-resolved |
+| U10 known_unknowns — demographic/diagnosis/histology/grade/performance | VERIFIED for tested cases | Matching-field and unrelated-field controls passed; performance scale is not inferred |
+| U10 known_unknowns — family history/caregiver context | VERIFIED for tested cases | Matching, unrelated and positive controls retained |
+| U10 known_unknowns — medications/allergies/prior treatment | VERIFIED for tested cases | Matching, unrelated and no-note positive controls retained |
+| U10 known_unknowns — relevant investigations/typed records | VERIFIED for tested cases | Test-first `a57eb7a`; implementation `4e9177a`; fallback fixture corrected `ac385781`; backend 837/837 |
+| U10 known_unknowns — goals/preferences/social/resource | VERIFIED for tested cases | Test-first `4be8f85`; fix `8c6fa70`; backend 855/855; 18 regression cases, goals/preferences remain separate |
+| Broader U09–U10 field/state/source/provenance acceptance | IN PROGRESS | Registry-wide acceptance matrix and remaining reproducible combinations remain; do not reopen verified groups without a regression |
+| Backend tests / deterministic preflight | VERIFIED on `3bb7e33` | Run `44784074225`: 856/856; preflight 7/7; diagnostics 0; artifacts `14654275151` and `14654110260` |
+| Sequential Development Gate | VERIFIED on `3bb7e33` | Run `44784073795`: SUCCESS |
+| Security/dependency/secret scan/CodeQL | VERIFIED on `3bb7e33` | Run `44784073642`: SUCCESS; dependency audit, full-history secret scan and both language CodeQL scans passed |
+| Frontend build / browser E2E | NOT APPLICABLE | No frontend files changed in this backend/schema/persistence test slice |
+| R1–R3 shared canonical context across 45 roles | IN PROGRESS | Mocked all-role context regression exists; live saved-run coverage remains unverified |
+| R4 Chair consensus, dissent and traceability | IN PROGRESS | Live saved R1–R3 to Chair reconciliation remains unverified |
+| Case snapshot hashes, audit, failure and resume integrity | IN PROGRESS | Deterministic store checks exist; full saved-run tamper/failure/resume acceptance remains |
+| Evidence retrieval and claim-to-passage verification | IN PROGRESS | External current-source retrieval and live claim verification remain |
+| Ollama discovery/reuse and RTX 4060 request-time inference | BLOCKED | Later ordered work; no current request-time GPU telemetry or inference proof |
+| U04 and later ordered workstreams | BLOCKED | Must not start before U09–U10 acceptance |
+| Live 45-role R1–R4 execution and saved-run audit | NOT STARTED | No accepted current-head live run ID or inspected saved artefact |
+| Independent clinical validation | NOT STARTED | No qualified independent clinical review |
+| Integrated release acceptance | BLOCKED | Broader U09–U10, live/GPU, evidence, clinical, security and packaging gates remain |
+
+**Next approved action:** continue the remaining U09–U10 registry-wide field/state/source/provenance acceptance in the approved order. Use the existing registry and schema as the source of truth; add narrow tests only for demonstrable mismatches. Preserve source values, unknown states, provenance and hashes. Do not edit the machine plan, start U04, merge PR #5, or modify the protected development branch or main.
