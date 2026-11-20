@@ -1064,6 +1064,14 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         "current_medications": (r"\bcurrent\s+medications?\b", r"\bmedication\s+list\b"),
         "known_allergies": (r"\bknown\s+allerg(?:y|ies)\b", r"\ballergy\s+history\b"),
         "prior_treatment": (r"\bprior\s+treatment\b", r"\bprevious\s+treatment\b", r"\btreatment\s+history\b"),
+        "relevant_investigations": (
+            r"\brelevant\s+investigations?\b",
+            r"\binvestigation\s+(?:results?|findings?|history)\b",
+        ),
+        "investigation_records": (
+            r"\b(?:typed\s+)?investigation\s+records?\b",
+            r"\binvestigation\s+record\s+(?:entries|details)\b",
+        ),
         "relevant_comorbidities": (r"relevant\s+comorbidit(?:y|ies)\s+history", r"comorbidit(?:y|ies)\s+history", r"medical\s+history"),
         "patient_willingness": (r"patient\s+willingness", r"patient\s+preference(?:s)?", r"patient\s+decision", r"willingness\s+to\s+(?:undergo|accept|receive)\s+treatment"),
     }
@@ -2385,6 +2393,8 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     imaging_state = field_state("imaging_summary")
     investigations_state = field_state("relevant_investigations")
     records_state = field_state("investigation_records")
+    relevant_investigations_gap = known_unknown_blocks_field("relevant_investigations")
+    investigation_records_gap = known_unknown_blocks_field("investigation_records")
     investigation_parts: list[str] = []
     noncompleted_record_statuses = sorted({
         record.status
@@ -2393,9 +2403,9 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     })
     if imaging_state in (None, "PRESENT") and case.imaging_summary:
         investigation_parts.append(case.imaging_summary)
-    if investigations_state in (None, "PRESENT"):
+    if investigations_state in (None, "PRESENT") and not relevant_investigations_gap:
         investigation_parts.extend(case.relevant_investigations)
-    if records_state in (None, "PRESENT"):
+    if records_state in (None, "PRESENT") and not investigation_records_gap:
         investigation_parts.extend(
             " ".join(
                 part for part in (
@@ -2407,7 +2417,14 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             for record in case.investigation_records
             if record.status == "COMPLETED"
         )
-    if all(state in (None, "PRESENT") for state in (imaging_state, investigations_state, records_state)):
+    if (
+        all(state in (None, "PRESENT") for state in (imaging_state, investigations_state, records_state))
+        and not relevant_investigations_gap
+        and not investigation_records_gap
+    ):
+        # The free-text summary is only a fallback for unclassified source
+        # fields. A matching field-specific unresolved note must not be
+        # bypassed by re-reading the same claim from the generic summary.
         investigation_parts.append(case_summary_text)
     investigation_source = "\n".join(investigation_parts)
     unsupported_investigations = _unsupported_matches(
@@ -2441,21 +2458,36 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         if not biopsy_result_is_supported(item)
     ]
     if unsupported_investigations:
+        unresolved_investigation_fields = [
+            field_id
+            for field_id, is_unresolved in (
+                ("relevant_investigations", relevant_investigations_gap),
+                ("investigation_records", investigation_records_gap),
+            )
+            if is_unresolved
+        ]
+        investigation_reasons: list[str] = []
+        if unresolved_investigation_fields:
+            investigation_reasons.append(
+                ", ".join(unresolved_investigation_fields)
+                + " is explicitly unresolved in known_unknowns; no positive finding may rely on that source."
+            )
         if records_state not in (None, "PRESENT"):
-            investigation_reason = (
+            investigation_reasons.append(
                 f"investigation_records is marked {records_state}; that state cannot support a finding or permit summary fallback."
             )
-        elif noncompleted_record_statuses:
-            investigation_reason = (
+        if noncompleted_record_statuses:
+            investigation_reasons.append(
                 "investigation_records contains non-COMPLETED record status(es) ("
                 + ", ".join(noncompleted_record_statuses)
                 + "); only COMPLETED records may support a finding."
             )
-        else:
-            investigation_reason = (
+        if not investigation_reasons:
+            investigation_reasons.append(
                 "the claim is not supported by an assertable imaging summary, relevant investigation, "
                 "COMPLETED investigation record, or permitted verbatim case-summary source."
             )
+        investigation_reason = " ".join(investigation_reasons)
         flags.append(
             "Generated narrative asserts imaging/investigation result(s) / investigation_records finding(s) ("
             + "; ".join(unsupported_investigations[:2])
