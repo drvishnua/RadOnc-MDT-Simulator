@@ -6194,3 +6194,66 @@ Separate patient preference/goal statements from treatment willingness statement
 
 **Next action:** add field-specific checks for known-unknown willingness and treatment consent, retain the unrelated-unknown positive control, then run exact-head Backend/preflight, Sequential Gate and Security Audit. Do not change `active_step`, modify intake code or activate U04.
 
+## U10 known-unknown consent/willingness conflict gate — implementation and exact-head verification
+
+### Reproduced failure and correction
+
+- Test-only commit `f936b027e01be848959ac14728fb9dcc0e5bb0c1` added two negative and one positive-control regression.
+- Exact-head Backend run `44749181226`, job `136332308240`: **691 passed, 2 failed**. Both failures showed a matching case-summary sentence bypassed a corresponding explicit unresolved entry in `known_unknowns`:
+  - patient willingness not established, but summary says patient is willing to undergo surgery;
+  - treatment-specific informed consent not documented, but summary says patient consented to surgery.
+- The unrelated known-unknown control passed: a missing staging system/edition does not block treatment consent otherwise supported by the summary.
+- Preflight artifact `14633838661`, SHA-256 `fcc7b302d11973f5d7126a996a4ac11887114f78e07f2456f30eefccccdb5843`; pytest artifact `14634492048`, SHA-256 `3f55fdf3da4a6cc76d9491e9b76668e97363bb84ace1cb8ae0afb7783d98721c`.
+- Sequential Gate `44749181168`: SUCCESS; log confirmed `active_step=U09-U10`, checked head `f936b02`, scope baseline `5284483a26e87028f919966e304c472ed537e839`.
+- Security Audit `44749181240`: SUCCESS; all four jobs passed.
+- Code correction commit: `ae4e5afd286ecd33b110813171e4dec4dc4fb0a3`; only `backend/app/services/case_integrity.py` changed.
+- The audit now examines `known_unknowns` only when its field state is implicit or PRESENT. A specific unresolved willingness entry blocks willingness summary fallback; a specific treatment-consent entry blocks treatment-consent summary fallback. The audit flags the conflict and preserves both source statements. It does not let an unrelated unknown block the claim, and it does not rewrite `case_summary`, `known_unknowns` or any field state.
+- Explicit non-PRESENT state on `known_unknowns` does not make its list contents assertable.
+- Exact-head Backend run `44749806362`, job `136334425055`, on `ae4e5af`: **693 passed, 0 failed, 0 errors, 0 skipped** (one existing Starlette/httpx deprecation warning).
+- All three new known-unknown regressions passed:
+  - matching summary fallback blocked by patient-willingness gap;
+  - matching summary fallback blocked by treatment-specific consent gap;
+  - unrelated staging unknown did not block supported treatment-consent source.
+- Deterministic preflight artifact `14634657282`, SHA-256 `64b5328a7b0db8b63dfb705a6c877ed03089179dd53683b3b0d503c4fb3199af`; pytest diagnostics artifact `14634239800`, SHA-256 `a643dae366d9065fbf5b87b8498688705637b34d6de6f7a2a7f2100b1242c8eb`.
+- Exact-head Sequential Development Gate `44749806334`: SUCCESS; log confirmed `active_step=U09-U10`, checked head `ae4e5af`, scope baseline `5284483a26e87028f919966e304c472ed537e839`.
+- Exact-head Security and Dependency Audit `44749806338`: SUCCESS; all four jobs passed (Python CodeQL, JavaScript/TypeScript CodeQL, dependency audit, full-history secret scan).
+- Checklist-only commit `1a4851a` security workflow `44749499871`: SUCCESS; all four jobs passed.
+- PR #5 remains OPEN, unmerged and not draft, targeting `feature/four-round-mdt-and-performance` at base SHA `df90e4a380bef06a7d37def753b385db4ae86c30`. Current head is `ae4e5af`. Submitted PR reviews: 0. Review threads: 0. No merge or main-branch modification occurred.
+
+### Master Checklist — Current Status
+
+| Workstream | Status | Current evidence / outstanding boundary |
+|---|---|---|
+| Repository, protected PR and branch | VERIFIED | PR #5 OPEN/unmerged; head `ae4e5af`; base `feature/four-round-mdt-and-performance` at `df90e4a`; 0 submitted reviews and 0 review threads; no main modification or merge. |
+| Approved algorithm / machine plan | VERIFIED | Exact-head Sequential Gate `44749806334` confirms `active_step=U09-U10`; scope baseline `5284483a26e87028f919966e304c472ed537e839`; do not advance. |
+| U09 immutable clinical registry v2 and typed data contract | IN PROGRESS | Stable IDs, aliases, version hash, typed states and immutable definitions exist; complete field-by-field state/source/provenance, migration and backward-compatibility acceptance remains. |
+| U10 staging site/system/edition | VERIFIED for tested controls | Missing-context and explicit UNKNOWN system/edition regressions passed; full edition applicability/migration matrix remains open. |
+| U10 clinical/pathological T/N/M and stage-group separation | IN PROGRESS | Clinical/pathological namespaces and UNKNOWN fallback controls pass; complete field-by-field NOT_REPORTED, NOT_ASSESSED, PENDING, DECLINED, INVALID, CONFLICTING and provenance matrix remains. |
+| U10 diagnosis date and family/caregiver claims | VERIFIED | Code `9b0d4cf`; Backend `44737660862`, 661/661. |
+| U10 investigation-record status/source fallback | VERIFIED | Code `c4d5c63`; Backend `44738779218`, 666/666; only COMPLETED records support findings, explicit UNKNOWN blocks summary fallback. |
+| U10 positive comorbidity/prior-treatment/family-history/allergy/medication claims | VERIFIED | Code `25635e9`; Backend `44740400697`, 674/674. |
+| U10 social/resource claim audit | VERIFIED | Code `5571074`; Backend `44741865637`, 683/683; explicit UNKNOWN/NOT_REPORTED, structured match/mismatch, unrelated unknowns and allowed CONFIRMED_ABSENT separation covered. |
+| U10 patient goals/preferences versus willingness | VERIFIED | Code `ad98a10`; Backend `44745009819`, 690/690; goals/preferences are not willingness; explicit UNKNOWN blocks summary fallback. |
+| U10 known_unknowns willingness/consent conflict gate | VERIFIED for tested cases | Code `ae4e5af`; Backend `44749806362`, 693/693; specific unresolved willingness/consent items block summary fallback, unrelated staging unknown remains non-blocking. |
+| U10 educational-scenario versus treatment-specific consent | VERIFIED for tested cases | Consent separation and new known-unknown treatment-consent controls passed in `44749806362`; exhaustive consent state/value matrix remains open. |
+| U10 negative/absence claims and CONFIRMED_ABSENT provenance | IN PROGRESS | Separate positive/negative gates and selected allowed-field tests exist; full field-by-field state/provenance/mismatch matrix remains. |
+| U10 remaining canonical fields / known-unknown mappings | IN PROGRESS | Known-unknown handling now covers willingness and treatment consent; all remaining entries and clinical fields still require field-specific source mapping review. |
+| R1–R4 shared canonical input and Chair reconciliation | IN PROGRESS | Mocked provenance/context tests exist; live saved R1–R3 and Chair R4 execution/reconciliation remains unverified. |
+| Case version, source hashes and audit history | IN PROGRESS | Deterministic provenance/conflict controls exist; full saved-run tamper, partial failure, retry and resume audit remains. |
+| Evidence/reference retrieval and claim-to-passage validation | IN PROGRESS | Independent current-source retrieval and exact claim support validation remain outstanding; no guideline compliance claimed. |
+| Missing/failed specialist handling | IN PROGRESS | Deterministic tests exist; live 45-role missing/failed-agent and saved-artifact inspection remains. |
+| Backend regression suite | VERIFIED | Exact application head `ae4e5af`; run `44749806362`; 693/693. |
+| Deterministic preflight | VERIFIED | Run `44749806362`; artifact `14634657282`, SHA-256 recorded above. |
+| Sequential Development Gate | VERIFIED | Exact application head; run `44749806334` SUCCESS; `active_step=U09-U10`. |
+| Security/dependency/secret scan/CodeQL | VERIFIED | Exact application head; run `44749806338` SUCCESS; all four jobs passed. |
+| U04 Case Intake and Completeness Screener | BLOCKED | Must not activate until U09–U10 acceptance is complete. |
+| U05–U08 | BLOCKED | Remain in approved order after U04. |
+| U03 intelligent Ollama installer | BLOCKED | Remains after U08; real Windows Ollama stopped/model reuse test remains unverified. |
+| U01–U02 desktop experience/removal of development surfaces | BLOCKED | Remain after U03; installed desktop acceptance remains unverified. |
+| Live 45-role R1–R4 | NOT STARTED | No live run ID or inspected saved MDT artefact claimed. |
+| RTX 4060 request-time GPU inference | NOT STARTED | No actual request-time telemetry, Ollama layer-offload trace or GPU activity evidence claimed. |
+| Independent clinical validation | NOT STARTED | No qualified independent clinical review or guideline validation claimed. |
+| Integrated release acceptance | BLOCKED | U09–U10 field/state/source audit and all ordered downstream, live, GPU and clinical gates remain outstanding. |
+
+**Next U09–U10 action:** continue the approved field-by-field audit for remaining consent-state variants, pathological T/N/M provenance states, negative/absence controls and unresolved canonical fields. Keep `active_step=U09-U10`. Do not modify intake code, activate U04 or introduce later workstreams.
+
