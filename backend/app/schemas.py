@@ -20,7 +20,22 @@ class StrictModel(BaseModel):
 class ClinicalFieldProvenance(StrictModel):
     """Immutable source metadata for one supplied clinical field value or explicit state."""
 
-    model_config = ConfigDict(frozen=True)
+    # The source excerpt is hashed and must remain byte-for-byte faithful,
+    # including leading/trailing whitespace and line endings. Other metadata
+    # identifiers retain the shared strict model's normal trimming explicitly.
+    model_config = ConfigDict(frozen=True, str_strip_whitespace=False)
+
+    @field_validator("source_type", "source_reference", mode="before")
+    @classmethod
+    def strip_provenance_identifiers(cls, value: object) -> object:
+        return value.strip() if isinstance(value, str) else value
+
+    @field_validator("source_excerpt")
+    @classmethod
+    def require_nonblank_source_excerpt(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("source_excerpt must contain non-whitespace source text.")
+        return value
 
     source_type: Literal[
         "CASE_SUMMARY",
