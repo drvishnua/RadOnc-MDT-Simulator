@@ -3861,3 +3861,67 @@ def test_non_empty_known_unknowns_list_cannot_be_marked_unknown():
             clinical_field_states={"known_unknowns": "UNKNOWN"},
         )
 
+
+
+@pytest.mark.parametrize(
+    ("field_id", "case_values", "known_unknown", "generated_claim"),
+    [
+        (
+            "family_history",
+            {"family_history": ["Mother had breast cancer."]},
+            "Family history has not been established.",
+            "The patient's mother had breast cancer.",
+        ),
+        (
+            "family_caregiver_context",
+            {"family_caregiver_context": ["A daughter provides support to the patient."]},
+            "Family/caregiver context has not been documented.",
+            "A daughter provides support to the patient.",
+        ),
+    ],
+)
+def test_matching_list_field_known_unknown_blocks_positive_structured_claim(
+    field_id, case_values, known_unknown, generated_claim
+):
+    case = _case(
+        case_summary="Synthetic case narrative; list fields are supplied separately.",
+        known_unknowns=[known_unknown],
+        **case_values,
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": generated_claim,
+    })).casefold()
+
+    assert field_id in flags
+    assert "known_unknowns" in flags
+    assert "unresolved" in flags or "not been" in flags
+
+
+@pytest.mark.parametrize(
+    ("field_id", "case_values", "generated_claim"),
+    [
+        (
+            "family_history",
+            {"family_history": ["Mother had breast cancer."]},
+            "The patient's mother had breast cancer.",
+        ),
+        (
+            "family_caregiver_context",
+            {"family_caregiver_context": ["A daughter provides support to the patient."]},
+            "A daughter provides support to the patient.",
+        ),
+    ],
+)
+def test_unrelated_known_unknown_does_not_block_matching_family_or_caregiver_claim(
+    field_id, case_values, generated_claim
+):
+    case = _case(
+        case_summary="Synthetic case narrative; list fields are supplied separately.",
+        known_unknowns=["Patient willingness has not been established."],
+        **case_values,
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": generated_claim,
+    })
+
+    assert not any(field_id in item for item in flags)
