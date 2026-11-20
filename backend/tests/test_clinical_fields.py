@@ -479,7 +479,7 @@ def test_explicit_provenance_record_cannot_be_mutated_after_hashing():
     assert source.source_sha256 == original_hash
 
 def test_provenance_excerpt_preserves_exact_whitespace_before_hashing():
-    excerpt = "\\n  Original source wording with preserved spacing.  \\t"
+    excerpt = "\n  Original source wording with preserved spacing.  \t"
     source = ClinicalFieldProvenance(
         source_type="CLINICIAN_NOTE",
         source_reference="synthetic-whitespace-note",
