@@ -8,7 +8,7 @@ import re
 from datetime import date, datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_validator
 
 from app.clinical_fields import CLINICAL_FIELD_REGISTRY, DataState
 
@@ -75,11 +75,66 @@ class ClinicalFieldProvenance(StrictModel):
         return self
 
 
+class _FrozenJSONDict(dict):
+    """JSON-shaped dictionary that cannot be edited after construction."""
+
+    def __init__(self, values: dict[str, Any]) -> None:
+        dict.__init__(
+            self,
+            ((key, _freeze_json_value(value)) for key, value in values.items()),
+        )
+
+    @staticmethod
+    def _reject_mutation(*args: object, **kwargs: object) -> None:
+        raise TypeError("Nested clinical conflict values are immutable.")
+
+    __setitem__ = _reject_mutation
+    __delitem__ = _reject_mutation
+    clear = _reject_mutation
+    pop = _reject_mutation
+    popitem = _reject_mutation
+    setdefault = _reject_mutation
+    update = _reject_mutation
+    __ior__ = _reject_mutation
+
+    def __deepcopy__(self, memo: dict[int, Any]) -> "_FrozenJSONDict":
+        return _FrozenJSONDict(self)
+
+
+def _freeze_json_value(value: Any) -> Any:
+    """Recursively freeze JSON arrays/objects without changing their JSON shape."""
+    if isinstance(value, dict):
+        return _FrozenJSONDict(value)
+    if isinstance(value, (list, tuple)):
+        return tuple(_freeze_json_value(item) for item in value)
+    return value
+
+
+def _thaw_json_value(value: Any) -> Any:
+    """Return ordinary JSON containers for Pydantic's JSON-mode serialization."""
+    if isinstance(value, dict):
+        return {key: _thaw_json_value(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_thaw_json_value(item) for item in value]
+    return value
+
+
 class ClinicalFieldConflict(StrictModel):
-    """One source-specific value retained when two or more sources disagree."""
+    """Immutable source-specific value retained when two or more sources disagree."""
+
+    model_config = ConfigDict(frozen=True)
 
     raw_value: Any
     provenance: ClinicalFieldProvenance
+
+    @field_validator("raw_value", mode="before")
+    @classmethod
+    def freeze_raw_value(cls, value: Any) -> Any:
+        return _freeze_json_value(value)
+
+    @field_serializer("raw_value", when_used="json")
+    def serialize_raw_value(self, value: Any) -> Any:
+        return _thaw_json_value(value)
 
 
 class InvestigationRecord(StrictModel):
