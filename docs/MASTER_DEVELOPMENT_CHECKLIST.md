@@ -7203,3 +7203,60 @@ Application and test code is unchanged from `4a44b3e8d6796dee21d25e396d611091c79
 | Integrated release acceptance | BLOCKED | U09–U10 plus live/GPU/clinical and downstream gates remain |
 
 **Next approved action:** perform the registry data-type/schema consistency audit, add regression tests only for demonstrable mismatches, and verify exact-head CI. Then proceed to legacy/registry-version migration compatibility. Do not change the machine-plan order, merge PR #5, modify the protected development branch, or activate U04.
+
+
+### U09 registry-to-schema declared data-type consistency — 20 November 2026
+
+**Approved-sequence position:** completion of the registry data-type/schema consistency audit after registry field/state/source work. No clinical decision logic or patient values changed.
+
+**Audit scope**
+- Inspected all **40** canonical field definitions in `CLINICAL_FIELD_REGISTRY`.
+- Seven declared type categories are present: `string`, `free_text`, `integer`, `enum`, `date`, `string_list`, `object_list`.
+- Compared the declared type of every canonical field with the actual `SyntheticCase.model_fields[field_id].annotation`.
+- The regression verifies scalar string/free-text, integer, date, exact Literal enum values, list-of-string element types and typed `InvestigationRecord` list shape.
+- No current registry-to-schema type mismatch was found. This audit does not claim semantic validation of clinical values beyond the existing field-specific validators.
+
+**Verification**
+- Test commit: `25426f5c71f487b7eaec6ee7233693d5d457b0c0`.
+- Backend Tests run `44773476563`: SUCCESS; **797/797 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive**; diagnostic errors 0. Pytest artifact `14648496293`; deterministic preflight artifact `14647504664`.
+- Sequential Development Gate run `44773476687`: SUCCESS.
+- Security and Dependency Audit run `44773476875`: SUCCESS; Python CodeQL, JavaScript/TypeScript CodeQL, Python/Node dependency audit and full-history secret scan all successful.
+- All three successful workflows identify exact test head `25426f5c71f487b7eaec6ee7233693d5d457b0c0`.
+- No schema or application implementation change was required for this type-consistency slice.
+
+**Current interpretation**
+- Registry-declared data-type/schema shape consistency: VERIFIED for all 40 registry fields by exhaustive regression coverage.
+- U09–U10 remains IN PROGRESS because legacy/registry-version migration and broader field/state/source/provenance acceptance remain.
+- PR #5 remains OPEN and NOT MERGED. No U04 or later workstream has started.
+
+### Master Checklist — Current Status (20 November 2026)
+
+| Workstream | Status | Evidence / outstanding boundary |
+|---|---|---|
+| PR #5 / protected branches | VERIFIED | PR #5 test head `25426f5`; base is `feature/four-round-mdt-and-performance`; OPEN/unmerged; main untouched |
+| Approved development sequence | VERIFIED | Active scope U09–U10; no U04+ work started |
+| U09 immutable registry v2 / stable field IDs | IN PROGRESS | v1 historical definitions retained; v2 hash-addressed; migration and full field/state/source acceptance remain |
+| U10 known_unknowns field-specific mapping | VERIFIED (tested cases) | Explicit unresolved-field and qualifier regressions pass |
+| U10 known_unknowns own-state gate | VERIFIED | Exact implementation `f5f556b`; backend 793/793 |
+| U09 empty provenance-list fallback | VERIFIED | Test-first failure at `00a018c`; implementation `d615592`; backend 795/795 |
+| U09 clinical list source-text preservation | VERIFIED | Exact list-text regression and CI pass |
+| U09 typed investigation source-excerpt preservation | VERIFIED | Actual newline/tab source excerpt regression and CI pass |
+| U09 free-text case/pathology/imaging summaries | VERIFIED | Test-first failure at `68069f3`; implementation `6310774`; backend 796/796 |
+| U09 registry-to-schema data-type consistency | VERIFIED | All 40 fields / 7 type categories checked on `25426f5`; backend 797/797 |
+| Provenance hashes, immutable excerpts and conflict candidates | IN PROGRESS | Core controls and tests pass; broader field/source acceptance remains |
+| Legacy/registry-version migration and compatibility | NOT STARTED | Next approved task; ensure historical records are preserved without silent v1-to-v2 reinterpretation |
+| Backend tests / deterministic preflight | VERIFIED on `25426f5` | Run `44773476563`, 797/797; preflight artifact `14647504664` |
+| Sequential Development Gate | VERIFIED on `25426f5` | Run `44773476687` SUCCESS |
+| Security/dependency/secret scan/CodeQL | VERIFIED on `25426f5` | Run `44773476875` SUCCESS; all four checks passed |
+| R1–R3 shared context across 45 roles | IN PROGRESS | Mocked coverage exists; live saved-run role coverage remains |
+| R4 Chair consensus, dissent and traceability | IN PROGRESS | Live saved R1–R3 to R4 reconciliation remains unverified |
+| Case snapshots, hashes, audit, failures and resume | IN PROGRESS | Deterministic controls exist; complete saved-run tamper/failure/resume acceptance remains |
+| Evidence retrieval and claim-to-passage verification | IN PROGRESS | Current-source verification in live cases remains |
+| Frontend/browser E2E | NOT STARTED | No frontend changes in U09 slices |
+| U04 and later ordered workstreams | BLOCKED | Must not begin before U09–U10 acceptance |
+| Live 45-role R1–R4 | NOT STARTED | No live run ID or inspected artefact |
+| RTX 4060 request-time GPU inference | NOT STARTED | No request-time telemetry |
+| Independent clinical validation | NOT STARTED | No qualified review |
+| Integrated release acceptance | BLOCKED | Migration, remaining U09–U10, live/GPU/clinical and downstream gates remain |
+
+**Next approved action:** audit the existing legacy/registry-version migration and resume paths. Verify historical v1 and unversioned records remain immutable and readable for review, that new/resumed generation fails closed unless it uses the active v2 registry and immutable case version, and that any upgrade requires an explicit new version/migration record rather than silent reinterpretation. Add tests only for reproducible gaps. Do not alter the machine-plan order, merge PR #5, modify the protected development branch or activate U04.
