@@ -4630,3 +4630,14 @@ All eight applicable workflows on exact application-code SHA `c41ead4c37f054ac01
 **Clinical-safety boundary remains unchanged:** synthetic educational use only; unknown remains unknown; no invented TNM/stage, investigations, comorbidities, performance status, resectability or patient preferences; preserve contradictions, uncertainty, conditional recommendations and minority opinions. The Chair may only synthesise saved R1-R3 contributions in R4. Deterministic code must enforce counts, provenance and report structure.
 
 **Outstanding gate:** the reconciliation/activation branch must receive successful exact-head CI and independent approval before U09-U10 work begins on the protected development branch.
+
+
+### PR #3 validation iteration and test-fixture correction — 20 November 2026
+
+- PR #3 initial head `299004e4720e6feaac0e5ebe8d424f3ec4a96399` had a failed Sequential Development Gate run `44662043733`. The deterministic plan validator passed; the adversarial test phase failed in the new positive U12-to-U09/U10 transition test.
+- Root cause: `_fixture()` reused the mutable global `WORKFLOWS` list for STEP-A. The existing negative test `test_required_workflows_cannot_be_removed_from_the_json_plan` calls `.pop()`, contaminating later fixtures. This was test isolation, not a production validator failure.
+- Corrective change on PR #3 head `94f862c7bec13c82db3cd06e18d3c5645548f3d3`: create a fresh `list(WORKFLOWS)` for each fixture. The negative test remains intact; the positive exact-evidence transition test now passes.
+- Exact-head validation on `94f862c7bec13c82db3cd06e18d3c5645548f3d3`: Sequential Development Gate run `44662308543` SUCCESS; Backend Tests run `44662308453` SUCCESS with 563 passing per-test diagnostic records; Security and Dependency Audit run `44662308457` SUCCESS. All six ruleset-required check contexts completed SUCCESS.
+- Historical failure `44662043733` remains in GitHub Actions history and is recorded here; it has not been deleted or represented as a successful run.
+- This checklist-only follow-up creates a new PR head. The successful run IDs above are explicitly evidence for predecessor SHA `94f862c7bec13c82db3cd06e18d3c5645548f3d3`; the new head must receive fresh exact-head CI before approval/merge.
+- PR #3 remains open and unmerged; independent approval is still required. No clinical application code has been changed and U09-U10 clinical implementation has not started.
