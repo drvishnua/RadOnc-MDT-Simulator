@@ -1690,11 +1690,11 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         )
 
     treatment_consent_pattern = re.compile(
-        r"\\bpatient(?:'s)?\\s+(?:(?:has|had)\\s+)?"
-        r"(?:consents?\\s+to|consented\\s+to|"
-        r"(?:gave|provided|granted)\\s+(?:their\\s+)?(?:informed\\s+)?consent\\s+to)\\s+"
-        r"(?!participate\\s+in\\s+(?:this|the)\\s+educational\\s+(?:case|scenario|simulation)\\b)"
-        r"[^.!?;\\n]{1,100}",
+        r"\bpatient(?:'s)?\s+(?:(?:has|had)\s+)?"
+        r"(?:consents?\s+to|consented\s+to|"
+        r"(?:gave|provided|granted)\s+(?:their\s+)?(?:informed\s+)?consent\s+to)\s+"
+        r"(?!participate\s+in\s+(?:this|the)\s+educational\s+(?:case|scenario|simulation)\b)"
+        r"[^.!?;\n]{1,100}",
         re.IGNORECASE,
     )
     unsupported_treatment_consent = _unsupported_matches(
