@@ -153,6 +153,33 @@ def test_clinical_list_values_preserve_original_whitespace():
     assert case.model_dump(mode="json")["family_history"] == [original]
 
 
+def test_free_text_case_and_report_summaries_preserve_exact_whitespace():
+    case_summary = "\n  Fictional case narrative preserves its exact boundary whitespace.  \t"
+    pathology_summary = "\t  Synthetic pathology report text remains byte-faithful.  \n"
+    imaging_summary = "\n\t Synthetic imaging report text remains byte-faithful. \t"
+
+    case = _case(
+        case_summary=case_summary,
+        pathology_summary=pathology_summary,
+        imaging_summary=imaging_summary,
+    )
+
+    assert case.case_summary == case_summary
+    assert case.pathology_summary == pathology_summary
+    assert case.imaging_summary == imaging_summary
+
+    serialized = case.model_dump(mode="json")
+    assert serialized["case_summary"] == case_summary
+    assert serialized["pathology_summary"] == pathology_summary
+    assert serialized["imaging_summary"] == imaging_summary
+
+    context = build_case_prompt_context(case)
+    snapshot = context["case_snapshot"]
+    assert snapshot["case_summary"] == case_summary
+    assert snapshot["pathology_summary"] == pathology_summary
+    assert snapshot["imaging_summary"] == imaging_summary
+
+
 def test_pathological_stage_prefix_is_flagged_and_raw_source_is_preserved():
     context = build_case_prompt_context(_case(clinical_t_stage="pT1"))
     item = context["canonical_field_values"][CLINICAL_T_STAGE]
