@@ -359,7 +359,7 @@ def require_supported_registry_version(version: str) -> None:
             f"This saved record uses clinical field registry version {version!r}, "
             f"but this build supports new/resumed runs only on "
             f"{CLINICAL_FIELD_REGISTRY_VERSION!r}. Historical snapshots remain preserved; "
-            "create a new immutable case version before starting or resuming MDT generation."
+            "Create a new immutable case version before starting or resuming MDT generation."
         )
 
 
