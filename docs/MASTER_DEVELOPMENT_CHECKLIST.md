@@ -4978,3 +4978,56 @@ A regression-first review found that `case_summary` itself can be marked `INVALI
 **Current U09–U10 sequence:** continue the remaining typed-field non-PRESENT state/provenance and deterministic audit projections; preserve the invalid/conflicting case-summary regression; add only scoped regressions for reproducible gaps; run the exact-head backend/preflight, sequential gate and security checks; inspect their logs/artifacts; update this same checklist. Do not modify `intake_store.py`, change the machine plan, activate U04, or work on later steps.
 
 **Clinical and validation boundary:** the checks above verify deterministic software behavior only. They do not establish that Qwen follows prompts, that all 45 roles complete a live MDT, that Chair R4 correctly reconciles saved contributions, that any clinical staging is correct, or that guidelines/evidence have been retrieved and checked. No RTX 4060 inference, clinical accuracy or independent clinical validation is claimed.
+
+# Master Checklist — Current Status (20 November 2026; field-specific confirmed-absent verification)
+
+**Exact code/test commit:** `c9f64c36395a76febd052136deef6620f19a5359`  
+**PR #5:** OPEN, not draft, not merged; head branch `docs/reconcile-master-checklist-after-pr4-merge`, target `feature/four-round-mdt-and-performance` at `df90e4a380bef06a7d37def753b385db4ae86c30`. No independent review is recorded.  
+**Approved machine plan:** `active_step=U09-U10`; U09-U10 remains IN PROGRESS. U04 and all later steps remain BLOCKED. U12 scope baseline is unchanged at `5284483a26e87028f919966e304c472ed537e839`.
+
+## Latest U09–U10 change: field-specific CONFIRMED_ABSENT eligibility
+
+- Registry review found that `_NEGATIVEABLE_LIST_FIELDS` explicitly lists five fields, but `_build_v2_definition` also granted `CONFIRMED_ABSENT` to every `string_list` and `object_list` field. This made patient goals/preferences, family-caregiver context, social/resource context, known unknowns, relevant investigations and investigation records eligible merely because they are list-shaped.
+- Regression-only commit `0d09c1efc16309413fa38742345fed1b63649221` added an exact registry allowlist assertion and schema-rejection cases for eight non-negativeable list/object-list fields.
+- Exact-head Backend Tests run `44719739839` reproduced the defect: **611 passed, 9 failed, 0 errors, 0 skipped, 0 inconclusive**. The actual eligible set included the eight unintended fields. The eight schema tests reached the later provenance check, proving the state was accepted rather than rejected. Sequential Development Gate run `44719740032`: SUCCESS. Security and Dependency Audit run `44719739713`: SUCCESS.
+- Fix commit `c9f64c36395a76febd052136deef6620f19a5359` changes the v2 state-set selection so `CONFIRMED_ABSENT` is supplied only to the five explicit `_NEGATIVEABLE_LIST_FIELDS`: `current_medications`, `known_allergies`, `relevant_comorbidities`, `prior_treatment`, and `family_history`. Every other field uses the common state set; list or object-list type alone no longer grants a confirmed-absence state.
+- Exact-head Backend Tests run `44719891817`: **620 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive**; one warning. Deterministic preflight **7 passed, 0 failed, 0 inconclusive**.
+- Exact-head Sequential Development Gate run `44719891822`: SUCCESS.
+- Exact-head Security and Dependency Audit run `44719891769`: SUCCESS. Python CodeQL, JavaScript/TypeScript CodeQL, Python/Node dependency audit and full-history secret scan all completed successfully.
+- Exact-head artifacts: deterministic preflight artifact `14621112691`, SHA-256 `ecfabc0f07102b379ffac001436a0ad8c41c6a18195fc08df4d9722c9192732e`; pytest/JUnit diagnostics artifact `14620144691`, SHA-256 `22957f06406cdde1d368af2dbe106e71dd3cd1ff60d95959e6ac67f771e4355b`.
+- Test-only failure on `0d09c1e` is retained as regression evidence and is not counted as acceptance. Successful verification is tied to exact code/test commit `c9f64c3`.
+
+## Master Checklist — Current Status
+
+| Workstream | Status | Current evidence / outstanding boundary |
+|---|---|---|
+| Repository, branch, PR, commit and checklist verification | VERIFIED | PR #5 head is `c9f64c3`; target is the protected development branch, not `main`. PR remains open/unmerged; no independent review recorded. |
+| U12 protected sequential development gate | VERIFIED | Exact-head gate run `44719891822` SUCCESS; approved machine plan and step order unchanged. |
+| U09 canonical clinical registry v2 | IN PROGRESS | Immutable v2 registry and stable IDs exist; full U09/U10 acceptance and legacy-case compatibility/recovery remain outstanding. |
+| U10 deterministic state-aware hallucination controls | IN PROGRESS | INVALID/CONFLICTING summary quarantine and explicit per-field CONFIRMED_ABSENT eligibility are regression-tested on exact code/test head; remaining typed-field state/provenance audit continues. |
+| Per-field epistemic-state allowlist | VERIFIED | Only the five explicit negativeable fields allow CONFIRMED_ABSENT; registry equality and eight schema-rejection cases pass in Backend run `44719891817`. |
+| R1–R4 shared canonical case-data flow | IN PROGRESS | Mocked all-45-role R1, R2 and R3 prompt-context equivalence tests are recorded earlier; saved live R1–R3 and Chair R4 execution remains unverified. |
+| Clinical safety and staging | IN PROGRESS | Deterministic state/provenance and clinical/pathological phase-separation checks pass; site/system/edition-aware clinical classification and independent clinical review are not established. |
+| Case integrity, hashes and audit | IN PROGRESS | Source hashes, immutable provenance/conflict data, INVALID summary quarantine and field-specific absence-state gating pass; saved case-version/run tamper and failure-path acceptance remains open. |
+| Provenance and evidence retrieval | IN PROGRESS | User-supplied source provenance remains explicitly unverified; external evidence retrieval and source-document verification are not established. |
+| Chair consensus, conditionality, dissent and traceability | IN PROGRESS | Deterministic safeguards exist; full saved-contribution Chair reconciliation and live dissent/consensus audit remain outstanding. |
+| Missing/failed specialist and partial-run handling | IN PROGRESS | Deterministic regression coverage exists; complete live 45-role failure/resume inspection remains outstanding. |
+| Backend tests | VERIFIED | Exact code/test SHA `c9f64c3`; run `44719891817`: 620/620 passed. |
+| Deterministic preflight | VERIFIED | Exact code/test SHA `c9f64c3`; 7/7 passed; no model inference or clinical accuracy evaluation. |
+| Sequential development gate | VERIFIED | Exact code/test SHA `c9f64c3`; run `44719891822` SUCCESS. |
+| Security, dependency, secret scan and CodeQL | VERIFIED | Exact code/test SHA `c9f64c3`; run `44719891769` SUCCESS; all four jobs passed. |
+| Frontend build and browser E2E | VERIFIED | Latest post-merge baseline on `df90e4a`: runs `44702343341` and `44702343471`; no frontend files changed in this U09–U10 slice. |
+| Dashboard/API integration | IN PROGRESS | Backend API/unit coverage passes; no new browser E2E run was triggered by this backend-only change. |
+| Windows packaging prerequisites and installer | VERIFIED | Latest post-merge baseline on `df90e4a`: runs `44702343520` and `44702343432`; no packaging files changed in this slice. |
+| Deferred intake snapshot/terminal-event binding | BLOCKED | `intake_store.py` is outside U09–U10 allowed paths; retain for U04. No intake code changed. |
+| Legacy saved-case recovery/migration | BLOCKED | Historical v1/legacy snapshots remain read-only and fail-closed; no relabelling or silent migration. |
+| Ollama discovery and installed/stopped/model reuse | BLOCKED | U03 is later in the approved sequence; local installed-but-stopped and existing-model reuse remain unverified. |
+| Live 45-role R1–R4 run and saved-run audit | NOT STARTED | No live run ID or saved MDT artifact is claimed. |
+| RTX 4060 request-time GPU inference | NOT STARTED | No request-time `nvidia-smi` telemetry, Ollama offload trace or measured GPU inference. |
+| Independent clinical validation | NOT STARTED | No independent clinical validation or guideline concordance is claimed. |
+| U04, U05–U06, U06–U08, U07, U03 and U01–U02 | BLOCKED | All remain later than active U09–U10 in the approved dependency sequence. |
+| Integrated release acceptance | BLOCKED | U09–U10 remains IN PROGRESS; ordered later work, live model, GPU, evidence and clinical validation remain outstanding. |
+
+**Next U09–U10 action:** continue the remaining typed-field non-PRESENT state/provenance and deterministic audit projections, using regression-first changes for reproducible gaps only. Preserve the current summary and per-field state regressions. Re-run exact-head Backend Tests/preflight, Sequential Gate and Security Audit; inspect logs and artifacts; then update this same checklist. Do not modify `intake_store.py`, change the machine plan, activate U04 or begin later work.
+
+**Clinical/verification boundary:** this checkpoint verifies deterministic software behavior only. It does not prove model adherence, live 45-role execution, saved Chair reconciliation, clinical staging correctness, guideline verification, GPU inference or independent clinical validation.
