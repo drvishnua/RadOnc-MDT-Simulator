@@ -2952,24 +2952,17 @@ def test_present_social_context_does_not_support_a_different_living_arrangement(
     assert any("social_context" in item for item in flags)
 
 
-def test_confirmed_absent_social_context_cannot_fall_back_to_positive_summary_claim():
+def test_not_reported_social_context_cannot_fall_back_to_positive_summary_claim():
     statement = "The patient lives with a spouse."
     case = _case(
         case_summary="Referral text: " + statement,
         social_context=[],
-        clinical_field_states={"social_context": "CONFIRMED_ABSENT"},
-        clinical_field_provenance={
-            "social_context": [{
-                "source_type": "CLINICIAN_NOTE",
-                "source_reference": "social-history-absence",
-                "source_excerpt": "No social history or living arrangement was documented.",
-            }]
-        },
+        clinical_field_states={"social_context": "NOT_REPORTED"},
     )
     flags = audit_unverified_case_claims(case, {
         "provisional_conclusion": statement,
     })
-    assert any("social_context" in item and "CONFIRMED_ABSENT" in item for item in flags)
+    assert any("social_context" in item and "NOT_REPORTED" in item for item in flags)
 
 
 def test_present_resource_context_does_not_support_a_different_constraint():
@@ -2980,22 +2973,37 @@ def test_present_resource_context_does_not_support_a_different_constraint():
     assert any("resource_context" in item for item in flags)
 
 
-def test_confirmed_absent_resource_context_cannot_fall_back_to_positive_summary_claim():
+def test_not_reported_resource_context_cannot_fall_back_to_positive_summary_claim():
     statement = "The patient has financial constraints."
     case = _case(
         case_summary="Referral text: " + statement,
         resource_context=[],
-        clinical_field_states={"resource_context": "CONFIRMED_ABSENT"},
+        clinical_field_states={"resource_context": "NOT_REPORTED"},
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert any("resource_context" in item and "NOT_REPORTED" in item for item in flags)
+
+def test_confirmed_absent_comorbidity_cannot_support_a_positive_summary_claim():
+    statement = "The patient has diabetes mellitus."
+    case = _case(
+        case_summary="Referral text: " + statement,
+        relevant_comorbidities=[],
+        clinical_field_states={"relevant_comorbidities": "CONFIRMED_ABSENT"},
         clinical_field_provenance={
-            "resource_context": [{
+            "relevant_comorbidities": [{
                 "source_type": "CLINICIAN_NOTE",
-                "source_reference": "resource-history-absence",
-                "source_excerpt": "No financial, transport or access constraints were documented.",
+                "source_reference": "comorbidity-absence",
+                "source_excerpt": "No known comorbidities.",
             }]
         },
     )
     flags = audit_unverified_case_claims(case, {
         "provisional_conclusion": statement,
     })
-    assert any("resource_context" in item and "CONFIRMED_ABSENT" in item for item in flags)
+    assert any(
+        "relevant_comorbidities" in item and "CONFIRMED_ABSENT" in item
+        for item in flags
+    )
 
