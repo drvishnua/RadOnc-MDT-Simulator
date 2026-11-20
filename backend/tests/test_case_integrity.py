@@ -3032,3 +3032,39 @@ def test_patient_goal_cannot_substitute_for_explicit_patient_willingness():
     })
     assert any("patient_willingness" in item or "patient preference/decision" in item for item in flags)
 
+def test_known_unknown_willingness_blocks_matching_case_summary_fallback():
+    statement = "The patient is willing to undergo surgery."
+    case = _case(
+        case_summary="Referral text: " + statement,
+        patient_willingness=None,
+        known_unknowns=["Patient willingness has not been established."],
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert any("patient_willingness" in item for item in flags)
+
+
+def test_known_unknown_treatment_consent_blocks_matching_case_summary_fallback():
+    statement = "The patient has consented to surgery."
+    case = _case(
+        case_summary="Referral text: " + statement,
+        known_unknowns=["Treatment-specific informed consent has not been documented."],
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert any("treatment-specific consent" in item for item in flags)
+
+
+def test_unrelated_known_unknown_does_not_block_matching_treatment_consent_source():
+    statement = "The patient has consented to surgery."
+    case = _case(
+        case_summary="Referral text: " + statement,
+        known_unknowns=["The staging system and edition are not supplied."],
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert not any("treatment-specific consent" in item for item in flags)
+
