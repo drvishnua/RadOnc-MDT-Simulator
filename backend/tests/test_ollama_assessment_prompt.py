@@ -3,8 +3,10 @@ import json
 
 from app.agents.catalog import AGENT_PROFILES, EXPECTED_AGENT_COUNT
 from app.clinical_fields import CLINICAL_FIELD_REGISTRY_VERSION
+from app.round_schemas import AdversarialContributionDraft, Round2ContributionDraft
 from app.schemas import SyntheticCase
-from app.services import ollama
+from app.services import mdt_generation, ollama
+from app.services.case_integrity import build_case_prompt_context
 
 
 def test_r1_prompt_requires_fact_use_and_explicit_hypothetical_branches(monkeypatch):
@@ -196,4 +198,113 @@ def test_all_45_specialist_roles_receive_identical_v2_canonical_case_context(mon
     ] == "user_supplied_not_independently_verified"
     assert context["case_snapshot"]["case_summary"] == case.case_summary
     assert context["case_snapshot"]["age_years"] == 64
+
+def test_all_45_roles_receive_identical_canonical_context_in_rounds_2_and_3(monkeypatch):
+    """R2 and R3 must share the exact same v2 case context for every configured role."""
+    captured_prompts = []
+
+    round_payload = {
+        "position": "conditional",
+        "provisional_conclusion": (
+            "This role-specific educational position remains conditional; "
+            "the supplied record does not establish a definitive conclusion."
+        ),
+        "response_to_other_perspectives": (
+            "No peer contributions were supplied in this isolated contract test, "
+            "so no peer agreement or disagreement is inferred."
+        ),
+        "agreements": [],
+        "substantive_challenges": [],
+        "position_changes": [],
+        "remaining_unknowns": ["Clinical T and N are unknown; clinical M is not assessed."],
+        "risk_flags": [],
+        "confidence": 0.4,
+    }
+
+    async def fake_generate_structured(prompt, schema_type, max_tokens):
+        captured_prompts.append({"round_schema": schema_type.__name__, "prompt": prompt})
+        payload = dict(round_payload)
+        if schema_type is Round2ContributionDraft:
+            payload["source_opinion_responses"] = []
+        elif schema_type is AdversarialContributionDraft:
+            payload["source_opinion_reviews"] = []
+        else:
+            raise AssertionError(f"Unexpected schema requested: {schema_type.__name__}")
+        return schema_type.model_validate(payload)
+
+    monkeypatch.setattr(mdt_generation, "_generate_structured", fake_generate_structured)
+
+    case = SyntheticCase(
+        scenario_title="Synthetic all-role R2/R3 canonical-context regression",
+        case_summary=(
+            "Fictional educational case. Clinical T and N are unknown; "
+            "clinical M has not been assessed."
+        ),
+        age_years=64,
+        primary_site="Larynx",
+        histology="Squamous cell carcinoma",
+        clinical_field_states={
+            "clinical_t_stage": "UNKNOWN",
+            "clinical_n_stage": "UNKNOWN",
+            "clinical_m_stage": "NOT_ASSESSED",
+        },
+    )
+    own_r1 = {
+        "position": "conditional",
+        "provisional_conclusion": (
+            "The role-specific R1 educational assessment remains conditional "
+            "because relevant details are not established in the supplied record."
+        ),
+        "preferred_educational_option": "No unconditional option is selected.",
+        "case_data_integrity_flags": [],
+    }
+    own_r2 = {
+        "position": "conditional",
+        "provisional_conclusion": (
+            "The role-specific R2 educational position remains conditional "
+            "and does not establish a patient-specific indication."
+        ),
+        "response_to_other_perspectives": (
+            "No peer contributions were supplied in this isolated contract test."
+        ),
+        "agreements": [],
+        "substantive_challenges": [],
+        "position_changes": [],
+        "remaining_unknowns": [],
+        "risk_flags": [],
+        "case_data_integrity_flags": [],
+        "source_opinion_responses": [],
+        "source_reference_integrity_flags": [],
+    }
+
+    async def generate_both_rounds_for_all_roles():
+        for profile in AGENT_PROFILES:
+            await mdt_generation.generate_debate_contribution(
+                profile, case, own_r1, peer_views=[]
+            )
+            await mdt_generation.generate_adversarial_contribution(
+                profile, case, own_r1, own_r2, peer_debate_views=[]
+            )
+
+    asyncio.run(generate_both_rounds_for_all_roles())
+
+    assert len(AGENT_PROFILES) == EXPECTED_AGENT_COUNT == 45
+    assert len(captured_prompts) == EXPECTED_AGENT_COUNT * 2
+    assert sum(item["round_schema"] == "Round2ContributionDraft" for item in captured_prompts) == 45
+    assert sum(item["round_schema"] == "AdversarialContributionDraft" for item in captured_prompts) == 45
+
+    expected_context = json.dumps(
+        build_case_prompt_context(case),
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+    for item in captured_prompts:
+        prompt = item["prompt"]
+        assert "SUPPLIED CASE:\\n" + expected_context in prompt
+        assert "\\nSERVER-IDENTIFIED ATTRIBUTED SOURCE OPINIONS" in prompt
+
+    assert all(
+        item["prompt"].count(expected_context) == 1
+        for item in captured_prompts
+    )
 
