@@ -308,6 +308,7 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
             "The v2 canonical field registry is immutable; field IDs and meanings must not be renamed or repurposed.",
             "Registry constants standardise identifiers and semantics; they do not guarantee model adherence or prevent every hallucination.",
             "UNKNOWN, NOT_REPORTED, NOT_ASSESSED, PENDING, DECLINED and NOT_APPLICABLE are distinct states and are never normal/negative findings.",
+            "INVALID means a supplied raw value failed validation; preserve it for audit, but do not treat it as a valid clinical fact, use it for canonical comparison, or rely on it to support a conclusion.",
             "CONFIRMED_ABSENT requires explicit source provenance; an empty or omitted field is not a confirmed absent or negative finding.",
             "CONFLICTING fields retain all source-specific candidate values and remain unresolved; do not select or average a source.",
             "The raw case snapshot and source excerpts must be preserved; canonical comparison values are analysis-only and do not overwrite the source.",
