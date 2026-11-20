@@ -6974,3 +6974,15 @@ The latest PR #5 head before this checklist update, `4a44b3e8d6796dee21d25e396d6
 - Each workflow is associated with exact SHA `4a44b3e8d6796dee21d25e396d611091c7982cd5`.
 
 **Status update:** backend tests, deterministic preflight, Sequential Development Gate and Security/Dependency Audit are VERIFIED on `4a44b3e`. U09–U10 remains IN PROGRESS pending independent review and remaining acceptance requirements. PR #5 remains OPEN and NOT MERGED. The checklist update creates a new documentation-only head; rerun the required workflows on that new head before merge consideration. No U04 or later workstream is started.
+
+
+### Verification on checklist-bearing application head — 20 November 2026
+
+Application and test code is unchanged from `4a44b3e8d6796dee21d25e396d611091c7982cd5`. The latest checklist-bearing PR head `529fb83f7be063d18bfa410cfb89734b66bdd983` has now completed:
+
+- Backend Tests run `44767842879`: SUCCESS; **789/789 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive**; diagnostic errors 0. Pytest artifact `14646452676`; deterministic preflight artifact `14646206676`.
+- Sequential Development Gate run `44767842931`: SUCCESS.
+- Security and Dependency Audit run `44767843140`: SUCCESS. Python CodeQL, JavaScript/TypeScript CodeQL, Python/Node dependency audit and full-history secret scan all successful.
+- All three workflow runs identify exact SHA `529fb83f7be063d18bfa410cfb89734b66bdd983`.
+
+**Master checklist current interpretation:** U09–U10 remains IN PROGRESS despite the verified software test/gate/security results; independent review and remaining acceptance work are outstanding. PR #5 remains OPEN, NOT MERGED. No U04 or later workstream has started. No live model, RTX 4060 request-time GPU or clinical validation is claimed.
