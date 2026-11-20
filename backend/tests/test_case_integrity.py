@@ -2637,6 +2637,46 @@ def test_primary_site_can_fall_back_to_summary_only_without_explicit_state():
     assert not any("primary_site" in item for item in flags)
 
 
+@pytest.mark.parametrize(
+    ("field_id", "case_values", "known_unknown", "generated_claim"),
+    [
+        (
+            "primary_site",
+            {"primary_site": "lung"},
+            "The primary site has not been confirmed.",
+            "The primary site is lung.",
+        ),
+        (
+            "anatomical_subsite",
+            {"anatomical_subsite": "upper lobe"},
+            "The anatomical subsite has not been reported.",
+            "The anatomical subsite is upper lobe.",
+        ),
+        (
+            "laterality",
+            {"laterality": "LEFT"},
+            "Tumour laterality remains unknown.",
+            "The primary tumour is left-sided.",
+        ),
+    ],
+)
+def test_known_unknown_for_anatomical_field_blocks_matching_structured_claim(
+    field_id, case_values, known_unknown, generated_claim
+):
+    case = _case(
+        case_summary="Referral narrative; anatomical detail is recorded in a separate structured field.",
+        known_unknowns=[known_unknown],
+        **case_values,
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": generated_claim,
+    })).casefold()
+
+    assert field_id in flags
+    assert "known_unknowns" in flags
+    assert "unresolved" in flags or "not been" in flags
+
+
 def test_unknown_anatomical_subsite_cannot_use_case_summary_as_selected_subsite():
     case = _case(
         anatomical_subsite=None,
