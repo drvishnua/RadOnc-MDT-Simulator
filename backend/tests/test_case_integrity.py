@@ -3068,3 +3068,56 @@ def test_unrelated_known_unknown_does_not_block_matching_treatment_consent_sourc
     })
     assert not any("treatment-specific consent" in item for item in flags)
 
+@pytest.mark.parametrize(
+    ("status", "statement"),
+    [
+        (
+            "NOT_ASKED",
+            "The patient's consent to participate in this educational scenario has not been asked.",
+        ),
+        (
+            "PENDING",
+            "The patient's consent to participate in this educational scenario is pending.",
+        ),
+        (
+            "WITHDRAWN",
+            "The patient withdrew consent to participate in this educational scenario.",
+        ),
+    ],
+)
+def test_not_asked_pending_and_withdrawn_consent_statuses_support_only_matching_statements(
+    status, statement
+):
+    case = _case(patient_consent_status=status)
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert not any("educational-scenario consent status" in item for item in flags)
+
+
+@pytest.mark.parametrize(
+    ("status", "statement"),
+    [
+        (
+            "NOT_ASKED",
+            "The patient has consented to participate in this educational scenario.",
+        ),
+        (
+            "PENDING",
+            "The patient has consented to participate in this educational scenario.",
+        ),
+        (
+            "WITHDRAWN",
+            "The patient has consented to participate in this educational scenario.",
+        ),
+    ],
+)
+def test_not_asked_pending_and_withdrawn_consent_do_not_support_consent_given(
+    status, statement
+):
+    case = _case(patient_consent_status=status)
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })).casefold()
+    assert "educational-scenario consent status" in flags
+
