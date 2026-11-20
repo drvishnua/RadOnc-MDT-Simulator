@@ -1047,6 +1047,13 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         "primary_site": (r"primary\s+site", r"site\s+of\s+(?:the\s+)?primary"),
         "anatomical_subsite": (r"anatomical\s+subsite",),
         "laterality": (r"laterality", r"primary\s+(?:tumou?r|lesion)\s+side"),
+        "age_years": (r"\b(?:patient\s+)?age(?:\s+in\s+years)?\b",),
+        "sex_at_birth": (r"\bsex\s+at\s+birth\b", r"\bbirth\s+sex\b"),
+        "diagnosis_date": (r"\bdiagnosis\s+date\b", r"\bdate\s+of\s+diagnosis\b"),
+        "histology": (r"\bhistology\b", r"\bhistological\s+diagnosis\b"),
+        "histological_grade": (r"\bhistological\s+grade\b", r"\btumou?r\s+grade\b"),
+        "performance_status": (r"\bperformance\s+status(?!\s+scale)\b",),
+        "performance_status_scale": (r"\bperformance\s+status\s+scale\b", r"\bperformance\s+status\s+scoring\s+scale\b"),
         "relevant_comorbidities": (r"relevant\s+comorbidit(?:y|ies)\s+history", r"comorbidit(?:y|ies)\s+history", r"medical\s+history"),
         "patient_willingness": (r"patient\s+willingness", r"patient\s+preference(?:s)?", r"patient\s+decision", r"willingness\s+to\s+(?:undergo|accept|receive)\s+treatment"),
     }
@@ -1424,15 +1431,20 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         }
 
     age_state = field_state("age_years")
+    age_gap = known_unknown_blocks_field("age_years")
     supported_ages = (
-        {case.age_years}
+        set()
+        if age_gap
+        else {case.age_years}
         if case.age_years is not None and field_assertable("age_years")
         else age_numbers(case_summary_text) if age_state is None
         else set()
     )
     unsupported_ages = sorted(age_numbers(text) - supported_ages)
     if unsupported_ages:
-        if case.age_years is not None and field_assertable("age_years"):
+        if age_gap:
+            reason = "age_years is explicitly unresolved in known_unknowns; its structured value and case-summary fallback cannot support an age assertion."
+        elif case.age_years is not None and field_assertable("age_years"):
             reason = f"which conflict with structured age_years={case.age_years}."
         elif age_state == "CONFLICTING":
             reason = "but age_years has conflicting source values; no single age may be selected."
@@ -1465,7 +1477,10 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         }
 
     diagnosis_date_state = field_state("diagnosis_date")
-    if case.diagnosis_date is not None and field_assertable("diagnosis_date"):
+    diagnosis_date_gap = known_unknown_blocks_field("diagnosis_date")
+    if diagnosis_date_gap:
+        supported_diagnosis_dates = set()
+    elif case.diagnosis_date is not None and field_assertable("diagnosis_date"):
         supported_diagnosis_dates = {case.diagnosis_date.isoformat()}
     elif diagnosis_date_state is None:
         # The verbatim summary is a fallback only when no explicit state exists.
@@ -1484,7 +1499,9 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     ]
     if unsupported_diagnosis_date_snippets:
         unsupported_dates = sorted({value for _snippet, value in unsupported_diagnosis_date_snippets})
-        if diagnosis_date_state == "CONFLICTING":
+        if diagnosis_date_gap:
+            reason = "diagnosis_date is explicitly unresolved in known_unknowns; its structured value and case-summary fallback cannot support a date claim."
+        elif diagnosis_date_state == "CONFLICTING":
             reason = "diagnosis_date has unresolved conflicting source values; no single date may be selected."
         elif diagnosis_date_state not in (None, "PRESENT"):
             reason = (
@@ -1660,7 +1677,10 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         return None
 
     sex_state = field_state("sex_at_birth")
-    if case.sex_at_birth not in (None, "") and field_assertable("sex_at_birth"):
+    sex_gap = known_unknown_blocks_field("sex_at_birth")
+    if sex_gap:
+        source_sexes = set()
+    elif case.sex_at_birth not in (None, "") and field_assertable("sex_at_birth"):
         expected_sex = sex_category(str(case.sex_at_birth))
         source_sexes = {expected_sex} if expected_sex else set()
     elif sex_state is None:
@@ -1679,7 +1699,9 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         if sex_category(term) not in source_sexes
     ]
     if unsupported_sex_terms:
-        if sex_state == "CONFLICTING":
+        if sex_gap:
+            reason = "sex_at_birth is explicitly unresolved in known_unknowns; its structured value and case-summary fallback cannot support a descriptor."
+        elif sex_state == "CONFLICTING":
             reason = "sex_at_birth has conflicting source values and no single descriptor may be selected."
         elif case.sex_at_birth not in (None, "") and field_assertable("sex_at_birth"):
             reason = f"these descriptors conflict with structured sex_at_birth={case.sex_at_birth!s}."
@@ -2099,6 +2121,8 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     )
     ps_state = field_state("performance_status")
     scale_state = field_state("performance_status_scale")
+    performance_gap = known_unknown_blocks_field("performance_status")
+    performance_scale_gap = known_unknown_blocks_field("performance_status_scale")
     embedded_scale = bool(
         case.performance_status
         and re.search(r"\b(?:ECOG|WHO|KPS|Karnofsky)\b", str(case.performance_status), re.IGNORECASE)
@@ -2107,7 +2131,9 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         (case.performance_status_scale not in (None, "") and scale_state in (None, "PRESENT"))
         or embedded_scale
     )
-    if case.performance_status not in (None, "") and field_assertable("performance_status") and scale_is_assertable:
+    if performance_gap or performance_scale_gap:
+        performance_source = ""
+    elif case.performance_status not in (None, "") and field_assertable("performance_status") and scale_is_assertable:
         performance_source = (
             str(case.performance_status)
             if embedded_scale
@@ -2121,7 +2147,13 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         performance_pattern, text, performance_source
     )
     if unsupported_performance:
-        if ps_state == "CONFLICTING" or scale_state == "CONFLICTING":
+        if performance_gap and performance_scale_gap:
+            reason = "performance_status and performance_status_scale are explicitly unresolved in known_unknowns; structured values and summary fallback cannot support a score."
+        elif performance_gap:
+            reason = "performance_status is explicitly unresolved in known_unknowns; its structured value and summary fallback cannot support a score."
+        elif performance_scale_gap:
+            reason = "performance_status_scale is explicitly unresolved in known_unknowns; the structured score cannot be interpreted without its scale."
+        elif ps_state == "CONFLICTING" or scale_state == "CONFLICTING":
             reason = "the performance-status value or scale has conflicting source values."
         elif case.performance_status not in (None, "") and field_assertable("performance_status") and not scale_is_assertable:
             reason = "the performance-status scale is absent or not assertable."
@@ -2213,7 +2245,8 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
 
     histology_state = field_state("histology")
     pathology_summary_state = field_state("pathology_summary")
-    if histology_state == "CONFLICTING" or pathology_summary_state == "CONFLICTING":
+    histology_gap = known_unknown_blocks_field("histology")
+    if histology_gap or histology_state == "CONFLICTING" or pathology_summary_state == "CONFLICTING":
         histology_source = ""
     elif case.histology not in (None, "") and field_assertable("histology"):
         histology_source = str(case.histology)
@@ -2233,10 +2266,15 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         if histology_key(item) not in source_histologies
     ]
     if unsupported_histologies:
+        if histology_gap:
+            histology_reason = "histology is explicitly unresolved in known_unknowns; structured histology, pathology-summary and case-summary fallback cannot support the diagnosis."
+        else:
+            histology_reason = "the diagnosis is not supported by the available structured histology/pathology field or verbatim case summary."
         flags.append(
             "Generated narrative asserts histological diagnosis(es) ("
             + ", ".join(unsupported_histologies[:3])
-            + "), which are not supported by the available structured histology/pathology field or verbatim case summary."
+            + "), but "
+            + histology_reason
         )
 
     histological_grade_pattern = re.compile(
@@ -2258,7 +2296,10 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
 
     histological_grade_state = field_state("histological_grade")
     pathology_summary_state = field_state("pathology_summary")
-    if histological_grade_state in (None, "PRESENT") and case.histological_grade not in (None, ""):
+    histological_grade_gap = known_unknown_blocks_field("histological_grade")
+    if histological_grade_gap:
+        supported_histological_grades = set()
+    elif histological_grade_state in (None, "PRESENT") and case.histological_grade not in (None, ""):
         supported_histological_grades = histological_grade_values(str(case.histological_grade))
     elif histological_grade_state is None:
         grade_source_parts = [
@@ -2278,7 +2319,9 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     )
     if unsupported_histological_grades:
         claims = ", ".join(f"G{grade}" for grade in unsupported_histological_grades[:3])
-        if histological_grade_state == "CONFLICTING":
+        if histological_grade_gap:
+            reason = "histological_grade is explicitly unresolved in known_unknowns; structured and case-summary/pathology-summary values cannot support a grade."
+        elif histological_grade_state == "CONFLICTING":
             reason = "histological_grade has conflicting source values and no single grade may be selected"
         elif histological_grade_state not in (None, "PRESENT"):
             reason = f"histological_grade is marked {histological_grade_state} and cannot support a selected grade"
