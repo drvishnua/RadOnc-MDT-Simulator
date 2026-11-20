@@ -170,10 +170,11 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
     field_status["scenario_title"] = {
         "label": "Scenario title", "status": "provided", "value": case.scenario_title,
     }
+    case_summary_state = case.clinical_field_states.get("case_summary")
     field_status["case_summary"] = {
         "label": "User-provided free-text case summary",
-        "status": "provided_verbatim_unparsed",
-        "value": case.case_summary,
+        "status": case_summary_state.casefold() if case_summary_state else "provided_verbatim_unparsed",
+        "value": None if case_summary_state == "CONFLICTING" else case.case_summary,
     }
 
     for field_id, definition in CLINICAL_FIELD_REGISTRY.items():
@@ -303,12 +304,16 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
         "field_status": field_status,
         "tnm_normalization_warnings": normalization_warnings,
         "staging_context_warnings": staging_context_warnings,
-        "source_integrity_warnings": _source_laterality_integrity_warnings(case.case_summary),
+        "source_integrity_warnings": (
+            _source_laterality_integrity_warnings(case.case_summary)
+            if case_summary_state in (None, "PRESENT") else []
+        ),
         "interpretation_rules": [
             "The v2 canonical field registry is immutable; field IDs and meanings must not be renamed or repurposed.",
             "Registry constants standardise identifiers and semantics; they do not guarantee model adherence or prevent every hallucination.",
             "UNKNOWN, NOT_REPORTED, NOT_ASSESSED, PENDING, DECLINED and NOT_APPLICABLE are distinct states and are never normal/negative findings.",
             "INVALID means a supplied raw value failed validation; preserve it for audit, but do not treat it as a valid clinical fact, use it for canonical comparison, or rely on it to support a conclusion.",
+            "An INVALID or CONFLICTING case_summary is preserved only as raw audit material and cannot support a generated clinical fact; use independently PRESENT fields and their provenance instead.",
             "CONFIRMED_ABSENT requires explicit source provenance; an empty or omitted field is not a confirmed absent or negative finding.",
             "CONFLICTING fields retain all source-specific candidate values and remain unresolved; do not select or average a source.",
             "The raw case snapshot and source excerpts must be preserved; canonical comparison values are analysis-only and do not overwrite the source.",
@@ -1004,8 +1009,13 @@ def _unsupported_prerequisite_status_matches(
 def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[str, Any]) -> list[str]:
     """Flag generated assertions that lack a corresponding structured source field."""
     text = " ".join(_flatten_strings(generated_payload))
-    flags: list[str] = _source_laterality_integrity_warnings(case.case_summary)
-    source_text = case.case_summary.casefold()
+    case_summary_text = (
+        case.case_summary
+        if case.clinical_field_states.get("case_summary") in (None, "PRESENT")
+        else ""
+    )
+    flags: list[str] = _source_laterality_integrity_warnings(case_summary_text)
+    source_text = case_summary_text.casefold()
 
     def field_state(field_id: str) -> str | None:
         return case.clinical_field_states.get(field_id)
@@ -1024,7 +1034,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         if state == "CONFIRMED_ABSENT":
             return field_provenance_text(field_id)
         if state in (None, "PRESENT"):
-            return "\n".join([case.case_summary, *values])
+            return "\n".join([case_summary_text, *values])
         return ""
 
     # Compare generated stage components with the exact structured value when
@@ -1049,7 +1059,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         elif explicit_state is not None:
             supported_values = set()
         else:
-            supported_values = _tnm_component_values(case.case_summary, component)
+            supported_values = _tnm_component_values(case_summary_text, component)
         generated_values = _tnm_component_values(text, component)
         unsupported_values = sorted(generated_values - supported_values)
         if unsupported_values:
@@ -1101,7 +1111,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             supported_values = set()
         else:
             supported_values = _tnm_component_values(
-                case.case_summary, component, allowed_prefixes=("P", "YP")
+                case_summary_text, component, allowed_prefixes=("P", "YP")
             )
         generated_values = _tnm_component_values(
             text, component, allowed_prefixes=("P", "YP")
@@ -1148,7 +1158,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     supported_ages = (
         {case.age_years}
         if case.age_years is not None and field_assertable("age_years")
-        else age_numbers(case.case_summary) if age_state is None
+        else age_numbers(case_summary_text) if age_state is None
         else set()
     )
     unsupported_ages = sorted(age_numbers(text) - supported_ages)
@@ -1169,7 +1179,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     # Stage groups are audited by declared type. Pathological staging cannot
     # support a clinical stage-group assertion, or vice versa. An untyped legacy
     # stage_group supports only an untyped generated/source statement.
-    source_group_records = _stage_group_records(case.case_summary)
+    source_group_records = _stage_group_records(case_summary_text)
     generated_group_records = _stage_group_records(text)
     stage_sources = {
         "UNSPECIFIED": (
@@ -1240,7 +1250,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             category
             for category in (
                 sex_category(term)
-                for term in _unqualified_matches(sex_pattern, case.case_summary)
+                for term in _unqualified_matches(sex_pattern, case_summary_text)
             )
             if category
         }
@@ -1320,7 +1330,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             else f"{case.performance_status_scale} {case.performance_status}"
         )
     elif ps_state is None and scale_state is None:
-        performance_source = case.case_summary
+        performance_source = case_summary_text
     else:
         performance_source = ""
     unsupported_performance = _unsupported_matches(
@@ -1351,7 +1361,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     supported_n_source = (
         str(case.clinical_n_stage)
         if case.clinical_n_stage not in (None, "") and n_state in (None, "PRESENT")
-        else case.case_summary if n_state is None else ""
+        else case_summary_text if n_state is None else ""
     )
     source_n_values = _tnm_component_values(supported_n_source, "N")
     source_explicitly_node_negative = bool(
@@ -1377,7 +1387,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     supported_m_source = (
         str(case.clinical_m_stage)
         if case.clinical_m_stage not in (None, "") and m_state in (None, "PRESENT")
-        else case.case_summary if m_state is None else ""
+        else case_summary_text if m_state is None else ""
     )
     source_m_values = _tnm_component_values(supported_m_source, "M")
     source_explicitly_no_metastases = bool(
@@ -1426,7 +1436,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     elif histology_state is None and case.pathology_summary not in (None, "") and field_assertable("pathology_summary"):
         histology_source = str(case.pathology_summary)
     elif histology_state is None and pathology_summary_state is None:
-        histology_source = case.case_summary
+        histology_source = case_summary_text
     else:
         histology_source = ""
     source_histologies = {
@@ -1454,7 +1464,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         item
         for item in (
             case.pathology_summary if pathology_summary_state in (None, "PRESENT") else "",
-            case.case_summary if pathology_summary_state is None else "",
+            case_summary_text if pathology_summary_state is None else "",
         )
         if item
     )
@@ -1492,7 +1502,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             for record in case.investigation_records
         )
     if all(state in (None, "PRESENT") for state in (imaging_state, investigations_state, records_state)):
-        investigation_parts.append(case.case_summary)
+        investigation_parts.append(case_summary_text)
     investigation_source = "\n".join(investigation_parts)
     unsupported_investigations = _unsupported_matches(
         investigation_pattern, text, investigation_source
@@ -1502,7 +1512,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     # This does not validate any additional biomarker, grade, margin, or stage claim;
     # those are checked independently by the pathology and TNM audits below/above.
     source_biopsy_statements = re.findall(
-        r"\bbiopsy\b[^.!?;\n]{1,140}", case.case_summary, re.IGNORECASE
+        r"\bbiopsy\b[^.!?;\n]{1,140}", case_summary_text, re.IGNORECASE
     )
     source_biopsy_histologies = {
         histology_key(item)
@@ -1577,7 +1587,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     treatment_suitability_matches = [
         item
         for item in _unsupported_matches(
-            treatment_suitability_pattern, text, case.case_summary
+            treatment_suitability_pattern, text, case_summary_text
         )
         if not conditional_suitability_marker.search(item)
     ]
@@ -1603,7 +1613,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     if preferences_state in (None, "PRESENT"):
         preference_sources.extend(f"patient {item}" for item in (case.patient_preferences or []))
     if goals_state in (None, "PRESENT") and preferences_state in (None, "PRESENT"):
-        preference_sources.append(case.case_summary)
+        preference_sources.append(case_summary_text)
     preference_source_text = "\n".join(preference_sources)
     unsupported_preferences = _unsupported_matches(
         preference_pattern,
@@ -1664,8 +1674,14 @@ def build_case_validation_warnings(case: SyntheticCase) -> list[str]:
     empty_fields = [field for field in ("current_medications", "known_allergies", "relevant_investigations", "relevant_comorbidities", "prior_treatment", "patient_goals", "social_context", "resource_context", "known_unknowns") if not getattr(case, field)]
     if empty_fields:
         warnings.append("Empty structured lists are not confirmed negatives; these fields are not reported: " + ", ".join(empty_fields) + ". Review the raw case summary before interpreting them.")
-    summary = case.case_summary.casefold()
-    warnings.extend(_source_laterality_integrity_warnings(case.case_summary))
+    summary_state = case.clinical_field_states.get("case_summary")
+    summary = case.case_summary.casefold() if summary_state in (None, "PRESENT") else ""
+    if summary_state in (None, "PRESENT"):
+        warnings.extend(_source_laterality_integrity_warnings(case.case_summary))
+    elif summary_state == "INVALID":
+        warnings.append("case_summary is marked INVALID; its preserved raw text is for audit only and cannot support a clinical assertion.")
+    elif summary_state == "CONFLICTING":
+        warnings.append("case_summary has unresolved conflicting source values; no single summary may be selected or used to support a clinical assertion.")
 
     # Explicit contradictions are warnings for human reconciliation; neither
     # the structured field nor free text is silently preferred.
