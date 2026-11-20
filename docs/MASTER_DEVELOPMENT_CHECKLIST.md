@@ -7863,3 +7863,70 @@ Application and test code is unchanged from `4a44b3e8d6796dee21d25e396d611091c79
 | Integrated release acceptance | BLOCKED | Broader U09–U10, live/GPU, evidence, clinical, security and packaging gates remain |
 
 **Next approved action:** continue the remaining U09–U10 registry-wide field/state/source/provenance acceptance in the approved order. Verify the remaining source/provenance and legacy-version boundaries with targeted evidence; add tests only for reproducible gaps. Preserve original values, unknown states, conflicts, hashes and audit history. Do not edit the machine plan, start U04, merge PR #5, or modify the protected development branch or main.
+
+### U09 legacy registry-version upgrade boundary — explicit accepted v1-to-v2 case version — 20 November 2026
+
+**Approved-sequence position:** remains within `active_step=U09-U10`. The existing tests already proved that v1/unversioned records remain readable and hash-verified but cannot start/resume generation. This increment closes the remaining combined transition boundary: a historical v1 record must not be relabelled in place; an explicit, newly accepted v2 intake must create a separate immutable version before new generation.
+
+**Single targeted regression**
+- Test-only commit: `2b5248ee41f19dba696967a9665d5c365e8def42`, `backend/tests/test_patients.py`.
+- Added `test_historical_v1_case_requires_new_accepted_v2_version_before_generation`.
+- The test first tags an existing immutable case version as historical registry `1.0.0`, verifies that attempting to start a run from it returns HTTP 409 and cites the unsupported historical/current registry versions.
+- It then creates and explicitly accepts a fresh synthetic intake, promotes that intake to the same patient, and verifies that the promotion creates a separate version 2 under active registry `2.0.0`, linked to the accepted intake and its promotion event.
+- It verifies the historical v1 row retains the exact original `case_json` bytes, SHA-256 and `1.0.0` registry label; the old case remains readable and unchanged. New generation is accepted only from the new accepted v2 version.
+- No application code, existing patient source values, old records or machine-plan data were changed.
+
+**Exact-head verification**
+- Backend run `44796588077`: **858/858 passed**, 0 failures, 0 errors, 0 skipped, 0 inconclusive; deterministic no-inference preflight **7/7 passed**, diagnostic errors **0**, 1 warning.
+- New legacy-to-v2 regression passed: `pytest::tests.test_patients::test_historical_v1_case_requires_new_accepted_v2_version_before_generation`.
+- JUnit diagnostics artifact `14657379389`, SHA-256 `b378a0fc76fd9214dedf7cedf7955ad85ee5cb3e24034b2bf5f27613b0f7f980`.
+- Deterministic preflight artifact `14659681000`, SHA-256 `0b2d2dbe09793d1fe75c9b63287c89b59291334bad61be83a8b79fef925aa7f0`.
+- Sequential Development Gate `44796588104`: SUCCESS.
+- Security and Dependency Audit `44796588154`: SUCCESS. Python/Node dependency audit (`136497593161`), full-history secret scan (`136497593884`), Python CodeQL (`136497593627`) and JavaScript/TypeScript CodeQL (`136497594188`) all passed.
+
+**Verified boundary and limitation**
+- Historical v1 case versions stay reviewable and hash-verified; they are not silently interpreted under the v2 contract and cannot enter new generation.
+- Upgrade is an explicit new accepted intake and a new immutable v2 patient-case version; the earlier v1 version remains preserved.
+- This is deterministic software/integration evidence for the tested transition. It is not external source verification or independent clinical validation.
+- Existing legacy database-copy, additive schema migration, unversioned-read-only, v1-run-read-only, accepted-intake event-chain and hash-preservation tests remain in place.
+
+### Master Checklist — Current Status (20 November 2026; verified code/test head 2b5248e)
+
+| Workstream | Status | Evidence / outstanding boundary |
+|---|---|---|
+| PR #5 / branch protection | VERIFIED | PR #5 OPEN, NOT MERGED; source `docs/reconcile-master-checklist-after-pr4-merge`; base `feature/four-round-mdt-and-performance` at `df90e4a380bef06a7d37def753b385db4ae86c30`; main and protected development branch untouched |
+| Approved machine-plan sequence | VERIFIED | `docs/development_plan.json` `active_step=U09-U10`; U04 and all later plan steps remain BLOCKED |
+| Single repository master checklist | VERIFIED | Existing `docs/MASTER_DEVELOPMENT_CHECKLIST.md` appended in place; no duplicate checklist |
+| U09 immutable clinical registry v2 / stable IDs | VERIFIED for tested contract | 40 fields, 7 declared value types, immutable definitions/aliases/version hash and schema field/type checks |
+| U09 registry/schema state vocabulary | VERIFIED for tested contract | `6b144ed`; every field-level allowed state maps to schema `DataState`, and every schema state is declared by the v2 registry |
+| U09 full v2 patient-case persistence | VERIFIED for tested round-trip | `3bb7e33`; exact backend 856/856; full registry case payload persisted across immutable versions and database reopen |
+| U09 field-state/provenance/conflict persistence | VERIFIED for tested combinations | `9716885`, `3bb7e33`; UNKNOWN, INVALID, PRESENT, CONFLICTING and CONFIRMED_ABSENT; excerpts/hashes/conflict candidates survive reopen |
+| U09 source-text/hash/frozen provenance | VERIFIED for tested cases | Exact excerpts, SHA-256 checks and immutable source records tested; source authenticity remains independently unverified |
+| U09 empty provenance-list fallback | VERIFIED | PRESENT/INVALID fallback tests pass; empty explicit provenance list does not suppress required hash-bound user-input provenance |
+| U09 legacy/v1 read-only compatibility | VERIFIED for tested cases | Historical v1 and unversioned data remain reviewable/hash-verified; new/resumed generation fails closed on unsupported registry versions |
+| U09 explicit v1-to-v2 upgrade path | VERIFIED for tested transition | `2b5248e`; v1 raw JSON/hash/version remain unchanged; separate accepted v2 intake creates version 2; generation starts only from v2 |
+| U10 TNM and typed stage-group separation | VERIFIED for tested cases | Clinical/pathological components and groups are separate; lexical normalization is not clinical staging validation |
+| U10 known_unknowns own-state gate | VERIFIED | Non-PRESENT known_unknowns list values are not consumed |
+| U10 known_unknowns — staging/comorbidity/willingness | VERIFIED for tested cases | Matching-field, clause-local and unrelated-field controls |
+| U10 known_unknowns — site/subsite/laterality | VERIFIED for tested cases | Matching/unrelated controls; source laterality contradictions not auto-resolved |
+| U10 known_unknowns — age/sex/date/histology/grade/performance | VERIFIED for tested cases | Matching/unrelated controls; performance scale is not inferred |
+| U10 known_unknowns — family/caregiver | VERIFIED for tested cases | Matching, unrelated and positive controls |
+| U10 known_unknowns — medications/allergies/prior treatment | VERIFIED for tested cases | Matching, unrelated and positive controls |
+| U10 known_unknowns — relevant investigations/typed records | VERIFIED for tested cases | `a57eb7a`, `4e9177a`, `ac385781`; backend 837/837 |
+| U10 known_unknowns — goals/preferences/social/resource | VERIFIED for tested cases | `4be8f85`, `8c6fa70`; backend 855/855; separate goals/preferences and 18 regressions |
+| Broader U09–U10 field/state/source/provenance acceptance | IN PROGRESS | Only remaining reproducible gaps and overall acceptance remain; do not reopen verified groups without a regression |
+| Backend tests / deterministic preflight | VERIFIED on `2b5248e` | Run `44796588077`: 858/858; preflight 7/7; diagnostics 0; artifacts `14657379389` and `14659681000` |
+| Sequential Development Gate | VERIFIED on `2b5248e` | Run `44796588104`: SUCCESS |
+| Security/dependency/secret scan/CodeQL | VERIFIED on `2b5248e` | Run `44796588154`: SUCCESS; dependency audit, secret scan and both language CodeQL scans passed |
+| Frontend build / browser E2E | NOT APPLICABLE | No frontend files changed in this backend/test-only U09–U10 increment |
+| R1–R3 shared canonical context across 45 roles | IN PROGRESS | Mocked all-role context regression exists; live saved-run coverage remains |
+| R4 Chair consensus, dissent and traceability | IN PROGRESS | Live saved R1–R3 to Chair reconciliation remains unverified |
+| Case snapshot hashes, audit, failure and resume integrity | IN PROGRESS | Deterministic controls exist; complete live saved-run tamper/failure/resume acceptance remains |
+| Evidence retrieval and claim-to-passage verification | IN PROGRESS | External current-source retrieval and live claim verification remain |
+| Ollama discovery/reuse and RTX 4060 request-time inference | BLOCKED | Later ordered work; no request-time GPU telemetry or actual inference proof |
+| U04 and later ordered workstreams | BLOCKED | Must not start before U09–U10 acceptance |
+| Live 45-role R1–R4 execution and saved-run audit | NOT STARTED | No accepted current-head live run ID or inspected saved artefact |
+| Independent clinical validation | NOT STARTED | No qualified independent clinical review |
+| Integrated release acceptance | BLOCKED | Remaining U09–U10 acceptance, live/GPU, evidence, clinical and packaging gates remain |
+
+**Next approved action:** continue only the remaining U09–U10 source/provenance and legacy-version boundary checks that have not already been verified. Add a narrowly scoped regression only for a demonstrated gap, then verify against the exact head. Preserve all historical records, raw source values, unknown states, conflicts, hashes and audit history. Do not edit the machine plan, start U04, merge PR #5, or modify the protected development branch or main.
