@@ -4183,7 +4183,6 @@ def test_matching_relevant_investigation_gap_blocks_generic_case_summary_fallbac
         case_summary=statement,
         relevant_investigations=[],
         investigation_records=[],
-        clinical_field_states={"relevant_investigations": "PRESENT"},
         known_unknowns=["Relevant investigations have not been reported."],
     )
     flags = " ".join(audit_unverified_case_claims(case, {
