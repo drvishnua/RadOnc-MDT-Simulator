@@ -231,7 +231,7 @@ _PROVENANCE_REQUIRED_FIELDS: Final = frozenset({
 })
 
 def _build_v2_definition(definition: ClinicalFieldDefinition) -> ClinicalFieldDefinition:
-    states = _LIST_DATA_STATES if definition.field_id in _NEGATIVEABLE_LIST_FIELDS or definition.value_type in {"string_list", "object_list"} else _COMMON_DATA_STATES
+    states = _LIST_DATA_STATES if definition.field_id in _NEGATIVEABLE_LIST_FIELDS else _COMMON_DATA_STATES
     return replace(
         definition,
         allowed_states=states,
