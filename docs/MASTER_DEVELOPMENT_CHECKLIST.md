@@ -4925,3 +4925,56 @@ This is the latest authoritative status. Earlier entries above are retained as h
 - U09–U10 remains `IN PROGRESS`; machine plan, U12 scope baseline and approved step order remain unchanged. PR #5 remains open and unmerged pending independent review.
 - **Next U09–U10 work:** continue case-integrity audit coverage for non-PRESENT states and other typed fields; keep the deferred current-snapshot/terminal-event check in U04 and do not modify intake services during U09–U10.
 
+# Master Checklist — Current Status (20 November 2026; latest PR #5 verification)
+
+**Exact code/test commit:** `ce24dc56f196d83d52c1f8d022c513b655fc88a2`  
+**PR #5 head branch:** `docs/reconcile-master-checklist-after-pr4-merge`  
+**PR #5:** OPEN, not draft, not merged; base `feature/four-round-mdt-and-performance` at `df90e4a380bef06a7d37def753b385db4ae86c30`. Independent review records: 0; review threads: 0.  
+**Approved machine plan:** `active_step=U09-U10`; U09-U10 remains IN PROGRESS; U04 and every later step remain BLOCKED. U12 scope baseline remains `5284483a26e87028f919966e304c472ed537e839`.
+
+## Latest U09–U10 change: invalid/conflicting case-summary quarantine
+
+A regression-first review found that `case_summary` itself can be marked `INVALID` or `CONFLICTING`, but the deterministic claim audit still used the raw summary as supporting evidence. The prompt's separate `field_status.case_summary` entry also always labelled it `provided_verbatim_unparsed` and exposed the raw text as selected, even when the canonical state was INVALID or CONFLICTING.
+
+- Regression-only commit `5f3a6f23259175f80e1d61be2518293f41489bf4` added three tests for (1) an INVALID summary incorrectly supporting TNM, age, sex and negative comorbidity/prior-treatment claims, (2) the INVALID summary's prompt status, and (3) the selected-value leak for a CONFLICTING summary.
+- Exact-head Backend Tests run `44718300046` reproduced all three failures: **608 passed, 3 failed, 0 errors, 0 skipped, 0 inconclusive**. The failure diagnostics identify the unflagged TNM/other claims and the incorrect `provided_verbatim_unparsed` state. Deterministic preflight was **7/7**. Sequential Development Gate run `44718299903`: SUCCESS. Security and Dependency Audit run `44718299977`: SUCCESS.
+- Fix commit `ce24dc56f196d83d52c1f8d022c513b655fc88a2` changes only `backend/app/services/case_integrity.py` after the regression-only commit. The audit now passes only a case summary in an implicit or explicit PRESENT state into its supporting-source fallbacks; INVALID and CONFLICTING summaries cannot support generated claims. The prompt's field-status entry now carries the actual state, the selected value is null for CONFLICTING, and the summary's source-integrity checks run only when the summary is assertable. The shared interpretation rules explicitly quarantine INVALID/CONFLICTING summary text. Case-validation warnings also identify INVALID and CONFLICTING summaries without treating their text as a trusted source.
+- Exact-head Backend Tests run `44718735962`: **611 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive**; one existing warning. Deterministic preflight: **7 passed, 0 failed, 0 inconclusive**. Preflight reports no model inference and no clinical accuracy evaluation.
+- Exact-head Sequential Development Gate run `44718735823`: SUCCESS.
+- Exact-head Security and Dependency Audit run `44718735878`: SUCCESS. Python and Node dependency audit, Python CodeQL, JavaScript/TypeScript CodeQL, and full-history secret scan all completed successfully.
+- Exact-head artifacts: deterministic preflight artifact `14619854879`, SHA-256 `fd88df44ef9d770a2776a378b3ec1f4d656f7932fe1ba30a3e5fb49fa3221be0`; pytest/JUnit diagnostics artifact `14620302889`, SHA-256 `c55c9bcf778c8921bcc6bf5a0a8e726307d89dd75a0b0969aaea5eb285145b8d`.
+- The regression failure on `5f3a6f2` remains recorded above as the reproduction; it is not counted as acceptance. The passing evidence is tied to the exact fix commit `ce24dc5`.
+
+## Master Checklist — Current Status
+
+| Workstream | Status | Current evidence / outstanding boundary |
+|---|---|---|
+| Repository, branch, PR, commit and checklist verification | VERIFIED | PR #5 head is `ce24dc5`; it targets the protected development branch, not `main`. PR #5 remains open/unmerged with no independent review recorded. |
+| U12 protected sequential development gate | VERIFIED | Development-only machine plan; exact-head gate run `44718735823` SUCCESS. |
+| U09 canonical clinical registry v2 | IN PROGRESS | Immutable v2 registry and stable IDs exist; complete U09/U10 acceptance and legacy-case compatibility/recovery remain outstanding. |
+| U10 deterministic state-aware hallucination controls | IN PROGRESS | INVALID/CONFLICTING case-summary quarantine and prior typed-state safeguards pass exact-head backend tests; remaining field-specific and saved-data-path audit remains. |
+| R1–R4 shared canonical case-data flow | IN PROGRESS | Mocked all-45-role R1, R2 and R3 prompt-context equivalence tests are recorded in earlier entries; saved live R1–R3 and Chair R4 execution remains unverified. |
+| Clinical safety and staging | IN PROGRESS | Deterministic state, provenance and clinical/pathological phase-separation regressions pass; site/system/edition-aware clinical classification and independent clinical review are not established. |
+| Case integrity, hashes and audit | IN PROGRESS | Source excerpt hashes, immutable provenance/conflict data, INVALID handling and case-summary quarantine are regression-tested; saved patient-version/run tamper and failure-path acceptance remains open. |
+| Provenance and evidence retrieval | IN PROGRESS | User-provided source identity/hash is retained and explicitly marked not independently verified; external evidence retrieval and source-document verification are not established. |
+| Chair consensus, conditionality, dissent and traceability | IN PROGRESS | Deterministic safeguards exist; full saved-contribution Chair reconciliation and live dissent/consensus audit remain outstanding. |
+| Missing/failed specialist and partial-run handling | IN PROGRESS | Deterministic regression coverage exists; complete live 45-role failure/resume inspection remains outstanding. |
+| Backend tests | VERIFIED | Exact code/test SHA `ce24dc5`; Backend run `44718735962`: 611/611 passed. |
+| Deterministic preflight | VERIFIED | Exact code/test SHA `ce24dc5`; 7/7 passed; no model inference or clinical accuracy evaluation. |
+| Sequential development gate | VERIFIED | Exact code/test SHA `ce24dc5`; run `44718735823` SUCCESS. |
+| Security, dependency, secret scan and CodeQL | VERIFIED | Exact code/test SHA `ce24dc5`; run `44718735878` SUCCESS, all four jobs passed. |
+| Frontend build and browser E2E | VERIFIED | Latest post-merge baseline runs on `df90e4a`: Frontend `44702343341`, Browser E2E `44702343471`. No frontend files changed in this U09–U10 slice. |
+| Dashboard/API integration | IN PROGRESS | Backend API/unit coverage passes; a new browser E2E on PR #5 head was not triggered by this backend-only change. |
+| Windows packaging prerequisites and installer | VERIFIED | Latest post-merge baseline runs on `df90e4a`: packaging prerequisites `44702343520`, installer `44702343432`; no packaging files changed in this slice. |
+| Deferred intake snapshot/terminal-event binding | BLOCKED | `intake_store.py` is outside U09–U10 allowed paths; preserve this finding for U04. No intake code changed. |
+| Legacy saved-case recovery/migration | BLOCKED | Keep v1/legacy snapshots read-only and fail-closed; do not relabel or silently migrate. Recovery requires its ordered, separately verified scope. |
+| Ollama discovery, installed/stopped/model reuse and installer state machine | BLOCKED | U03 is later in the approved sequence; local installed-but-stopped and existing-model reuse remain unverified. |
+| Live 45-role R1–R4 run and saved-run artifact audit | NOT STARTED | No live run ID or saved production-like MDT artifact is claimed. |
+| RTX 4060 request-time GPU inference | NOT STARTED | No local `nvidia-smi` request-time telemetry, Ollama offload trace or measured GPU inference evidence. |
+| Independent clinical validation | NOT STARTED | No independent clinical validation or guideline concordance is claimed. |
+| U04, U05–U06, U06–U08, U07, U03 and U01–U02 | BLOCKED | All remain later than active U09–U10 in the approved dependency sequence. |
+| Integrated release acceptance | BLOCKED | U09–U10 remains IN PROGRESS; later ordered work, full live model, GPU, evidence and independent clinical validation are outstanding. |
+
+**Current U09–U10 sequence:** continue the remaining typed-field non-PRESENT state/provenance and deterministic audit projections; preserve the invalid/conflicting case-summary regression; add only scoped regressions for reproducible gaps; run the exact-head backend/preflight, sequential gate and security checks; inspect their logs/artifacts; update this same checklist. Do not modify `intake_store.py`, change the machine plan, activate U04, or work on later steps.
+
+**Clinical and validation boundary:** the checks above verify deterministic software behavior only. They do not establish that Qwen follows prompts, that all 45 roles complete a live MDT, that Chair R4 correctly reconciles saved contributions, that any clinical staging is correct, or that guidelines/evidence have been retrieved and checked. No RTX 4060 inference, clinical accuracy or independent clinical validation is claimed.
