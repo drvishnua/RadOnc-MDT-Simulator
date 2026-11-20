@@ -364,3 +364,44 @@ def test_case_model_persists_hash_bound_user_input_provenance_for_supplied_field
     assert t_source.source_excerpt == "T1"
     assert investigation_source.source_type == "STRUCTURED_CASE_INPUT"
     assert investigation_source.source_sha256
+
+
+
+def test_model_facing_case_snapshot_redacts_conflicting_flat_value_but_preserves_candidates():
+    case = _case(
+        age_years=70,
+        clinical_field_states={"age_years": "CONFLICTING"},
+        clinical_field_conflicts={
+            "age_years": [
+                {
+                    "raw_value": 70,
+                    "provenance": {
+                        "source_type": "CLINICIAN_NOTE",
+                        "source_reference": "age-note-a",
+                        "source_excerpt": "Age recorded as 70 years.",
+                    },
+                },
+                {
+                    "raw_value": 72,
+                    "provenance": {
+                        "source_type": "PATIENT_REPORT",
+                        "source_reference": "age-report-b",
+                        "source_excerpt": "Patient reports age as 72 years.",
+                    },
+                },
+            ]
+        },
+    )
+    context = build_case_prompt_context(case)
+
+    # The in-memory/original case remains unchanged for immutable persistence.
+    assert case.model_dump(mode="json")["age_years"] == 70
+    # The prompt receives no arbitrarily selected flat value.
+    assert context["case_snapshot"]["age_years"] is None
+    assert context["field_status"]["age_years"]["value"] is None
+    field = context["canonical_field_values"]["age_years"]
+    assert field["state"] == "CONFLICTING"
+    assert field["raw_value"] is None
+    assert [item["raw_value"] for item in field["conflict_candidates"]] == [70, 72]
+    assert "age_years" in context["case_snapshot_redacted_conflicting_fields"]
+    assert "persisted immutable case snapshot is unchanged" in context["case_snapshot_projection_note"]
