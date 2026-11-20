@@ -359,7 +359,7 @@ def test_case_model_persists_hash_bound_user_input_provenance_for_supplied_field
     investigation_source = case.clinical_field_provenance["investigation_records"][0]
 
     assert age_source.source_reference == "SyntheticCase.age_years"
-    assert age_source.verification_status == "USER_SUPPLIED_NOT_INDEPENDENTLY_VERIFIED"
+    assert age_source.verification_status == "user_supplied_not_independently_verified"
     assert age_source.source_sha256
     assert t_source.source_excerpt == "T1"
     assert investigation_source.source_type == "STRUCTURED_CASE_INPUT"
