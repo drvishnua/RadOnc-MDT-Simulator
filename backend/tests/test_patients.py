@@ -926,3 +926,108 @@ def test_patient_registry_round_trips_field_states_provenance_and_conflicts_afte
     )
     assert restored_direct["case"] == expected_case
     assert restored_direct["case_snapshot_sha256"] == expected_hash
+
+
+
+def test_historical_v1_case_requires_new_accepted_v2_version_before_generation(
+    monkeypatch, tmp_path
+):
+    import sqlite3
+
+    monkeypatch.setattr(run_store, "DB_PATH", tmp_path / "explicit_v1_to_v2_upgrade.sqlite3")
+
+    async def no_inference(run_id):
+        return None
+
+    monkeypatch.setattr("app.main.run_independent_assessments", no_inference)
+
+    # Start with a historical patient version and record its exact persisted bytes/hash.
+    patient = client.post(
+        "/api/patients",
+        json=_registration(_case("Historical v1 source version")),
+    ).json()
+    patient_id = patient["patient_id"]
+    original = patient["versions"][0]
+    original_version_id = original["case_version_id"]
+    with sqlite3.connect(run_store.DB_PATH) as db:
+        original_row = db.execute(
+            "SELECT case_json, case_snapshot_sha256 FROM patient_case_versions "
+            "WHERE case_version_id = ?",
+            (original_version_id,),
+        ).fetchone()
+        assert original_row is not None
+        original_json, original_hash = original_row
+
+        # Reproduce a real historical v1 record; the migration path must not relabel it.
+        db.execute(
+            "UPDATE patient_case_versions SET clinical_field_registry_version = ? "
+            "WHERE case_version_id = ?",
+            (HISTORICAL_CLINICAL_FIELD_REGISTRY_VERSION, original_version_id),
+        )
+
+    blocked = client.post(
+        f"/api/patients/{patient_id}/runs",
+        json={"case_version_id": original_version_id},
+    )
+    assert blocked.status_code == 409
+    assert HISTORICAL_CLINICAL_FIELD_REGISTRY_VERSION in blocked.json()["detail"]
+    assert CLINICAL_FIELD_REGISTRY_VERSION in blocked.json()["detail"]
+
+    # The only upgrade path is a separately accepted, hash-verified intake
+    # promoted into a new immutable v2 version for the same patient.
+    updated_case = _case(
+        "Explicitly reaccepted v2 version",
+        "New fictional intake content; the historical v1 snapshot must remain unchanged.",
+    )
+    intake = client.post("/api/intakes", json={"case": updated_case}).json()
+    accepted = client.post(
+        f"/api/intakes/{intake['session_id']}/accept",
+        json={"confirmed": True},
+    )
+    assert accepted.status_code == 200
+    promoted = client.post(
+        f"/api/intakes/{intake['session_id']}/promote",
+        json={
+            "patient_name": "Explicit v2 Training Version",
+            "patient_id": patient_id,
+        },
+    )
+    assert promoted.status_code == 200
+
+    detail = promoted.json()
+    assert len(detail["versions"]) == 2
+    current, preserved = detail["versions"]
+    assert current["version_number"] == 2
+    assert current["case_version_id"] != original_version_id
+    assert current["clinical_field_registry_version"] == CLINICAL_FIELD_REGISTRY_VERSION
+    assert current["intake_backed"] is True
+    assert current["intake_session_id"] == intake["session_id"]
+    assert current["case_snapshot_sha256"] == accepted.json()["case_snapshot_sha256"]
+    assert current["case"]["scenario_title"] == updated_case["scenario_title"]
+
+    assert preserved["case_version_id"] == original_version_id
+    assert preserved["clinical_field_registry_version"] == HISTORICAL_CLINICAL_FIELD_REGISTRY_VERSION
+    assert preserved["case_snapshot_sha256"] == original_hash
+    assert preserved["case"] == original["case"]
+
+    with sqlite3.connect(run_store.DB_PATH) as db:
+        restored_legacy_row = db.execute(
+            "SELECT case_json, case_snapshot_sha256, clinical_field_registry_version "
+            "FROM patient_case_versions WHERE case_version_id = ?",
+            (original_version_id,),
+        ).fetchone()
+    assert restored_legacy_row == (
+        original_json,
+        original_hash,
+        HISTORICAL_CLINICAL_FIELD_REGISTRY_VERSION,
+    )
+
+    # Generation is permitted only from the newly accepted v2 version.
+    started = client.post(
+        f"/api/patients/{patient_id}/runs",
+        json={"case_version_id": current["case_version_id"]},
+    )
+    assert started.status_code == 200
+    assert started.json()["case_version_id"] == current["case_version_id"]
+    assert started.json()["clinical_field_registry_version"] == CLINICAL_FIELD_REGISTRY_VERSION
+    assert started.json()["case_snapshot_sha256"] == current["case_snapshot_sha256"]
