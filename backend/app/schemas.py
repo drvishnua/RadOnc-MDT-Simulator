@@ -311,7 +311,10 @@ class SyntheticCase(StrictModel):
                 field_id,
                 "PRESENT" if value is not None and value != "" and (not isinstance(value, list) or bool(value)) else "NOT_REPORTED",
             )
-            if field_id in provenance or state not in {"PRESENT", "INVALID"}:
+            # An explicitly empty provenance list is equivalent to no source
+            # record: it must not suppress the minimal hash-bound fallback.
+            # Any non-empty caller-supplied source list remains untouched.
+            if provenance.get(field_id) or state not in {"PRESENT", "INVALID"}:
                 continue
             if value is None or value == "" or (isinstance(value, list) and not value):
                 continue
