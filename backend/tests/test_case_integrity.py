@@ -4174,3 +4174,44 @@ def test_completed_typed_investigation_record_supports_matching_finding_without_
     })
 
     assert not any("investigation_records" in item for item in flags)
+
+
+
+def test_matching_relevant_investigation_gap_blocks_generic_case_summary_fallback():
+    statement = "CT chest shows a 9 mm pulmonary nodule."
+    case = _case(
+        case_summary=statement,
+        relevant_investigations=[],
+        investigation_records=[],
+        clinical_field_states={"relevant_investigations": "PRESENT"},
+        known_unknowns=["Relevant investigations have not been reported."],
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })).casefold()
+
+    assert "relevant_investigations" in flags
+    assert "explicitly unresolved in known_unknowns" in flags
+
+
+def test_matching_typed_investigation_gap_blocks_generic_case_summary_fallback():
+    statement = "CT chest shows a 9 mm pulmonary nodule."
+    record = InvestigationRecord(
+        investigation_name="CT chest",
+        result_summary="A 9 mm pulmonary nodule is described.",
+        status="COMPLETED",
+        source_excerpt=statement,
+    )
+    case = _case(
+        case_summary=statement,
+        relevant_investigations=[],
+        investigation_records=[record],
+        clinical_field_states={"investigation_records": "PRESENT"},
+        known_unknowns=["Typed investigation records have not been verified."],
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })).casefold()
+
+    assert "investigation_records" in flags
+    assert "explicitly unresolved in known_unknowns" in flags
