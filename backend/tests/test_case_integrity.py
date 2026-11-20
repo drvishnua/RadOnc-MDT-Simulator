@@ -2243,7 +2243,7 @@ def test_unknown_willingness_or_consent_state_cannot_use_case_summary(
     if field_id == "patient_consent_status":
         assert "educational-scenario consent status" in flags
     else:
-        assert "patient preference/willingness" in flags
+        assert "patient preference/decision" in flags
 
 
 def test_structured_patient_willingness_supports_matching_decision_statement():
@@ -2253,7 +2253,7 @@ def test_structured_patient_willingness_supports_matching_decision_statement():
         "provisional_conclusion": "The patient agrees to surgery.",
     })
 
-    assert not any("patient preference/willingness" in item for item in flags)
+    assert not any("patient preference/decision" in item for item in flags)
 
 
 def test_given_patient_consent_status_supports_matching_educational_scenario_consent():
