@@ -1,3 +1,5 @@
+import pytest
+
 from app.schemas import SyntheticCase
 from app.services.case_integrity import (
     audit_unverified_case_claims,
