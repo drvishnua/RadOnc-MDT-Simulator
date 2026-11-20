@@ -3121,3 +3121,141 @@ def test_not_asked_pending_and_withdrawn_consent_do_not_support_consent_given(
     })).casefold()
     assert "educational-scenario consent status" in flags
 
+@pytest.mark.parametrize(
+    ("field_id", "component", "source_token", "generated_token"),
+    [
+        ("pathological_t_stage", "T", "pT2", "pT3"),
+        ("pathological_n_stage", "N", "pN1", "pN2"),
+        ("pathological_m_stage", "M", "pM1", "pM0"),
+    ],
+)
+@pytest.mark.parametrize(
+    "state",
+    ["UNKNOWN", "NOT_REPORTED", "NOT_ASSESSED", "PENDING", "DECLINED", "NOT_APPLICABLE"],
+)
+def test_each_nonpresent_pathological_tnm_state_blocks_matching_summary_and_names_state(
+    field_id, component, source_token, generated_token, state
+):
+    case = _case(
+        case_summary=f"Synthetic pathology text records {source_token}.",
+        **{field_id: None},
+        clinical_field_states={field_id: state},
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": (
+            f"The pathological {component} component is {source_token}."
+        ),
+    })).casefold()
+    assert field_id in flags
+    assert f"marked {state.casefold()}" in flags
+
+
+@pytest.mark.parametrize(
+    ("field_id", "component", "invalid_raw", "generated_token"),
+    [
+        ("pathological_t_stage", "T", "pT9", "pT2"),
+        ("pathological_n_stage", "N", "pN4", "pN1"),
+        ("pathological_m_stage", "M", "pM2", "pM1"),
+    ],
+)
+def test_invalid_pathological_tnm_raw_value_is_preserved_but_never_supports_claim(
+    field_id, component, invalid_raw, generated_token
+):
+    case = _case(
+        **{field_id: invalid_raw},
+        clinical_field_states={field_id: "INVALID"},
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": (
+            f"The pathological {component} component is {generated_token}."
+        ),
+    })).casefold()
+    assert field_id in flags
+    assert "marked invalid" in flags
+    assert getattr(case, field_id) == invalid_raw
+
+
+@pytest.mark.parametrize(
+    ("field_id", "component", "first_raw", "second_raw"),
+    [
+        ("pathological_t_stage", "T", "pT1", "pT2"),
+        ("pathological_n_stage", "N", "pN0", "pN1"),
+        ("pathological_m_stage", "M", "pM0", "pM1"),
+    ],
+)
+def test_conflicting_pathological_tnm_values_remain_unselected_for_generated_claim(
+    field_id, component, first_raw, second_raw
+):
+    case = _case(
+        **{field_id: first_raw},
+        clinical_field_states={field_id: "CONFLICTING"},
+        clinical_field_conflicts={
+            field_id: [
+                {
+                    "raw_value": first_raw,
+                    "provenance": {
+                        "source_type": "PATHOLOGY_REPORT",
+                        "source_reference": f"{field_id}-report-a",
+                        "source_excerpt": f"Pathology report A records {first_raw}.",
+                    },
+                },
+                {
+                    "raw_value": second_raw,
+                    "provenance": {
+                        "source_type": "CLINICIAN_NOTE",
+                        "source_reference": f"{field_id}-note-b",
+                        "source_excerpt": f"Clinician note B records {second_raw}.",
+                    },
+                },
+            ]
+        },
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": (
+            f"The pathological {component} component is {first_raw}."
+        ),
+    })).casefold()
+    assert field_id in flags
+    assert "unresolved conflicting source values" in flags
+    assert getattr(case, field_id) == first_raw
+
+
+@pytest.mark.parametrize(
+    ("field_id", "component", "supported_token", "unsupported_token"),
+    [
+        ("pathological_t_stage", "T", "pT2", "pT3"),
+        ("pathological_n_stage", "N", "pN1", "pN2"),
+        ("pathological_m_stage", "M", "pM1", "pM0"),
+    ],
+)
+def test_present_pathological_tnm_supports_only_its_matching_structured_component(
+    field_id, component, supported_token, unsupported_token
+):
+    case = _case(
+        case_summary=f"Synthetic summary contains conflicting free text {unsupported_token}.",
+        **{field_id: supported_token},
+        clinical_field_states={field_id: "PRESENT"},
+        clinical_field_provenance={
+            field_id: [{
+                "source_type": "PATHOLOGY_REPORT",
+                "source_reference": f"{field_id}-structured-report",
+                "source_excerpt": f"Pathology report records {supported_token}.",
+            }]
+        },
+    )
+    supported = audit_unverified_case_claims(case, {
+        "provisional_conclusion": (
+            f"The pathological {component} component is {supported_token}."
+        ),
+    })
+    mismatched = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": (
+            f"The pathological {component} component is {unsupported_token}."
+        ),
+    })).casefold()
+    assert not any(field_id in item for item in supported)
+    assert field_id in mismatched
+    assert unsupported_token.casefold() in mismatched
+    assert getattr(case, field_id) == supported_token
+
+
