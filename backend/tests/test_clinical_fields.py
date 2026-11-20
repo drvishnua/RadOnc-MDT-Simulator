@@ -400,6 +400,39 @@ def test_case_model_persists_hash_bound_user_input_provenance_for_supplied_field
     assert investigation_source.source_sha256
 
 
+@pytest.mark.parametrize(
+    ("case_overrides", "field_id", "expected_excerpt", "expected_state"),
+    [
+        ({"age_years": 70}, "age_years", "70", "PRESENT"),
+        (
+            {
+                "clinical_t_stage": "T9",
+                "clinical_field_states": {"clinical_t_stage": "INVALID"},
+            },
+            "clinical_t_stage",
+            "T9",
+            "INVALID",
+        ),
+    ],
+)
+def test_empty_explicit_provenance_entry_does_not_suppress_required_fallback_provenance(
+    case_overrides, field_id, expected_excerpt, expected_state
+):
+    case = _case(
+        clinical_field_provenance={field_id: []},
+        **case_overrides,
+    )
+
+    records = case.clinical_field_provenance[field_id]
+    assert len(records) == 1
+    assert records[0].source_type == "STRUCTURED_CASE_INPUT"
+    assert records[0].source_reference == f"SyntheticCase.{field_id}"
+    assert records[0].source_excerpt == expected_excerpt
+    assert records[0].source_sha256 == hashlib.sha256(expected_excerpt.encode("utf-8")).hexdigest()
+    assert records[0].verification_status == "user_supplied_not_independently_verified"
+    assert case.clinical_field_states.get(field_id, expected_state) == expected_state
+
+
 
 def test_model_facing_case_snapshot_redacts_conflicting_flat_value_but_preserves_candidates():
     case = _case(
