@@ -1275,7 +1275,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     ):
         structured_value = getattr(case, field)
         explicit_state = case.clinical_field_states.get(field)
-        if explicit_state == "CONFLICTING":
+        if explicit_state == "CONFLICTING" or known_unknown_blocks_field(field):
             supported_values = set()
         elif structured_value not in (None, "") and explicit_state in (None, "PRESENT"):
             try:
@@ -1291,7 +1291,12 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         unsupported_values = sorted(generated_values - supported_values)
         if unsupported_values:
             unsupported_list = ", ".join(unsupported_values[:4])
-            if explicit_state == "INVALID":
+            if known_unknown_blocks_field(field):
+                flags.append(
+                    f"Generated narrative contains {component}-stage value(s) {unsupported_list}, "
+                    f"but {label} is explicitly unresolved in known_unknowns; structured and case-summary values cannot support this assertion."
+                )
+            elif explicit_state == "INVALID":
                 flags.append(
                     f"Generated narrative contains {component}-stage value(s) {unsupported_list}, "
                     f"but {label} is marked INVALID; its preserved raw value cannot support a clinical staging assertion."
@@ -1329,7 +1334,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     ):
         structured_value = getattr(case, field)
         explicit_state = case.clinical_field_states.get(field)
-        if explicit_state == "CONFLICTING":
+        if explicit_state == "CONFLICTING" or known_unknown_blocks_field(field):
             supported_values = set()
         elif structured_value not in (None, "") and explicit_state in (None, "PRESENT"):
             try:
@@ -1351,7 +1356,12 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         unsupported_values = sorted(generated_values - supported_values)
         if unsupported_values:
             unsupported_list = ", ".join(unsupported_values[:4])
-            if explicit_state == "INVALID":
+            if known_unknown_blocks_field(field):
+                flags.append(
+                    f"Generated narrative contains unsupported pathological {component}-stage value(s) "
+                    f"{unsupported_list}; {field} is explicitly unresolved in known_unknowns and cannot support this assertion."
+                )
+            elif explicit_state == "INVALID":
                 flags.append(
                     f"Generated narrative contains unsupported pathological {component}-stage value(s) "
                     f"{unsupported_list}; {field} is marked INVALID and its raw value cannot support a pathological staging assertion."
