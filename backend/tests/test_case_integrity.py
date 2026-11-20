@@ -2223,8 +2223,8 @@ def test_positive_negativeable_list_value_overrides_contradictory_summary_absenc
         ),
         (
             "patient_consent_status",
-            "Referral text: the patient has consented to surgery.",
-            "The patient has consented to surgery.",
+            "Referral text: the patient has consented to participate in this educational scenario.",
+            "The patient has consented to participate in this educational scenario.",
         ),
     ],
 )
@@ -2257,7 +2257,7 @@ def test_given_patient_consent_status_supports_matching_consent_statement():
     case = _case(patient_consent_status="GIVEN")
 
     flags = audit_unverified_case_claims(case, {
-        "provisional_conclusion": "The patient has consented to surgery.",
+        "provisional_conclusion": "The patient has consented to participate in this educational scenario.",
     })
 
     assert not any("patient preference/decision" in item for item in flags)
@@ -2267,7 +2267,7 @@ def test_declined_patient_consent_status_does_not_support_consent_given_claim():
     case = _case(patient_consent_status="DECLINED")
 
     flags = " ".join(audit_unverified_case_claims(case, {
-        "provisional_conclusion": "The patient has consented to surgery.",
+        "provisional_conclusion": "The patient has consented to participate in this educational scenario.",
     })).casefold()
 
     assert "patient preference/decision" in flags
@@ -2277,7 +2277,7 @@ def test_declined_patient_consent_status_supports_matching_decline_statement():
     case = _case(patient_consent_status="DECLINED")
 
     flags = audit_unverified_case_claims(case, {
-        "provisional_conclusion": "The patient declines consent to surgery.",
+        "provisional_conclusion": "The patient declined consent to participate in this educational scenario.",
     })
 
     assert not any("patient preference/decision" in item for item in flags)
