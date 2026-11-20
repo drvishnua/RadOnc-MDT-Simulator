@@ -7324,3 +7324,65 @@ Application and test code is unchanged from `4a44b3e8d6796dee21d25e396d611091c79
 | Integrated release acceptance | BLOCKED | Broader U09–U10, live/GPU/clinical and downstream gates remain |
 
 **Next approved action:** finish the remaining registry-wide field/state/source/provenance acceptance; keep previously verified migration and type-consistency work closed unless a reproducible regression reopens it. Do not modify the machine-plan sequence, merge PR #5, modify the protected development branch or activate U04.
+
+
+### U10 known_unknowns mapping — primary site, subsite and laterality — 20 November 2026
+
+**Approved-sequence position:** continued field-by-field U10 canonical source-eligibility validation.
+
+**Test-first finding**
+- Test-only commit `0d0a1d304f29ece54c208c1503d721758ca25173`.
+- Added three parameterized regressions where a populated structured value matched the generated claim but `known_unknowns` explicitly marked that same canonical field unresolved:
+  - primary site has not been confirmed;
+  - anatomical subsite has not been reported;
+  - tumour laterality remains unknown.
+- Backend run `44775185278`: FAILED as expected; **799 passed, 3 failed, 0 errors, 0 skipped**. All three failures demonstrated structured values bypassed the matching unresolved note.
+
+**Narrow correction**
+- Implementation commit `979e375527ce67c94530c274987fa9d9622d3720`.
+- Added explicit aliases for `primary_site`, `anatomical_subsite` and `laterality` to the existing clause-local unresolved-note matcher.
+- The site/subsite source check and laterality source check now withhold both structured values and case-summary fallback when their matching field-specific unresolved note is present.
+- Other fields are not suppressed by these notes. The existing `known_unknowns` own-state guard and “not unknown” handling remain unchanged.
+
+**Exact implementation-head verification**
+- Backend Tests run `44775455548`: SUCCESS; **802/802 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive**; diagnostic errors 0. Pytest diagnostics artifact `14648817568`; deterministic preflight artifact `14649716872`.
+- Sequential Development Gate run `44775455277`: SUCCESS.
+- Security and Dependency Audit run `44775455491`: SUCCESS; Python CodeQL, JavaScript/TypeScript CodeQL, dependency audit and full-history secret scan all successful.
+- All three runs identify exact implementation/test SHA `979e375527ce67c94530c274987fa9d9622d3720`.
+
+**Current interpretation**
+- Field-specific unresolved-note gates for primary site, anatomical subsite and laterality: VERIFIED for tested cases.
+- U10 `known_unknowns` mapping as a whole: IN PROGRESS; other canonical field families remain to be audited.
+- U09 migration/type-consistency milestones remain verified as previously recorded.
+- PR #5 remains OPEN and NOT MERGED; main and protected development branches remain untouched.
+
+### Master Checklist — Current Status (20 November 2026)
+
+| Workstream | Status | Evidence / outstanding boundary |
+|---|---|---|
+| PR #5 / protected branches | VERIFIED | Implementation head `979e375`; base remains `feature/four-round-mdt-and-performance` at `df90e4a`; OPEN/unmerged; main untouched |
+| Approved sequence | VERIFIED | Active scope remains U09–U10; U04+ remains blocked |
+| U09 registry v2 / type consistency | VERIFIED for tested contract | 40 fields and seven declared types tested on `25426f5`; full clinical semantics/source acceptance remains |
+| U09 list, typed investigation and free-text source preservation | VERIFIED for tested fields | Exact-text regressions passed on `b628eb2`, `d507d69`, `6310774` |
+| U09 empty provenance fallback | VERIFIED for PRESENT/INVALID cases | Exact backend 795/795 on `d615592` |
+| U09 legacy/v1 migration compatibility | VERIFIED for tested cases | Historical v1 and legacy-unversioned snapshots remain readable/read-only; 799/799 on `46b9c3f` |
+| U10 TNM/stage-group namespace and state gates | VERIFIED for tested cases | Clinical/pathological, PRESENT, non-PRESENT, INVALID and CONFLICTING regressions pass |
+| U10 known_unknowns field mapping | IN PROGRESS | Existing staging, comorbidity, willingness plus primary site/subsite/laterality mappings verified; remaining field families require audit |
+| U10 known_unknowns own-state guard | VERIFIED | Non-PRESENT list contents are not consumed; exact backend 793/793 on `f5f556b` |
+| U10 primary site/subsite/laterality unresolved-note mapping | VERIFIED for tested cases | Test-first failure at `0d0a1d3`; fix `979e375`; exact backend 802/802 |
+| Backend tests / deterministic preflight | VERIFIED on `979e375` | Run `44775455548`, 802/802; preflight artifact `14649716872` |
+| Sequential Development Gate | VERIFIED on `979e375` | Run `44775455277` SUCCESS |
+| Security/dependency/secret scan/CodeQL | VERIFIED on `979e375` | Run `44775455491` SUCCESS; all four jobs passed |
+| Remaining registry-wide field/state/source/provenance matrix | IN PROGRESS | Continue only reproducible gaps and source conflicts |
+| R1–R3 shared context across 45 roles | IN PROGRESS | Mocked coverage exists; live saved-run role coverage remains |
+| R4 Chair consensus, dissent and traceability | IN PROGRESS | Live saved R1–R3 to R4 reconciliation remains unverified |
+| Case snapshots/hashes/audit/failure/resume | IN PROGRESS | Deterministic controls exist; full saved-run tamper/failure/resume acceptance remains |
+| Evidence retrieval and claim-to-passage verification | IN PROGRESS | Current-source retrieval/verification in live cases remains |
+| Frontend/browser E2E | NOT STARTED | No frontend change in this slice |
+| U04 and later ordered workstreams | BLOCKED | Do not begin before U09–U10 acceptance |
+| Live 45-role R1–R4 | NOT STARTED | No live run ID or inspected saved artefact |
+| RTX 4060 request-time GPU inference | NOT STARTED | No request-time telemetry |
+| Independent clinical validation | NOT STARTED | No independent clinical review |
+| Integrated release acceptance | BLOCKED | Broader U09–U10, live/GPU/clinical and downstream gates remain |
+
+**Next approved action:** continue the same field-by-field audit for remaining demographic, diagnosis-date, histology/grade and performance-status claims, then list-based history, preference, social and resource claims. For each reproducible gap, add a field-specific negative and unrelated-field control before changing the audit. Do not alter the machine-plan sequence, merge PR #5, modify the protected development branch or activate U04.
