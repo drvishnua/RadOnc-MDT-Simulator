@@ -4034,3 +4034,143 @@ def test_matching_medication_allergy_or_treatment_claim_is_supported_without_unr
     })
 
     assert not any(field_id in item for item in flags)
+
+
+def test_matching_known_unknown_blocks_relevant_investigations_list_finding():
+    statement = "CT chest shows a 9 mm pulmonary nodule."
+    case = _case(
+        case_summary="Synthetic case narrative; investigation information is held in structured fields.",
+        relevant_investigations=[statement],
+        investigation_records=[],
+        clinical_field_states={
+            "imaging_summary": "NOT_REPORTED",
+            "relevant_investigations": "PRESENT",
+            "investigation_records": "NOT_REPORTED",
+        },
+        known_unknowns=["Relevant investigations have not been reported."],
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })).casefold()
+
+    assert "relevant_investigations" in flags
+    assert "known_unknowns" in flags
+    assert "unresolved" in flags or "not been" in flags
+
+
+def test_matching_known_unknown_blocks_completed_typed_investigation_record_finding():
+    statement = "CT chest shows a 9 mm pulmonary nodule."
+    record = InvestigationRecord(
+        investigation_name="CT chest",
+        result_summary="A 9 mm pulmonary nodule is described.",
+        status="COMPLETED",
+        source_excerpt=statement,
+    )
+    case = _case(
+        case_summary="Synthetic case narrative; investigation information is held in structured fields.",
+        relevant_investigations=[],
+        investigation_records=[record],
+        clinical_field_states={
+            "imaging_summary": "NOT_REPORTED",
+            "relevant_investigations": "NOT_REPORTED",
+            "investigation_records": "PRESENT",
+        },
+        known_unknowns=["Typed investigation records have not been verified."],
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })).casefold()
+
+    assert "investigation_records" in flags
+    assert "known_unknowns" in flags
+    assert "unresolved" in flags or "not been" in flags
+
+
+def test_unrelated_known_unknown_does_not_block_matching_relevant_investigation_finding():
+    statement = "CT chest shows a 9 mm pulmonary nodule."
+    case = _case(
+        case_summary="Synthetic case narrative; investigation information is held in structured fields.",
+        relevant_investigations=[statement],
+        investigation_records=[],
+        clinical_field_states={
+            "imaging_summary": "NOT_REPORTED",
+            "relevant_investigations": "PRESENT",
+            "investigation_records": "NOT_REPORTED",
+        },
+        known_unknowns=["Patient willingness has not been established."],
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+
+    assert not any("relevant_investigations" in item for item in flags)
+
+
+def test_unrelated_known_unknown_does_not_block_matching_completed_investigation_record_finding():
+    statement = "CT chest shows a 9 mm pulmonary nodule."
+    record = InvestigationRecord(
+        investigation_name="CT chest",
+        result_summary="A 9 mm pulmonary nodule is described.",
+        status="COMPLETED",
+        source_excerpt=statement,
+    )
+    case = _case(
+        case_summary="Synthetic case narrative; investigation information is held in structured fields.",
+        relevant_investigations=[],
+        investigation_records=[record],
+        clinical_field_states={
+            "imaging_summary": "NOT_REPORTED",
+            "relevant_investigations": "NOT_REPORTED",
+            "investigation_records": "PRESENT",
+        },
+        known_unknowns=["Patient willingness has not been established."],
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+
+    assert not any("investigation_records" in item for item in flags)
+
+
+def test_relevant_investigation_list_supports_matching_finding_without_unresolved_note():
+    statement = "CT chest shows a 9 mm pulmonary nodule."
+    case = _case(
+        case_summary="Synthetic case narrative; investigation information is held in structured fields.",
+        relevant_investigations=[statement],
+        investigation_records=[],
+        clinical_field_states={
+            "imaging_summary": "NOT_REPORTED",
+            "relevant_investigations": "PRESENT",
+            "investigation_records": "NOT_REPORTED",
+        },
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+
+    assert not any("relevant_investigations" in item for item in flags)
+
+
+def test_completed_typed_investigation_record_supports_matching_finding_without_unresolved_note():
+    statement = "CT chest shows a 9 mm pulmonary nodule."
+    record = InvestigationRecord(
+        investigation_name="CT chest",
+        result_summary="A 9 mm pulmonary nodule is described.",
+        status="COMPLETED",
+        source_excerpt=statement,
+    )
+    case = _case(
+        case_summary="Synthetic case narrative; investigation information is held in structured fields.",
+        relevant_investigations=[],
+        investigation_records=[record],
+        clinical_field_states={
+            "imaging_summary": "NOT_REPORTED",
+            "relevant_investigations": "NOT_REPORTED",
+            "investigation_records": "PRESENT",
+        },
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+
+    assert not any("investigation_records" in item for item in flags)
