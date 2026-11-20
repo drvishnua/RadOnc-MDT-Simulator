@@ -609,3 +609,21 @@ def test_invalid_state_requires_raw_value_without_canonicalizing_it():
         "user_supplied_not_independently_verified"
     )
 
+def test_conflicting_values_require_distinct_source_excerpt_provenance():
+    same_source = {
+        "source_type": "CLINICIAN_NOTE",
+        "source_reference": "synthetic-single-source",
+        "source_excerpt": "The same source excerpt is attached to both conflicting candidates.",
+    }
+    with pytest.raises(ValueError, match="distinct source-specific provenance records"):
+        _case(
+            age_years=70,
+            clinical_field_states={"age_years": "CONFLICTING"},
+            clinical_field_conflicts={
+                "age_years": [
+                    {"raw_value": 70, "provenance": same_source},
+                    {"raw_value": 72, "provenance": same_source},
+                ]
+            },
+        )
+
