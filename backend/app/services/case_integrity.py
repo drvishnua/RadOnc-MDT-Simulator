@@ -789,24 +789,35 @@ def _tnm_component_values(
     return values
 
 
-def _stage_group_values(value: str) -> set[str]:
-    """Normalise explicit stage-group labels while retaining substage distinctions."""
-    pattern = re.compile(
-        r"\b(?:clinical[ \t\r\n])?stage[ \t\r\n]?(?:group[ \t\r\n]?)?(IV|III|II|I|[1-4])([ABC])?\b",
-        re.IGNORECASE,
-    )
+_STAGE_GROUP_ASSERTION_PATTERN = re.compile(
+    r"\\b(?P<kind>clinical|pathological)?[ \\t\\r\\n]*"
+    r"(?:stage[ \\t\\r\\n]?(?:group[ \\t\\r\\n]?)?)"
+    r"(?P<number>IV|III|II|I|[1-4])(?P<suffix>[ABC])?\\b",
+    re.IGNORECASE,
+)
+
+
+def _stage_group_records(value: str) -> list[tuple[str, str, str]]:
+    """Return explicit (kind, normalized group, source excerpt) records."""
+    records: list[tuple[str, str, str]] = []
     roman_values = {"I": 1, "II": 2, "III": 3, "IV": 4}
-    keys: set[str] = set()
-    for snippet in _unqualified_matches(pattern, value):
-        match = pattern.search(snippet)
+    for snippet in _unqualified_matches(_STAGE_GROUP_ASSERTION_PATTERN, value):
+        match = _STAGE_GROUP_ASSERTION_PATTERN.search(snippet)
         if not match:
             continue
-        numeral = match.group(1).upper()
-        suffix = (match.group(2) or "").upper()
+        numeral = match.group("number").upper()
+        suffix = (match.group("suffix") or "").upper()
         number = roman_values.get(numeral, int(numeral) if numeral.isdigit() else None)
-        if number is not None:
-            keys.add(f"{number}{suffix}")
-    return keys
+        if number is None:
+            continue
+        kind = (match.group("kind") or "UNSPECIFIED").upper()
+        records.append((kind, f"{number}{suffix}", snippet))
+    return records
+
+
+def _stage_group_values(value: str) -> set[str]:
+    """Compatibility helper returning stage group values without their label."""
+    return {key for _kind, key, _snippet in _stage_group_records(value)}
 
 
 def _stage_group_supported(generated_key: str, source_keys: set[str]) -> bool:
@@ -1078,40 +1089,50 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
                 + "), but age_years is not supplied in the structured case or explicitly recorded in the source summary."
             )
 
-    # Stage group is checked against structured input when present, otherwise
-    # against the source summary. A parent stage is not inferred from a substage's
-    # absence, and a substage is never inferred from a parent stage.
-    structured_group = case.stage_group
-    supported_group_keys = (
-        _stage_group_values(str(structured_group))
-        if structured_group not in (None, "")
-        else _stage_group_values(case.case_summary)
-    )
-    generated_group_snippets = _unqualified_matches(
-        re.compile(r"\b(?:clinical[ \t\r\n])?stage[ \t\r\n]?(?:group[ \t\r\n]?)?(IV|III|II|I|[1-4])([ABC])?\b", re.IGNORECASE),
-        text,
-    )
-    unsupported_stage_groups = [
-        snippet
-        for snippet in generated_group_snippets
-        if not all(
-            _stage_group_supported(key, supported_group_keys)
-            for key in _stage_group_values(snippet)
+    # Stage groups are audited by declared type. Pathological staging cannot
+    # support a clinical stage-group assertion, or vice versa. An untyped legacy
+    # stage_group supports only an untyped generated/source statement.
+    source_group_records = _stage_group_records(case.case_summary)
+    generated_group_records = _stage_group_records(text)
+    stage_sources = {
+        "UNSPECIFIED": (
+            case.stage_group
+            if case.clinical_field_states.get("stage_group") in (None, "PRESENT")
+            else None
+        ),
+        "CLINICAL": (
+            case.clinical_stage_group
+            if case.clinical_field_states.get("clinical_stage_group") in (None, "PRESENT")
+            else None
+        ),
+        "PATHOLOGICAL": (
+            case.pathological_stage_group
+            if case.clinical_field_states.get("pathological_stage_group") in (None, "PRESENT")
+            else None
+        ),
+    }
+    structured_group_keys = {
+        kind: _stage_group_values(str(value)) if value not in (None, "") else set()
+        for kind, value in stage_sources.items()
+    }
+    summary_group_keys = {
+        kind: {key for record_kind, key, _snippet in source_group_records if record_kind == kind}
+        for kind in ("UNSPECIFIED", "CLINICAL", "PATHOLOGICAL")
+    }
+    unsupported_stage_groups: list[str] = []
+    for generated_kind, generated_key, snippet in generated_group_records:
+        supported = (
+            structured_group_keys[generated_kind]
+            | summary_group_keys[generated_kind]
         )
-    ]
+        if not any(_stage_group_supported(generated_key, {source_key}) for source_key in supported):
+            unsupported_stage_groups.append(snippet)
     if unsupported_stage_groups:
-        if structured_group not in (None, ""):
-            flags.append(
-                "Generated narrative assigns stage group(s) "
-                + ", ".join(unsupported_stage_groups[:4])
-                + f", which conflict with structured stage_group={structured_group!s}."
-            )
-        else:
-            flags.append(
-                "Generated narrative assigns a stage group ("
-                + ", ".join(unsupported_stage_groups[:4])
-                + "), but stage_group is not supplied in the structured case or explicitly recorded in the source summary."
-            )
+        flags.append(
+            "Generated narrative assigns unsupported or type-conflicting stage group(s) ("
+            + ", ".join(unsupported_stage_groups[:4])
+            + "); clinical, pathological and untyped stage groups must be explicitly sourced separately."
+        )
     sex_pattern = re.compile(r"\b(?:male|female|man|woman|boy|girl)\b", re.IGNORECASE)
     generated_sex_terms = _unqualified_matches(sex_pattern, text)
 
