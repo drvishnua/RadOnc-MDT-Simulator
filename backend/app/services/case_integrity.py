@@ -1054,6 +1054,13 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         "histological_grade": (r"\bhistological\s+grade\b", r"\btumou?r\s+grade\b"),
         "performance_status": (r"\bperformance\s+status(?!\s+scale)\b",),
         "performance_status_scale": (r"\bperformance\s+status\s+scale\b", r"\bperformance\s+status\s+scoring\s+scale\b"),
+        "family_history": (r"\bfamily(?:\s+medical)?\s+history\b",),
+        "family_caregiver_context": (
+            r"\bfamily\s*(?:/|and)\s*caregiver\s+(?:context|arrangements?|support)\b",
+            r"\bfamily\s+caregiver\s+(?:context|arrangements?|support)\b",
+            r"\bcaregiver\s+(?:availability|support|arrangements?|context)\b",
+            r"\bfamily\s+support\b",
+        ),
         "relevant_comorbidities": (r"relevant\s+comorbidit(?:y|ies)\s+history", r"comorbidit(?:y|ies)\s+history", r"medical\s+history"),
         "patient_willingness": (r"patient\s+willingness", r"patient\s+preference(?:s)?", r"patient\s+decision", r"willingness\s+to\s+(?:undergo|accept|receive)\s+treatment"),
     }
@@ -2020,7 +2027,12 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         re.IGNORECASE,
     )
     family_caregiver_state = field_state("family_caregiver_context")
-    if family_caregiver_state == "PRESENT" and case.family_caregiver_context:
+    family_caregiver_gap = known_unknown_blocks_field("family_caregiver_context")
+    if family_caregiver_gap:
+        # A field-specific unresolved note takes precedence over a populated
+        # structured list or free-text summary for positive caregiver claims.
+        family_caregiver_source = ""
+    elif family_caregiver_state == "PRESENT" and case.family_caregiver_context:
         family_caregiver_source = "\n".join(case.family_caregiver_context)
     elif family_caregiver_state is None:
         family_caregiver_source = (
@@ -2037,7 +2049,12 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         family_caregiver_support_pattern, text, family_caregiver_source
     )
     if unsupported_family_caregiver_claims:
-        if family_caregiver_state not in (None, "PRESENT"):
+        if family_caregiver_gap:
+            reason = (
+                "family_caregiver_context is explicitly unresolved in known_unknowns; "
+                "no positive family/caregiver assertion may be selected."
+            )
+        elif family_caregiver_state not in (None, "PRESENT"):
             reason = (
                 f"family_caregiver_context is marked {family_caregiver_state}; "
                 "that state cannot support a selected family/caregiver assertion."
