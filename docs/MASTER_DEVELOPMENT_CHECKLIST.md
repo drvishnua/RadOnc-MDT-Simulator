@@ -4794,6 +4794,7 @@ This is the latest authoritative status. Earlier entries above are retained as h
 | Versioned external evidence retrieval (U07) | BLOCKED | No guideline/evidence verification is claimed. |
 | Standalone desktop UI; remove Mission Control and Development Monitor (U01–U02) | BLOCKED | Must follow the approved sequence; no browser-loading replacement is claimed. |
 | Legacy saved-case user recovery / migration path | IN PROGRESS | Existing v1 snapshots are not silently rewritten; unsupported legacy versions are rejected for new/resumed generation. User-visible recovery to a new immutable v2 case version and migration tests remain open. Preserve old snapshots and hashes. |
+| Intake current-snapshot ↔ terminal-event binding | BLOCKED | Static review found `get_intake_session` verifies the current case JSON against its stored hash and verifies the event chain independently, but does not compare the current snapshot hash with the last event's snapshot hash. A current-case JSON+hash database edit could detach current state from append-only history. Regression/fix requires `backend/app/services/intake_store.py`, outside active U09–U10 allowed production paths; carry into the later U04 intake scope. No change made. |
 | Live 45-role R1–R4 execution and saved-run audit | NOT STARTED | CI test suites are not a live simulation. No live run ID or audit artefact is recorded here. |
 | RTX 4060 request-time inference verification | NOT STARTED | No `nvidia-smi` request-time telemetry, Ollama offload trace or measured local inference run is recorded. |
 | Independent clinical validation | NOT STARTED | No independent clinical validation is claimed. |
@@ -4869,4 +4870,12 @@ This is the latest authoritative status. Earlier entries above are retained as h
 - Preflight reports model inference was not performed and clinical accuracy was not evaluated. These are deterministic software checks only; they do not validate AJCC/site-specific staging or clinical conclusions.
 - U09–U10 remains `IN PROGRESS`; machine plan and U12 scope baseline are unchanged. PR #5 remains open and unmerged pending independent review.
 - **Next U09–U10 work:** continue audit of accepted-intake → immutable patient case version → saved run provenance, including tamper/mismatch and failed-agent paths. Keep historical legacy snapshots read-only; do not relabel or silently migrate them.
+
+### Deferred intake audit finding — current snapshot must match terminal event — 20 November 2026
+
+- Read-only source inspection of `backend/app/services/intake_store.py:get_intake_session` shows that it checks the event hash chain and historical snapshots, event count, and the current case JSON against the separate `current_case_sha256` column.
+- The reader does not also require `current_case_sha256` to equal the terminal event's `case_snapshot_sha256`. A database edit that changes both `current_case_json` and its separate `current_case_sha256`, without appending an event, could pass these independent checks and detach current state from the append-only history.
+- This is a static code-review finding only. No tampering regression has been executed and no production code has been changed for it.
+- The implementation and regression test belong in `backend/app/services/intake_store.py` and `backend/tests/test_intake_store.py`. `intake_store.py` is not in active U09–U10 `allowed_paths`; this item is **BLOCKED** until the approved U04 intake scope. Do not broaden U09–U10 scope or change the machine plan.
+- Preserve existing accepted intake records and historical snapshots as-is. The later fix must fail closed on a mismatch; it must not silently rewrite current state or rebuild the audit chain.
 
