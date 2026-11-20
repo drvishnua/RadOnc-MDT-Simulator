@@ -142,8 +142,30 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
         for field_id, state in case.clinical_field_states.items()
         if state == "CONFLICTING" and field_id in CLINICAL_FIELD_REGISTRY
     )
-    for field_id in redacted_conflicting_fields:
+    redacted_invalid_fields = sorted(
+        field_id
+        for field_id, state in case.clinical_field_states.items()
+        if state == "INVALID" and field_id in CLINICAL_FIELD_REGISTRY
+    )
+    for field_id in set(redacted_conflicting_fields) | set(redacted_invalid_fields):
         model_snapshot[field_id] = None
+
+    # INVALID source excerpts remain in the persisted case/audit snapshot, but
+    # must not be supplied as clinical evidence to model generation. Keep
+    # source identity and the original excerpt hash in this projection.
+    model_provenance = model_snapshot.get("clinical_field_provenance")
+    if isinstance(model_provenance, dict):
+        for field_id in redacted_invalid_fields:
+            entries = model_provenance.get(field_id)
+            if isinstance(entries, list):
+                model_provenance[field_id] = [
+                    {
+                        **{key: value for key, value in source.items() if key != "source_excerpt"},
+                        "source_excerpt_redacted": True,
+                    }
+                    for source in entries
+                    if isinstance(source, dict)
+                ]
     field_status: dict[str, dict[str, Any]] = {}
     canonical_field_values: dict[str, dict[str, Any]] = {}
     normalization_warnings: list[str] = []
@@ -156,7 +178,7 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
         field_status[field] = {
             "label": label,
             "status": status,
-            "value": None if explicit_state == "CONFLICTING" else (snapshot.get(field) if provided else None),
+            "value": None if explicit_state in {"CONFLICTING", "INVALID"} else (snapshot.get(field) if provided else None),
         }
     for field, label in _LIST_FIELDS.items():
         values = getattr(case, field) or []
@@ -174,7 +196,7 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
     field_status["case_summary"] = {
         "label": "User-provided free-text case summary",
         "status": case_summary_state.casefold() if case_summary_state else "provided_verbatim_unparsed",
-        "value": None if case_summary_state == "CONFLICTING" else case.case_summary,
+        "value": None if case_summary_state in {"CONFLICTING", "INVALID"} else case.case_summary,
     }
 
     for field_id, definition in CLINICAL_FIELD_REGISTRY.items():
@@ -193,6 +215,14 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
         # field itself. This is not independent verification of the underlying fact.
         if explicit_sources:
             provenance = [source.model_dump(mode="json") for source in explicit_sources]
+            if state == "INVALID":
+                provenance = [
+                    {
+                        **{key: source_value for key, source_value in source.items() if key != "source_excerpt"},
+                        "source_excerpt_redacted": True,
+                    }
+                    for source in provenance
+                ]
         elif state == "PRESENT":
             source_type = "CASE_SUMMARY" if field_id == "case_summary" else "STRUCTURED_CASE_INPUT"
             provenance = [{
@@ -212,7 +242,7 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
             "value_type": definition.value_type,
             "state": state,
             "status": state,
-            "raw_value": snapshot.get(field_id),
+            "raw_value": None if state in {"CONFLICTING", "INVALID"} else snapshot.get(field_id),
             "canonical_comparison_value": None,
             "unit": definition.unit,
             "allowed_values": list(definition.allowed_values),
@@ -224,10 +254,9 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
             ],
         }
 
-        # A conflicting flat-field value is retained in the immutable case
-        # snapshot and in source-specific conflict_candidates, but is not shown
-        # as a selected model-facing raw value.
-        if state == "CONFLICTING":
+        # Conflicting candidates remain separately visible; neither the flat
+        # selected value nor an INVALID raw value is supplied as model evidence.
+        if state in {"CONFLICTING", "INVALID"}:
             item["raw_value"] = None
 
         if state == "PRESENT":
@@ -296,9 +325,12 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
         "clinical_field_registry_sha256": clinical_field_registry_sha256(),
         "case_snapshot": model_snapshot,
         "case_snapshot_redacted_conflicting_fields": redacted_conflicting_fields,
+        "case_snapshot_redacted_invalid_fields": redacted_invalid_fields,
         "case_snapshot_projection_note": (
-            "Model-facing projection only. Conflicting flat field values are redacted; "
-            "source-specific conflict candidates remain available. The persisted immutable case snapshot is unchanged."
+            "Model-facing projection only. Conflicting flat values and INVALID raw values are redacted; "
+            "source-specific conflict candidates remain available. INVALID source excerpts are withheld while "
+            "source references and original excerpt hashes remain available. The persisted immutable case "
+            "snapshot and full audit provenance are unchanged."
         ),
         "canonical_field_values": canonical_field_values,
         "field_status": field_status,
@@ -402,18 +434,31 @@ def case_summary_has_attributed_opinions(case_summary: str) -> bool:
 
 
 def build_source_case_facts(case: SyntheticCase) -> list[str]:
-    """Create the factual register on the server; model-generated facts are not trusted."""
-    facts = [
-        "User-provided case summary (verbatim; clinical interpretation is not independently confirmed): " + case.case_summary
-    ]
+    """Create a source-fact register without promoting invalid or unresolved values."""
+    facts: list[str] = []
+    summary_state = case.clinical_field_states.get("case_summary")
+    if summary_state in (None, "PRESENT"):
+        facts.append(
+            "User-provided case summary (verbatim; clinical interpretation is not independently confirmed): "
+            + case.case_summary
+        )
+
     for field, label in _SINGLE_FIELDS.items():
+        state = case.clinical_field_states.get(field)
         value = getattr(case, field)
+        if state not in (None, "PRESENT"):
+            continue
         if value is not None and value != "":
             facts.append(f"Structured case field — {label}: {value}")
+
     for field, label in _LIST_FIELDS.items():
+        state = case.clinical_field_states.get(field)
         values = getattr(case, field) or []
+        if state not in (None, "PRESENT"):
+            continue
         if values:
             facts.append(f"Structured case field — {label}: " + "; ".join(values))
+
     facts.append("Data-status rule: empty or missing structured fields are not reported, not confirmed negative.")
     return facts[:25]
 
