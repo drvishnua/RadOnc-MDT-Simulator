@@ -1618,7 +1618,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
                 "or the verbatim case summary."
             )
         flags.append(
-            "Generated narrative asserts family/caregiver support or availability ("
+            "Generated narrative asserts family_caregiver_context (family/caregiver support or availability) ("
             + ", ".join(unsupported_family_caregiver_claims[:3])
             + "), but "
             + reason
