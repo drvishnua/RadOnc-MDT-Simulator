@@ -1326,11 +1326,11 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     # made about the diagnosis date; unrelated investigation/treatment dates are
     # outside this field's scope.
     diagnosis_date_pattern = re.compile(
-        r"\\b(?:diagnosis\\s+date|date\\s+of\\s+diagnosis)\\s*"
-        r"(?:(?:is|was)\\s*)?[:=]?\\s*\\d{4}-\\d{2}-\\d{2}\\b|"
-        r"\\bdiagnosed\\s+(?:on|date\\s+of)\\s+\\d{4}-\\d{2}-\\d{2}\\b|"
-        r"\\bdiagnosis\\s+(?:was\\s+)?(?:made|established|confirmed)\\s+"
-        r"(?:on|at)\\s+\\d{4}-\\d{2}-\\d{2}\\b",
+        r"\b(?:diagnosis\s+date|date\s+of\s+diagnosis)\s*"
+        r"(?:(?:is|was)\s*)?[:=]?\s*\d{4}-\d{2}-\d{2}\b|"
+        r"\bdiagnosed\s+(?:on|date\s+of)\s+\d{4}-\d{2}-\d{2}\b|"
+        r"\bdiagnosis\s+(?:was\s+)?(?:made|established|confirmed)\s+"
+        r"(?:on|at)\s+\d{4}-\d{2}-\d{2}\b",
         re.IGNORECASE,
     )
 
@@ -1338,7 +1338,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         return {
             date_match.group(0)
             for snippet in _unqualified_matches(diagnosis_date_pattern, value)
-            if (date_match := re.search(r"\\b\\d{4}-\\d{2}-\\d{2}\\b", snippet))
+            if (date_match := re.search(r"\b\d{4}-\d{2}-\d{2}\b", snippet))
         }
 
     diagnosis_date_state = field_state("diagnosis_date")
@@ -1356,7 +1356,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     unsupported_diagnosis_date_snippets = [
         (snippet, date_match.group(0))
         for snippet in generated_diagnosis_date_snippets
-        if (date_match := re.search(r"\\b\\d{4}-\\d{2}-\\d{2}\\b", snippet))
+        if (date_match := re.search(r"\b\d{4}-\d{2}-\d{2}\b", snippet))
         and date_match.group(0) not in supported_diagnosis_dates
     ]
     if unsupported_diagnosis_date_snippets:
@@ -1578,21 +1578,21 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         )
 
     family_caregiver_support_pattern = re.compile(
-        r"\\b(?:family|family\\s+members?|relatives?|caregivers?|carers?|daughter|son|"
-        r"spouse|partner|wife|husband|siblings?|children)\\b"
-        r"[^.!?;:\\n]{0,100}\\b(?:support|care|assistance|available|unavailable|"
-        r"accompany|accompanied|provides?|providing|helps?|helping|present|involved)\\b|"
-        r"\\b(?:support|care|assistance)\\b[^.!?;:\\n]{0,100}\\b"
-        r"(?:family|family\\s+members?|relatives?|caregivers?|carers?|daughter|son|"
-        r"spouse|partner|wife|husband|siblings?|children)\\b",
+        r"\b(?:family|family\s+members?|relatives?|caregivers?|carers?|daughter|son|"
+        r"spouse|partner|wife|husband|siblings?|children)\b"
+        r"[^.!?;:\n]{0,100}\b(?:support|care|assistance|available|unavailable|"
+        r"accompany|accompanied|provides?|providing|helps?|helping|present|involved)\b|"
+        r"\b(?:support|care|assistance)\b[^.!?;:\n]{0,100}\b"
+        r"(?:family|family\s+members?|relatives?|caregivers?|carers?|daughter|son|"
+        r"spouse|partner|wife|husband|siblings?|children)\b",
         re.IGNORECASE,
     )
     family_caregiver_state = field_state("family_caregiver_context")
     if family_caregiver_state == "PRESENT" and case.family_caregiver_context:
-        family_caregiver_source = "\\n".join(case.family_caregiver_context)
+        family_caregiver_source = "\n".join(case.family_caregiver_context)
     elif family_caregiver_state is None:
         family_caregiver_source = (
-            "\\n".join(case.family_caregiver_context)
+            "\n".join(case.family_caregiver_context)
             if case.family_caregiver_context
             else case_summary_text
         )
