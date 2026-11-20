@@ -865,10 +865,12 @@ def test_invalid_and_conflicting_values_are_withheld_from_generation_context_but
         case_summary=invalid_summary,
         clinical_t_stage="T9",
         clinical_n_stage="N0",
+        relevant_investigations=["TEST_ONLY_INVALID_LIST_SENTINEL"],
         clinical_field_states={
             "case_summary": "INVALID",
             "clinical_t_stage": "INVALID",
             "clinical_n_stage": "CONFLICTING",
+            "relevant_investigations": "INVALID",
         },
         clinical_field_provenance={
             "clinical_t_stage": [{
@@ -903,14 +905,17 @@ def test_invalid_and_conflicting_values_are_withheld_from_generation_context_but
     assert context["case_snapshot"]["case_summary"] is None
     assert context["case_snapshot"]["clinical_t_stage"] is None
     assert context["case_snapshot"]["clinical_n_stage"] is None
+    assert context["case_snapshot"]["relevant_investigations"] is None
     assert "case_summary" in context["case_snapshot_redacted_invalid_fields"]
     assert "clinical_t_stage" in context["case_snapshot_redacted_invalid_fields"]
     assert "clinical_n_stage" in context["case_snapshot_redacted_conflicting_fields"]
 
     assert context["field_status"]["case_summary"]["value"] is None
     assert context["field_status"]["clinical_t_stage"]["value"] is None
+    assert context["field_status"]["relevant_investigations"]["value"] is None
     assert context["canonical_field_values"]["case_summary"]["raw_value"] is None
     assert context["canonical_field_values"]["clinical_t_stage"]["raw_value"] is None
+    assert context["canonical_field_values"]["relevant_investigations"]["raw_value"] is None
     invalid_provenance = context["canonical_field_values"]["clinical_t_stage"]["provenance"][0]
     assert invalid_provenance["source_reference"] == "test-only-invalid-stage-source"
     assert invalid_provenance["source_excerpt_redacted"] is True
@@ -931,11 +936,13 @@ def test_invalid_and_conflicting_values_are_withheld_from_generation_context_but
     serialized_context = repr(context)
     assert invalid_summary not in serialized_context
     assert invalid_stage_excerpt not in serialized_context
+    assert "TEST_ONLY_INVALID_LIST_SENTINEL" not in serialized_context
     assert "T9" not in serialized_context
 
     source_facts = " ".join(build_source_case_facts(case))
     assert invalid_summary not in source_facts
     assert invalid_stage_excerpt not in source_facts
+    assert "TEST_ONLY_INVALID_LIST_SENTINEL" not in source_facts
     assert "T9" not in source_facts
     assert "Clinical N stage: N0" not in source_facts
 
@@ -943,6 +950,7 @@ def test_invalid_and_conflicting_values_are_withheld_from_generation_context_but
     original = case.model_dump(mode="json", exclude_none=True)
     assert original["case_summary"] == invalid_summary
     assert original["clinical_t_stage"] == "T9"
+    assert original["relevant_investigations"] == ["TEST_ONLY_INVALID_LIST_SENTINEL"]
     assert original["clinical_field_provenance"]["clinical_t_stage"][0]["source_excerpt"] == invalid_stage_excerpt
     assert original["clinical_n_stage"] == "N0"
     assert [item["raw_value"] for item in original["clinical_field_conflicts"]["clinical_n_stage"]] == ["N0", "N1"]
