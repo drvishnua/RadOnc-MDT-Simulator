@@ -6358,3 +6358,71 @@ Separate patient preference/goal statements from treatment willingness statement
 
 **Next action:** continue U09–U10 pathology component state/provenance and negative/absence controls field by field. Keep `active_step=U09-U10`. Do not modify intake code, activate U04 or introduce downstream workstreams.
 
+## U10 pathological T/N/M state/provenance matrix — test-first findings
+
+- Test-only commit: `c60c2dcf56c472c38216d6f11e46b1b19235ca85`, changed only `backend/tests/test_case_integrity.py`; no application code changed.
+- Added 27 parameterized cases across all three pathological fields:
+  - 18 combinations: UNKNOWN, NOT_REPORTED, NOT_ASSESSED, PENDING, DECLINED and NOT_APPLICABLE for pathological T, N and M;
+  - 3 INVALID raw-value controls;
+  - 3 CONFLICTING source-value controls with two source-specific provenance records each;
+  - 3 PRESENT structured-source matching/mismatch controls.
+- Exact-head Backend Tests run `44752006138`, job `136341985443`: **705 passed, 21 failed, 0 errors, 0 skipped** (726 total).
+- Failure analysis:
+  1. Eighteen failures are a reproducible output/audit-detail gap: the audit blocks a pathological TNM assertion for each explicit non-PRESENT state, but the warning says the field is “absent or does not support” the value and omits the actual explicit state. The state remains effective; the warning is not sufficiently precise for an auditable clinical state explanation.
+  2. Three PRESENT mismatch tests correctly receive a warning, but the test expected tokens such as `pT3`, while the audit intentionally formats canonical comparison keys as `p:T3`. These are test expectation errors, not missed mismatch detection; correct the tests to assert the registry's canonical comparison representation.
+  3. INVALID controls passed for all three components; raw invalid values were retained and not used to support staging assertions.
+  4. CONFLICTING controls passed for all three components; neither of two source-specific candidates was silently selected.
+- Deterministic no-inference preflight completed. Artifact `14636735075`, SHA-256 `4a3586cd880f7371e1aaf1a7217627659aef5db09003ff439376101bddb41432`.
+- Pytest diagnostic artifact `14636385884`, SHA-256 `c3b2ed079c516838fac09cb374d3439249230a7a977b21c8f37b33df4de6e362`.
+- Sequential Development Gate run `44752006096`: SUCCESS.
+- Security and Dependency Audit run `44752006125`: SUCCESS; all four jobs passed (Python CodeQL, JavaScript/TypeScript CodeQL, dependency audit, full-history secret scan).
+- PR #5 remains OPEN/unmerged at test head `c60c2dc`, base branch `feature/four-round-mdt-and-performance` at `df90e4a380bef06a7d37def753b385db4ae86c30`.
+- Preserve this failed checkpoint. Do not widen the registry state vocabulary or change raw pathological TNM values.
+
+### Required narrow correction
+
+- For each pathological T/N/M audit, if the corresponding explicit state is non-PRESENT (including UNKNOWN, NOT_REPORTED, NOT_ASSESSED, PENDING, DECLINED or NOT_APPLICABLE), keep the source/summary fallback blocked and include the exact field ID and explicit state in the warning.
+- Preserve the existing explicit INVALID and CONFLICTING explanations and their raw/source-specific records.
+- Preserve PRESENT exact-match support and mismatched-value rejection. Correct only the three test expectations to the canonical `p:Tn`, `p:Nn`, `p:Mn` representation emitted by the registry audit.
+- Keep clinical and pathological namespaces separate. Do not normalize a pathological source into clinical T/N/M evidence or infer N0/M0 from missing information.
+
+### Master Checklist — Current Status
+
+| Workstream | Status | Current evidence / outstanding boundary |
+|---|---|---|
+| Repository, PR and protected branch | VERIFIED | PR #5 OPEN/unmerged at test head `c60c2dc`; base `feature/four-round-mdt-and-performance`; no main modification, merge or force-push. |
+| Approved sequence / machine plan | VERIFIED | Sequential Gate `44752006096` SUCCESS; active step remains U09–U10; scope baseline `5284483a26e87028f919966e304c472ed537e839`. |
+| U09 immutable clinical registry v2 and typed contract | IN PROGRESS | Stable IDs, aliases, version/hash and typed states exist; complete field-by-field state/source/provenance/migration/backward-compatibility acceptance remains. |
+| U10 pathological T/N/M UNKNOWN and non-PRESENT source gate | VERIFIED for source blocking; IN PROGRESS for warning precision | Existing UNKNOWN summary-blocking test passes; new 18-case matrix confirms blocking across six non-PRESENT states and all three components, but actual state names are not currently emitted in warnings. |
+| U10 pathological T/N/M INVALID handling | VERIFIED for tested cases | Three INVALID controls passed on `c60c2dc`; raw values preserved and not used as staging support. |
+| U10 pathological T/N/M CONFLICTING handling | VERIFIED for tested cases | Three CONFLICTING controls passed on `c60c2dc`; two source-specific values retained and no single value selected. |
+| U10 pathological T/N/M PRESENT source matching | IN PROGRESS | Mismatch warnings are emitted; three test expectations need correction to registry key format `p:Tn`, `p:Nn`, `p:Mn`; rerun needed. |
+| U10 clinical/pathological T/N/M and stage-group separation | IN PROGRESS | Cross-namespace and UNKNOWN tests pass; full state and provenance matrix remains. |
+| U10 staging site/system/edition | VERIFIED for tested cases | Missing context and UNKNOWN system/edition controls pass; full edition applicability/migration matrix remains. |
+| U10 diagnosis date and family/caregiver claims | VERIFIED | Code `9b0d4cf`; Backend `44737660862`, 661/661. |
+| U10 investigation-record status/fallback | VERIFIED | Code `c4d5c63`; Backend `44738779218`, 666/666. |
+| U10 positive comorbidity/prior-treatment/family-history/allergy/medication assertions | VERIFIED | Code `25635e9`; Backend `44740400697`, 674/674. |
+| U10 social/resource context assertions | VERIFIED | Code `5571074`; Backend `44741865637`, 683/683. |
+| U10 patient goals/preferences versus willingness | VERIFIED | Code `ad98a10`; Backend `44745009819`, 690/690. |
+| U10 known_unknowns willingness/treatment-consent blocker | VERIFIED for tested cases | Code `ae4e5af`; Backend `44749806362`, 693/693. |
+| U10 educational-consent five-state mapping | VERIFIED for tested cases | Code `9b0b56b`; Backend `44750998934`, 699/699. |
+| U10 negative/absence claims and CONFIRMED_ABSENT provenance | IN PROGRESS | Selected field controls pass; complete field-by-field state/source/mismatch matrix remains. |
+| Known-unknown mapping across remaining fields | IN PROGRESS | Willingness/consent mappings pass; other field-specific mappings remain. |
+| Backend suite | FAILED | Test-only head `c60c2dc`; run `44752006138`; 705/726, with 18 warning-state-label gaps and 3 canonical-token test expectation errors. |
+| Deterministic preflight | VERIFIED | Run `44752006138`; artifact `14636735075`, SHA-256 recorded above. |
+| Sequential Development Gate | VERIFIED | Run `44752006096` SUCCESS; active step U09–U10. |
+| Security/dependency/secret scan/CodeQL | VERIFIED | Run `44752006125` SUCCESS; all four jobs passed. |
+| R1–R4 saved contributions and Chair reconciliation | IN PROGRESS | Mocked provenance/context tests exist; live saved R1–R3 and Chair R4 remain unverified. |
+| Case snapshot hashes, audit, failed-agent and resume paths | IN PROGRESS | Deterministic protections exist; full saved-run tamper/failure/resume audit remains. |
+| Evidence retrieval and claim-to-passage checks | IN PROGRESS | Independent current-source retrieval and exact support verification remain outstanding. |
+| U04 Case Intake and Completeness Screener | BLOCKED | Do not activate until U09–U10 acceptance is complete. |
+| U05–U08 | BLOCKED | Remain in approved order after U04. |
+| U03 intelligent Ollama installer | BLOCKED | Remains after U08. |
+| U01–U02 desktop experience/removal of development surfaces | BLOCKED | Remain after U03. |
+| Live 45-role R1–R4 | NOT STARTED | No live run ID or inspected saved artefact claimed. |
+| RTX 4060 request-time GPU inference | NOT STARTED | No request-time GPU/Ollama offload evidence claimed. |
+| Independent clinical validation | NOT STARTED | No qualified independent clinical review claimed. |
+| Integrated release acceptance | BLOCKED | U09–U10 pathological state/warning coverage and all ordered downstream/live/GPU/clinical gates remain. |
+
+**Next action:** first correct the three canonical-token assertions in the test file, then implement the explicit-state wording for non-PRESENT pathological TNM states. Run exact-head Backend/preflight, Sequential Gate and Security Audit. Keep `active_step=U09-U10`; do not modify intake code or activate U04.
+
