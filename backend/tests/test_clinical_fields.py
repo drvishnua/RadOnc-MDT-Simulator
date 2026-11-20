@@ -8,6 +8,8 @@ from pydantic import ValidationError
 from app.clinical_fields import (
     AGE,
     CLINICAL_FIELD_REGISTRY,
+    CLINICAL_FIELD_ALIASES,
+    CLINICAL_FIELD_ALIASES_V1,
     CLINICAL_FIELD_REGISTRY_VERSION,
     HISTORICAL_CLINICAL_FIELD_REGISTRY_VERSION,
     CLINICAL_FIELD_REGISTRY_V1,
@@ -510,4 +512,26 @@ def test_provenance_rejects_whitespace_only_excerpt_without_trimming_real_excerp
 def test_pathological_tnm_requires_explicit_p_or_yp_prefix(field_id, value):
     with pytest.raises(ValueError, match="explicit p or yp prefix"):
         normalize_pathological_tnm_component(field_id, value)
+
+@pytest.mark.parametrize(
+    ("registry", "alias_lookup"),
+    [
+        (CLINICAL_FIELD_REGISTRY_V1, CLINICAL_FIELD_ALIASES_V1),
+        (CLINICAL_FIELD_REGISTRY, CLINICAL_FIELD_ALIASES),
+    ],
+)
+def test_registry_aliases_are_unique_and_resolve_to_declared_field(registry, alias_lookup):
+    declared_aliases = [
+        (alias, definition.field_id)
+        for definition in registry.values()
+        for alias in definition.aliases
+    ]
+    alias_names = [alias for alias, _ in declared_aliases]
+
+    # A duplicate alias would be silently overwritten by the mapping-comprehension
+    # used to build the read-only lookup; reject ambiguity before it reaches a prompt.
+    assert len(alias_names) == len(set(alias_names))
+    expected_lookup = {alias: field_id for alias, field_id in declared_aliases}
+    assert dict(alias_lookup) == expected_lookup
+    assert set(alias_lookup.values()).issubset(set(registry))
 
