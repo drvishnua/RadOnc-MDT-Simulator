@@ -1,5 +1,6 @@
 """Regression tests for the immutable canonical clinical field registry."""
 from dataclasses import FrozenInstanceError
+import hashlib
 
 import pytest
 
@@ -405,3 +406,60 @@ def test_model_facing_case_snapshot_redacts_conflicting_flat_value_but_preserves
     assert [item["raw_value"] for item in field["conflict_candidates"]] == [70, 72]
     assert "age_years" in context["case_snapshot_redacted_conflicting_fields"]
     assert "persisted immutable case snapshot is unchanged" in context["case_snapshot_projection_note"]
+
+def test_explicit_provenance_and_conflict_sources_get_hashes_when_omitted():
+    """Every retained source excerpt must be hash-addressed without implying verification."""
+    t_excerpt = "Synthetic pathology report states a recorded clinical T token."
+    age_a_excerpt = "Synthetic clinician note records age as 70 years."
+    age_b_excerpt = "Synthetic patient report records age as 72 years."
+
+    case = _case(
+        clinical_t_stage="T1",
+        age_years=70,
+        clinical_field_states={"age_years": "CONFLICTING"},
+        clinical_field_provenance={
+            "clinical_t_stage": [{
+                "source_type": "PATHOLOGY_REPORT",
+                "source_reference": "synthetic-pathology-01",
+                "source_excerpt": t_excerpt,
+            }]
+        },
+        clinical_field_conflicts={
+            "age_years": [
+                {
+                    "raw_value": 70,
+                    "provenance": {
+                        "source_type": "CLINICIAN_NOTE",
+                        "source_reference": "synthetic-age-note",
+                        "source_excerpt": age_a_excerpt,
+                    },
+                },
+                {
+                    "raw_value": 72,
+                    "provenance": {
+                        "source_type": "PATIENT_REPORT",
+                        "source_reference": "synthetic-age-report",
+                        "source_excerpt": age_b_excerpt,
+                    },
+                },
+            ]
+        },
+    )
+
+    t_source = case.clinical_field_provenance["clinical_t_stage"][0]
+    conflict_sources = [
+        item.provenance
+        for item in case.clinical_field_conflicts["age_years"]
+    ]
+
+    assert t_source.source_sha256 == hashlib.sha256(t_excerpt.encode("utf-8")).hexdigest()
+    assert [item.source_sha256 for item in conflict_sources] == [
+        hashlib.sha256(age_a_excerpt.encode("utf-8")).hexdigest(),
+        hashlib.sha256(age_b_excerpt.encode("utf-8")).hexdigest(),
+    ]
+    assert t_source.verification_status == "user_supplied_not_independently_verified"
+    assert all(
+        item.verification_status == "user_supplied_not_independently_verified"
+        for item in conflict_sources
+    )
+
