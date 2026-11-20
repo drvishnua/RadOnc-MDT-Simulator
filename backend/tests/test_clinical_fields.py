@@ -340,3 +340,27 @@ def test_field_status_legacy_aliases_are_preserved_for_unannotated_values():
     assert context["field_status"]["age_years"]["status"] == "provided"
     assert context["field_status"]["relevant_comorbidities"]["status"] == "reported"
     assert context["canonical_field_values"]["age_years"]["status"] == "PRESENT"
+
+
+
+def test_case_model_persists_hash_bound_user_input_provenance_for_supplied_fields():
+    case = _case(
+        age_years=70,
+        clinical_t_stage="T1",
+        investigation_records=[{
+            "investigation_name": "MRI",
+            "result_summary": "Report summary supplied by the user.",
+            "status": "COMPLETED",
+            "reported_on": "2026-11-20",
+        }],
+    )
+    age_source = case.clinical_field_provenance["age_years"][0]
+    t_source = case.clinical_field_provenance["clinical_t_stage"][0]
+    investigation_source = case.clinical_field_provenance["investigation_records"][0]
+
+    assert age_source.source_reference == "SyntheticCase.age_years"
+    assert age_source.verification_status == "USER_SUPPLIED_NOT_INDEPENDENTLY_VERIFIED"
+    assert age_source.source_sha256
+    assert t_source.source_excerpt == "T1"
+    assert investigation_source.source_type == "STRUCTURED_CASE_INPUT"
+    assert investigation_source.source_sha256
