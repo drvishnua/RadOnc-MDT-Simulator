@@ -481,7 +481,6 @@ def test_explicit_provenance_record_cannot_be_mutated_after_hashing():
 def test_provenance_excerpt_preserves_exact_whitespace_before_hashing():
     excerpt = "\n  Original source wording with preserved spacing.  \t"
     source = ClinicalFieldProvenance(
-        source_type="CLINICIAN_NOTE",
         source_type=" CLINICIAN_NOTE ",
         source_reference=" synthetic-whitespace-note ",
         source_excerpt=excerpt,
@@ -495,6 +494,6 @@ def test_provenance_rejects_whitespace_only_excerpt_without_trimming_real_excerp
         ClinicalFieldProvenance(
             source_type="CLINICIAN_NOTE",
             source_reference="synthetic-blank-note",
-            source_excerpt=" \\n  \\t ",
+            source_excerpt=" \n  \t ",
         )
-\n
+
