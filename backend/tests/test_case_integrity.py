@@ -905,6 +905,96 @@ def test_negative_n_and_m_claims_conflict_with_structured_positive_stages():
     assert "absence of metastatic disease" in flags
 
 
+def test_unreported_positive_comorbidity_claim_is_flagged():
+    case = _case(
+        case_summary="Synthetic case. Comorbidity history is not reported.",
+        relevant_comorbidities=[],
+        clinical_field_states={"relevant_comorbidities": "UNKNOWN"},
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has diabetes mellitus."
+    })
+    assert any("relevant_comorbidities" in item for item in flags)
+
+
+def test_matching_structured_positive_comorbidity_claim_is_supported():
+    case = _case(relevant_comorbidities=["Diabetes mellitus"])
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has diabetes mellitus."
+    })
+    assert not any("relevant_comorbidities" in item for item in flags)
+
+
+def test_unknown_comorbidity_state_blocks_positive_case_summary_fallback():
+    statement = "The patient has diabetes mellitus."
+    case = _case(
+        case_summary="Synthetic case. " + statement,
+        relevant_comorbidities=[],
+        clinical_field_states={"relevant_comorbidities": "UNKNOWN"},
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement
+    })
+    assert any("relevant_comorbidities" in item and "UNKNOWN" in item for item in flags)
+
+
+def test_unreported_positive_prior_treatment_claim_is_flagged():
+    case = _case(
+        case_summary="Synthetic case. Prior treatment history is not reported.",
+        prior_treatment=[],
+        clinical_field_states={"prior_treatment": "UNKNOWN"},
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient previously received radiotherapy."
+    })
+    assert any("prior_treatment" in item for item in flags)
+
+
+def test_matching_structured_positive_prior_treatment_claim_is_supported():
+    case = _case(prior_treatment=["Prior radiotherapy"])
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient previously received radiotherapy."
+    })
+    assert not any("prior_treatment" in item for item in flags)
+
+
+def test_unreported_positive_family_history_claim_is_flagged():
+    statement = "The patient's mother had breast cancer."
+    case = _case(
+        case_summary="Synthetic case. Family history is not reported.",
+        family_history=[],
+        clinical_field_states={"family_history": "UNKNOWN"},
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement
+    })
+    assert any("family_history" in item for item in flags)
+
+
+def test_unreported_positive_allergy_claim_is_flagged():
+    case = _case(
+        case_summary="Synthetic case. Allergy history is not reported.",
+        known_allergies=[],
+        clinical_field_states={"known_allergies": "UNKNOWN"},
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has a penicillin allergy."
+    })
+    assert any("known_allergies" in item for item in flags)
+
+
+def test_unreported_positive_current_medication_claim_is_flagged():
+    case = _case(
+        case_summary="Synthetic case. Current medications are not reported.",
+        current_medications=[],
+        clinical_field_states={"current_medications": "UNKNOWN"},
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient is currently taking metformin."
+    })
+    assert any("current_medications" in item for item in flags)
+
+
 def test_comorbidity_and_prior_treatment_absence_claims_are_checked_against_supplied_lists():
     case = _case(
         relevant_comorbidities=["Diabetes mellitus"],
