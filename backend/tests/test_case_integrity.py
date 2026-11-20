@@ -1742,3 +1742,249 @@ def test_conflicting_stage_group_state_cannot_support_generated_stage_group():
         "provisional_conclusion": "The clinical stage group is II."
     })).casefold()
     assert "unsupported or type-conflicting stage group" in flags
+
+
+
+def test_conflicting_age_value_cannot_support_generated_age_claim():
+    case = _case(
+        age_years=70,
+        clinical_field_states={"age_years": "CONFLICTING"},
+        clinical_field_conflicts={
+            "age_years": [
+                {
+                    "raw_value": 70,
+                    "provenance": {
+                        "source_type": "CLINICIAN_NOTE",
+                        "source_reference": "age-note-a",
+                        "source_excerpt": "Age recorded as 70 years.",
+                    },
+                },
+                {
+                    "raw_value": 72,
+                    "provenance": {
+                        "source_type": "PATIENT_REPORT",
+                        "source_reference": "age-report-b",
+                        "source_excerpt": "Patient reports age as 72 years.",
+                    },
+                },
+            ]
+        },
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient is 70 years old."
+    })).casefold()
+    assert "conflicting source values" in flags
+
+
+def test_conflicting_sex_at_birth_cannot_support_generated_sex_descriptor():
+    case = _case(
+        sex_at_birth="male",
+        clinical_field_states={"sex_at_birth": "CONFLICTING"},
+        clinical_field_conflicts={
+            "sex_at_birth": [
+                {
+                    "raw_value": "male",
+                    "provenance": {
+                        "source_type": "CLINICIAN_NOTE",
+                        "source_reference": "sex-note-a",
+                        "source_excerpt": "Sex at birth recorded as male.",
+                    },
+                },
+                {
+                    "raw_value": "female",
+                    "provenance": {
+                        "source_type": "MEDICAL_RECORD",
+                        "source_reference": "sex-record-b",
+                        "source_excerpt": "Sex at birth recorded as female.",
+                    },
+                },
+            ]
+        },
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient is male."
+    })).casefold()
+    assert "conflicting source values" in flags
+
+
+def test_conflicting_performance_status_or_scale_cannot_support_generated_score():
+    case = _case(
+        performance_status="1",
+        performance_status_scale="ECOG",
+        clinical_field_states={
+            "performance_status": "CONFLICTING",
+            "performance_status_scale": "CONFLICTING",
+        },
+        clinical_field_conflicts={
+            "performance_status": [
+                {
+                    "raw_value": "1",
+                    "provenance": {
+                        "source_type": "CLINICIAN_NOTE",
+                        "source_reference": "ps-note-a",
+                        "source_excerpt": "ECOG performance status 1.",
+                    },
+                },
+                {
+                    "raw_value": "2",
+                    "provenance": {
+                        "source_type": "MEDICAL_RECORD",
+                        "source_reference": "ps-record-b",
+                        "source_excerpt": "ECOG performance status 2.",
+                    },
+                },
+            ],
+            "performance_status_scale": [
+                {
+                    "raw_value": "ECOG",
+                    "provenance": {
+                        "source_type": "CLINICIAN_NOTE",
+                        "source_reference": "ps-scale-a",
+                        "source_excerpt": "Performance scale: ECOG.",
+                    },
+                },
+                {
+                    "raw_value": "WHO",
+                    "provenance": {
+                        "source_type": "MEDICAL_RECORD",
+                        "source_reference": "ps-scale-b",
+                        "source_excerpt": "Performance scale: WHO.",
+                    },
+                },
+            ],
+        },
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "Performance status is ECOG 1."
+    })).casefold()
+    assert "conflicting source values" in flags
+
+
+def test_performance_status_score_without_a_named_scale_is_not_accepted_as_verified():
+    case = _case(performance_status="1", performance_status_scale=None)
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "Performance status is ECOG 1."
+    })).casefold()
+    assert "scale is absent" in flags
+
+
+def test_conflicting_histology_cannot_support_generated_histology_claim():
+    case = _case(
+        histology="scc",
+        clinical_field_states={"histology": "CONFLICTING"},
+        clinical_field_conflicts={
+            "histology": [
+                {
+                    "raw_value": "scc",
+                    "provenance": {
+                        "source_type": "PATHOLOGY_REPORT",
+                        "source_reference": "path-a",
+                        "source_excerpt": "Squamous cell carcinoma.",
+                    },
+                },
+                {
+                    "raw_value": "adenocarcinoma",
+                    "provenance": {
+                        "source_type": "PATHOLOGY_REPORT",
+                        "source_reference": "path-b",
+                        "source_excerpt": "Adenocarcinoma.",
+                    },
+                },
+            ]
+        },
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "Histology is squamous cell carcinoma."
+    })).casefold()
+    assert "not supported" in flags
+
+
+def test_conflicting_comorbidity_list_cannot_support_negative_comorbidity_claim():
+    case = _case(
+        relevant_comorbidities=["diabetes"],
+        clinical_field_states={"relevant_comorbidities": "CONFLICTING"},
+        clinical_field_conflicts={
+            "relevant_comorbidities": [
+                {
+                    "raw_value": ["diabetes"],
+                    "provenance": {
+                        "source_type": "CLINICIAN_NOTE",
+                        "source_reference": "comorbidity-a",
+                        "source_excerpt": "Diabetes recorded.",
+                    },
+                },
+                {
+                    "raw_value": [],
+                    "provenance": {
+                        "source_type": "PATIENT_REPORT",
+                        "source_reference": "comorbidity-b",
+                        "source_excerpt": "Patient reports no known comorbidities.",
+                    },
+                },
+            ]
+        },
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has no known comorbidities."
+    })).casefold()
+    assert "absence is not explicitly supported" in flags
+
+
+def test_confirmed_absent_comorbidity_requires_and_uses_explicit_provenance():
+    case = _case(
+        relevant_comorbidities=[],
+        clinical_field_states={"relevant_comorbidities": "CONFIRMED_ABSENT"},
+        clinical_field_provenance={
+            "relevant_comorbidities": [{
+                "source_type": "CLINICIAN_NOTE",
+                "source_reference": "comorbidity-confirmation",
+                "source_excerpt": "No known comorbidities.",
+            }]
+        },
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has no known comorbidities."
+    })
+    assert not any("absence is not explicitly supported" in item for item in flags)
+
+
+def test_unknown_comorbidity_state_does_not_use_flat_or_empty_list_as_negative_evidence():
+    case = _case(
+        relevant_comorbidities=[],
+        clinical_field_states={"relevant_comorbidities": "UNKNOWN"},
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has no known comorbidities."
+    })).casefold()
+    assert "absence is not explicitly supported" in flags
+
+
+def test_conflicting_prior_treatment_list_cannot_support_no_prior_treatment_claim():
+    case = _case(
+        prior_treatment=["radiotherapy"],
+        clinical_field_states={"prior_treatment": "CONFLICTING"},
+        clinical_field_conflicts={
+            "prior_treatment": [
+                {
+                    "raw_value": ["radiotherapy"],
+                    "provenance": {
+                        "source_type": "CLINICIAN_NOTE",
+                        "source_reference": "treatment-a",
+                        "source_excerpt": "Prior radiotherapy recorded.",
+                    },
+                },
+                {
+                    "raw_value": [],
+                    "provenance": {
+                        "source_type": "PATIENT_REPORT",
+                        "source_reference": "treatment-b",
+                        "source_excerpt": "Patient reports no prior treatment.",
+                    },
+                },
+            ]
+        },
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has received no prior treatment."
+    })).casefold()
+    assert "absence is not explicitly supported" in flags
