@@ -1061,6 +1061,9 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             r"\bcaregiver\s+(?:availability|support|arrangements?|context)\b",
             r"\bfamily\s+support\b",
         ),
+        "current_medications": (r"\bcurrent\s+medications?\b", r"\bmedication\s+list\b"),
+        "known_allergies": (r"\bknown\s+allerg(?:y|ies)\b", r"\ballergy\s+history\b"),
+        "prior_treatment": (r"\bprior\s+treatment\b", r"\bprevious\s+treatment\b", r"\btreatment\s+history\b"),
         "relevant_comorbidities": (r"relevant\s+comorbidit(?:y|ies)\s+history", r"comorbidit(?:y|ies)\s+history", r"medical\s+history"),
         "patient_willingness": (r"patient\s+willingness", r"patient\s+preference(?:s)?", r"patient\s+decision", r"willingness\s+to\s+(?:undergo|accept|receive)\s+treatment"),
     }
