@@ -1376,6 +1376,33 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             + "); this is an unsupported or type-conflicting stage group assertion and may conflict with structured stage_group. "
             + "Clinical, pathological and untyped stage groups must be explicitly sourced separately."
         )
+
+    if generated_group_records:
+        staging_context_gaps: list[str] = []
+        for field_id, label in (
+            ("primary_site", "primary site"),
+            ("staging_system", "staging system"),
+            ("staging_edition", "staging edition"),
+        ):
+            value = getattr(case, field_id)
+            state = field_state(field_id)
+            if value in (None, "") or not field_assertable(field_id):
+                if state not in (None, "PRESENT"):
+                    staging_context_gaps.append(f"{label} ({state})")
+                else:
+                    staging_context_gaps.append(label)
+        if staging_context_gaps:
+            generated_stage_snippets = [
+                snippet for _kind, _key, snippet in generated_group_records[:3]
+            ]
+            flags.append(
+                "Generated narrative presents stage-group assertion(s) ("
+                + "; ".join(generated_stage_snippets)
+                + ") without assertable staging context: "
+                + ", ".join(staging_context_gaps)
+                + ". Preserve the recorded group token, but do not present it as a validated staging classification or infer site/system/edition compatibility."
+            )
+
     sex_pattern = re.compile(r"\b(?:male|female|man|woman|boy|girl)\b", re.IGNORECASE)
     generated_sex_terms = _unqualified_matches(sex_pattern, text)
 
