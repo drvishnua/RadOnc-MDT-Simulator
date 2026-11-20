@@ -33,7 +33,7 @@ def _fixture():
                 "status": "VERIFIED" if index == 0 else ("IN PROGRESS" if index == 1 else "BLOCKED"),
                 "depends_on": [] if index == 0 else [STEP_ORDER[index - 1]],
                 "required_workflow_names": (
-                    WORKFLOWS if index == 0 else
+                    list(WORKFLOWS) if index == 0 else
                     ["Sequential Development Gate", "Backend Tests", "Security and Dependency Audit"] if index == 1 else
                     ["Sequential Development Gate"]
                 ),
