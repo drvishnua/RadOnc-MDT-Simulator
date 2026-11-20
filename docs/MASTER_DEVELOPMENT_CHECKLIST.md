@@ -7260,3 +7260,67 @@ Application and test code is unchanged from `4a44b3e8d6796dee21d25e396d611091c79
 | Integrated release acceptance | BLOCKED | Migration, remaining U09–U10, live/GPU/clinical and downstream gates remain |
 
 **Next approved action:** audit the existing legacy/registry-version migration and resume paths. Verify historical v1 and unversioned records remain immutable and readable for review, that new/resumed generation fails closed unless it uses the active v2 registry and immutable case version, and that any upgrade requires an explicit new version/migration record rather than silent reinterpretation. Add tests only for reproducible gaps. Do not alter the machine-plan order, merge PR #5, modify the protected development branch or activate U04.
+
+
+### U09 legacy and registry-version migration compatibility — 20 November 2026
+
+**Approved-sequence position:** completion of the next U09–U10 checklist item after registry/schema type consistency. No downstream workstream or machine-plan step was started.
+
+**Existing implementation audited**
+- Explicit legacy SQLite database import copies the source to a temporary destination and verifies SQLite `integrity_check` on both source and copy. It leaves the source file untouched, never overwrites an existing user-data destination, and rejects corrupt source databases.
+- Additive migrations add the registry-version columns with default `legacy-unversioned` for pre-existing simulation runs and patient case versions. They do not silently label old rows as v2.
+- Historical patient case versions are read through `_version_record`, which verifies the preserved `case_json` SHA-256 before parsing. The stored JSON bytes/hash and registry-version marker are not rewritten when display metadata is backfilled.
+- Historical registry `1.0.0` and `legacy-unversioned` remain inspectable; `require_supported_registry_version` only admits active v2 `2.0.0` for new/resumed generation.
+- New R1 creation from a patient version checks active registry version, accepted-intake event-chain linkage and case snapshot hash. New round creation and round resume repeat the registry-version and intake-provenance checks; batch resume does the same.
+- Direct unlinked assessment and direct run endpoints remain disabled. Historical run detail/case/results endpoints remain readable; historical runs without valid active-v2 immutable case/intake provenance cannot resume or advance.
+
+**Historical-v1 regression coverage added**
+- Test commit `8a654a0ea0aa46a0c3fb090e73283f805d6b9b1f`; import correction `46b9c3f07123f0b8099558b0c5b702e871cc42b2`.
+- Added patient case-version regression: explicit v1 version remains readable with its original case hash and v1 marker; attempted R1 returns HTTP 409 and leaves case JSON/hash/version label unchanged.
+- Added historical v1 run regression: run metadata and exact stored case snapshot remain viewable; R1 resume and R2 advance both return HTTP 409 and do not relabel the run.
+- Existing tests cover legacy-unversioned patient versions, old-schema additive defaults, legacy runs being readable but read-only, corrupt/overwritten database migration protection, and preservation of historical patient versions/display names.
+
+**Exact-head verification**
+- Test head: `46b9c3f07123f0b8099558b0c5b702e871cc42b2`.
+- Backend Tests run `44774504484`: SUCCESS; **799/799 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive**; diagnostic errors 0. Pytest diagnostics artifact `14648911709`; deterministic preflight artifact `14650110413`.
+- Sequential Development Gate run `44774504909`: SUCCESS.
+- Security and Dependency Audit run `44774504491`: SUCCESS; Python CodeQL, JavaScript/TypeScript CodeQL, Python/Node dependency audit and full-history secret scan all successful.
+- Each workflow identifies the exact test head `46b9c3f07123f0b8099558b0c5b702e871cc42b2`.
+
+**Current interpretation**
+- Legacy database-copy preservation and safe additive legacy version defaults: VERIFIED for tested cases.
+- Historical v1 and legacy-unversioned read-only compatibility: VERIFIED for tested cases.
+- Active-v2 immutable case/intake requirements on new R1, round advancement and resume paths: VERIFIED by code trace and regression coverage.
+- No automatic v1-to-v2 conversion occurs. Historical snapshots remain historical; an accepted new intake is promoted as a separate immutable v2 case version.
+- U09–U10 remains IN PROGRESS pending the wider field/state/source/provenance acceptance and independent review. PR #5 remains OPEN and NOT MERGED.
+
+### Master Checklist — Current Status (20 November 2026)
+
+| Workstream | Status | Evidence / outstanding boundary |
+|---|---|---|
+| PR #5 / protected branches | VERIFIED | Test head `46b9c3f`; base remains `feature/four-round-mdt-and-performance` at `df90e4a`; OPEN/unmerged; main untouched |
+| Approved development sequence | VERIFIED | Active scope remains U09–U10; no U04+ work started |
+| U09 immutable registry v2 / stable IDs | IN PROGRESS | v1 retained for history; v2 hash-addressed; full field/state/source/provenance acceptance remains |
+| U10 known_unknowns field mapping and own-state gate | VERIFIED (tested cases) | Explicit field/clause mapping, unrelated-field and non-PRESENT source gate regressions pass |
+| U09 empty provenance-list fallback | VERIFIED | Exact implementation `d615592`; 795/795 backend |
+| U09 clinical list / investigation excerpt / free-text source preservation | VERIFIED | Exact-text regressions and exact-head backend checks passed |
+| U09 registry-to-schema data-type consistency | VERIFIED | All 40 fields / 7 types checked; 797/797 backend |
+| U09 legacy DB copy and additive migration defaults | VERIFIED (tested cases) | Database migration tests verify source unchanged, destination not overwritten, corrupt source rejected and old rows marked legacy-unversioned |
+| U09 historical v1 / legacy-unversioned read-only compatibility | VERIFIED (tested cases) | New v1 case/run regressions; 799/799 backend on `46b9c3f` |
+| Active-v2 immutable case and accepted-intake gates | VERIFIED (tested routes) | R1 create, R1 resume, R2–R4 start and round resume require v2 plus immutable accepted-intake linkage |
+| Broader field/state/source/provenance matrix | IN PROGRESS | Additional registry-wide edge-case and source-state acceptance remains |
+| Backend tests / deterministic preflight | VERIFIED on `46b9c3f` | Run `44774504484`, 799/799; preflight artifact `14650110413` |
+| Sequential Development Gate | VERIFIED on `46b9c3f` | Run `44774504909` SUCCESS |
+| Security/dependency/secret scan/CodeQL | VERIFIED on `46b9c3f` | Run `44774504491` SUCCESS; all four checks passed |
+| R1–R3 shared context across 45 roles | IN PROGRESS | Mocked coverage exists; live saved-run role coverage remains |
+| R4 Chair consensus, dissent and traceability | IN PROGRESS | Live saved R1–R3 to R4 reconciliation remains unverified |
+| Case snapshots/hashes, audit, failure and resume | IN PROGRESS | Core deterministic controls verified; full saved-run tamper/failure/resume acceptance remains |
+| Evidence retrieval and claim-to-passage verification | IN PROGRESS | Current-source verification in live cases remains |
+| Frontend/browser E2E | NOT STARTED | No frontend change in these U09 slices |
+| U04 and later ordered workstreams | BLOCKED | Do not begin before U09–U10 acceptance |
+| Live 45-role R1–R4 | NOT STARTED | No live run ID or inspected saved artefact |
+| RTX 4060 request-time GPU inference | NOT STARTED | No request-time telemetry |
+| Independent clinical validation | NOT STARTED | No qualified independent review |
+| Integrated release acceptance | BLOCKED | Broader U09–U10, live/GPU/clinical and downstream gates remain |
+
+**Next approved action:** finish the remaining registry-wide field/state/source/provenance acceptance; keep previously verified migration and type-consistency work closed unless a reproducible regression reopens it. Do not modify the machine-plan sequence, merge PR #5, modify the protected development branch or activate U04.
