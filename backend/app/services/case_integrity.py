@@ -1053,16 +1053,27 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         generated_values = _tnm_component_values(text, component)
         unsupported_values = sorted(generated_values - supported_values)
         if unsupported_values:
-            if structured_value not in (None, ""):
+            unsupported_list = ", ".join(unsupported_values[:4])
+            if explicit_state == "INVALID":
+                flags.append(
+                    f"Generated narrative contains {component}-stage value(s) {unsupported_list}, "
+                    f"but {label} is marked INVALID; its preserved raw value cannot support a clinical staging assertion."
+                )
+            elif explicit_state == "CONFLICTING":
+                flags.append(
+                    f"Generated narrative contains {component}-stage value(s) {unsupported_list}, "
+                    f"but {label} has unresolved conflicting source values; no single value may be selected."
+                )
+            elif structured_value not in (None, ""):
                 flags.append(
                     f"Generated narrative contains {component}-stage value(s) "
-                    + ", ".join(unsupported_values[:4])
+                    + unsupported_list
                     + f", which conflict with structured {label}={structured_value!s}."
                 )
             else:
                 flags.append(
                     f"Generated narrative contains {component}-stage value(s) "
-                    + ", ".join(unsupported_values[:4])
+                    + unsupported_list
                     + f", but {label} is not supplied and those values are not explicitly recorded in the verbatim case summary."
                 )
 
@@ -1097,11 +1108,23 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         )
         unsupported_values = sorted(generated_values - supported_values)
         if unsupported_values:
-            flags.append(
-                f"Generated narrative contains unsupported pathological {component}-stage value(s) "
-                + ", ".join(unsupported_values[:4])
-                + f"; {field} is absent or does not support those exact pathological values."
-            )
+            unsupported_list = ", ".join(unsupported_values[:4])
+            if explicit_state == "INVALID":
+                flags.append(
+                    f"Generated narrative contains unsupported pathological {component}-stage value(s) "
+                    f"{unsupported_list}; {field} is marked INVALID and its raw value cannot support a pathological staging assertion."
+                )
+            elif explicit_state == "CONFLICTING":
+                flags.append(
+                    f"Generated narrative contains unsupported pathological {component}-stage value(s) "
+                    f"{unsupported_list}; {field} has unresolved conflicting source values and no single value may be selected."
+                )
+            else:
+                flags.append(
+                    f"Generated narrative contains unsupported pathological {component}-stage value(s) "
+                    + unsupported_list
+                    + f"; {field} is absent or does not support those exact pathological values."
+                )
 
     # Explicit age assertions are compared with structured age when present,
     # otherwise with the exact age stated in the verbatim source summary.
