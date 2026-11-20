@@ -5320,3 +5320,64 @@ A regression-first review found that `case_summary` itself can be marked `INVALI
 **Next U09–U10 action:** continue auditing the remaining canonical registry fields and deterministic claim-support fallbacks for state/provenance gaps. Add regression tests only for reproducible gaps; preserve all current summary, state, negative-list, willingness/consent, laterality, histological-grade and site/subsite protections. Run exact-head backend/preflight, Sequential Gate and Security Audit; inspect logs/artifacts; update this same checklist. Do not modify `intake_store.py`, alter the machine plan, activate U04 or begin later steps.
 
 **Clinical/verification boundary:** these checks verify deterministic software behavior only. They do not prove model adherence, live 45-role execution, saved Chair reconciliation, clinical staging correctness, guideline verification, GPU inference or independent clinical validation.
+
+# Master Checklist — Current Status (20 November 2026; staging-context claim audit regression failure)
+
+**Exact current PR code/test commit:** `3a271d8e7399193b93194ff324a377fcd4dcec7b`  
+**PR #5:** OPEN, not draft, not merged; head branch `docs/reconcile-master-checklist-after-pr4-merge`; target `feature/four-round-mdt-and-performance` at `df90e4a380bef06a7d37def753b385db4ae86c30`. No independent review or inline review thread is recorded.  
+**Approved machine plan:** `active_step=U09-U10`; U09-U10 remains IN PROGRESS; U04 and all later steps remain BLOCKED. Machine plan SHA: `7c4bd894af1ef21f8bf54d48ad7e09353fd6471a`.
+
+## Latest U09–U10 finding: stage-group claim requires assertable site/system/edition context
+
+- Regression-only commit `66b38211ea11949628308c38261be0c142554ecf` added three tests: clinical stage group with no primary-site/system/edition context; explicit UNKNOWN staging-system state; and a complete site/system/edition control.
+- The code at current PR head `3a271d8` has not yet added a staging-context prerequisite to the stage-group claim audit. The context warning in shared prompt construction is not enough to prevent a matching structured stage-group token from being accepted by the deterministic claim audit.
+- Exact-head Backend Tests run `44729275307`, job `136264550734`: **652 passed, 2 failed, 0 errors, 0 skipped, 0 inconclusive**. The failures are:
+  - `test_clinical_stage_group_is_not_presented_as_validated_without_site_system_edition`: no staging-context audit flag for a generated clinical stage-group assertion when primary site, staging system and edition are absent.
+  - `test_explicit_unknown_staging_system_cannot_validate_clinical_stage_group`: no staging-context audit flag when staging system is explicitly UNKNOWN.
+  - The complete-context control passed.
+- Exact-head Sequential Development Gate run `44729275154`: SUCCESS.
+- Exact-head Security and Dependency Audit run `44729275130`: SUCCESS. Python CodeQL, JavaScript/TypeScript CodeQL, dependency audit and full-history secret scan all completed successfully.
+- The follow-up code commit `3a271d8` changed only the wording of the staging-context warning; it did not fix the two failing test cases. Do not treat that wording adjustment as closure.
+- This is a recorded FAILED regression checkpoint, not acceptance. The failure remains open until the claim audit rejects staging classification claims without an assertable primary site, staging system and staging edition, including when any required context field has an explicit non-PRESENT state. It must not silently rewrite or discard the recorded stage-group token.
+
+## Master Checklist — Current Status
+
+| Workstream | Status | Current evidence / outstanding boundary |
+|---|---|---|
+| Repository, branch, PR, commit and checklist verification | VERIFIED | PR #5 head `3a271d8`; target is the protected development branch, not `main`. PR is open/unmerged; no independent review recorded. |
+| U12 protected sequential development gate | VERIFIED | Exact-head Sequential Gate run `44729275154` SUCCESS; machine plan and dependency order unchanged. |
+| U09 canonical clinical registry v2 | IN PROGRESS | Immutable v2 registry and stable IDs exist; complete U09/U10 acceptance and legacy-case compatibility/recovery remain outstanding. |
+| U10 deterministic state-aware hallucination controls | IN PROGRESS | Summary quarantine, per-field absence states, negative-list claims, willingness/consent, laterality, histological-grade, primary-site/subsite and TNM protections have tests; staging-context claim audit remains FAILED on current head. |
+| Per-field epistemic-state allowlist | VERIFIED | Only five explicit negativeable list fields allow CONFIRMED_ABSENT; registry/schema regressions passed on `c9f64c3`. |
+| Negative claims for allergies, medications, comorbidities, prior treatment and family history | VERIFIED | Exact-head tests on `f78e8ac` cover UNKNOWN/empty sources and populated structured values contradicting free-text negative claims. |
+| Patient preference/willingness and educational consent separation | VERIFIED | Exact-head tests on `8c784eb` cover UNKNOWN-state summary bypass, structured willingness, educational-scenario GIVEN/DECLINED consent and no inference of treatment consent from scenario status. |
+| Canonical laterality claim audit | VERIFIED | Exact-head tests on `f44730a` cover structured mismatch/match, UNKNOWN/CONFLICTING non-selection and safe summary fallback. |
+| Histological-grade claim audit | VERIFIED | Exact-head tests on `cc0de39` cover structured support, contradictory summary rejection, UNKNOWN-state summary rejection and CONFLICTING-state non-selection. |
+| Primary-site and anatomical-subsite claim audit | VERIFIED | Exact-head tests on `ebe0d75` cover structured mismatch/match, UNKNOWN/CONFLICTING non-selection and safe summary fallback. |
+| Clinical stage-group staging-context prerequisite | FAILED | Current head `3a271d8`; run `44729275307`: 2 failed tests for missing and UNKNOWN staging context. Complete-context control passed. Fix and rerun required. |
+| Investigation summary and typed-record state gates | VERIFIED | Source inspection confirms imaging_summary, relevant_investigations and investigation_records are used as supporting sources only when implicitly/explicitly PRESENT; detailed clinical result interpretation remains unvalidated. |
+| R1–R4 shared canonical context | IN PROGRESS | Mocked all-45-role R1–R3 prompt-context tests are recorded; live saved R1–R3 and Chair R4 execution remains unverified. |
+| Clinical safety and staging | IN PROGRESS | Deterministic TNM, phase, state, site, subsite, laterality and grade checks exist; staging-context claim prerequisite currently FAILED; site/system/edition-aware classification and independent clinical review are not established. |
+| Case integrity, hashes and audit | IN PROGRESS | Immutable provenance/conflicts and typed claim audits have regression coverage; complete saved case-version/run tamper and failure-path acceptance remains open. |
+| Provenance and evidence retrieval | IN PROGRESS | Source hashes/provenance are preserved; user-supplied provenance is not independently verified; external guideline/evidence retrieval remains unverified. |
+| Chair consensus, conditionality, dissent and traceability | IN PROGRESS | Deterministic safeguards exist; full saved-contribution Chair reconciliation and live dissent/consensus audit remain outstanding. |
+| Missing/failed specialist and partial-run handling | IN PROGRESS | Deterministic regression coverage exists; full live 45-role failure/resume inspection remains outstanding. |
+| Backend tests | FAILED | Exact current PR head `3a271d8`; run `44729275307`: 652/654 passed, 2 failed. |
+| Deterministic preflight | VERIFIED | Exact current head `3a271d8`; preflight 7/7 passed. |
+| Sequential development gate | VERIFIED | Exact current head `3a271d8`; run `44729275154` SUCCESS. |
+| Security, dependency, secret scan and CodeQL | VERIFIED | Exact current head `3a271d8`; run `44729275130` SUCCESS; all four jobs passed. |
+| Frontend build and browser E2E | NOT APPLICABLE | No frontend files changed in this backend-only checkpoint; previous post-merge baseline remains recorded. |
+| Dashboard/API integration | IN PROGRESS | Backend API/unit coverage exists; no new browser E2E run triggered by this backend-only slice. |
+| Windows packaging prerequisites and installer | VERIFIED | No packaging files changed in this slice; prior exact post-merge baseline remains the latest packaging evidence. |
+| Deferred intake snapshot/terminal-event binding | BLOCKED | `intake_store.py` remains outside U09–U10 scope; retain for U04. |
+| Legacy saved-case recovery/migration | BLOCKED | Historical v1/legacy snapshots remain read-only and fail-closed; no silent migration. |
+| Ollama discovery/model reuse | BLOCKED | U03 remains later in the approved order; local installed-but-stopped/model reuse remains unverified. |
+| Live 45-role R1–R4 run and saved-run audit | NOT STARTED | No live run ID or saved MDT artifact is claimed. |
+| RTX 4060 request-time GPU inference | NOT STARTED | No request-time telemetry or Ollama offload/inference trace is claimed. |
+| Independent clinical validation | NOT STARTED | No independent clinical review or guideline concordance is claimed. |
+| U04, U05–U06, U06–U08, U07, U03 and U01–U02 | BLOCKED | All remain later than active U09–U10 in the approved dependency sequence. |
+| Integrated release acceptance | BLOCKED | U09–U10 has an open FAILED regression; ordered later work, live-model/GPU, evidence and clinical-validation requirements remain outstanding. |
+
+**Next U09–U10 action:** fix the two staging-context regression failures so that a generated clinical or pathological stage-group claim is not represented as a validated classification unless the necessary primary site, staging system and staging edition are all independently assertable. Explicit UNKNOWN, INVALID, CONFLICTING, NOT_REPORTED and other non-PRESENT states must not be bypassed by free-text summary. Preserve the original recorded token and emit a precise deterministic warning. Re-run exact-head backend/preflight, Sequential Gate and Security Audit; inspect logs/artifacts; update this same checklist. Do not modify `intake_store.py`, alter the machine plan, activate U04 or begin later steps.
+
+**Clinical/verification boundary:** deterministic audit behavior only. This does not establish clinical stage assignment, guideline concordance, live model adherence, live 45-role execution, GPU inference or independent clinical validation.
