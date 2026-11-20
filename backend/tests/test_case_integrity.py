@@ -3007,3 +3007,28 @@ def test_confirmed_absent_comorbidity_cannot_support_a_positive_summary_claim():
         for item in flags
     )
 
+def test_unknown_patient_willingness_blocks_direct_willingness_claim_in_case_summary():
+    statement = "The patient is willing to undergo surgery."
+    case = _case(
+        case_summary="Referral text: " + statement,
+        patient_willingness=None,
+        clinical_field_states={"patient_willingness": "UNKNOWN"},
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert any("patient_willingness" in item or "patient preference/decision" in item for item in flags)
+
+
+def test_patient_goal_cannot_substitute_for_explicit_patient_willingness():
+    statement = "The patient is willing to undergo surgery."
+    case = _case(
+        patient_goals=["is willing to undergo surgery"],
+        patient_willingness=None,
+        clinical_field_states={"patient_willingness": "UNKNOWN"},
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert any("patient_willingness" in item or "patient preference/decision" in item for item in flags)
+
