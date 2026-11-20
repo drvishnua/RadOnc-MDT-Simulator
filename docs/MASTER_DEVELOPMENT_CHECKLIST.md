@@ -5144,3 +5144,60 @@ A regression-first review found that `case_summary` itself can be marked `INVALI
 **Next U09–U10 action:** continue the remaining typed-field non-PRESENT state/provenance and deterministic claim-audit projections, using regression-first changes only for reproducible gaps. Review the remaining registry fields and every audit source fallback; preserve current invalid/conflicting summary, CONFIRMED_ABSENT, negative-list and willingness/consent regressions. Run exact-head backend/preflight, Sequential Gate and Security Audit; inspect logs/artifacts; then update this same checklist. Do not modify `intake_store.py`, alter the machine plan, activate U04 or begin later steps.
 
 **Clinical/verification boundary:** these checks verify deterministic software behavior only. They do not prove model adherence, live 45-role execution, saved Chair reconciliation, clinical staging correctness, guideline verification, GPU inference or independent clinical validation.
+
+# Master Checklist — Current Status (20 November 2026; canonical laterality audit verification)
+
+**Exact code/test commit:** `f44730a4c53889121a5af060b0f03ec87859360f`  
+**PR #5:** OPEN, not draft, not merged; head branch `docs/reconcile-master-checklist-after-pr4-merge`; base `feature/four-round-mdt-and-performance` at `df90e4a380bef06a7d37def753b385db4ae86c30`. Independent reviews: 0; inline review threads: 0.  
+**Approved machine plan:** `active_step=U09-U10`; U09-U10 remains IN PROGRESS. U04 and all later steps remain BLOCKED. U12 scope baseline remains `5284483a26e87028f919966e304c472ed537e839`.
+
+## Latest U09–U10 change: canonical laterality claim audit
+
+- The source-path audit confirmed that imaging summary, relevant investigations and investigation records are already included as audit evidence only when their field state is implicitly or explicitly PRESENT; the free-text case summary is fallback only when all corresponding states are assertable.
+- A separate gap was found for the canonical `laterality` enum: source-to-source conflicts in the free-text summary were warned about, but generated primary-site side claims were not compared with the structured laterality field. A structured LEFT value could therefore fail to flag generated RIGHT-sided disease. An explicit UNKNOWN or CONFLICTING laterality state could also be bypassed by matching case-summary text.
+- Regression-only commit `16e3d59a2d15b5023fca99b7b8b64a7247e9bf81` added tests for structured-side mismatch/match, summary fallback, and UNKNOWN/CONFLICTING states. Exact-head Backend Tests run `44726569112` reproduced three failures: **637 passed, 3 failed, 0 errors, 0 skipped, 0 inconclusive**. Structured mismatch, UNKNOWN summary bypass and CONFLICTING selection were not flagged; matching structured side and legitimate summary fallback passed.
+- Fix commit `f44730a4c53889121a5af060b0f03ec87859360f` adds a deterministic laterality claim extractor for LEFT, RIGHT, BILATERAL, MIDLINE and NOT_LATERALIZED wording. PRESENT structured laterality is the sole selected structured source; UNKNOWN/INVALID/CONFLICTING and other explicit non-PRESENT states supply no selected side and cannot fall back to the case summary. The case summary remains a fallback only when laterality has no explicit state and no structured value. Conflicting raw sources remain unresolved; the audit does not adjudicate or choose a side.
+- Exact-head Backend Tests run `44726716668`: **640 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive**. Deterministic preflight: **7 passed, 0 failed, 0 inconclusive**.
+- Exact-head Sequential Development Gate run `44726716831`: SUCCESS.
+- Exact-head Security and Dependency Audit run `44726716723`: SUCCESS. Python CodeQL, JavaScript/TypeScript CodeQL, Python/Node dependency audit and full-history secret scan all completed successfully.
+- Exact-head artifacts: pytest/JUnit diagnostics artifact `14625005364`, SHA-256 `0595ef510a5b9e59ec369590d0fceb57166579a7e47493793d234cd5533fbdf1`; deterministic preflight artifact `14624915519`, SHA-256 `b615044685f28e101d7d263e9c3796318ca2e60ca237f50c668b4ecd6a03fb87`.
+- The reproduced failures on `16e3d59` are retained as audit history, not acceptance evidence. Successful verification is tied to exact code/test SHA `f44730a`.
+
+## Master Checklist — Current Status
+
+| Workstream | Status | Current evidence / outstanding boundary |
+|---|---|---|
+| Repository, branch, PR, commit and checklist verification | VERIFIED | PR #5 head is `f44730a`; targets the protected development branch, not `main`. PR remains open/unmerged; no independent review recorded. |
+| U12 protected sequential development gate | VERIFIED | Exact-head Sequential Gate run `44726716831` SUCCESS; machine plan and dependency order unchanged. |
+| U09 canonical clinical registry v2 | IN PROGRESS | Immutable v2 registry and stable IDs exist; complete U09/U10 acceptance and legacy-case compatibility/recovery remain outstanding. |
+| U10 deterministic state-aware hallucination controls | IN PROGRESS | Invalid/conflicting summary quarantine, field-specific absence states, negative-list claims, willingness/consent separation and canonical laterality checks pass exact-head tests; remaining typed-field source paths continue to be audited. |
+| Per-field epistemic-state allowlist | VERIFIED | Only the five explicit negativeable list fields allow CONFIRMED_ABSENT; exact registry/schema regressions passed on `c9f64c3`. |
+| Negative claims for allergies, medications, comorbidities, prior treatment and family history | VERIFIED | Exact-head tests on `f78e8ac` cover UNKNOWN/empty sources and populated structured values contradicting free-text negative claims. |
+| Patient preference/willingness and educational consent separation | VERIFIED | Exact-head tests on `8c784eb` cover UNKNOWN-state summary bypass, structured willingness, educational-scenario GIVEN/DECLINED consent and no inference of treatment consent from scenario status. |
+| Canonical laterality claim audit | VERIFIED | Exact-head tests on `f44730a` cover structured mismatch/match, UNKNOWN/CONFLICTING non-selection and summary fallback only without explicit state. |
+| Investigation summary and typed-record state gates | VERIFIED | Source inspection confirms imaging_summary, relevant_investigations and investigation_records are only used as supporting sources when state is implicitly or explicitly PRESENT; complete typed-result semantics remain under review. |
+| R1–R4 shared canonical case-data flow | IN PROGRESS | Mocked all-45-role R1, R2 and R3 prompt-context equivalence tests are recorded earlier; saved live R1–R3 and Chair R4 execution remains unverified. |
+| Clinical safety and staging | IN PROGRESS | Deterministic epistemic-state/provenance, TNM phase separation and laterality safeguards pass; site/system/edition-aware clinical classification and independent clinical review are not established. |
+| Case integrity, hashes and audit | IN PROGRESS | Source hashes, immutable provenance/conflict data, invalid-summary quarantine and typed claim audits pass; saved case-version/run tamper and failure-path acceptance remains open. |
+| Provenance and evidence retrieval | IN PROGRESS | User-supplied provenance remains explicitly unverified; external evidence retrieval/source-document verification are not established. |
+| Chair consensus, conditionality, dissent and traceability | IN PROGRESS | Deterministic safeguards exist; full saved-contribution Chair reconciliation and live dissent/consensus audit remain outstanding. |
+| Missing/failed specialist and partial-run handling | IN PROGRESS | Deterministic regression coverage exists; full live 45-role failure/resume inspection remains outstanding. |
+| Backend tests | VERIFIED | Exact code/test SHA `f44730a`; run `44726716668`: 640/640 passed. |
+| Deterministic preflight | VERIFIED | Exact code/test SHA `f44730a`; 7/7 passed; no model inference or clinical accuracy evaluation. |
+| Sequential development gate | VERIFIED | Exact code/test SHA `f44730a`; run `44726716831` SUCCESS. |
+| Security, dependency, secret scan and CodeQL | VERIFIED | Exact code/test SHA `f44730a`; run `44726716723` SUCCESS; all four jobs passed. |
+| Frontend build and browser E2E | VERIFIED | Latest post-merge baseline on `df90e4a`: runs `44702343341` and `44702343471`; no frontend files changed in this U09–U10 slice. |
+| Dashboard/API integration | IN PROGRESS | Backend API/unit coverage passes; no new browser E2E run was triggered by these backend-only changes. |
+| Windows packaging prerequisites and installer | VERIFIED | Latest post-merge baseline on `df90e4a`: runs `44702343520` and `44702343432`; no packaging files changed in this slice. |
+| Deferred intake snapshot/terminal-event binding | BLOCKED | `intake_store.py` is outside U09–U10 allowed paths; retain for U04. No intake code changed. |
+| Legacy saved-case recovery/migration | BLOCKED | Historical v1/legacy snapshots remain read-only and fail-closed; no relabelling or silent migration. |
+| Ollama discovery and installed/stopped/model reuse | BLOCKED | U03 is later in the approved sequence; local installed-but-stopped and existing-model reuse remain unverified. |
+| Live 45-role R1–R4 run and saved-run audit | NOT STARTED | No live run ID or saved MDT artifact is claimed. |
+| RTX 4060 request-time GPU inference | NOT STARTED | No request-time `nvidia-smi` telemetry, Ollama offload trace or measured GPU inference. |
+| Independent clinical validation | NOT STARTED | No independent clinical validation or guideline concordance is claimed. |
+| U04, U05–U06, U06–U08, U07, U03 and U01–U02 | BLOCKED | All remain later than active U09–U10 in the approved dependency sequence. |
+| Integrated release acceptance | BLOCKED | U09–U10 remains IN PROGRESS; ordered later work, live model, GPU, evidence and clinical validation remain outstanding. |
+
+**Next U09–U10 action:** continue auditing the remaining registry fields and deterministic claim-support fallbacks for any non-PRESENT value that could still support a generated assertion. Add regression tests only for reproducible gaps; preserve all current summary, state, negative-list, consent and laterality protections. Run exact-head backend/preflight, Sequential Gate and Security Audit; inspect logs/artifacts; update this same checklist. Do not modify `intake_store.py`, alter the machine plan, activate U04 or begin later steps.
+
+**Clinical/verification boundary:** these checks verify deterministic software behavior only. They do not prove model adherence, live 45-role execution, saved Chair reconciliation, clinical staging correctness, guideline verification, GPU inference or independent clinical validation.
