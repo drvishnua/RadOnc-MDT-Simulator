@@ -1459,7 +1459,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             )
             for record in case.investigation_records
         )
-    if imaging_state is None and investigations_state is None and records_state is None:
+    if all(state in (None, "PRESENT") for state in (imaging_state, investigations_state, records_state)):
         investigation_parts.append(case.case_summary)
     investigation_source = "\n".join(investigation_parts)
     unsupported_investigations = _unsupported_matches(
@@ -1570,7 +1570,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         preference_sources.extend(f"patient {goal}" for goal in (case.patient_goals or []))
     if preferences_state in (None, "PRESENT"):
         preference_sources.extend(f"patient {item}" for item in (case.patient_preferences or []))
-    if goals_state is None and preferences_state is None:
+    if goals_state in (None, "PRESENT") and preferences_state in (None, "PRESENT"):
         preference_sources.append(case.case_summary)
     preference_source_text = "\n".join(preference_sources)
     unsupported_preferences = _unsupported_matches(
