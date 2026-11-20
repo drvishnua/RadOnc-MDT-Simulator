@@ -2295,3 +2295,86 @@ def test_declined_patient_consent_status_supports_matching_decline_statement():
 
     assert not any("educational-scenario consent status" in item for item in flags)
 
+def test_structured_laterality_flags_contradictory_generated_primary_side():
+    case = _case(laterality="LEFT")
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The primary tumour is right-sided.",
+    })).casefold()
+
+    assert "laterality" in flags
+    assert "left" in flags
+    assert "right" in flags
+
+
+def test_structured_laterality_supports_matching_generated_primary_side():
+    case = _case(laterality="RIGHT")
+
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The primary tumour is right-sided.",
+    })
+
+    assert not any("laterality" in item.casefold() for item in flags)
+
+
+def test_unknown_laterality_cannot_use_case_summary_as_selected_side():
+    case = _case(
+        laterality=None,
+        case_summary="Fictional referral: the primary tumour is right-sided.",
+        clinical_field_states={"laterality": "UNKNOWN"},
+    )
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The primary tumour is right-sided.",
+    })).casefold()
+
+    assert "laterality" in flags
+    assert "unknown" in flags
+
+
+def test_conflicting_laterality_cannot_support_either_single_primary_side():
+    case = _case(
+        laterality=None,
+        clinical_field_states={"laterality": "CONFLICTING"},
+        clinical_field_conflicts={
+            "laterality": [
+                {
+                    "raw_value": "LEFT",
+                    "provenance": {
+                        "source_type": "CLINICIAN_NOTE",
+                        "source_reference": "laterality-a",
+                        "source_excerpt": "Primary laterality is left.",
+                    },
+                },
+                {
+                    "raw_value": "RIGHT",
+                    "provenance": {
+                        "source_type": "IMAGING_REPORT",
+                        "source_reference": "laterality-b",
+                        "source_excerpt": "Primary laterality is right.",
+                    },
+                },
+            ]
+        },
+    )
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The primary tumour is left-sided.",
+    })).casefold()
+
+    assert "laterality" in flags
+    assert "conflicting" in flags
+
+
+def test_laterality_can_fall_back_to_case_summary_only_when_state_is_not_explicit():
+    case = _case(
+        laterality=None,
+        case_summary="Fictional referral: the primary tumour is right-sided.",
+    )
+
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The primary tumour is right-sided.",
+    })
+
+    assert not any("laterality" in item.casefold() for item in flags)
+
