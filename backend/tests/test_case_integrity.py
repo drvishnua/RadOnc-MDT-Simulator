@@ -2213,3 +2213,72 @@ def test_positive_negativeable_list_value_overrides_contradictory_summary_absenc
     assert label in flags
     assert "absence is not explicitly supported" in flags
 
+@pytest.mark.parametrize(
+    ("field_id", "summary", "generated"),
+    [
+        (
+            "patient_willingness",
+            "Referral text: the patient agrees to surgery.",
+            "The patient agrees to surgery.",
+        ),
+        (
+            "patient_consent_status",
+            "Referral text: the patient has consented to surgery.",
+            "The patient has consented to surgery.",
+        ),
+    ],
+)
+def test_unknown_willingness_or_consent_state_cannot_use_case_summary(
+    field_id, summary, generated
+):
+    case = _case(
+        case_summary=summary,
+        clinical_field_states={field_id: "UNKNOWN"},
+    )
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": generated,
+    })).casefold()
+
+    assert "patient preference/decision" in flags
+
+
+def test_structured_patient_willingness_supports_matching_decision_statement():
+    case = _case(patient_willingness="agrees to surgery")
+
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient agrees to surgery.",
+    })
+
+    assert not any("patient preference/decision" in item for item in flags)
+
+
+def test_given_patient_consent_status_supports_matching_consent_statement():
+    case = _case(patient_consent_status="GIVEN")
+
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has consented to surgery.",
+    })
+
+    assert not any("patient preference/decision" in item for item in flags)
+
+
+def test_declined_patient_consent_status_does_not_support_consent_given_claim():
+    case = _case(patient_consent_status="DECLINED")
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has consented to surgery.",
+    })).casefold()
+
+    assert "patient preference/decision" in flags
+
+
+def test_declined_patient_consent_status_supports_matching_decline_statement():
+    case = _case(patient_consent_status="DECLINED")
+
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient declines consent to surgery.",
+    })
+
+    assert not any("patient preference/decision" in item for item in flags)
+
