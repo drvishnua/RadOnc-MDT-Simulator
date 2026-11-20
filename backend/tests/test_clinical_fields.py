@@ -313,7 +313,7 @@ def test_context_keeps_clinical_and_pathological_stage_groups_separate():
     assert values["clinical_stage_group"]["canonical_comparison_value"] == "2A"
     assert values["pathological_stage_group"]["canonical_comparison_value"] == "3"
     assert values["clinical_stage_group"]["raw_value"] == "IIA"
-    assert values["pathological_stage_group"]["raw_value"] == "pStage III"
+    assert values["pathological_stage_group"]["raw_value"] == "pathological stage III"
 
 
 def test_context_remains_json_serializable_with_typed_investigations_and_dates():
