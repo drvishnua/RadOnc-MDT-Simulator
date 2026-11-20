@@ -1029,6 +1029,52 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             for source in case.clinical_field_provenance.get(field_id, [])
         )
 
+    # Map only explicit, field-specific unresolved statements. This is a
+    # deterministic lexical safeguard, not a clinical interpretation engine.
+    # A qualifier for one field must never suppress evidence for another.
+    known_unknown_field_aliases: dict[str, tuple[str, ...]] = {
+        "clinical_t_stage": (r"clinical\s+T(?:\s+component|\s+stage)?",),
+        "clinical_n_stage": (r"clinical\s+N(?:\s+component|\s+stage)?",),
+        "clinical_m_stage": (r"clinical\s+M(?:\s+component|\s+stage)?",),
+        "pathological_t_stage": (r"pathological\s+T(?:\s+component|\s+stage)?", r"histopathological\s+T(?:\s+component|\s+stage)?"),
+        "pathological_n_stage": (r"pathological\s+N(?:\s+component|\s+stage)?", r"histopathological\s+N(?:\s+component|\s+stage)?"),
+        "pathological_m_stage": (r"pathological\s+M(?:\s+component|\s+stage)?", r"histopathological\s+M(?:\s+component|\s+stage)?"),
+        "stage_group": (r"(?<!clinical )(?<!pathological )stage\s+group", r"overall\s+stage"),
+        "clinical_stage_group": (r"clinical\s+stage\s+group", r"clinical\s+stage"),
+        "pathological_stage_group": (r"pathological\s+stage\s+group", r"pathological\s+stage"),
+        "staging_edition": (r"staging\s+edition", r"AJCC\s+edition", r"UICC\s+edition"),
+        "staging_system": (r"staging\s+system",),
+        "relevant_comorbidities": (r"relevant\s+comorbidit(?:y|ies)\s+history", r"comorbidit(?:y|ies)\s+history", r"medical\s+history"),
+        "patient_willingness": (r"patient\s+willingness", r"patient\s+preference(?:s)?", r"patient\s+decision", r"willingness\s+to\s+(?:undergo|accept|receive)\s+treatment"),
+    }
+    unresolved_statement_pattern = re.compile(
+        r"(?<!not )\\bunknown\\b|\\b(?:pending|unresolved|not\\s+(?:reported|confirmed|verified|"
+        r"established|documented|assessed|available|supplied|provided|determined|recorded)|"
+        r"has\\s+not\\s+been\\s+(?:reported|confirmed|verified|established|documented|assessed|determined)|"
+        r"have\\s+not\\s+been\\s+(?:reported|confirmed|verified|established|documented|assessed|determined)|"
+        r"remains?\\s+(?:unknown|unresolved|unconfirmed|unverified|pending)|"
+        r"not\\s+yet\\s+(?:known|confirmed|verified|available|assessed))\\b",
+        re.IGNORECASE,
+    )
+
+    def known_unknown_blocks_field(field_id: str) -> bool:
+        aliases = known_unknown_field_aliases.get(field_id, ())
+        if not aliases:
+            return False
+        field_pattern = re.compile(
+            r"(?:" + "|".join(aliases) + r")",
+            re.IGNORECASE,
+        )
+        for statement in case.known_unknowns or []:
+            if not isinstance(statement, str):
+                continue
+            # Evaluate each clause independently. "not unknown" is explicitly
+            # not an unresolved marker and cannot trigger this mapping.
+            for clause in _CLAUSE_BOUNDARY.split(_collapse_horizontal_whitespace(statement)):
+                if field_pattern.search(clause) and unresolved_statement_pattern.search(clause):
+                    return True
+        return False
+
     def list_field_source(field_id: str, values: list[str]) -> str:
         state = field_state(field_id)
         if state == "CONFIRMED_ABSENT":
