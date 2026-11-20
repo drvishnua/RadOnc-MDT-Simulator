@@ -790,9 +790,9 @@ def _tnm_component_values(
 
 
 _STAGE_GROUP_ASSERTION_PATTERN = re.compile(
-    r"\\b(?P<kind>clinical|pathological)?[ \\t\\r\\n]*"
-    r"(?:stage[ \\t\\r\\n]?(?:group[ \\t\\r\\n]?)?)"
-    r"(?P<number>IV|III|II|I|[1-4])(?P<suffix>[ABC])?\\b",
+    r"\b(?P<kind>clinical|pathological)?[ \t\r\n]*"
+    r"(?:stage[ \t\r\n]?(?:group[ \t\r\n]?)?)"
+    r"(?P<number>IV|III|II|I|[1-4])(?P<suffix>[ABC])?\b",
     re.IGNORECASE,
 )
 
@@ -815,9 +815,24 @@ def _stage_group_records(value: str) -> list[tuple[str, str, str]]:
     return records
 
 
+def _stage_group_value_key(value: str) -> str | None:
+    """Normalize a bare or labelled stage-group value without assigning TNM."""
+    token = value.strip().upper()
+    token = re.sub(r"^(?:CLINICAL|PATHOLOGICAL)\\s+", "", token)
+    token = re.sub(r"^STAGE(?:\\s+GROUP)?\\s*", "", token)
+    match = re.fullmatch(r"(IV|III|II|I|[1-4])([ABC])?", token)
+    if match is None:
+        records = _stage_group_records(value)
+        return records[0][1] if len(records) == 1 else None
+    roman_values = {"I": 1, "II": 2, "III": 3, "IV": 4}
+    number = roman_values.get(match.group(1), int(match.group(1)) if match.group(1).isdigit() else None)
+    return f"{number}{match.group(2) or ''}" if number is not None else None
+
+
 def _stage_group_values(value: str) -> set[str]:
     """Compatibility helper returning stage group values without their label."""
-    return {key for _kind, key, _snippet in _stage_group_records(value)}
+    key = _stage_group_value_key(value)
+    return {key} if key else set()
 
 
 def _stage_group_supported(generated_key: str, source_keys: set[str]) -> bool:
