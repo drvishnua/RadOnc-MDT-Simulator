@@ -1666,3 +1666,79 @@ def test_conflicting_clinical_stage_field_cannot_become_supporting_evidence():
         "provisional_conclusion": "The clinical T stage is T1."
     })).casefold()
     assert "t-stage value(s) t1" in flags
+
+
+
+def test_pathological_stage_group_cannot_support_clinical_stage_group_claim():
+    case = _case(
+        clinical_stage_group=None,
+        pathological_stage_group="III",
+        stage_group=None,
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The clinical stage group is III."
+    })).casefold()
+    assert "unsupported or type-conflicting stage group" in flags
+
+
+def test_clinical_stage_group_cannot_support_pathological_stage_group_claim():
+    case = _case(
+        clinical_stage_group="IIA",
+        pathological_stage_group=None,
+        stage_group=None,
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The pathological stage group is IIA."
+    })).casefold()
+    assert "unsupported or type-conflicting stage group" in flags
+
+
+def test_typed_stage_group_supports_same_type_and_parent_stage_without_substage_inference():
+    case = _case(
+        clinical_stage_group="IIA",
+        pathological_stage_group=None,
+        stage_group=None,
+    )
+    parent = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The clinical stage group is II."
+    })
+    exact = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The clinical stage group is IIA."
+    })
+    unsupported_substage = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The clinical stage group is IIB."
+    })
+    assert not any("stage group" in item.casefold() for item in parent)
+    assert not any("stage group" in item.casefold() for item in exact)
+    assert any("stage group" in item.casefold() for item in unsupported_substage)
+
+
+def test_conflicting_stage_group_state_cannot_support_generated_stage_group():
+    case = _case(
+        clinical_stage_group="II",
+        clinical_field_states={"clinical_stage_group": "CONFLICTING"},
+        clinical_field_conflicts={
+            "clinical_stage_group": [
+                {
+                    "raw_value": "II",
+                    "provenance": {
+                        "source_type": "CLINICIAN_NOTE",
+                        "source_reference": "stage-a",
+                        "source_excerpt": "Clinical stage group II.",
+                    },
+                },
+                {
+                    "raw_value": "III",
+                    "provenance": {
+                        "source_type": "IMAGING_REPORT",
+                        "source_reference": "stage-b",
+                        "source_excerpt": "Clinical stage group III.",
+                    },
+                },
+            ]
+        },
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The clinical stage group is II."
+    })).casefold()
+    assert "unsupported or type-conflicting stage group" in flags
