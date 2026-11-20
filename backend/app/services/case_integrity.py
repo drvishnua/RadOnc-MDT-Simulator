@@ -1562,11 +1562,16 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     )
 
     def histological_grade_values(value: str) -> set[str]:
-        return {
-            number
-            for statement in _unqualified_matches(histological_grade_pattern, value)
-            for number in re.findall(r"\b[1-4]\b", statement)
-        }
+        values: set[str] = set()
+        for statement in _unqualified_matches(histological_grade_pattern, value):
+            match = re.search(
+                r"\b(?:grade\s*(?:G\s*)?|G\s*)([1-4])\b",
+                statement,
+                re.IGNORECASE,
+            )
+            if match:
+                values.add(match.group(1))
+        return values
 
     histological_grade_state = field_state("histological_grade")
     pathology_summary_state = field_state("pathology_summary")
