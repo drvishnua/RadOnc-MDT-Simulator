@@ -13,6 +13,8 @@ from app.clinical_fields import (
     CLINICAL_FIELD_REGISTRY_V1,
     CLINICAL_M_STAGE,
     PATHOLOGICAL_T_STAGE,
+    PATHOLOGICAL_N_STAGE,
+    PATHOLOGICAL_M_STAGE,
     CLINICAL_N_STAGE,
     CLINICAL_T_STAGE,
     SEX,
@@ -496,4 +498,16 @@ def test_provenance_rejects_whitespace_only_excerpt_without_trimming_real_excerp
             source_reference="synthetic-blank-note",
             source_excerpt=" \n  \t ",
         )
+
+@pytest.mark.parametrize(
+    ("field_id", "value"),
+    [
+        (PATHOLOGICAL_T_STAGE, "T1"),
+        (PATHOLOGICAL_N_STAGE, "N0"),
+        (PATHOLOGICAL_M_STAGE, "M0"),
+    ],
+)
+def test_pathological_tnm_requires_explicit_p_or_yp_prefix(field_id, value):
+    with pytest.raises(ValueError, match="explicit p or yp prefix"):
+        normalize_pathological_tnm_component(field_id, value)
 
