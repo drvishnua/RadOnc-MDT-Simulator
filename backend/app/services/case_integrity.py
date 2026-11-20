@@ -1040,6 +1040,57 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             return "\n".join(values) if values else case_summary_text
         return ""
 
+    laterality_claim_pattern = re.compile(
+        r"\b(?:left|right|bilateral|midline)(?:[- ]sided)?(?:\s+[\w-]+){0,3}\s+"
+        r"(?:primary|tumou?r|lesion|mass|growth|cancer|carcinoma|nodule|neoplasm|site)\b|"
+        r"\b(?:primary|tumou?r|lesion|mass|growth|cancer|carcinoma|nodule|neoplasm|site)\b"
+        r"[^.!?;\n]{0,80}\b(?:left|right|bilateral|midline)(?:[- ]sided)?\b|"
+        r"\b(?:non[- ]lateralized|not lateralized)(?:\s+[\w-]+){0,3}\s+"
+        r"(?:primary|tumou?r|lesion|mass|growth|cancer|carcinoma|nodule|neoplasm|site)\b|"
+        r"\b(?:primary|tumou?r|lesion|mass|growth|cancer|carcinoma|nodule|neoplasm|site)\b"
+        r"[^.!?;\n]{0,80}\b(?:non[- ]lateralized|not lateralized)\b",
+        re.IGNORECASE,
+    )
+
+    def laterality_values(value: str) -> set[str]:
+        values: set[str] = set()
+        for statement in _unqualified_matches(laterality_claim_pattern, value):
+            if re.search(r"\b(?:non[- ]lateralized|not lateralized)\b", statement, re.IGNORECASE):
+                values.add("NOT_LATERALIZED")
+            else:
+                for side in ("left", "right", "bilateral", "midline"):
+                    if re.search(
+                        r"\b" + side + r"(?:[- ]sided)?\b",
+                        statement,
+                        re.IGNORECASE,
+                    ):
+                        values.add(side.upper())
+        return values
+
+    laterality_state = field_state("laterality")
+    if case.laterality is not None and field_assertable("laterality"):
+        supported_laterality = {case.laterality}
+    elif laterality_state is None:
+        supported_laterality = laterality_values(case_summary_text)
+    else:
+        supported_laterality = set()
+
+    generated_laterality = laterality_values(text)
+    unsupported_laterality = sorted(generated_laterality - supported_laterality)
+    if unsupported_laterality:
+        claims = ", ".join(unsupported_laterality[:3])
+        if laterality_state == "CONFLICTING":
+            reason = "laterality has conflicting source values; no single side may be selected"
+        elif laterality_state not in (None, "PRESENT"):
+            reason = f"laterality is marked {laterality_state} and cannot support a selected side"
+        elif case.laterality is not None:
+            reason = f"the generated side conflicts with structured laterality={case.laterality}"
+        else:
+            reason = "laterality is not supplied and the generated side is not explicitly supported by the verbatim case summary"
+        flags.append(
+            f"Generated narrative asserts laterality value(s) {claims}, but {reason}."
+        )
+
     # Compare generated stage components with the exact structured value when
     # present; otherwise compare with the verbatim case summary. A supplied
     # structured stage must not silently legitimise a contradictory generated
