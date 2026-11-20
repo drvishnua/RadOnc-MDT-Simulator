@@ -1311,11 +1311,16 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
                     f"Generated narrative contains unsupported pathological {component}-stage value(s) "
                     f"{unsupported_list}; {field} has unresolved conflicting source values and no single value may be selected."
                 )
+            elif explicit_state is not None:
+                flags.append(
+                    f"Generated narrative contains unsupported pathological {component}-stage value(s) "
+                    f"{unsupported_list}; {field} is marked {explicit_state} and that state cannot support a selected pathological staging assertion or permit case-summary fallback."
+                )
             else:
                 flags.append(
                     f"Generated narrative contains unsupported pathological {component}-stage value(s) "
                     + unsupported_list
-                    + f"; {field} is absent or does not support those exact pathological values."
+                    + f"; {field} is not supplied and those exact pathological values are not explicitly recorded in the verbatim case summary."
                 )
 
     # Explicit age assertions are compared with structured age when present,
