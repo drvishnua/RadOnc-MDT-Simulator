@@ -1044,6 +1044,9 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         "pathological_stage_group": (r"pathological\s+stage\s+group", r"pathological\s+stage"),
         "staging_edition": (r"staging\s+edition", r"AJCC\s+edition", r"UICC\s+edition"),
         "staging_system": (r"staging\s+system",),
+        "primary_site": (r"primary\s+site", r"site\s+of\s+(?:the\s+)?primary"),
+        "anatomical_subsite": (r"anatomical\s+subsite",),
+        "laterality": (r"laterality", r"primary\s+(?:tumou?r|lesion)\s+side"),
         "relevant_comorbidities": (r"relevant\s+comorbidit(?:y|ies)\s+history", r"comorbidit(?:y|ies)\s+history", r"medical\s+history"),
         "patient_willingness": (r"patient\s+willingness", r"patient\s+preference(?:s)?", r"patient\s+decision", r"willingness\s+to\s+(?:undergo|accept|receive)\s+treatment"),
     }
@@ -1155,7 +1158,10 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         return values
 
     laterality_state = field_state("laterality")
-    if case.laterality is not None and field_assertable("laterality"):
+    laterality_gap = known_unknown_blocks_field("laterality")
+    if laterality_gap:
+        supported_laterality = set()
+    elif case.laterality is not None and field_assertable("laterality"):
         supported_laterality = {case.laterality}
     elif laterality_state is None:
         supported_laterality = laterality_values(case_summary_text)
@@ -1166,7 +1172,9 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     unsupported_laterality = sorted(generated_laterality - supported_laterality)
     if unsupported_laterality:
         claims = ", ".join(unsupported_laterality[:3])
-        if laterality_state == "CONFLICTING":
+        if laterality_gap:
+            reason = "laterality is explicitly unresolved in known_unknowns; neither its structured value nor case-summary fallback may support a selected side"
+        elif laterality_state == "CONFLICTING":
             reason = "laterality has conflicting source values; no single side may be selected"
         elif laterality_state not in (None, "PRESENT"):
             reason = f"laterality is marked {laterality_state} and cannot support a selected side"
@@ -1240,7 +1248,10 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     ):
         state = field_state(field_id)
         structured_value = getattr(case, field_id)
-        if structured_value not in (None, "") and field_assertable(field_id):
+        unresolved_gap = known_unknown_blocks_field(field_id)
+        if unresolved_gap:
+            supported_values = set()
+        elif structured_value not in (None, "") and field_assertable(field_id):
             supported_values = {normalise_site_value(str(structured_value))}
         elif state is None:
             supported_values = asserted_site_values(
@@ -1255,7 +1266,12 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             continue
 
         claims = "; ".join(unsupported_values[:3])
-        if state == "CONFLICTING":
+        if unresolved_gap:
+            reason = (
+                f"{field_id} is explicitly unresolved in known_unknowns; "
+                "neither its structured value nor case-summary fallback may support a selected anatomical value"
+            )
+        elif state == "CONFLICTING":
             reason = f"{label} has conflicting source values and no single value may be selected"
         elif state not in (None, "PRESENT"):
             reason = f"{label} is marked {state} and cannot support a selected anatomical value"
