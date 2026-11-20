@@ -723,30 +723,59 @@ def _tnm_component_values(
     allowed_prefixes: tuple[str, ...] = ("", "C", "YC"),
     default_prefix: str | None = None,
 ) -> set[str]:
-    """Extract component values without collapsing clinical/pathological phases.
+    """Extract TNM components without collapsing clinical/pathological phases.
 
-    Clinical callers accept unprefixed, c and yc values. Pathological callers
-    explicitly request p/yp values. A y-prefix is retained in the comparison key.
+    A prefix on a combined token (for example pT2N1M0) applies to every
+    component in that token. Treatment-phase prefixes remain distinct.
     """
     if component not in {"T", "N", "M"}:
         raise ValueError(f"Unsupported TNM component: {component}")
-    component_pattern = re.compile(
-        rf"(?<![A-Z0-9])(?P<prefix>YC|YP|C|P)?(?P<component>{component})"
-        rf"(?P<value>{'IS|X|0|[1-4][A-D]?' if component == 'T' else 'X|0|[1-3]' if component == 'N' else 'X|0|1'})(?![A-Z0-9])",
+    token_patterns = {
+        "T": r"(?:IS|X|0|[1-4][A-D]?)",
+        "N": r"(?:X|0|[1-3])",
+        "M": r"(?:X|0|1)",
+    }
+    combined_pattern = re.compile(
+        r"(?<![A-Z0-9])(?P<prefix>YC|YP|C|P)?"
+        r"T(?P<T>IS|X|0|[1-4][A-D]?)"
+        r"(?P<N>N(?:X|0|[1-3]))?"
+        r"(?P<M>M(?:X|0|1))?"
+        r"(?![A-Z0-9])",
+        re.IGNORECASE,
+    )
+    standalone_pattern = re.compile(
+        rf"(?<![A-Z0-9])(?P<prefix>YC|YP|C|P)?"
+        rf"(?P<component>{component})(?P<value>{token_patterns[component]})(?![A-Z0-9])",
         re.IGNORECASE,
     )
     values: set[str] = set()
     for snippet in _unqualified_tnm_matches(value):
-        for match in component_pattern.finditer(snippet):
+        covered_spans: list[tuple[int, int]] = []
+        for combined in combined_pattern.finditer(snippet):
+            prefix = (combined.group("prefix") or "").upper()
+            effective_prefix = prefix or (default_prefix or "")
+            if effective_prefix not in allowed_prefixes:
+                continue
+            for name in ("T", "N", "M"):
+                raw_component = combined.group(name)
+                if not raw_component:
+                    continue
+                if name == component:
+                    category_value = raw_component[1:] if name in {"N", "M"} else raw_component
+                    category = f"{name}{category_value.upper()}"
+                    key = f"{effective_prefix}:{category}" if effective_prefix in {"YC", "P", "YP"} else category
+                    values.add(key)
+            covered_spans.append(combined.span())
+
+        for match in standalone_pattern.finditer(snippet):
+            if any(match.start() < end and match.end() > start for start, end in covered_spans):
+                continue
             prefix = (match.group("prefix") or "").upper()
-            if prefix == "" and default_prefix is not None:
-                prefix = default_prefix.upper()
-            if prefix not in allowed_prefixes:
+            effective_prefix = prefix or (default_prefix or "")
+            if effective_prefix not in allowed_prefixes:
                 continue
             category = f"{component}{match.group('value').upper()}"
-            # Do not erase treatment-phase modifiers. c/blank are compared as
-            # clinical categories; yc, p and yp remain distinct namespaces.
-            key = f"{prefix}:{category}" if prefix in {"YC", "P", "YP"} else category
+            key = f"{effective_prefix}:{category}" if effective_prefix in {"YC", "P", "YP"} else category
             values.add(key)
     return values
 
@@ -936,11 +965,19 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         ("M", "clinical_m_stage", "clinical_m_stage"),
     ):
         structured_value = getattr(case, field)
-        supported_values = (
-            _tnm_component_values(str(structured_value), component)
-            if structured_value not in (None, "")
-            else _tnm_component_values(case.case_summary, component)
-        )
+        explicit_state = case.clinical_field_states.get(field)
+        if explicit_state == "CONFLICTING":
+            supported_values = set()
+        elif structured_value not in (None, "") and explicit_state in (None, "PRESENT"):
+            try:
+                canonical_structured = normalize_clinical_tnm_component(field, str(structured_value))
+                supported_values = _tnm_component_values(canonical_structured, component)
+            except ValueError:
+                supported_values = set()
+        elif explicit_state is not None:
+            supported_values = set()
+        else:
+            supported_values = _tnm_component_values(case.case_summary, component)
         generated_values = _tnm_component_values(text, component)
         unsupported_values = sorted(generated_values - supported_values)
         if unsupported_values:
@@ -966,16 +1003,23 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         ("M", PATHOLOGICAL_M_STAGE),
     ):
         structured_value = getattr(case, field)
-        supported_values = (
-            _tnm_component_values(
-                str(structured_value), component,
-                allowed_prefixes=("", "P", "YP"), default_prefix="P",
-            )
-            if structured_value not in (None, "")
-            else _tnm_component_values(
+        explicit_state = case.clinical_field_states.get(field)
+        if explicit_state == "CONFLICTING":
+            supported_values = set()
+        elif structured_value not in (None, "") and explicit_state in (None, "PRESENT"):
+            try:
+                canonical_structured = normalize_pathological_tnm_component(field, str(structured_value))
+                supported_values = _tnm_component_values(
+                    canonical_structured, component, allowed_prefixes=("P", "YP")
+                )
+            except ValueError:
+                supported_values = set()
+        elif explicit_state is not None:
+            supported_values = set()
+        else:
+            supported_values = _tnm_component_values(
                 case.case_summary, component, allowed_prefixes=("P", "YP")
             )
-        )
         generated_values = _tnm_component_values(
             text, component, allowed_prefixes=("P", "YP")
         )
@@ -1165,10 +1209,11 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         re.IGNORECASE,
     )
     generated_node_negative = _unqualified_matches(node_negative_pattern, text)
+    n_state = case.clinical_field_states.get("clinical_n_stage")
     supported_n_source = (
         str(case.clinical_n_stage)
-        if case.clinical_n_stage not in (None, "")
-        else case.case_summary
+        if case.clinical_n_stage not in (None, "") and n_state in (None, "PRESENT")
+        else case.case_summary if n_state is None else ""
     )
     source_n_values = _tnm_component_values(supported_n_source, "N")
     source_explicitly_node_negative = bool(
@@ -1190,10 +1235,11 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         re.IGNORECASE,
     )
     generated_no_metastases = _unqualified_matches(no_metastases_pattern, text)
+    m_state = case.clinical_field_states.get("clinical_m_stage")
     supported_m_source = (
         str(case.clinical_m_stage)
-        if case.clinical_m_stage not in (None, "")
-        else case.case_summary
+        if case.clinical_m_stage not in (None, "") and m_state in (None, "PRESENT")
+        else case.case_summary if m_state is None else ""
     )
     source_m_values = _tnm_component_values(supported_m_source, "M")
     source_explicitly_no_metastases = bool(
