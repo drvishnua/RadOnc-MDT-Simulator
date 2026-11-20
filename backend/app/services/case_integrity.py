@@ -1040,6 +1040,40 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             return "\n".join(values) if values else case_summary_text
         return ""
 
+    def positive_list_field_source(
+        field_id: str,
+        values: list[str],
+        templates: tuple[str, ...],
+    ) -> str:
+        """Build positive-claim support without bypassing an explicit field state."""
+        state = field_state(field_id)
+        if state == "CONFIRMED_ABSENT":
+            return field_provenance_text(field_id)
+        if state not in (None, "PRESENT"):
+            return ""
+        if not values:
+            return case_summary_text if state is None else ""
+        source_parts = list(values)
+        for raw_value in values:
+            value = raw_value.strip()
+            # Preserve the supplied value; these are analysis-only phrasing
+            # variants so a role can restate the same documented list item.
+            for template in templates:
+                source_parts.append(template.format(value=value))
+        return "\n".join(source_parts)
+
+    def positive_list_field_reason(field_id: str, values: list[str]) -> str:
+        state = field_state(field_id)
+        if state == "CONFLICTING":
+            return f"{field_id} has unresolved conflicting source values; no single positive finding may be selected."
+        if state == "CONFIRMED_ABSENT":
+            return f"{field_id} is CONFIRMED_ABSENT and its source provenance does not support a positive finding."
+        if state not in (None, "PRESENT"):
+            return f"{field_id} is marked {state}; that state cannot support a positive assertion or permit summary fallback."
+        if values:
+            return f"the generated assertion does not match the PRESENT structured {field_id} value(s)."
+        return f"{field_id} has no matching structured value or permitted verbatim case-summary assertion."
+
     laterality_claim_pattern = re.compile(
         r"\b(?:left|right|bilateral|midline)(?:[- ]sided)?(?:\s+[\w-]+){0,3}\s+"
         r"(?:primary|tumou?r|lesion|mass|growth|cancer|carcinoma|nodule|neoplasm|site)\b|"
@@ -1498,6 +1532,224 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             + ", ".join(unsupported_sex_terms[:4])
             + "), which "
             + reason
+        )
+
+    # Positive history claims require field-specific evidence as well as the
+    # absence checks below. Explicit non-PRESENT states cannot be bypassed by
+    # repeating a matching phrase from the free-text case summary.
+    comorbidity_values = case.relevant_comorbidities or []
+    comorbidity_terms = {
+        "diabetes mellitus", "diabetes", "hypertension", "high blood pressure",
+        "hypotension", "asthma", "copd", "chronic obstructive pulmonary disease",
+        "chronic kidney disease", "ckd", "chronic renal disease",
+        "coronary artery disease", "cad", "ischemic heart disease",
+        "ischaemic heart disease", "heart failure", "congestive heart failure",
+        "myocardial infarction", "stroke", "cerebrovascular disease", "epilepsy",
+        "seizure disorder", "hiv", "tuberculosis", "hypothyroidism",
+        "hyperthyroidism", "rheumatoid arthritis", "obesity", "dyslipidaemia",
+        "dyslipidemia", "hyperlipidaemia", "hyperlipidemia", "depression",
+        "anxiety disorder", "cirrhosis", "chronic liver disease",
+    }
+    comorbidity_terms.update(value.strip() for value in comorbidity_values if value.strip())
+    comorbidity_alternation = "|".join(
+        re.escape(value)
+        for value in sorted(comorbidity_terms, key=len, reverse=True)
+    )
+    positive_comorbidity_pattern = re.compile(
+        r"\b(?:the\s+)?patient\s+"
+        r"(?:has|have|is known to have|was diagnosed with|has been diagnosed with|"
+        r"is diagnosed with|suffers from)\s+"
+        r"(?!(?:no|not|unknown|possible|suspected)\b)"
+        r"(?:(?:a|an)\s+)?(?:history of\s+)?(?:"
+        + comorbidity_alternation
+        + r")\b",
+        re.IGNORECASE,
+    )
+    comorbidity_positive_source = positive_list_field_source(
+        "relevant_comorbidities",
+        comorbidity_values,
+        (
+            "The patient has {value}.",
+            "The patient has a history of {value}.",
+            "The patient is known to have {value}.",
+            "The patient was diagnosed with {value}.",
+            "The patient suffers from {value}.",
+        ),
+    )
+    unsupported_positive_comorbidities = _unsupported_matches(
+        positive_comorbidity_pattern, text, comorbidity_positive_source
+    )
+    if unsupported_positive_comorbidities:
+        flags.append(
+            "Generated narrative asserts unsupported positive relevant_comorbidities finding(s) ("
+            + "; ".join(unsupported_positive_comorbidities[:3])
+            + "), but "
+            + positive_list_field_reason("relevant_comorbidities", comorbidity_values)
+        )
+
+    prior_treatment_values = case.prior_treatment or []
+    prior_treatment_terms = {
+        "radiotherapy", "radiation therapy", "chemotherapy", "chemoradiotherapy",
+        "chemoradiation", "surgery", "surgical resection", "operation",
+        "immunotherapy", "targeted therapy", "hormone therapy",
+        "hormonal therapy", "endocrine therapy", "ablation",
+        "transplantation", "stem cell transplant", "bone marrow transplant",
+    }
+    prior_treatment_terms.update(
+        re.sub(r"^(?:prior|previous)\s+", "", value.strip(), flags=re.IGNORECASE)
+        for value in prior_treatment_values if value.strip()
+    )
+    prior_treatment_alternation = "|".join(
+        re.escape(value)
+        for value in sorted(prior_treatment_terms, key=len, reverse=True)
+    )
+    positive_prior_treatment_pattern = re.compile(
+        r"\b(?:the\s+)?patient\s+"
+        r"(?:(?:has|had)\s+)?(?:(?:previously|prior to this)\s+)?"
+        r"(?:received|underwent|completed|was treated with|has been treated with|"
+        r"was given|has undergone)\s+(?:"
+        + prior_treatment_alternation
+        + r")\b",
+        re.IGNORECASE,
+    )
+    prior_treatment_positive_values = [
+        re.sub(r"^(?:prior|previous)\s+", "", value.strip(), flags=re.IGNORECASE)
+        for value in prior_treatment_values if value.strip()
+    ]
+    prior_treatment_positive_source = positive_list_field_source(
+        "prior_treatment",
+        prior_treatment_values,
+        tuple(
+            template
+            for _value in prior_treatment_positive_values
+            for template in (
+                "The patient previously received " + _value + ".",
+                "The patient received " + _value + ".",
+                "The patient underwent " + _value + ".",
+                "The patient completed " + _value + ".",
+                "The patient was treated with " + _value + ".",
+            )
+        ),
+    )
+    unsupported_positive_prior_treatment = _unsupported_matches(
+        positive_prior_treatment_pattern, text, prior_treatment_positive_source
+    )
+    if unsupported_positive_prior_treatment:
+        flags.append(
+            "Generated narrative asserts unsupported positive prior_treatment claim(s) ("
+            + "; ".join(unsupported_positive_prior_treatment[:3])
+            + "), but "
+            + positive_list_field_reason("prior_treatment", prior_treatment_values)
+        )
+
+    family_history_values = case.family_history or []
+    family_condition_terms = {
+        "cancer", "carcinoma", "malignancy", "tumour", "tumor", "lymphoma",
+        "leukaemia", "leukemia", "sarcoma", "melanoma", "breast cancer",
+        "ovarian cancer", "colorectal cancer", "prostate cancer", "lung cancer",
+        "diabetes", "heart disease", "stroke", "myocardial infarction",
+    }
+    family_condition_terms.update(value.strip() for value in family_history_values if value.strip())
+    family_condition_alternation = "|".join(
+        re.escape(value)
+        for value in sorted(family_condition_terms, key=len, reverse=True)
+    )
+    positive_family_history_pattern = re.compile(
+        r"\b(?:mother|father|sister|brother|daughter|son|wife|husband|spouse|"
+        r"partner|child|children|maternal aunt|maternal uncle|paternal aunt|"
+        r"paternal uncle|grandmother|grandfather|aunt|uncle|sibling)s?\b"
+        r"\s+(?:had|has|was diagnosed with|is diagnosed with|suffered from|"
+        r"was affected by|is affected by|died of|died from|with|:|-)\s+"
+        r"[^.!?;:\n]{0,60}(?:"
+        + family_condition_alternation
+        + r")\b|"
+        r"\b(?:the\s+)?patient\s+has\s+(?:a\s+)?family history of\s+"
+        r"[^.!?;:\n]{0,60}(?:"
+        + family_condition_alternation
+        + r")\b",
+        re.IGNORECASE,
+    )
+    unsupported_positive_family_history = _unsupported_matches(
+        positive_family_history_pattern,
+        text,
+        positive_list_field_source("family_history", family_history_values, ()),
+    )
+    if unsupported_positive_family_history:
+        flags.append(
+            "Generated narrative asserts unsupported positive family_history claim(s) ("
+            + "; ".join(unsupported_positive_family_history[:3])
+            + "), but "
+            + positive_list_field_reason("family_history", family_history_values)
+        )
+
+    allergy_values = case.known_allergies or []
+    allergy_terms = [
+        re.sub(r"^(?:allergy to|allergic to)\s+", "", value.strip(), flags=re.IGNORECASE)
+        for value in allergy_values if value.strip()
+    ]
+    allergy_terms = [
+        re.sub(r"\s+allerg(?:y|ies)$", "", value, flags=re.IGNORECASE)
+        for value in allergy_terms
+    ]
+    positive_allergy_pattern = re.compile(
+        r"\b(?:the\s+)?patient\s+(?:has|reports|is known to have)\s+"
+        r"(?!(?:no|not|unknown|possible|suspected)\b)"
+        r"(?:(?:a|an)\s+)?[^.!?;:\n]{1,80}\ballerg(?:y|ies)\b|"
+        r"\b(?:the\s+)?patient\s+is allergic to\s+[^.!?;:\n]{1,80}",
+        re.IGNORECASE,
+    )
+    allergy_positive_templates = tuple(
+        template
+        for value in allergy_terms
+        for template in (
+            "The patient has a " + value + " allergy.",
+            "The patient is allergic to " + value + ".",
+            "The patient reports a " + value + " allergy.",
+        )
+    )
+    unsupported_positive_allergies = _unsupported_matches(
+        positive_allergy_pattern,
+        text,
+        positive_list_field_source("known_allergies", allergy_values, allergy_positive_templates),
+    )
+    if unsupported_positive_allergies:
+        flags.append(
+            "Generated narrative asserts unsupported positive known_allergies claim(s) ("
+            + "; ".join(unsupported_positive_allergies[:3])
+            + "), but "
+            + positive_list_field_reason("known_allergies", allergy_values)
+        )
+
+    medication_values = case.current_medications or []
+    positive_medication_pattern = re.compile(
+        r"\b(?:the\s+)?patient\s+"
+        r"(?:(?:is|was)\s+)?(?:currently\s+)?"
+        r"(?:taking|takes|on|using|uses|receiving|has been prescribed|was prescribed)\s+"
+        r"(?!(?:no|not|unknown|possible|suspected)\b)"
+        r"[^.!?;:\n]{1,100}",
+        re.IGNORECASE,
+    )
+    medication_positive_templates = tuple(
+        template
+        for value in medication_values
+        for template in (
+            "The patient is currently taking " + value.strip() + ".",
+            "The patient takes " + value.strip() + ".",
+            "The patient is on " + value.strip() + ".",
+            "The patient has been prescribed " + value.strip() + ".",
+        )
+    )
+    unsupported_positive_medications = _unsupported_matches(
+        positive_medication_pattern,
+        text,
+        positive_list_field_source("current_medications", medication_values, medication_positive_templates),
+    )
+    if unsupported_positive_medications:
+        flags.append(
+            "Generated narrative asserts unsupported positive current_medications claim(s) ("
+            + "; ".join(unsupported_positive_medications[:3])
+            + "), but "
+            + positive_list_field_reason("current_medications", medication_values)
         )
 
     comorbidity_absence_pattern = re.compile(
