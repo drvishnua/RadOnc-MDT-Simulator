@@ -1480,16 +1480,22 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         "UNSPECIFIED": (
             case.stage_group
             if case.clinical_field_states.get("stage_group") in (None, "PRESENT")
+            and not known_unknown_blocks_field("stage_group")
+            and not known_unknown_blocks_field("staging_edition")
             else None
         ),
         "CLINICAL": (
             case.clinical_stage_group
             if case.clinical_field_states.get("clinical_stage_group") in (None, "PRESENT")
+            and not known_unknown_blocks_field("clinical_stage_group")
+            and not known_unknown_blocks_field("staging_edition")
             else None
         ),
         "PATHOLOGICAL": (
             case.pathological_stage_group
             if case.clinical_field_states.get("pathological_stage_group") in (None, "PRESENT")
+            and not known_unknown_blocks_field("pathological_stage_group")
+            and not known_unknown_blocks_field("staging_edition")
             else None
         ),
     }
@@ -1529,7 +1535,11 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         state = field_state(field_id)
         structured_value = getattr(case, field_id)
 
-        if state == "INVALID":
+        if known_unknown_blocks_field("staging_edition"):
+            reason = "staging_edition is explicitly unresolved in known_unknowns; a populated edition value cannot validate a stage-group claim."
+        elif known_unknown_blocks_field(field_id):
+            reason = f"{field_id} is explicitly unresolved in known_unknowns; its value and case-summary fallback cannot support a stage-group claim."
+        elif state == "INVALID":
             reason = (
                 f"{field_id} is marked INVALID; its preserved raw value cannot support "
                 f"a {generated_kind.lower()} stage-group assertion."
@@ -1592,8 +1602,10 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         ):
             value = getattr(case, field_id)
             state = field_state(field_id)
-            if value in (None, "") or not field_assertable(field_id):
-                if state not in (None, "PRESENT"):
+            if value in (None, "") or not field_assertable(field_id) or known_unknown_blocks_field(field_id):
+                if known_unknown_blocks_field(field_id):
+                    staging_context_gaps.append(f"{label} (unresolved in known_unknowns)")
+                elif state not in (None, "PRESENT"):
                     staging_context_gaps.append(f"{label} ({state})")
                 else:
                     staging_context_gaps.append(label)
