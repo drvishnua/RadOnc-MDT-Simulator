@@ -1649,21 +1649,32 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         )
 
     preference_pattern = re.compile(
-        # Match an actual patient-attributed choice/act. The noun phrase
-        # "obtain patient consent" is a recommendation to elicit consent,
-        # not evidence that the patient has already consented.
-        r"\bpatient(?:'s)?\s+(?:prefers?|wishes?|wants?|chooses?|declines?|refuses?|agrees?|consents\b|has chosen|has consented|does not want|doesn't want)\b[^.!?;\n]{0,100}",
+        # This checks treatment preferences/willingness, not educational-scenario
+        # consent. Formal treatment consent must never be inferred from the
+        # separate patient_consent_status field.
+        r"\bpatient(?:'s)?\s+(?:prefers?|wishes?|wants?|chooses?|declines?|refuses?|agrees?|has chosen|does not want|doesn't want)\b[^.!?;\n]{0,100}",
         re.IGNORECASE,
     )
     goals_state = field_state("patient_goals")
     preferences_state = field_state("patient_preferences")
+    willingness_state = field_state("patient_willingness")
     preference_sources: list[str] = []
     if goals_state in (None, "PRESENT"):
         preference_sources.extend(f"patient {goal}" for goal in (case.patient_goals or []))
     if preferences_state in (None, "PRESENT"):
         preference_sources.extend(f"patient {item}" for item in (case.patient_preferences or []))
-    if goals_state in (None, "PRESENT") and preferences_state in (None, "PRESENT"):
+    if willingness_state in (None, "PRESENT") and case.patient_willingness:
+        preference_sources.append(f"patient {case.patient_willingness}")
+
+    # A supplied structured preference/willingness value takes precedence over
+    # free text. The summary is a fallback only when no structured source is
+    # present and none of these fields is explicitly non-PRESENT.
+    if not preference_sources and all(
+        state in (None, "PRESENT")
+        for state in (goals_state, preferences_state, willingness_state)
+    ):
         preference_sources.append(case_summary_text)
+
     preference_source_text = "\n".join(preference_sources)
     unsupported_preferences = _unsupported_matches(
         preference_pattern,
@@ -1672,9 +1683,46 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     )
     if unsupported_preferences:
         flags.append(
-            "Generated narrative attributes patient preference/decision statement(s) "
+            "Generated narrative attributes patient preference/willingness statement(s) "
             + "; ".join(unsupported_preferences[:2])
-            + ", which are not explicitly supported by the verbatim case summary or structured patient_goals."
+            + ", which are not explicitly supported by PRESENT structured patient_goals, "
+            "patient_preferences or patient_willingness, or an assertable case summary."
+        )
+
+    scenario_consent_pattern = re.compile(
+        r"\bpatient(?:'s)?\s+(?:has\s+)?consented\s+to\s+participate\s+in\s+"
+        r"(?:this|the)\s+educational\s+(?:case|scenario|simulation)\b[^.!?;\n]{0,80}|"
+        r"\bpatient(?:'s)?\s+(?:declined|refused|withdrew)\s+consent\s+to\s+participate\s+in\s+"
+        r"(?:this|the)\s+educational\s+(?:case|scenario|simulation)\b[^.!?;\n]{0,80}|"
+        r"\bpatient(?:'s)?\s+consent\s+to\s+participate\s+in\s+"
+        r"(?:this|the)\s+educational\s+(?:case|scenario|simulation)\b[^.!?;\n]{0,100}",
+        re.IGNORECASE,
+    )
+    consent_state = field_state("patient_consent_status")
+    consent_sources: list[str] = []
+    if consent_state in (None, "PRESENT"):
+        consent_status_text = {
+            "NOT_ASKED": "patient consent to participate in this educational scenario has not been asked",
+            "PENDING": "patient consent to participate in this educational scenario is pending",
+            "GIVEN": "patient has consented to participate in this educational scenario",
+            "DECLINED": "patient declined consent to participate in this educational scenario",
+            "WITHDRAWN": "patient withdrew consent to participate in this educational scenario",
+        }
+        if case.patient_consent_status is not None:
+            consent_sources.append(consent_status_text[case.patient_consent_status])
+        else:
+            consent_sources.append(case_summary_text)
+
+    unsupported_scenario_consent = _unsupported_matches(
+        scenario_consent_pattern,
+        text,
+        "\n".join(consent_sources),
+    )
+    if unsupported_scenario_consent:
+        flags.append(
+            "Generated narrative asserts educational-scenario consent status ("
+            + "; ".join(unsupported_scenario_consent[:2])
+            + "), which is not supported by the explicit patient_consent_status or an assertable source."
         )
     prerequisite_status_pattern = re.compile(
         # Explicit "neither prerequisite is met" is a negative-status assertion,
