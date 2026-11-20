@@ -5697,3 +5697,21 @@ For positive patient-history assertions concerning comorbidities, prior treatmen
 
 **Next action:** add source-aware positive-assertion controls for the five listed fields, with narrow per-field patterns and preserved state/provenance semantics; add regression controls for unsupported values and uncertainty. Re-run exact-head backend, preflight, Sequential Gate and Security Audit. Do not activate U04 or alter the machine plan.
 
+## Positive-history test checkpoint — final Security Audit result
+
+- PR #5 advanced to checklist commit `cb832300441c2a50c91d2c21aa5dc5bd6afe3053` after the positive-claim failure record was added; this commit changes only `docs/MASTER_DEVELOPMENT_CHECKLIST.md`.
+- Test source checkpoint remains `d6a41f9325c45b041131d2c8fcd1e05ead09b177`; application-code checkpoint remains `c4d5c63aee12fd9f1bdfbac55a1eb4c4e5385c3e`.
+- Security Audit on the test checkpoint `d6a41f9`, run `44739600542`, completed SUCCESS; Python and Node dependency audit, JavaScript/TypeScript CodeQL, Python CodeQL and full-history secret scan all passed.
+- The new checklist-only commit's Sequential Development Gate run `44739828219` completed SUCCESS. Its Security Audit run `44739828136` completed SUCCESS; all four jobs passed.
+- The backend test failure remains unchanged and must not be overwritten by later green documentation/security workflows. Backend run `44739600496` on `d6a41f9` remains **668/674 passed, 6 failed**.
+- No positive-history application-code correction has been implemented yet. Next change remains within U10 only.
+
+### Current evidence update
+
+| Workstream | Status | Evidence |
+|---|---|---|
+| Positive history assertions (comorbidity, prior treatment, family history, allergies, current medications) | FAILED | Backend run `44739600496` on test checkpoint `d6a41f9`: 6 focused failures; preserve. |
+| Deterministic preflight | VERIFIED | Completed in Backend run `44739600496`; artifact `14630018096`. |
+| Sequential Development Gate | VERIFIED | `44739600517` SUCCESS on `d6a41f9`; `44739828219` SUCCESS on checklist-only `cb8323`. |
+| Security/dependency/secret scan/CodeQL | VERIFIED | `44739600542` SUCCESS on `d6a41f9`; all four jobs passed. `44739828136` SUCCESS on checklist-only `cb8323`; all four jobs passed. |
+
