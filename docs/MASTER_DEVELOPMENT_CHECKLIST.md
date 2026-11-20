@@ -6304,3 +6304,57 @@ Separate patient preference/goal statements from treatment willingness statement
 
 **Next action:** correct only the state-to-source wording for NOT_ASKED/PENDING consent matching, rerun exact-head backend/preflight, Sequential Gate and Security. Preserve the five enum values and all consent-separation controls. Do not advance `active_step`, modify intake code or activate U04.
 
+## U10 educational-consent status wording — implementation and exact-head verification
+
+### Correction
+
+- Application commit: `9b0b56b85615043bb8a80fa149bf96e286db1fb0`; only `backend/app/services/case_integrity.py` changed.
+- For `NOT_ASKED` and `PENDING`, the consent-state source projection now retains the canonical non-possessive wording and adds the common possessive wording (“patient's consent”) as an analysis-only equivalent. This preserves exact source/status semantics and allows both ordinary phrasings to compare against the same structured state.
+- The five consent enum values and their separate meanings remain unchanged: NOT_ASKED, PENDING, GIVEN, DECLINED and WITHDRAWN. No treatment-specific consent proxy was introduced.
+- Failed test-only checkpoint `e68b98398c6a8764554ab15db8de5f100e800cc9` is preserved: Backend `44750354306`, **697 passed, 2 failed** (NOT_ASKED/PENDING equivalent wording mismatches). The WITHDRAWN matching case and all three mismatched-GIVEN controls passed.
+- Exact-head Backend Tests run `44750998934`, job `136338542485`, on `9b0b56b`: **699 passed, 0 failed, 0 errors, 0 skipped** (one existing Starlette/httpx deprecation warning).
+- All six new NOT_ASKED/PENDING/WITHDRAWN matching and mismatch parameter cases passed. Existing GIVEN and DECLINED tests passed.
+- Deterministic preflight artifact `14634823849`, SHA-256 `604458792e856616ff00fd7a3261e049cc9c1fda55570342e1b295810861aba0`; pytest diagnostics artifact `14635940786`, SHA-256 `693f664995742711a61561111e4b6112c4feb7d325076a611e1f3a18f0873bb3`.
+- Exact-head Sequential Development Gate run `44750998955`: SUCCESS; log confirms `active_step=U09-U10`, checked head `9b0b56b`, scope baseline `5284483a26e87028f919966e304c472ed537e839`.
+- Exact-head Security and Dependency Audit run `44750998935`: SUCCESS; all four jobs passed (Python CodeQL, JavaScript/TypeScript CodeQL, dependency audit and full-history secret scan).
+- The earlier failing checkpoint `e68b983` and checklist-only rerun `c799a23` / Backend run `44750745262` (697/699) remain historical failures; this correction does not erase them.
+- PR #5 remains OPEN/unmerged, base branch `feature/four-round-mdt-and-performance`, base SHA `df90e4a380bef06a7d37def753b385db4ae86c30`. Current application head `9b0b56b`; submitted reviews 0; review threads 0.
+
+### Master Checklist — Current Status
+
+| Workstream | Status | Current evidence / outstanding boundary |
+|---|---|---|
+| Repository, protected PR and branch | VERIFIED | PR #5 OPEN/unmerged; application head `9b0b56b`; base `feature/four-round-mdt-and-performance` at `df90e4a`; 0 submitted reviews and 0 review threads; no main modification or merge. |
+| Approved sequence / machine plan | VERIFIED | Exact-head Sequential Gate `44750998955` confirms `active_step=U09-U10`; scope baseline `5284483a26e87028f919966e304c472ed537e839`. |
+| U09 immutable registry v2 and typed clinical contract | IN PROGRESS | Stable IDs, aliases, version/hash and typed states exist; complete field/state/provenance, legacy migration and backward-compatibility acceptance remains. |
+| U10 staging site/system/edition | VERIFIED for tested cases | Missing context and UNKNOWN system/edition regressions pass; full edition applicability/migration matrix remains. |
+| U10 clinical/pathological T/N/M and stage-group separation | IN PROGRESS | Namespace and UNKNOWN fallback regressions pass; full state/provenance matrix across NOT_REPORTED, NOT_ASSESSED, PENDING, DECLINED, INVALID and CONFLICTING remains. |
+| U10 diagnosis date and family/caregiver claims | VERIFIED | Code `9b0d4cf`; Backend `44737660862`, 661/661. |
+| U10 investigation-record status/source fallback | VERIFIED | Code `c4d5c63`; Backend `44738779218`, 666/666; only COMPLETED records support findings and explicit UNKNOWN blocks summary fallback. |
+| U10 positive clinical-history assertions | VERIFIED | Code `25635e9`; Backend `44740400697`, 674/674. |
+| U10 social/resource context assertions | VERIFIED | Code `5571074`; Backend `44741865637`, 683/683; UNKNOWN/NOT_REPORTED, mismatch, source match and state-vocabulary controls pass. |
+| U10 patient goals/preferences vs willingness | VERIFIED | Code `ad98a10`; Backend `44745009819`, 690/690; source fields separate and UNKNOWN willingness blocks summary fallback. |
+| U10 known_unknowns willingness/treatment-consent blocker | VERIFIED for tested cases | Code `ae4e5af`; Backend `44749806362`, 693/693; field-specific gaps block summary fallback, unrelated gaps remain non-blocking. |
+| U10 educational-scenario consent state mapping | VERIFIED | Code `9b0b56b`; Backend `44750998934`, 699/699; all five enum states covered by matching or existing controls, with NOT_ASKED/PENDING possessive wording fixed. |
+| U10 treatment-specific consent remains separate | VERIFIED for tested cases | Treatment-consent source checks and educational-consent non-proxy tests pass; broader treatment-consent state matrix remains. |
+| U10 negative/absence claims and CONFIRMED_ABSENT provenance | IN PROGRESS | Existing safeguards and selected allowed-field tests pass; complete field-by-field state/source/mismatch matrix remains. |
+| U10 other known-unknown field mappings | IN PROGRESS | Specific willingness/consent mappings verified; other fields still require source-aware review. |
+| Backend regression suite | VERIFIED | Exact application head `9b0b56b`; run `44750998934`; 699/699. |
+| Deterministic preflight | VERIFIED | Run `44750998934`; artifact `14634823849`, SHA-256 above. |
+| Sequential Development Gate | VERIFIED | Exact application head; run `44750998955` SUCCESS; active step U09–U10. |
+| Security/dependency/secret scan/CodeQL | VERIFIED | Exact application head; run `44750998935` SUCCESS; all four jobs passed. |
+| R1–R4 saved contributions and Chair reconciliation | IN PROGRESS | Mocked provenance/context tests exist; live saved R1–R3 and Chair R4 remain unverified. |
+| Case snapshot hashes, audit history and failure/resume paths | IN PROGRESS | Deterministic protections exist; full saved-run tamper, partial-failure and resume audit remains. |
+| Evidence retrieval and claim-to-passage validation | IN PROGRESS | Independent current-source retrieval and exact support verification remain outstanding. |
+| Missing/failed specialist handling | IN PROGRESS | Deterministic tests exist; live 45-role failure/resume and saved-artifact inspection remain. |
+| U04 Case Intake and Completeness Screener | BLOCKED | Do not activate until U09–U10 acceptance is complete. |
+| U05–U08 | BLOCKED | Remain in the approved order after U04. |
+| U03 intelligent Ollama installer | BLOCKED | Remains after U08; Windows Ollama/model reuse remains unverified. |
+| U01–U02 desktop experience/removal of development surfaces | BLOCKED | Remain after U03. |
+| Live 45-role R1–R4 | NOT STARTED | No live run ID or inspected saved artefact claimed. |
+| RTX 4060 request-time GPU inference | NOT STARTED | No request-time GPU/Ollama offload evidence claimed. |
+| Independent clinical validation | NOT STARTED | No qualified independent clinical review claimed. |
+| Integrated release acceptance | BLOCKED | U09–U10 full field/state/source matrix and all ordered downstream/live/GPU/clinical gates remain. |
+
+**Next action:** continue U09–U10 pathology component state/provenance and negative/absence controls field by field. Keep `active_step=U09-U10`. Do not modify intake code, activate U04 or introduce downstream workstreams.
+
