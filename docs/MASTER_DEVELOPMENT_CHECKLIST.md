@@ -7597,3 +7597,79 @@ Application and test code is unchanged from `4a44b3e8d6796dee21d25e396d611091c79
 | Integrated release acceptance | BLOCKED | Remaining U09–U10, live/GPU/clinical and downstream gates remain |
 
 **Next approved action:** continue the list-based known-unknown field/source audit with relevant investigations and typed investigation records. Add matching-field negative/positive and unrelated-field controls only for reproducible gaps. Do not alter the machine-plan sequence, merge PR #5, modify the protected development branch or activate U04.
+
+### U10 known_unknowns mapping — relevant investigations and typed investigation records — 20 November 2026
+
+**Approved-sequence position:** continuation of the list-based U10 known-unknown source audit, immediately after current medications, known allergies and prior treatment. The next group remains patient goals/preferences and social/resource context. No machine-plan step was skipped or activated.
+
+**Test-first finding**
+- Test-only commit: `a57eb7a9602a267ff238c4f32824255bffe2efd0`.
+- Added matching-field regressions for a populated `relevant_investigations` list and a completed `investigation_records` entry, each with a matching unresolved note.
+- Unrelated-field controls and supported-positive cases without a matching unresolved note were included.
+- Backend run `44779697353`: expected test-first failure, **833 passed, 2 failed, 0 errors, 0 skipped**. Both failures were the two target matching-field mappings; the unrelated-field and supported-positive controls passed.
+- Sequential Development Gate `44779697373`: SUCCESS. Security/Dependency Audit `44779697254`: SUCCESS.
+
+**Narrow implementation correction**
+- Implementation commit: `4e9177a3c9c7506236867ec81e7a0c6c7a62b8c1`.
+- Added canonical field aliases for `relevant_investigations` and `investigation_records` to the existing clause-local known-unknown matcher.
+- A matching unresolved note now prevents the corresponding list/typed-record source from supporting a positive investigation finding.
+- A matching field-specific unresolved note also prevents the generic case-summary fallback from bypassing that unresolved source.
+- Only `COMPLETED` typed investigation records can support a finding. Non-completed records remain disclosed as non-supporting.
+- No source text, clinical values, investigation state or saved case was rewritten.
+- Exact implementation-head backend run `44779946357`: **835/835 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive**.
+- Sequential Development Gate `44779946349`: SUCCESS. Security and Dependency Audit `44779947599`: SUCCESS; Python/Node dependency audit, full-history secret scan and Python/JavaScript-TypeScript CodeQL all passed.
+
+**Supplementary generic-summary fallback regressions**
+- Test commit `adbb06462eca5b4a0d4141fc2174286dfcacfc23` added explicit fallback-bypass regressions for both source fields.
+- Its first exact-head backend run `44780856705` failed with **836 passed, 1 failed** because the new empty-list fixture incorrectly marked `relevant_investigations` as `PRESENT`; the schema correctly rejected a PRESENT state without a supplied value. The typed-record fallback test passed. This failed iteration is retained and is not counted as acceptance.
+- Fixture-only correction commit: `ac385781b278a6450cbe4a8f4117417159aece16`; removed the inconsistent PRESENT state from the empty-list fixture. No application code changed in this correction.
+- Exact corrected-head backend run `44781062399`: **837/837 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive**; 1 warning; deterministic preflight **7/7 passed**, diagnostic errors **0**.
+- Pytest/JUnit diagnostics artifact: `14652651704`, SHA-256 `e49bf970bbe4c6ff08ce303c8ae0aa8ce21602bacd21d3931e2a2a33f4b95801`.
+- Deterministic preflight artifact: `14651752859`, SHA-256 `092218cb9af0c3f8547f9bc707a0e01ad6136a1a07c876e50b8f55a950bb392a`.
+- Sequential Development Gate `44781062649`: SUCCESS.
+- Security and Dependency Audit `44781062427`: SUCCESS; dependency audit, full-history secret scan, Python CodeQL and JavaScript/TypeScript CodeQL all passed.
+- Both supplementary generic-summary fallback tests passed on corrected head `ac385781`.
+
+**Current interpretation**
+- Field-specific unresolved mapping for relevant investigations and typed investigation records: **VERIFIED for the tested matching-field, unrelated-field, supported-positive and generic-summary fallback cases**.
+- This is deterministic software regression evidence, not independent validation of the external investigation report, clinical accuracy, or all possible natural-language formulations.
+- User-supplied source excerpts remain user-supplied and are not independently verified merely because their hashes are retained.
+- The overall U10 list-based mapping remains IN PROGRESS. The next approved group is patient goals/preferences and social/resource context.
+- PR #5 remains OPEN and NOT MERGED; it targets only `feature/four-round-mdt-and-performance`. No main or protected development branch changes were made. No later algorithm step has started.
+
+### Master Checklist — Current Status (20 November 2026; code/test head ac385781)
+
+| Workstream | Status | Evidence / outstanding boundary |
+|---|---|---|
+| PR #5 / branch protection | VERIFIED | PR #5 OPEN, unmerged; code/test head `ac385781`; base `feature/four-round-mdt-and-performance` at `df90e4a`; main untouched |
+| Approved development sequence | VERIFIED | U09–U10 remains the active step; U04 and later remain blocked |
+| U09 immutable clinical registry v2 / stable IDs | IN PROGRESS | Additive v2 and preserved v1 history exist; complete field/state/source/provenance acceptance remains |
+| U09 registry-to-schema type consistency | VERIFIED | All 40 fields/seven declared types checked in prior exact-head evidence |
+| U09 source-text preservation | VERIFIED for tested fields | Exact source text/whitespace regressions cover clinical lists, typed investigation excerpts and case/pathology/imaging summaries |
+| U09 empty provenance-list fallback | VERIFIED for tested cases | PRESENT/INVALID fallback tests and exact prior backend evidence retained |
+| U09 legacy/v1 read-only compatibility | VERIFIED for tested cases | Historical v1 and legacy-unversioned snapshots remain readable/hash-verified and blocked from new generation without v2 |
+| U10 clinical/pathological TNM and typed stage-group separation | VERIFIED for tested cases | Separate namespaces and state/invalid/conflict controls pass; not site/edition-aware clinical staging |
+| U10 known_unknowns own-state gate | VERIFIED | Non-PRESENT known_unknowns list contents are not consumed |
+| U10 known_unknowns — staging, comorbidity and willingness | VERIFIED for tested cases | Matching-field, clause-local, unrelated-field and negative controls retained |
+| U10 known_unknowns — primary site/subsite/laterality | VERIFIED for tested cases | Matching-field and unrelated-field regressions passed |
+| U10 known_unknowns — age/sex/date/histology/grade/performance | VERIFIED for tested cases | Field-specific and unrelated-field regression cases passed |
+| U10 known_unknowns — family history/caregiver context | VERIFIED for tested cases | Matching, unrelated-field and supported-positive controls passed |
+| U10 known_unknowns — current medications/allergies/prior treatment | VERIFIED for tested cases | Matching, unrelated-field and no-note positive controls; exact backend 829/829 on `982c33b` |
+| U10 known_unknowns — relevant investigations/typed investigation records | VERIFIED for tested cases | Test-first `a57eb7a`; implementation `4e9177a`; fallback tests corrected on `ac385781`; exact backend 837/837, gate and security successful |
+| U10 known_unknowns — patient goals/preferences and social/resource context | NOT STARTED | Next approved field group; do not skip ahead |
+| Broader U09–U10 field/state/source/provenance matrix | IN PROGRESS | Continue only reproducible gaps with field-specific positive, negative and unrelated-field controls |
+| Backend tests / deterministic preflight | VERIFIED on `ac385781` | Run `44781062399`: 837/837; preflight 7/7; artifacts `14652651704` and `14651752859` |
+| Sequential Development Gate | VERIFIED on `ac385781` | Run `44781062649`: SUCCESS |
+| Security/dependency/secret scan/CodeQL | VERIFIED on `ac385781` | Run `44781062427`: SUCCESS; all four security jobs passed |
+| Frontend build / browser E2E | NOT APPLICABLE | No frontend files changed in this backend-only U09/U10 slice |
+| R1–R3 shared canonical context across 45 roles | IN PROGRESS | Mocked all-role context regression exists; live saved-run coverage remains |
+| R4 Chair consensus, dissent and traceability | IN PROGRESS | Live saved R1–R3 to Chair reconciliation remains unverified |
+| Case snapshot hashes, audit, failure and resume integrity | IN PROGRESS | Deterministic controls exist; full saved-run tamper/failure/resume acceptance remains |
+| Evidence retrieval and claim-to-passage verification | IN PROGRESS | External current-source retrieval and live claim verification remain |
+| Ollama discovery/reuse and RTX 4060 request-time inference | BLOCKED | Later ordered work; no local request-time GPU telemetry or active inference proof |
+| U04 and later ordered workstreams | BLOCKED | Must not start before U09–U10 acceptance |
+| Live 45-role R1–R4 execution and saved-run audit | NOT STARTED | No accepted current-head live run ID or inspected saved artefact |
+| Independent clinical validation | NOT STARTED | No qualified independent clinical review |
+| Integrated release acceptance | BLOCKED | Remaining U09–U10, live/GPU, evidence, clinical, security and packaging gates remain |
+
+**Next approved action:** continue the same U10 known-unknown field/source audit with patient goals/preferences and social/resource context. Add matching-field negative/positive and unrelated-field controls before a narrow correction for any reproduced gap. Keep U04 and all later steps blocked; do not merge PR #5, modify the protected development branch or main, or broaden the workstream.
