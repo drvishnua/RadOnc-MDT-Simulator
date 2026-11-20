@@ -1136,7 +1136,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         else:
             reason = "but age_years is not supplied as an assertable value or explicitly recorded in the source summary."
         flags.append(
-            "Generated narrative assigns an age ("
+            "Generated narrative assigns age(s) ("
             + ", ".join(str(age) for age in unsupported_ages[:4])
             + "), "
             + reason
@@ -1230,13 +1230,13 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         if sex_state == "CONFLICTING":
             reason = "sex_at_birth has conflicting source values and no single descriptor may be selected."
         elif case.sex_at_birth not in (None, "") and field_assertable("sex_at_birth"):
-            reason = f"the descriptor conflicts with structured sex_at_birth={case.sex_at_birth!s}."
+            reason = f"these descriptors conflict with structured sex_at_birth={case.sex_at_birth!s}."
         else:
             reason = "the descriptor is not supported by an assertable structured field or verbatim case summary."
         flags.append(
             "Generated narrative assigns sex/gender descriptor(s) ("
             + ", ".join(unsupported_sex_terms[:4])
-            + "), but "
+            + "), which "
             + reason
         )
 
@@ -1281,12 +1281,20 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     )
     ps_state = field_state("performance_status")
     scale_state = field_state("performance_status_scale")
+    embedded_scale = bool(
+        case.performance_status
+        and re.search(r"\\b(?:ECOG|WHO|KPS|Karnofsky)\\b", str(case.performance_status), re.IGNORECASE)
+    )
     scale_is_assertable = (
-        case.performance_status_scale not in (None, "")
-        and scale_state in (None, "PRESENT")
+        (case.performance_status_scale not in (None, "") and scale_state in (None, "PRESENT"))
+        or embedded_scale
     )
     if case.performance_status not in (None, "") and field_assertable("performance_status") and scale_is_assertable:
-        performance_source = f"{case.performance_status_scale} {case.performance_status}"
+        performance_source = (
+            str(case.performance_status)
+            if embedded_scale
+            else f"{case.performance_status_scale} {case.performance_status}"
+        )
     elif ps_state is None and scale_state is None:
         performance_source = case.case_summary
     else:
@@ -1300,13 +1308,13 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         elif case.performance_status not in (None, "") and field_assertable("performance_status") and not scale_is_assertable:
             reason = "the performance-status scale is absent or not assertable."
         elif case.performance_status not in (None, "") and field_assertable("performance_status"):
-            reason = f"the score conflicts with structured performance_status={case.performance_status!s}."
+            reason = f"which conflict with structured performance_status={case.performance_status!s}."
         else:
             reason = "performance_status and its scale are not supplied as assertable structured values or explicitly recorded in the source summary."
         flags.append(
             "Generated narrative assigns unsupported performance-status score(s) ("
             + ", ".join(unsupported_performance[:3])
-            + "); "
+            + "), "
             + reason
         )
 
