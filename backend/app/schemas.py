@@ -18,7 +18,9 @@ class StrictModel(BaseModel):
 
 
 class ClinicalFieldProvenance(StrictModel):
-    """Source metadata for one supplied clinical field value or explicit state."""
+    """Immutable source metadata for one supplied clinical field value or explicit state."""
+
+    model_config = ConfigDict(frozen=True)
 
     source_type: Literal[
         "CASE_SUMMARY",
@@ -39,16 +41,22 @@ class ClinicalFieldProvenance(StrictModel):
     recorded_at: datetime | None = None
     source_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
 
+    @model_validator(mode="before")
+    @classmethod
+    def populate_source_hash(cls, values: object) -> object:
+        if not isinstance(values, dict):
+            return values
+        payload = dict(values)
+        excerpt = payload.get("source_excerpt")
+        if payload.get("source_sha256") is None and isinstance(excerpt, str):
+            payload["source_sha256"] = hashlib.sha256(excerpt.encode("utf-8")).hexdigest()
+        return payload
+
     @model_validator(mode="after")
     def verify_source_hash(self) -> "ClinicalFieldProvenance":
         actual = hashlib.sha256(self.source_excerpt.encode("utf-8")).hexdigest()
-        if self.source_sha256 is not None and actual != self.source_sha256:
+        if self.source_sha256 != actual:
             raise ValueError("source_sha256 does not match the preserved source_excerpt.")
-        # Every preserved source excerpt is hash-addressed, including explicitly
-        # supplied provenance and conflict candidates that omit a checksum.
-        # This derives integrity metadata only; it never upgrades source verification.
-        if self.source_sha256 is None:
-            self.source_sha256 = actual
         return self
 
 
