@@ -6962,3 +6962,15 @@ The documentation-bearing PR head `a51f4492a6f563aa8e30591150d3ecf8f9de24fa` has
 - PR #5 remains OPEN, NOT MERGED and mergeable. Independent review has not been recorded. No merge action was taken.
 
 **Status interpretation:** field-specific unresolved-note mapping is VERIFIED by the exact-head software regression suite. U09–U10 as a whole remains IN PROGRESS because full acceptance, independent review, live R1–R4 saved-run verification and clinical validation remain outstanding. No live model inference, GPU verification or clinical accuracy is claimed.
+
+
+### Latest exact-head verification — 20 November 2026
+
+The latest PR #5 head before this checklist update, `4a44b3e8d6796dee21d25e396d611091c7982cd5`, completed all required checks successfully:
+
+- Backend Tests run `44767036094`: SUCCESS; **789/789 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive**; diagnostic errors 0. Pytest artifact `14645796698`; deterministic preflight artifact `14646231589`.
+- Sequential Development Gate run `44767036231`: SUCCESS.
+- Security and Dependency Audit run `44767036299`: SUCCESS; Python and JavaScript/TypeScript CodeQL, dependency audit and full-history secret scan all successful.
+- Each workflow is associated with exact SHA `4a44b3e8d6796dee21d25e396d611091c7982cd5`.
+
+**Status update:** backend tests, deterministic preflight, Sequential Development Gate and Security/Dependency Audit are VERIFIED on `4a44b3e`. U09–U10 remains IN PROGRESS pending independent review and remaining acceptance requirements. PR #5 remains OPEN and NOT MERGED. The checklist update creates a new documentation-only head; rerun the required workflows on that new head before merge consideration. No U04 or later workstream is started.
