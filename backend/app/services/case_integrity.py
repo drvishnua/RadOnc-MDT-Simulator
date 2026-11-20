@@ -1392,13 +1392,8 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
                 else:
                     staging_context_gaps.append(label)
         if staging_context_gaps:
-            generated_stage_snippets = [
-                snippet for _kind, _key, snippet in generated_group_records[:3]
-            ]
             flags.append(
-                "Generated narrative presents staging interpretation assertion(s) ("
-                + "; ".join(generated_stage_snippets)
-                + ") without assertable staging context: "
+                "Generated narrative presents staging classification token(s) without assertable staging context: "
                 + ", ".join(staging_context_gaps)
                 + ". Preserve the recorded group token, but do not present it as a validated staging classification or infer site/system/edition compatibility."
             )
