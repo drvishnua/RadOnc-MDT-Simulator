@@ -1,22 +1,25 @@
 """Immutable, versioned clinical field identifiers and safe terminology helpers.
 
-Field IDs and meanings are stable API contracts. Evolve definitions by adding a
-new registry version; never repurpose an existing identifier. This registry
-standardises data semantics but cannot guarantee model adherence or prevent all
-hallucinations.
+Registry v1.0.0 is retained unchanged for historical inspection. Registry v2.0.0
+is additive and is the only registry accepted for new or resumed model runs.
+A registry definition is a data contract, not evidence that a patient value exists.
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from types import MappingProxyType
 from typing import Final, Literal
 
 
-CLINICAL_FIELD_REGISTRY_VERSION: Final[str] = "1.0.0"
+HISTORICAL_CLINICAL_FIELD_REGISTRY_VERSION: Final[str] = "1.0.0"
+CLINICAL_FIELD_REGISTRY_VERSION: Final[str] = "2.0.0"
 LEGACY_FIELD_REGISTRY_VERSION: Final[str] = "legacy-unversioned"
 
-# Stable field IDs. Never rename or repurpose these identifiers.
+# Stable field IDs. Existing IDs are never renamed or repurposed. Additions are
+# introduced only in a new registry version.
 SCENARIO_TITLE: Final[str] = "scenario_title"
 CASE_SUMMARY: Final[str] = "case_summary"
 AGE_YEARS: Final[str] = "age_years"
@@ -40,6 +43,26 @@ SOCIAL_CONTEXT: Final[str] = "social_context"
 RESOURCE_CONTEXT: Final[str] = "resource_context"
 KNOWN_UNKNOWNS: Final[str] = "known_unknowns"
 
+# Additive v2 identifiers. Existing IDs above retain their exact meanings.
+ANATOMICAL_SUBSITE: Final[str] = "anatomical_subsite"
+LATERALITY: Final[str] = "laterality"
+HISTOLOGICAL_GRADE: Final[str] = "histological_grade"
+PATHOLOGICAL_T_STAGE: Final[str] = "pathological_t_stage"
+PATHOLOGICAL_N_STAGE: Final[str] = "pathological_n_stage"
+PATHOLOGICAL_M_STAGE: Final[str] = "pathological_m_stage"
+CLINICAL_STAGE_GROUP: Final[str] = "clinical_stage_group"
+PATHOLOGICAL_STAGE_GROUP: Final[str] = "pathological_stage_group"
+STAGING_SYSTEM: Final[str] = "staging_system"
+STAGING_EDITION: Final[str] = "staging_edition"
+PERFORMANCE_STATUS_SCALE: Final[str] = "performance_status_scale"
+DIAGNOSIS_DATE: Final[str] = "diagnosis_date"
+INVESTIGATION_RECORDS: Final[str] = "investigation_records"
+FAMILY_HISTORY: Final[str] = "family_history"
+FAMILY_CAREGIVER_CONTEXT: Final[str] = "family_caregiver_context"
+PATIENT_PREFERENCES: Final[str] = "patient_preferences"
+PATIENT_WILLINGNESS: Final[str] = "patient_willingness"
+PATIENT_CONSENT_STATUS: Final[str] = "patient_consent_status"
+
 # Short, stable aliases for common clinical concepts. These are field aliases,
 # not permission to infer a patient-specific value.
 T: Final[str] = CLINICAL_T_STAGE
@@ -56,9 +79,45 @@ DataState = Literal[
     "UNKNOWN",
     "NOT_REPORTED",
     "NOT_ASSESSED",
+    "PENDING",
+    "DECLINED",
     "NOT_APPLICABLE",
     "CONFLICTING",
+    "INVALID",
 ]
+
+_LEGACY_DATA_STATES: Final[tuple[str, ...]] = (
+    "PRESENT",
+    "CONFIRMED_ABSENT",
+    "UNKNOWN",
+    "NOT_REPORTED",
+    "NOT_ASSESSED",
+    "NOT_APPLICABLE",
+    "CONFLICTING",
+)
+_COMMON_DATA_STATES: Final[tuple[str, ...]] = (
+    "PRESENT",
+    "UNKNOWN",
+    "NOT_REPORTED",
+    "NOT_ASSESSED",
+    "PENDING",
+    "DECLINED",
+    "NOT_APPLICABLE",
+    "CONFLICTING",
+    "INVALID",
+)
+_LIST_DATA_STATES: Final[tuple[str, ...]] = (
+    "PRESENT",
+    "CONFIRMED_ABSENT",
+    "UNKNOWN",
+    "NOT_REPORTED",
+    "NOT_ASSESSED",
+    "PENDING",
+    "DECLINED",
+    "NOT_APPLICABLE",
+    "CONFLICTING",
+    "INVALID",
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,17 +127,19 @@ class ClinicalFieldDefinition:
     value_type: str
     description: str
     aliases: tuple[str, ...] = ()
-    allowed_states: tuple[DataState, ...] = (
-        "PRESENT",
-        "CONFIRMED_ABSENT",
-        "UNKNOWN",
-        "NOT_REPORTED",
-        "NOT_ASSESSED",
-        "NOT_APPLICABLE",
-        "CONFLICTING",
-    )
+    # The default is deliberately the v1 state vocabulary. V2 definitions set
+    # their state vocabulary explicitly when constructing the new registry.
+    allowed_states: tuple[str, ...] = _LEGACY_DATA_STATES
+    unit: str | None = None
+    allowed_values: tuple[str, ...] = ()
+    validation_rule: str = "preserve_raw_validate_declared_type"
+    source_requirement: str = "retain_source_and_provenance_status"
+    applicability: str = "case_specific; do_not_infer"
+    semantic_kind: str = "FACT"
 
 
+# Immutable v1 definitions. Do not edit or repurpose this tuple; new fields and
+# metadata belong to the separately versioned v2 registry below.
 _DEFINITIONS = (
     ClinicalFieldDefinition(SCENARIO_TITLE, "Scenario title", "string", "Fictional case label."),
     ClinicalFieldDefinition(CASE_SUMMARY, "Case summary", "free_text", "Verbatim user-provided case narrative; not silently parsed into confirmed facts."),
@@ -104,11 +165,10 @@ _DEFINITIONS = (
     ClinicalFieldDefinition(KNOWN_UNKNOWNS, "Known unknowns", "string_list", "Explicitly recorded unresolved information gaps."),
 )
 
-# Read-only registry and read-only alias index; definitions themselves are frozen.
-CLINICAL_FIELD_REGISTRY: Final = MappingProxyType(
+CLINICAL_FIELD_REGISTRY_V1: Final = MappingProxyType(
     {definition.field_id: definition for definition in _DEFINITIONS}
 )
-CLINICAL_FIELD_ALIASES: Final = MappingProxyType(
+CLINICAL_FIELD_ALIASES_V1: Final = MappingProxyType(
     {
         alias: definition.field_id
         for definition in _DEFINITIONS
@@ -116,26 +176,115 @@ CLINICAL_FIELD_ALIASES: Final = MappingProxyType(
     }
 )
 
+_ADDITIONAL_DEFINITIONS = (
+    ClinicalFieldDefinition(ANATOMICAL_SUBSITE, "Anatomical subsite", "string", "Explicitly recorded anatomical subsite; site-specific staging rules must be checked before interpretation."),
+    ClinicalFieldDefinition(LATERALITY, "Laterality", "enum", "Explicitly recorded side; preserve conflicting source statements.", allowed_values=("LEFT", "RIGHT", "BILATERAL", "MIDLINE", "NOT_LATERALIZED")),
+    ClinicalFieldDefinition(HISTOLOGICAL_GRADE, "Histological grade", "string", "Recorded grade using the histology-specific grading convention; do not infer or translate across systems."),
+    ClinicalFieldDefinition(PATHOLOGICAL_T_STAGE, "Pathological T component", "string", "Pathological primary-tumour component; never use as clinical T evidence."),
+    ClinicalFieldDefinition(PATHOLOGICAL_N_STAGE, "Pathological N component", "string", "Pathological regional-node component; never use as clinical N evidence."),
+    ClinicalFieldDefinition(PATHOLOGICAL_M_STAGE, "Pathological M component", "string", "Pathological distant-metastasis component; never use as clinical M evidence."),
+    ClinicalFieldDefinition(CLINICAL_STAGE_GROUP, "Clinical stage group", "string", "Explicitly recorded clinical stage group; requires site, staging system and edition context."),
+    ClinicalFieldDefinition(PATHOLOGICAL_STAGE_GROUP, "Pathological stage group", "string", "Explicitly recorded pathological stage group; never substitute for clinical stage group."),
+    ClinicalFieldDefinition(STAGING_SYSTEM, "Staging system", "string", "Named staging system used for the supplied stage value; do not infer from site or year."),
+    ClinicalFieldDefinition(STAGING_EDITION, "Staging edition", "string", "Explicit edition/version of the staging system; do not infer or silently upgrade."),
+    ClinicalFieldDefinition(PERFORMANCE_STATUS_SCALE, "Performance-status scale", "string", "Named scale for the recorded performance-status value; do not infer ECOG/WHO/Karnofsky equivalence."),
+    ClinicalFieldDefinition(DIAGNOSIS_DATE, "Diagnosis date", "date", "Explicitly recorded diagnosis date; preserve source and avoid inferring an exact date from relative wording."),
+    ClinicalFieldDefinition(INVESTIGATION_RECORDS, "Investigation records", "object_list", "Typed investigation records with test, finding, date and source; absent records are not normal findings."),
+    ClinicalFieldDefinition(FAMILY_HISTORY, "Family history", "string_list", "Reported family history; an empty list is not a confirmed negative."),
+    ClinicalFieldDefinition(FAMILY_CAREGIVER_CONTEXT, "Family/caregiver context", "string_list", "Reported family and caregiver context; do not infer availability or support."),
+    ClinicalFieldDefinition(PATIENT_PREFERENCES, "Patient preferences", "string_list", "Patient-stated preferences; distinguish recorded statements from clinician interpretation."),
+    ClinicalFieldDefinition(PATIENT_WILLINGNESS, "Patient willingness", "string", "Explicitly recorded willingness or refusal; never infer consent or willingness."),
+    ClinicalFieldDefinition(PATIENT_CONSENT_STATUS, "Patient consent status", "enum", "Explicit consent status for the described educational scenario; not a proxy for treatment consent.", allowed_values=("NOT_ASKED", "PENDING", "GIVEN", "DECLINED", "WITHDRAWN")),
+)
+
+# Units and validation rule identifiers are metadata, not clinical thresholds.
+_UNITS: Final = MappingProxyType({
+    AGE_YEARS: "years",
+    DIAGNOSIS_DATE: "date",
+})
+_VALIDATION_RULES: Final = MappingProxyType({
+    AGE_YEARS: "integer_0_to_120",
+    LATERALITY: "closed_enum",
+    DIAGNOSIS_DATE: "iso_date",
+    CLINICAL_T_STAGE: "clinical_tnm_lexical_only",
+    CLINICAL_N_STAGE: "clinical_tnm_lexical_only",
+    CLINICAL_M_STAGE: "clinical_tnm_lexical_only",
+    PATHOLOGICAL_T_STAGE: "pathological_tnm_lexical_only",
+    PATHOLOGICAL_N_STAGE: "pathological_tnm_lexical_only",
+    PATHOLOGICAL_M_STAGE: "pathological_tnm_lexical_only",
+    STAGING_SYSTEM: "explicit_identifier_no_inference",
+    STAGING_EDITION: "explicit_edition_no_inference",
+})
+_NEGATIVEABLE_LIST_FIELDS: Final = frozenset({
+    CURRENT_MEDICATIONS,
+    KNOWN_ALLERGIES,
+    RELEVANT_COMORBIDITIES,
+    PRIOR_TREATMENT,
+    FAMILY_HISTORY,
+})
+_PROVENANCE_REQUIRED_FIELDS: Final = frozenset({
+    CLINICAL_T_STAGE, CLINICAL_N_STAGE, CLINICAL_M_STAGE,
+    PATHOLOGICAL_T_STAGE, PATHOLOGICAL_N_STAGE, PATHOLOGICAL_M_STAGE,
+    STAGE_GROUP, CLINICAL_STAGE_GROUP, PATHOLOGICAL_STAGE_GROUP,
+    HISTOLOGY, HISTOLOGICAL_GRADE, PRIMARY_SITE, ANATOMICAL_SUBSITE,
+    LATERALITY, PERFORMANCE_STATUS,
+})
+
+def _build_v2_definition(definition: ClinicalFieldDefinition) -> ClinicalFieldDefinition:
+    states = _LIST_DATA_STATES if definition.field_id in _NEGATIVEABLE_LIST_FIELDS or definition.value_type in {"string_list", "object_list"} else _COMMON_DATA_STATES
+    return replace(
+        definition,
+        allowed_states=states,
+        unit=_UNITS.get(definition.field_id),
+        validation_rule=_VALIDATION_RULES.get(definition.field_id, "preserve_raw_validate_declared_type"),
+        source_requirement=(
+            "explicit_source_required_for_state_or_interpretation"
+            if definition.field_id in _PROVENANCE_REQUIRED_FIELDS
+            else "retain_source_when_available; mark_unverified_if_missing"
+        ),
+    )
+
+_V2_DEFINITIONS = tuple(_build_v2_definition(item) for item in (*_DEFINITIONS, *_ADDITIONAL_DEFINITIONS))
+CLINICAL_FIELD_REGISTRY_V2: Final = MappingProxyType(
+    {definition.field_id: definition for definition in _V2_DEFINITIONS}
+)
+CLINICAL_FIELD_REGISTRY: Final = CLINICAL_FIELD_REGISTRY_V2
+CLINICAL_FIELD_ALIASES: Final = MappingProxyType({
+    alias: definition.field_id
+    for definition in _V2_DEFINITIONS
+    for alias in definition.aliases
+})
+CLINICAL_CASE_VALUE_FIELDS: Final = tuple(CLINICAL_FIELD_REGISTRY)
 _TNM_FIELD_PREFIX: Final = MappingProxyType({
     CLINICAL_T_STAGE: "T",
     CLINICAL_N_STAGE: "N",
     CLINICAL_M_STAGE: "M",
+    PATHOLOGICAL_T_STAGE: "T",
+    PATHOLOGICAL_N_STAGE: "N",
+    PATHOLOGICAL_M_STAGE: "M",
 })
-_TNM_VALUE_PATTERN = re.compile(r"^(?:(?P<prefix>[CP])\s*)?(?P<component>[TNM])?\s*(?P<value>[A-Z0-9][A-Z0-9./+_-]*)$", re.IGNORECASE)
+_TNM_COMPONENT_PATTERNS: Final = MappingProxyType({
+    "T": re.compile(r"^(?:IS|X|0|[1-4][A-D]?)$", re.IGNORECASE),
+    "N": re.compile(r"^(?:X|0|[1-3])$", re.IGNORECASE),
+    "M": re.compile(r"^(?:X|0|1)$", re.IGNORECASE),
+})
+_TNM_VALUE_PATTERN = re.compile(
+    r"^(?:(?P<prefix>YP|YC|P|C)\s*)?(?P<component>[TNM])?\s*(?P<value>[A-Z0-9][A-Z0-9./+_-]*)$",
+    re.IGNORECASE,
+)
 
 
 def normalize_clinical_tnm_component(field_id: str, raw_value: str) -> str:
-    """Return a comparable clinical component (e.g. '1' and 'T1' -> 'T1').
+    """Return a lexical clinical component (e.g. '1' and 'T1' -> 'T1').
 
-    The original source value must always be retained separately. Only the
-    clinical T/N/M fields are accepted. A pathological prefix is rejected;
-    a clinical prefix is tolerated because the target field itself is clinical.
-    This is lexical normalization, not TNM staging validation or edition-aware
-    interpretation.
+    This is not stage validation. Clinical prefixes are tolerated because the
+    target field itself is clinical; pathological prefixes are rejected. Site,
+    subsite, staging system and edition remain necessary for interpretation.
+    The original raw source value must always be retained separately.
     """
-    expected = _TNM_FIELD_PREFIX.get(field_id)
-    if expected is None:
+    if field_id not in {CLINICAL_T_STAGE, CLINICAL_N_STAGE, CLINICAL_M_STAGE}:
         raise ValueError(f"Unsupported clinical TNM field: {field_id}")
+    expected = _TNM_FIELD_PREFIX[field_id]
     if not isinstance(raw_value, str) or not raw_value.strip():
         raise ValueError("TNM component must be a non-empty string.")
     match = _TNM_VALUE_PATTERN.fullmatch(raw_value.strip())
@@ -143,36 +292,83 @@ def normalize_clinical_tnm_component(field_id: str, raw_value: str) -> str:
         raise ValueError(f"Unrecognised TNM component syntax: {raw_value!r}")
     prefix = (match.group("prefix") or "").upper()
     component = (match.group("component") or expected).upper()
-    # A combined TNM token is not a single component value.
-    if re.search(r"[TNM](?:[0-4]|IS|X)", match.group("value")[1:], re.IGNORECASE):
-        raise ValueError("Combined TNM tokens must be split into their individual components.")
-    if prefix == "P":
+    value = match.group("value").upper()
+    if prefix in {"P", "YP"}:
         raise ValueError("Pathological staging cannot be normalized into a clinical field.")
     if component != expected:
-        raise ValueError(
-            f"{field_id} requires a {expected}-component, not {component}."
-        )
-    return expected + match.group("value").upper()
+        raise ValueError(f"{field_id} requires a {expected}-component, not {component}.")
+    if not _TNM_COMPONENT_PATTERNS[expected].fullmatch(value):
+        raise ValueError(f"Unrecognised {expected}-component value: {raw_value!r}")
+    return expected + value
+
+
+def normalize_pathological_tnm_component(field_id: str, raw_value: str) -> str:
+    """Normalize a pathological TNM token while retaining p/yp provenance class."""
+    if field_id not in {PATHOLOGICAL_T_STAGE, PATHOLOGICAL_N_STAGE, PATHOLOGICAL_M_STAGE}:
+        raise ValueError(f"Unsupported pathological TNM field: {field_id}")
+    expected = _TNM_FIELD_PREFIX[field_id]
+    if not isinstance(raw_value, str) or not raw_value.strip():
+        raise ValueError("Pathological TNM component must be a non-empty string.")
+    match = _TNM_VALUE_PATTERN.fullmatch(raw_value.strip())
+    if match is None:
+        raise ValueError(f"Unrecognised pathological TNM component syntax: {raw_value!r}")
+    prefix = (match.group("prefix") or "P").upper()
+    component = (match.group("component") or expected).upper()
+    value = match.group("value").upper()
+    if prefix not in {"P", "YP"}:
+        raise ValueError("A pathological TNM component must retain a p or yp prefix.")
+    if component != expected:
+        raise ValueError(f"{field_id} requires a {expected}-component, not {component}.")
+    if not _TNM_COMPONENT_PATTERNS[expected].fullmatch(value):
+        raise ValueError(f"Unrecognised pathological {expected}-component value: {raw_value!r}")
+    return prefix + expected + value
 
 
 def require_supported_registry_version(version: str) -> None:
-    """Prevent a saved run from mixing a historical registry with the current one.
+    """Fail closed when a run requests a registry other than the active contract.
 
-    Historical registry payloads must be retained and explicitly added to the
-    supported-version set before they can be resumed under a future release.
+    Historical v1 definitions remain available for inspection, but this build
+    does not silently resume a v1/legacy run with the v2 prompt contract. An
+    explicit migration/new immutable case version is required.
     """
     if version != CLINICAL_FIELD_REGISTRY_VERSION:
         raise ValueError(
             f"This saved record uses clinical field registry version {version!r}, "
-            f"but this build supports {CLINICAL_FIELD_REGISTRY_VERSION!r}. "
-            "Create a new immutable case version before starting or resuming MDT generation."
+            f"but this build supports new/resumed runs only on "
+            f"{CLINICAL_FIELD_REGISTRY_VERSION!r}. Historical snapshots remain preserved; "
+            "create a new immutable case version before starting or resuming MDT generation."
         )
 
 
-def build_registry_prompt_payload() -> dict[str, object]:
-    """Return a JSON-serializable copy of the immutable registry for model context."""
+def _registry_payload(version: str) -> dict[str, object]:
+    if version == HISTORICAL_CLINICAL_FIELD_REGISTRY_VERSION:
+        definitions = _DEFINITIONS
+        return {
+            "version": version,
+            "fields": [
+                {
+                    "field_id": item.field_id,
+                    "label": item.label,
+                    "value_type": item.value_type,
+                    "description": item.description,
+                    "aliases": list(item.aliases),
+                    "allowed_states": list(item.allowed_states),
+                }
+                for item in definitions
+            ],
+            "rules": [
+                "Field IDs and meanings are stable; do not invent or rename field IDs.",
+                "A field definition is not evidence that a patient-specific value exists.",
+                "UNKNOWN, NOT_REPORTED, NOT_ASSESSED, NOT_APPLICABLE, CONFIRMED_ABSENT and CONFLICTING are distinct states.",
+                "An empty list or missing value is not a negative finding.",
+                "Clinical and pathological staging are not interchangeable.",
+                "Lexical TNM equivalence is not staging validation; the staging system and edition are required for clinical interpretation.",
+            ],
+        }
+    if version != CLINICAL_FIELD_REGISTRY_VERSION:
+        raise ValueError(f"Unsupported clinical field registry version: {version!r}")
     return {
-        "version": CLINICAL_FIELD_REGISTRY_VERSION,
+        "version": version,
         "fields": [
             {
                 "field_id": item.field_id,
@@ -180,16 +376,38 @@ def build_registry_prompt_payload() -> dict[str, object]:
                 "value_type": item.value_type,
                 "description": item.description,
                 "aliases": list(item.aliases),
+                "unit": item.unit,
+                "allowed_values": list(item.allowed_values),
                 "allowed_states": list(item.allowed_states),
+                "validation_rule": item.validation_rule,
+                "source_requirement": item.source_requirement,
+                "applicability": item.applicability,
+                "semantic_kind": item.semantic_kind,
             }
             for item in CLINICAL_FIELD_REGISTRY.values()
         ],
         "rules": [
-            "Field IDs and meanings are stable; do not invent or rename field IDs.",
+            "Field IDs and meanings are stable; do not invent, rename or repurpose field IDs.",
+            "Registry constants standardise names and semantics; they do not guarantee model adherence or prevent every hallucination.",
             "A field definition is not evidence that a patient-specific value exists.",
-            "UNKNOWN, NOT_REPORTED, NOT_ASSESSED, NOT_APPLICABLE, CONFIRMED_ABSENT and CONFLICTING are distinct states.",
-            "An empty list or missing value is not a negative finding.",
-            "Clinical and pathological staging are not interchangeable.",
-            "Lexical TNM equivalence is not staging validation; the staging system and edition are required for clinical interpretation.",
+            "UNKNOWN, NOT_REPORTED, NOT_ASSESSED, PENDING, DECLINED, NOT_APPLICABLE, CONFIRMED_ABSENT, CONFLICTING and INVALID are distinct states.",
+            "An empty list or missing value is not a negative finding; CONFIRMED_ABSENT requires explicit source evidence.",
+            "Clinical and pathological staging are distinct and may never be substituted for one another.",
+            "T/N/M lexical normalization is not clinical staging validation. Site, subsite, staging system and edition are required before interpretation.",
+            "Preserve raw values, field states, source provenance, conflicts and transformation warnings; do not silently repair or choose a source.",
         ],
     }
+
+
+def clinical_field_registry_sha256(version: str = CLINICAL_FIELD_REGISTRY_VERSION) -> str:
+    payload = _registry_payload(version)
+    serialised = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(serialised.encode("utf-8")).hexdigest()
+
+
+def build_registry_prompt_payload(version: str = CLINICAL_FIELD_REGISTRY_VERSION) -> dict[str, object]:
+    """Return a JSON-serializable registry contract with a deterministic v2 hash."""
+    payload = _registry_payload(version)
+    if version == CLINICAL_FIELD_REGISTRY_VERSION:
+        payload["sha256"] = clinical_field_registry_sha256(version)
+    return payload
