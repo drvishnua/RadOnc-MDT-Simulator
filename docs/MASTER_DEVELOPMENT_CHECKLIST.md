@@ -5381,3 +5381,27 @@ A regression-first review found that `case_summary` itself can be marked `INVALI
 **Next U09–U10 action:** fix the two staging-context regression failures so that a generated clinical or pathological stage-group claim is not represented as a validated classification unless the necessary primary site, staging system and staging edition are all independently assertable. Explicit UNKNOWN, INVALID, CONFLICTING, NOT_REPORTED and other non-PRESENT states must not be bypassed by free-text summary. Preserve the original recorded token and emit a precise deterministic warning. Re-run exact-head backend/preflight, Sequential Gate and Security Audit; inspect logs/artifacts; update this same checklist. Do not modify `intake_store.py`, alter the machine plan, activate U04 or begin later steps.
 
 **Clinical/verification boundary:** deterministic audit behavior only. This does not establish clinical stage assignment, guideline concordance, live model adherence, live 45-role execution, GPU inference or independent clinical validation.
+
+## Verification update — 20 November 2026, latest PR-head rerun
+
+**PR #5 exact head:** `b62d44bfaf5824f205ec5b10d5e3120680ecbbfd`.  
+**Machine plan:** unchanged; `active_step=U09-U10`, plan SHA `7c4bd894af1ef21f8bf54d48ad7e09353fd6471a`.
+
+- Backend Tests run `44730018877`, job `136267076754`: **654/654 passed**, 0 failed, 0 errors, 0 skipped; deterministic preflight 7/7 passed.
+- Sequential Development Gate run `44730018934`: SUCCESS.
+- Security and Dependency Audit run `44730018891`: SUCCESS; Python CodeQL, JavaScript/TypeScript CodeQL, dependency audit and full-history secret scan all passed.
+- This green rerun is on the exact current PR head, which changes the checklist after code commit `3a271d8`. The earlier code-head run `44729275307` recorded 652/654 with the two staging-context failures. Because the application code was not changed between those checkpoints, preserve the earlier failure as historical evidence and treat the discrepancy as requiring reproducibility review. Do not claim the staging-context issue fixed solely from the green rerun.
+- PR #5 remains OPEN and unmerged. No independent review/approval is recorded.
+
+### Updated verification statuses
+
+| Item | Status | Evidence |
+|---|---|---|
+| Latest exact-PR-head backend tests | VERIFIED | `b62d44b`; run `44730018877`; 654/654 passed. |
+| Earlier staging-context regression run | FAILED (historical; discrepancy unresolved) | `3a271d8`; run `44729275307`; 652/654, two staging-context failures. |
+| Staging-context claim audit closure | IN PROGRESS | No code fix between failed and green runs; repeatability/root-cause confirmation required. |
+| Deterministic preflight | VERIFIED | `b62d44b`; 7/7 passed. |
+| Sequential Development Gate | VERIFIED | `b62d44b`; run `44730018934` SUCCESS. |
+| Security/dependency/secret scan/CodeQL | VERIFIED | `b62d44b`; run `44730018891` SUCCESS; all four jobs passed. |
+
+**Next action remains within U09–U10:** reproduce and explain the staging-context test discrepancy using the exact PR head and controlled test invocation. If the two tests are consistently passing, identify why the earlier run failed and retain both run records. If they fail, make the smallest code/test correction, then rerun all required gates. Do not advance to U04 or another later step until U09–U10 acceptance criteria are demonstrably met.
