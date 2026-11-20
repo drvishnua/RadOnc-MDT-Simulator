@@ -139,6 +139,20 @@ def test_unknown_and_empty_lists_are_not_converted_to_negative_findings():
     assert any("UNKNOWN, NOT_REPORTED, NOT_ASSESSED" in rule for rule in context["interpretation_rules"])
 
 
+def test_clinical_list_values_preserve_original_whitespace():
+    original = "  first-degree relative with cancer  "
+    case = _case(
+        family_history=[original],
+        relevant_comorbidities=["  hypertension  "],
+        known_unknowns=["  staging edition not reported  "],
+    )
+
+    assert case.family_history == [original]
+    assert case.relevant_comorbidities == ["  hypertension  "]
+    assert case.known_unknowns == ["  staging edition not reported  "]
+    assert case.model_dump(mode="json")["family_history"] == [original]
+
+
 def test_pathological_stage_prefix_is_flagged_and_raw_source_is_preserved():
     context = build_case_prompt_context(_case(clinical_t_stage="pT1"))
     item = context["canonical_field_values"][CLINICAL_T_STAGE]
