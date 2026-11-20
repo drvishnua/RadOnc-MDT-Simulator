@@ -176,7 +176,7 @@ class SyntheticCase(StrictModel):
                     raise ValueError(f"{field_id} cannot carry a positive value while marked CONFIRMED_ABSENT.")
                 if not sources or not any(source.source_excerpt.strip() for source in sources):
                     raise ValueError(f"{field_id} CONFIRMED_ABSENT requires explicit source provenance.")
-            if state in {"UNKNOWN", "NOT_REPORTED", "NOT_ASSESSED", "DECLINED", "NOT_APPLICABLE"} and value_present:
+            if state in {"UNKNOWN", "NOT_REPORTED", "NOT_ASSESSED", "PENDING", "DECLINED", "NOT_APPLICABLE"} and value_present:
                 raise ValueError(f"{field_id} cannot carry a supplied value while marked {state}.")
             if state == "CONFLICTING":
                 if len(conflicts) < 2:
