@@ -6257,3 +6257,50 @@ Separate patient preference/goal statements from treatment willingness statement
 
 **Next U09–U10 action:** continue the approved field-by-field audit for remaining consent-state variants, pathological T/N/M provenance states, negative/absence controls and unresolved canonical fields. Keep `active_step=U09-U10`. Do not modify intake code, activate U04 or introduce later workstreams.
 
+## U10 educational-consent enum coverage — test-first failure record
+
+- Test-only commit: `e68b98398c6a8764554ab15db8de5f100e800cc9`, changed only `backend/tests/test_case_integrity.py`.
+- Added six cases for matching and mismatching statements across `NOT_ASKED`, `PENDING` and `WITHDRAWN`, retaining existing `GIVEN` and `DECLINED` controls.
+- Exact-head Backend Tests run `44750354306`, job `136336297308`: **697 passed, 2 failed, 0 errors, 0 skipped** (699 total).
+- The `WITHDRAWN` matching case passed. All three mismatched “consented to participate” claims were correctly flagged for NOT_ASKED, PENDING and WITHDRAWN. The two failed matching cases were NOT_ASKED and PENDING statements phrased as “the patient's consent ...”; the server-owned source projection currently uses “patient consent ...” without the possessive, so exact-snippet comparison treats equivalent state wording as unsupported.
+- This is a source-projection wording mismatch, not a reason to alter the five-value consent enum or combine educational consent with treatment consent. The correction must add the equivalent possessive source phrasing for NOT_ASKED/PENDING while retaining the mismatch controls.
+- Deterministic preflight artifact `14634937010`, SHA-256 `fc0bf56c9d26b9571f9f3d70cc97e9bfb0355aa487ea514f5e00b9b667299cc6`; pytest artifact `14634034662`, SHA-256 `61d0406097ad7877b5e7c8437b0f86bb847d02c9143c98884a10e4d96883754d`.
+- Sequential Development Gate run `44750354273`: SUCCESS; log confirmed `active_step=U09-U10`, checked head `e68b983`, scope baseline `5284483a26e87028f919966e304c472ed537e839`.
+- Security Audit run `44750354325`: SUCCESS; all four jobs passed (Python CodeQL, JavaScript/TypeScript CodeQL, dependency audit, full-history secret scan).
+- No application code changed in this test-only increment. Keep the failure as historical audit evidence.
+
+### Master Checklist — Current Status
+
+| Workstream | Status | Current evidence / outstanding boundary |
+|---|---|---|
+| Repository, PR and protected branch | VERIFIED | PR #5 OPEN/unmerged at test head `e68b983`; base `feature/four-round-mdt-and-performance`; no main change, merge or force-push. |
+| Approved algorithm / machine plan | VERIFIED | Exact-head Sequential Gate `44750354273` confirms `active_step=U09-U10`; scope baseline `5284483a26e87028f919966e304c472ed537e839`. |
+| U09 immutable clinical registry v2 and typed contract | IN PROGRESS | Stable field IDs, aliases, version/hash and typed states exist; full state/provenance/legacy migration and backward-compatibility acceptance remains. |
+| U10 educational-consent enum source wording | FAILED | Test-only `e68b983`; Backend `44750354306`, 697/699; two matching NOT_ASKED/PENDING possessive-wording cases fail, while WITHDRAWN matching and all mismatched-GIVEN controls pass. |
+| U10 treatment-specific consent vs educational consent | VERIFIED for tested cases | Existing consent-separation test and known-unknown treatment-consent blocker pass; no educational-consent value is treated as treatment consent. |
+| U10 known_unknowns willingness/treatment-consent blocker | VERIFIED | Code `ae4e5af`; Backend `44749806362`, 693/693; field-specific gap blocks summary fallback and unrelated gaps remain non-blocking. |
+| U10 patient goals/preferences vs willingness | VERIFIED | Code `ad98a10`; Backend `44745009819`, 690/690; separate evidence fields and UNKNOWN fallback block. |
+| U10 positive clinical-history claims | VERIFIED | Code `25635e9`; Backend `44740400697`, 674/674. |
+| U10 social/resource context claims | VERIFIED | Code `5571074`; Backend `44741865637`, 683/683. |
+| U10 diagnosis date/caregiver/investigation status | VERIFIED | Codes `9b0d4cf` and `c4d5c63`; Backend 661/661 and 666/666 respectively. |
+| U10 staging and pathological/clinical namespace controls | IN PROGRESS | Missing-context, UNKNOWN staging edition, pathological T/N/M and stage-group UNKNOWN tests pass; complete state/provenance matrix remains. |
+| U10 negative/absence and CONFIRMED_ABSENT provenance | IN PROGRESS | Selected field tests pass; full per-field source/state/mismatch matrix remains. |
+| Known-unknown mapping across remaining fields | IN PROGRESS | Specific willingness/consent blockers implemented; other known-unknown field mappings still require audit. |
+| Backend suite | FAILED | Exact test head `e68b983`; run `44750354306`; 697/699, two consent wording failures. |
+| Deterministic preflight | VERIFIED | Run `44750354306`; artifact `14634937010`, SHA-256 above. |
+| Sequential Development Gate | VERIFIED | Run `44750354273` SUCCESS; active step confirmed U09–U10. |
+| Security/dependency/secret scan/CodeQL | VERIFIED | Run `44750354325` SUCCESS; all four jobs passed. |
+| R1–R4 saved contributions and Chair reconciliation | IN PROGRESS | Mocked tests exist; live saved R1–R3 and Chair R4 remain unverified. |
+| Case snapshot hashes, audit, failed-agent and resume paths | IN PROGRESS | Deterministic protections exist; full saved-run tamper/failure/resume acceptance remains. |
+| Evidence retrieval and claim-to-passage checks | IN PROGRESS | Independent current-source retrieval and exact passage verification remain outstanding. |
+| U04 Case Intake and Completeness Screener | BLOCKED | Do not activate before U09–U10 acceptance. |
+| U05–U08 | BLOCKED | Keep the approved dependency order. |
+| U03 intelligent Ollama installer | BLOCKED | Remains after U08. |
+| U01–U02 desktop experience/removal of development surfaces | BLOCKED | Remain after U03. |
+| Live 45-role R1–R4 | NOT STARTED | No live run ID or saved artefact claimed. |
+| RTX 4060 request-time inference verification | NOT STARTED | No request-time GPU/Ollama offload evidence claimed. |
+| Independent clinical validation | NOT STARTED | No qualified independent review claimed. |
+| Integrated release acceptance | BLOCKED | U09–U10 consent and remaining state/source audits plus all later gates remain. |
+
+**Next action:** correct only the state-to-source wording for NOT_ASKED/PENDING consent matching, rerun exact-head backend/preflight, Sequential Gate and Security. Preserve the five enum values and all consent-separation controls. Do not advance `active_step`, modify intake code or activate U04.
+
