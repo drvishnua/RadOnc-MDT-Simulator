@@ -4214,3 +4214,179 @@ def test_matching_typed_investigation_gap_blocks_generic_case_summary_fallback()
 
     assert "investigation_records" in flags
     assert "explicitly unresolved in known_unknowns" in flags
+
+
+
+@pytest.mark.parametrize(
+    ("field_id", "values", "statement", "unresolved_note"),
+    [
+        (
+            "patient_goals",
+            ["prefers surgery"],
+            "The patient prefers surgery.",
+            "Patient goals have not been documented.",
+        ),
+        (
+            "patient_preferences",
+            ["prefers surgery"],
+            "The patient prefers surgery.",
+            "Patient preferences have not been reported.",
+        ),
+        (
+            "social_context",
+            ["Lives with a spouse"],
+            "The patient lives with a spouse.",
+            "Social context has not been established.",
+        ),
+        (
+            "resource_context",
+            ["Financial constraints"],
+            "The patient has financial constraints.",
+            "Resource context has not been documented.",
+        ),
+    ],
+)
+def test_matching_known_unknown_blocks_positive_goal_or_context_claim(
+    field_id, values, statement, unresolved_note
+):
+    case = _case(
+        **{
+            field_id: values,
+            "known_unknowns": [unresolved_note],
+        }
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+
+    assert any(field_id in item for item in flags)
+
+
+@pytest.mark.parametrize(
+    ("field_id", "statement", "unresolved_note"),
+    [
+        (
+            "patient_goals",
+            "The patient prefers surgery.",
+            "Patient goals have not been documented.",
+        ),
+        (
+            "patient_preferences",
+            "The patient prefers surgery.",
+            "Patient preferences have not been reported.",
+        ),
+        (
+            "social_context",
+            "The patient lives with a spouse.",
+            "Social context has not been established.",
+        ),
+        (
+            "resource_context",
+            "The patient has financial constraints.",
+            "Resource context has not been documented.",
+        ),
+    ],
+)
+def test_matching_known_unknown_blocks_generic_summary_fallback_for_goal_or_context(
+    field_id, statement, unresolved_note
+):
+    case = _case(
+        case_summary="Referral text: " + statement,
+        known_unknowns=[unresolved_note],
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+
+    assert any(field_id in item for item in flags)
+
+
+@pytest.mark.parametrize(
+    ("field_id", "values", "statement", "unrelated_note"),
+    [
+        (
+            "patient_goals",
+            ["prefers surgery"],
+            "The patient prefers surgery.",
+            "Social context has not been established.",
+        ),
+        (
+            "patient_preferences",
+            ["prefers surgery"],
+            "The patient prefers surgery.",
+            "Resource context has not been documented.",
+        ),
+        (
+            "social_context",
+            ["Lives with a spouse"],
+            "The patient lives with a spouse.",
+            "Patient goals have not been documented.",
+        ),
+        (
+            "resource_context",
+            ["Financial constraints"],
+            "The patient has financial constraints.",
+            "Patient preferences have not been reported.",
+        ),
+    ],
+)
+def test_unrelated_known_unknown_does_not_block_goal_or_context_claim(
+    field_id, values, statement, unrelated_note
+):
+    case = _case(
+        **{
+            field_id: values,
+            "known_unknowns": [unrelated_note],
+        }
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+
+    assert not any(field_id in item for item in flags)
+
+
+@pytest.mark.parametrize(
+    ("field_id", "values", "statement"),
+    [
+        ("patient_goals", ["prefers surgery"], "The patient prefers surgery."),
+        ("patient_preferences", ["prefers surgery"], "The patient prefers surgery."),
+        ("social_context", ["Lives with a spouse"], "The patient lives with a spouse."),
+        ("resource_context", ["Financial constraints"], "The patient has financial constraints."),
+    ],
+)
+def test_structured_goal_or_context_claim_remains_supported_without_matching_gap(
+    field_id, values, statement
+):
+    case = _case(**{field_id: values, "known_unknowns": []})
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+
+    assert not any(field_id in item for item in flags)
+
+
+def test_patient_preferences_remain_distinct_from_unresolved_patient_goals():
+    case = _case(
+        patient_goals=["prefers chemotherapy"],
+        patient_preferences=["prefers radiotherapy"],
+        known_unknowns=["Patient goals have not been documented."],
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient prefers radiotherapy.",
+    })
+
+    assert not any("patient_preferences" in item for item in flags)
+
+
+def test_patient_goals_remain_distinct_from_unresolved_patient_preferences():
+    case = _case(
+        patient_goals=["prefers surgery"],
+        patient_preferences=["prefers radiotherapy"],
+        known_unknowns=["Patient preferences have not been reported."],
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient prefers surgery.",
+    })
+
+    assert not any("patient_goals" in item for item in flags)
