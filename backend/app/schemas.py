@@ -254,6 +254,8 @@ class SyntheticCase(StrictModel):
 
             if state == "PRESENT" and not value_present:
                 raise ValueError(f"{field_id} cannot be PRESENT without a supplied value.")
+            if state == "INVALID" and not value_present:
+                raise ValueError(f"{field_id} INVALID requires a supplied raw value to preserve for review.")
             if state == "CONFIRMED_ABSENT":
                 if value_present:
                     raise ValueError(f"{field_id} cannot carry a positive value while marked CONFIRMED_ABSENT.")
