@@ -6917,3 +6917,35 @@ For each unsupported generated stage-group record, retain the generic assertion 
 | Integrated release acceptance | BLOCKED | U09–U10 acceptance and all later gates outstanding |
 
 **Next action:** obtain an exact-head backend/preflight, Sequential Gate and Security Audit run for the current PR #5 head; inspect every failure and the generated artifacts. Do not merge PR #5, modify the protected development branch directly, or advance to U04.
+
+
+### Verification correction — PR #5 unresolved-field mapping (20 November 2026)
+
+This section supersedes the immediately preceding “no workflow runs” statement, which was accurate only before the new-head workflows were created.
+
+**Application/test head verified:** `c43a02acc096ef5f05e1642551adf359490eae28`.
+- Backend Tests run `44766505635`: SUCCESS. Diagnostic artifact reports **789 total; 789 passed; 0 failed; 0 errors; 0 skipped; 0 inconclusive**. Deterministic preflight step completed successfully. Artifact IDs: pytest diagnostics `14646011117`; deterministic preflight `14645921151`.
+- Sequential Development Gate run `44766505489`: SUCCESS.
+- Security and Dependency Audit run `44766505449`: SUCCESS. Python CodeQL, JavaScript/TypeScript CodeQL, Python/Node dependency audit and full-history secret scan all completed successfully.
+- All three workflows are tied to exact application/test head `c43a02acc096ef5f05e1642551adf359490eae28`. These are hosted CI results, not live-model, GPU or clinical validation.
+- PR #5 remains OPEN and NOT MERGED. Independent review remains outstanding.
+
+**Current checklist statuses after exact-head CI**
+| Workstream | Status | Evidence / boundary |
+|---|---|---|
+| U09 registry v2 / U10 deterministic integrity controls | IN PROGRESS | 789/789 backend tests and exact-head gate/security pass; complete acceptance still outstanding |
+| Field-specific unresolved-note mapping | VERIFIED (software regression suite) | Exact application/test head `c43a02a`; positive, unrelated-field, “not unknown” and clause-local tests included |
+| Clinical/pathological TNM and stage-group separation | VERIFIED (software tests) | Exact-head backend suite passed; no clinical staging validation implied |
+| Backend tests / deterministic preflight | VERIFIED | Run `44766505635`; 789/789, 0 skips/errors; preflight step passed |
+| Sequential Development Gate | VERIFIED | Run `44766505489` SUCCESS |
+| Security/dependency/secret scan/CodeQL | VERIFIED | Run `44766505449` SUCCESS; all four checks successful |
+| R1–R3 shared context across 45 roles | IN PROGRESS | Mocked tests pass; live saved-run role coverage remains outstanding |
+| R4 Chair synthesis, consensus, dissent and traceability | IN PROGRESS | Live saved R1–R3 to R4 provenance audit remains outstanding |
+| Frontend/browser E2E | NOT STARTED | No frontend changes in this slice |
+| U04 and all later ordered workstreams | BLOCKED | Do not advance until U09–U10 acceptance and independent review |
+| Live 45-role R1–R4 | NOT STARTED | No live run ID or inspected saved artefact |
+| RTX 4060 request-time GPU inference | NOT STARTED | No request-time telemetry |
+| Independent clinical validation | NOT STARTED | No qualified independent review |
+| Integrated release acceptance | BLOCKED | Live-model, GPU, clinical and remaining ordered gates outstanding |
+
+**Checklist-only follow-up:** the checklist update itself will create a documentation-only PR head commit. The application/test code remains unchanged from the verified SHA above; the required PR workflows must be allowed to complete on the new documentation-bearing head before merge consideration.
