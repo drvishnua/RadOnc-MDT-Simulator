@@ -1857,6 +1857,11 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     investigations_state = field_state("relevant_investigations")
     records_state = field_state("investigation_records")
     investigation_parts: list[str] = []
+    noncompleted_record_statuses = sorted({
+        record.status
+        for record in case.investigation_records
+        if record.status != "COMPLETED"
+    })
     if imaging_state in (None, "PRESENT") and case.imaging_summary:
         investigation_parts.append(case.imaging_summary)
     if investigations_state in (None, "PRESENT"):
@@ -1871,6 +1876,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
                 ) if part
             )
             for record in case.investigation_records
+            if record.status == "COMPLETED"
         )
     if all(state in (None, "PRESENT") for state in (imaging_state, investigations_state, records_state)):
         investigation_parts.append(case_summary_text)
@@ -1906,10 +1912,26 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         if not biopsy_result_is_supported(item)
     ]
     if unsupported_investigations:
+        if records_state not in (None, "PRESENT"):
+            investigation_reason = (
+                f"investigation_records is marked {records_state}; that state cannot support a finding or permit summary fallback."
+            )
+        elif noncompleted_record_statuses:
+            investigation_reason = (
+                "investigation_records contains non-COMPLETED record status(es) ("
+                + ", ".join(noncompleted_record_statuses)
+                + "); only COMPLETED records may support a finding."
+            )
+        else:
+            investigation_reason = (
+                "the claim is not supported by an assertable imaging summary, relevant investigation, "
+                "COMPLETED investigation record, or permitted verbatim case-summary source."
+            )
         flags.append(
-            "Generated narrative asserts imaging/investigation result(s) ("
+            "Generated narrative asserts investigation_records finding(s) / imaging-investigation result(s) ("
             + "; ".join(unsupported_investigations[:2])
-            + "), which are not explicitly supported by the supplied imaging summary, relevant investigations, or verbatim case summary."
+            + "), but "
+            + investigation_reason
         )
 
     # Missing information alone does not establish that a treatment is unsafe,
