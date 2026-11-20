@@ -60,7 +60,9 @@
         "docs/MASTER_DEVELOPMENT_CHECKLIST.md",
         "backend/scripts/validate_development_plan.py",
         "backend/tests/test_development_plan.py",
-        ".github/workflows/sequential-development-gate.yml"
+        ".github/workflows/sequential-development-gate.yml",
+        ".github/workflows/backend-tests.yml",
+        ".github/workflows/security-audit.yml"
       ],
       "required_workflow_names": [
         "Sequential Development Gate",
