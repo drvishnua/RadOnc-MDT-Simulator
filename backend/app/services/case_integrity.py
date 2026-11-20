@@ -1168,8 +1168,17 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         kind: _stage_group_values(str(value)) if value not in (None, "") else set()
         for kind, value in stage_sources.items()
     }
+    stage_group_field_by_kind = {
+        "UNSPECIFIED": "stage_group",
+        "CLINICAL": "clinical_stage_group",
+        "PATHOLOGICAL": "pathological_stage_group",
+    }
     summary_group_keys = {
-        kind: {key for record_kind, key, _snippet in source_group_records if record_kind == kind}
+        kind: (
+            {key for record_kind, key, _snippet in source_group_records if record_kind == kind}
+            if field_state(stage_group_field_by_kind[kind]) in (None, "PRESENT")
+            else set()
+        )
         for kind in ("UNSPECIFIED", "CLINICAL", "PATHOLOGICAL")
     }
     unsupported_stage_groups: list[str] = []
