@@ -3925,3 +3925,112 @@ def test_unrelated_known_unknown_does_not_block_matching_family_or_caregiver_cla
     })
 
     assert not any(field_id in item for item in flags)
+
+
+@pytest.mark.parametrize(
+    ("field_id", "case_values", "known_unknown", "generated_claim"),
+    [
+        (
+            "current_medications",
+            {"current_medications": ["metformin"]},
+            "Current medications have not been reported.",
+            "The patient is currently taking metformin.",
+        ),
+        (
+            "known_allergies",
+            {"known_allergies": ["penicillin"]},
+            "Known allergies have not been documented.",
+            "The patient has a penicillin allergy.",
+        ),
+        (
+            "prior_treatment",
+            {"prior_treatment": ["radiotherapy"]},
+            "Prior treatment has not been established.",
+            "The patient previously received radiotherapy.",
+        ),
+    ],
+)
+def test_matching_list_field_known_unknown_blocks_positive_medication_allergy_or_treatment_claim(
+    field_id, case_values, known_unknown, generated_claim
+):
+    case = _case(
+        case_summary="Synthetic case narrative; medication, allergy and treatment lists are supplied separately.",
+        known_unknowns=[known_unknown],
+        **case_values,
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": generated_claim,
+    })).casefold()
+
+    assert field_id in flags
+    assert "known_unknowns" in flags
+    assert "unresolved" in flags or "not been" in flags
+
+
+@pytest.mark.parametrize(
+    ("field_id", "case_values", "generated_claim"),
+    [
+        (
+            "current_medications",
+            {"current_medications": ["metformin"]},
+            "The patient is currently taking metformin.",
+        ),
+        (
+            "known_allergies",
+            {"known_allergies": ["penicillin"]},
+            "The patient has a penicillin allergy.",
+        ),
+        (
+            "prior_treatment",
+            {"prior_treatment": ["radiotherapy"]},
+            "The patient previously received radiotherapy.",
+        ),
+    ],
+)
+def test_unrelated_known_unknown_does_not_block_matching_medication_allergy_or_treatment_claim(
+    field_id, case_values, generated_claim
+):
+    case = _case(
+        case_summary="Synthetic case narrative; list fields are supplied separately.",
+        known_unknowns=["Patient willingness has not been established."],
+        **case_values,
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": generated_claim,
+    })
+
+    assert not any(field_id in item for item in flags)
+
+
+@pytest.mark.parametrize(
+    ("field_id", "case_values", "generated_claim"),
+    [
+        (
+            "current_medications",
+            {"current_medications": ["metformin"]},
+            "The patient is currently taking metformin.",
+        ),
+        (
+            "known_allergies",
+            {"known_allergies": ["penicillin"]},
+            "The patient has a penicillin allergy.",
+        ),
+        (
+            "prior_treatment",
+            {"prior_treatment": ["radiotherapy"]},
+            "The patient previously received radiotherapy.",
+        ),
+    ],
+)
+def test_matching_medication_allergy_or_treatment_claim_is_supported_without_unresolved_note(
+    field_id, case_values, generated_claim
+):
+    case = _case(
+        case_summary="Synthetic case narrative; list fields are supplied separately.",
+        **case_values,
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": generated_claim,
+    })
+
+    assert not any(field_id in item for item in flags)
