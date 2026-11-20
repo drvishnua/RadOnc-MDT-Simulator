@@ -34,7 +34,7 @@ class ClinicalFieldProvenance(StrictModel):
     ]
     source_reference: str = Field(min_length=1, max_length=300)
     source_excerpt: str = Field(min_length=1, max_length=500000)
-    verification_status: Literal["USER_SUPPLIED_NOT_INDEPENDENTLY_VERIFIED"] = "USER_SUPPLIED_NOT_INDEPENDENTLY_VERIFIED"
+    verification_status: Literal["user_supplied_not_independently_verified"] = "user_supplied_not_independently_verified"
     observed_at: datetime | None = None
     recorded_at: datetime | None = None
     source_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
@@ -223,7 +223,7 @@ class SyntheticCase(StrictModel):
                     source_reference=f"SyntheticCase.{field_id}",
                     source_excerpt=source_excerpt,
                     source_sha256=source_hash,
-                    verification_status="USER_SUPPLIED_NOT_INDEPENDENTLY_VERIFIED",
+                    verification_status="user_supplied_not_independently_verified",
                 )
             ]
         self.clinical_field_provenance = provenance
