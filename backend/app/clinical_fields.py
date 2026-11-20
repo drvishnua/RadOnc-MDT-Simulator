@@ -313,6 +313,8 @@ def normalize_stage_group_token(raw_value: str) -> str:
     value = raw_value.strip().upper()
     value = re.sub(r"^(?:CLINICAL|PATHOLOGICAL)\s+", "", value)
     value = re.sub(r"^STAGE(?:\s+GROUP)?\s*", "", value)
+    value = re.sub(r"^(?:IS|WAS|OF)\s+", "", value)
+    value = re.sub(r"^[:=]\s*", "", value)
     match = re.fullmatch(r"(IV|III|II|I|[1-4])([ABC])?", value)
     if match is None:
         raise ValueError(f"Unrecognised stage-group syntax: {raw_value!r}")
