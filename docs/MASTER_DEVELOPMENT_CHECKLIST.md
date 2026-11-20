@@ -6027,3 +6027,45 @@ Separate patient preference/goal statements from treatment willingness statement
 
 **Next action:** implement the narrow separate willingness matcher and source path, add positive controls and run exact-head Backend, preflight, Sequential Gate and Security checks. Do not modify U04 intake, advance active_step or begin downstream work.
 
+## U10 preference/willingness source separation — first implementation checkpoint
+
+- Application commit be9cef17515120b829831b211e68711d55f1d66d changed only backend/app/services/case_integrity.py.
+- It introduced separate source paths: goals/preferences no longer populate the willingness evidence pool; direct willingness/agreement/refusal statements are checked only against patient_willingness; explicit non-PRESENT willingness states block case-summary fallback.
+- Exact-head Backend Tests run 44744280204, job 136315428453: **689 passed, 1 failed, 0 errors, 0 skipped**.
+- The two new willingness regressions passed. Existing structured-willingness support and UNKNOWN-willingness summary-blocking regressions passed.
+- The single failure was the existing preference warning-label contract: implementation emits "patient preference/goal" while the test expects the established substring "patient preference/decision". The audit detected the unsupported patient preference correctly; the warning label is incompatible. This is a narrow output-contract issue, not evidence that the new source separation failed.
+- Sequential Development Gate run 44744280042: SUCCESS.
+- Security Audit run 44744280037: SUCCESS; all four jobs passed (Python CodeQL, JavaScript/TypeScript CodeQL, dependency audit, full-history secret scan).
+- Preserve commit be9cef1 and its 689/690 result. The next correction must retain the new source split and restore the established warning label; do not broaden evidence sources or weaken field-state checks.
+
+### Master Checklist — Current Status
+
+| Workstream | Status | Current evidence / outstanding boundary |
+|---|---|---|
+| Repository, PR and protected branch | VERIFIED | PR #5 OPEN/unmerged at application commit be9cef1; base feature/four-round-mdt-and-performance; main untouched. |
+| Approved sequence / machine plan | VERIFIED | active_step=U09-U10; plan SHA 7c4bd894af1ef21f8bf54d48ad7e09353fd6471a; exact-head Sequential Gate 44744280042 SUCCESS. |
+| U09 immutable registry v2 and typed field contract | IN PROGRESS | Immutable field IDs/aliases/hash and typed states exist; full source/state/migration/backward compatibility acceptance remains. |
+| U10 separate patient preference/goal and willingness evidence | IN PROGRESS | Application be9cef1 separates source pools and detects direct willingness; backend run 44744280204 is 689/690 due one legacy preference flag-label assertion. Correct label and retest. |
+| U10 direct willingness claim and UNKNOWN blocking | VERIFIED for new regressions | Both new tests in e523bfc pass on be9cef1: UNKNOWN willingness blocks direct "willing to undergo surgery"; patient_goals cannot substitute for patient_willingness. Overall U10 workstream remains IN PROGRESS due remaining full suite failure. |
+| U10 educational-scenario consent vs treatment-specific consent | VERIFIED for tested cases | Existing consent-separation tests passed on be9cef1; broader consent field state/value mapping remains under audit. |
+| U10 social/resource context | VERIFIED | Code 5571074; Backend 44741865637 683/683; mismatch, UNKNOWN/NOT_REPORTED and matching-source controls pass. |
+| U10 positive clinical-history claims | VERIFIED | Code 25635e9; Backend 44740400697 674/674. |
+| U10 pathological staging and edition state controls | IN PROGRESS | UNKNOWN pathological T/N/M, pathological stage-group and staging-edition regression cases passed on f11b55f (677/677); full state/provenance matrix remains. |
+| U10 diagnosis date/caregiver/investigation status | VERIFIED | Codes 9b0d4cf and c4d5c63; Backend 661/661 and 666/666 respectively. |
+| Backend exact code-head suite | FAILED | be9cef1, run 44744280204: 689/690, one known warning-label compatibility assertion. |
+| Deterministic preflight | VERIFIED | Completed in run 44744280204; report emitted. |
+| Sequential Development Gate | VERIFIED | Run 44744280042 SUCCESS. |
+| Security/dependency/secret scan/CodeQL | VERIFIED | Run 44744280037 SUCCESS; all four jobs passed. |
+| Known-unknowns and remaining registry-field claim audit | IN PROGRESS | Registry/prompt preserve context; complete generated-claim mapping/source-state audit remains. |
+| R1–R4 saved contribution and Chair reconciliation | IN PROGRESS | Mocked provenance/context tests exist; live saved R1–R3 and Chair R4 audit remains outstanding. |
+| Evidence retrieval/claim-to-passage verification | IN PROGRESS | Independent current source verification remains outstanding. |
+| U04–U08 | BLOCKED | Do not activate until U09–U10 acceptance. |
+| U03 | BLOCKED | Remains after U08. |
+| U01–U02 | BLOCKED | Remain after U03. |
+| Live 45-role R1–R4 | NOT STARTED | No live run ID or saved simulation artefact claimed. |
+| RTX 4060 request-time verification | NOT STARTED | No request-time telemetry or Ollama offload evidence. |
+| Independent clinical validation | NOT STARTED | No qualified independent review claimed. |
+| Integrated release acceptance | BLOCKED | U09–U10 full state/source audit and all ordered downstream/live/GPU/clinical gates remain. |
+
+**Next action:** preserve source separation and field state gating, change only the preference warning label to retain the expected "patient preference/decision" wording, then rerun the exact-head backend suite, preflight, Sequential Gate and Security Audit. Do not advance active_step or activate U04.
+
