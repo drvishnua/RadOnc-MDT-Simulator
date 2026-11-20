@@ -6813,3 +6813,61 @@ For each unsupported generated stage-group record, retain the generic assertion 
 
 **Next action:** continue U09–U10 field-by-field coverage. Prioritise canonical registry state/source validation, `known_unknowns` mapping to field-specific claim audits, then remaining data types and migration/legacy compatibility. Add tests only for reproducible gaps. Do not change the machine-plan step, modify intake, or activate U04.
 
+## U10 known_unknowns-to-canonical-field mapping — test-first findings
+
+- Test-only checkpoint `15f631fbaebe4a15a9c966e8a47289cee0888c95`, changing only `backend/tests/test_case_integrity.py`.
+- Exact-head Backend Tests run `44757788759`, job `136361988780`: **781 passed, 6 failed, 0 errors, 0 skipped** (787 total).
+- Five reproducible mapping gaps:
+  1. `known_unknowns=["Clinical T stage is not reported."]` does not block a matching `cT2` case-summary fallback for `clinical_t_stage`.
+  2. `known_unknowns=["Pathological N component remains unresolved."]` does not block matching `pN1` summary fallback for `pathological_n_stage`.
+  3. `known_unknowns=["Clinical stage group has not been confirmed."]` does not block a matching typed clinical stage-group summary.
+  4. `known_unknowns=["The staging edition has not been verified."]` does not stop a populated structured staging edition from being used to validate a generated stage group.
+  5. `known_unknowns=["Relevant comorbidity history is not reported."]` does not block a positive comorbidity claim that matches only the free-text case summary.
+- The unrelated-unknown control passed: an unresolved diagnosis date does not block a clinical T claim supported by the case summary. The field mapping must remain specific, not global.
+- The sixth failed test fixture was invalid: it supplied a non-empty `known_unknowns` list while marking that list field UNKNOWN. The schema correctly rejects this contradiction. Correct the fixture to use an empty list with UNKNOWN state and assert that no nonexistent list entry is treated as evidence. Do not weaken the schema.
+- Deterministic preflight artifact `14641025385`, SHA-256 `b9fddb1a2e809294d60df6f7b2959f7a329a52358dd9d0c30941972e34bf9a56`.
+- Pytest diagnostics artifact `14640150861`, SHA-256 `1eae4697510d5a2917261cf068f4b9ea6dc3d951fffe941a064bdd75a8113d35`.
+- Sequential Development Gate run `44757788701`: SUCCESS.
+- Security and Dependency Audit run `44757788747`: SUCCESS; all four jobs passed (Python CodeQL, JavaScript/TypeScript CodeQL, dependency audit and full-history secret scan).
+- No application-code fix has yet been made for the five gaps. Preserve this test-first failure checkpoint.
+
+### Required narrow U10 correction
+
+- Map an explicitly documented unresolved item in `known_unknowns` to its matching canonical field only when the entry clearly names that field (canonical ID or an unambiguous field label/alias) and explicitly states an unresolved status such as unknown, not reported, not assessed, pending, unresolved, not documented, not established or unverified.
+- The mapping must be field-specific and clause-local. A note about staging edition must not block diagnosis date or patient consent; a clinical T gap must not block pathological T/N/M; a clinical stage-group gap must not be treated as a pathological stage-group gap.
+- Apply the mapped gap to the relevant source-eligibility checks so neither a structured value nor a case-summary fallback silently overrides the recorded unresolved item. Preserve both source statements and flag the contradiction rather than selecting or rewriting either source.
+- Do not treat broad phrases such as “clinical staging and fitness are not supplied” as every individual T/N/M or staging field being independently unknown unless that particular field is explicitly named.
+- If the `known_unknowns` field itself is non-PRESENT, do not consume its list contents as reliable field-gap evidence.
+- Keep unrelated known-unknown entries from suppressing valid claims for other fields. Preserve existing willingness/consent known-unknown controls.
+
+### Master Checklist — Current Status
+
+| Workstream | Status | Current evidence / outstanding boundary |
+|---|---|---|
+| Repository, PR and protected branch | VERIFIED | PR #5 OPEN/unmerged at test-only head `15f631f`; base remains `feature/four-round-mdt-and-performance`; main untouched. |
+| Approved sequence / machine-plan gate | VERIFIED | Active step remains U09–U10; Sequential Gate `44757788701` SUCCESS. |
+| U09 immutable clinical registry v2 and typed contract | IN PROGRESS | Stable IDs, aliases, immutable version/hash and typed states exist; complete field/state/provenance/migration/backward-compatibility acceptance remains. |
+| U10 pathological and clinical TNM state/warning matrices | VERIFIED for tested cases | Codes `2577d2d` and `0110df0`; Backend 726/726 and 753/753, including explicit states, INVALID, CONFLICTING and PRESENT controls. |
+| U10 typed stage-group state/provenance warning | VERIFIED for tested cases | Code `d45060e`; Backend `44756715309`, 780/780, all 30 typed group tests pass. |
+| U10 known_unknowns mapping to canonical field state/source gates | FAILED | Test-only `15f631f`; Backend `44757788759`, 781/787; five real field mapping gaps and one invalid test fixture. Correct the fixture and add precise field-specific gap mapping. |
+| U10 known_unknowns unrelated-field isolation | VERIFIED for tested case | Run `44757788759`: unrelated diagnosis-date unknown did not block a clinical T claim supported by the summary. |
+| U10 willingness/treatment-consent known-unknown mapping | VERIFIED for tested cases | Code `ae4e5af`; Backend `44749806362`, 693/693; existing targeted known-unknown tests pass. |
+| U10 diagnosis date, investigation, history, social/resource, preferences/consent | VERIFIED for tested cases | Prior exact-head results retained in earlier sections; broader field-by-field source/state mapping remains open. |
+| Backend suite | FAILED | Test head `15f631f`; run `44757788759`; 781/787, five real mapping gaps plus one invalid fixture. |
+| Deterministic preflight | VERIFIED | Run `44757788759`; artifact `14641025385`, SHA-256 recorded above. |
+| Sequential Development Gate | VERIFIED | Run `44757788701` SUCCESS. |
+| Security/dependency/secret scan/CodeQL | VERIFIED | Run `44757788747` SUCCESS; all four jobs passed. |
+| R1–R4 saved contributions and Chair reconciliation | IN PROGRESS | Mocked provenance/context coverage exists; live saved R1–R3 and Chair R4 audit remains unverified. |
+| Case snapshots/hashes/audit/failure/resume | IN PROGRESS | Deterministic safeguards exist; full saved-run tamper and partial/failure/resume acceptance remains. |
+| Evidence retrieval and claim-to-passage verification | IN PROGRESS | Independent current-source verification remains outstanding. |
+| U04 Case Intake and Completeness Screener | BLOCKED | Do not activate before U09–U10 acceptance is complete. |
+| U05–U08 | BLOCKED | Remain in approved order after U04. |
+| U03 intelligent Ollama installer | BLOCKED | Remains after U08. |
+| U01–U02 desktop experience/removal of development surfaces | BLOCKED | Remain after U03. |
+| Live 45-role R1–R4 | NOT STARTED | No live run ID or inspected saved artefact claimed. |
+| RTX 4060 request-time GPU inference | NOT STARTED | No request-time GPU utilisation/VRAM/Ollama offload evidence claimed. |
+| Independent clinical validation | NOT STARTED | No qualified independent clinical review claimed. |
+| Integrated release acceptance | BLOCKED | Five U10 known-unknown field mappings, full registry acceptance and all ordered downstream/live/GPU/clinical gates remain. |
+
+**Next action:** correct the invalid known_unknowns test fixture and implement field-specific canonical mapping for only explicit, unambiguous unresolved items. Add positive and unrelated-field controls, then run exact-head Backend/preflight, Sequential Gate and Security Audit. Do not modify intake or advance to U04.
+
