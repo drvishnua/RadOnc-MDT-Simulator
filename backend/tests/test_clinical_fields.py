@@ -72,6 +72,69 @@ def test_registry_covers_every_synthetic_case_value_field():
     assert set(CLINICAL_FIELD_REGISTRY) == set(SyntheticCase.model_fields) - metadata_fields
 
 
+def test_every_registry_value_type_matches_its_synthetic_case_schema_annotation():
+    from datetime import date
+    from types import UnionType
+    from typing import Annotated, Literal, Union, get_args, get_origin
+
+    from app.schemas import InvestigationRecord
+
+    supported_types = {
+        "string",
+        "free_text",
+        "integer",
+        "enum",
+        "date",
+        "string_list",
+        "object_list",
+    }
+    assert {item.value_type for item in CLINICAL_FIELD_REGISTRY.values()} == supported_types
+
+    def unwrap_optional_and_annotated(annotation):
+        while True:
+            origin = get_origin(annotation)
+            if origin is Annotated:
+                annotation = get_args(annotation)[0]
+                continue
+            if origin in (Union, UnionType):
+                non_none = [arg for arg in get_args(annotation) if arg is not type(None)]
+                assert len(non_none) == 1
+                annotation = non_none[0]
+                continue
+            return annotation
+
+    for field_id, definition in CLINICAL_FIELD_REGISTRY.items():
+        annotation = unwrap_optional_and_annotated(
+            SyntheticCase.model_fields[field_id].annotation
+        )
+
+        if definition.value_type in {"string", "free_text"}:
+            assert annotation is str, field_id
+            if definition.value_type == "enum":
+                pytest.fail(f"{field_id} must declare enum, not {definition.value_type}")
+            assert not definition.allowed_values, field_id
+        elif definition.value_type == "integer":
+            assert annotation is int, field_id
+            assert not definition.allowed_values, field_id
+        elif definition.value_type == "date":
+            assert annotation is date, field_id
+            assert not definition.allowed_values, field_id
+        elif definition.value_type == "enum":
+            assert get_origin(annotation) is Literal, field_id
+            assert set(get_args(annotation)) == set(definition.allowed_values), field_id
+            assert definition.allowed_values, field_id
+        elif definition.value_type == "string_list":
+            assert get_origin(annotation) is list, field_id
+            assert unwrap_optional_and_annotated(get_args(annotation)[0]) is str, field_id
+            assert not definition.allowed_values, field_id
+        elif definition.value_type == "object_list":
+            assert get_origin(annotation) is list, field_id
+            assert unwrap_optional_and_annotated(get_args(annotation)[0]) is InvestigationRecord, field_id
+            assert not definition.allowed_values, field_id
+        else:
+            pytest.fail(f"Unsupported registry value_type for {field_id}: {definition.value_type}")
+
+
 def test_v2_registry_is_additive_and_v1_definitions_remain_inspectable():
     assert set(CLINICAL_FIELD_REGISTRY_V1).issubset(CLINICAL_FIELD_REGISTRY)
     assert CLINICAL_FIELD_REGISTRY_V1[CLINICAL_T_STAGE].description == (
