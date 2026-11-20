@@ -4772,8 +4772,9 @@ This is the latest authoritative status. Earlier entries above are retained as h
 | Main branch isolation | VERIFIED | `main` remains at `39a356b8eb09399aa2da1b9b9085965999f5105a`; no merge to main. |
 | U09 canonical clinical registry v2 and immutable field identifiers | IN PROGRESS | v2.0.0 implementation merged; registry uses read-only mappings and frozen field-definition records, with mutation-rejection tests. Legacy-case recovery/migration acceptance remains open. |
 | U10 deterministic state-aware hallucination controls | IN PROGRESS | Merged code and test suite pass; remaining acceptance and role-wide/live validation are not complete. |
-| Explicit epistemic states, per-field provenance, source hashes, conflict preservation/redaction, TNM type separation | VERIFIED | Regression coverage is included in the 593 passing pytest tests. This is software verification, not clinical validation. |
+| Explicit epistemic states, per-field provenance, source hashes, conflict preservation/redaction, TNM type separation | VERIFIED | Regression coverage includes the PR #4 merge baseline and follow-up U09 tests; source excerpts are now always SHA-256-addressed. Software verification only, not clinical validation. |
 | Canonical case context across all 45 specialist roles | IN PROGRESS | Mocked regression tests now exercise all 45 profiles in R1, R2 and R3 and assert identical canonical v2 context in every prompt, preserving UNKNOWN / NOT_ASSESSED TNM states. Live saved-case R1–R4 model execution remains unverified. |
+| Explicit source-excerpt hashes for field provenance and conflict candidates | VERIFIED | SHA-256 is generated when omitted, checked when supplied, and does not change `user_supplied_not_independently_verified`; exact-head regression covers field provenance and conflicting source candidates. |
 | R1–R4 saved contribution data flow | IN PROGRESS | Must continue to preserve round separation and use actual saved R1–R3 inputs for R4. Full live execution has not been verified by this CI. |
 | Chair consensus, conditional positions, dissent, minority views and source traceability | IN PROGRESS | Deterministic safeguards/tests exist; end-to-end saved-run synthesis and audit remain outstanding. |
 | Missing/failed-agent handling and partial-run integrity | IN PROGRESS | Unit/regression coverage exists; live failure-path execution and saved artefact inspection remain outstanding. |
@@ -4820,4 +4821,17 @@ This is the latest authoritative status. Earlier entries above are retained as h
 - Exact-head Security and Dependency Audit run `44704345886`: SUCCESS (Python and JavaScript/TypeScript CodeQL, full-history secret scan, Python/Node dependency audit).
 - The mocked R1, R2 and R3 prompt checks establish shared prompt-context construction only. They do not establish live round orchestration, persisted R1–R3 integrity, R4 Chair reconciliation, real Ollama behavior, GPU offload, staging validity or clinical accuracy.
 - U09–U10 remains `IN PROGRESS`; the machine plan and U12 scope baseline are unchanged. PR #5 remains open and unmerged pending review.
+
+### U09–U10 explicit provenance hash completeness — 20 November 2026
+
+- Inspection found that `ClinicalFieldProvenance.source_sha256` was optional and the validator checked a checksum only when supplied. An explicitly supplied source excerpt with no hash could therefore be retained with `source_sha256=null`, including source-specific conflict candidates. This did not satisfy the intended per-excerpt audit-hash contract.
+- Regression-first commit `4e9e39fa0f8825aff3046c5552236e36e774d626` added `test_explicit_provenance_and_conflict_sources_get_hashes_when_omitted`. Its backend run `44708124007` reproduced the defect (595 passed, 1 failed out of 596); the failing assertion was the expected missing SHA-256.
+- Fix commit `26a0a8ac22d0d00536fef64cd0f5157be61e8c34` now computes SHA-256 over the exact UTF-8 `source_excerpt` whenever `source_sha256` is omitted. A supplied checksum is still verified and a mismatch remains rejected. The verification status remains `user_supplied_not_independently_verified`; hash generation is an integrity checksum, not evidence verification.
+- The regression verifies hash generation for an explicitly supplied clinical field source and for both distinct source excerpts in a conflicting age field. Existing mismatch rejection coverage remains in place.
+- Exact-head Backend Tests run `44708243859`: **596 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive**; deterministic preflight **7 passed, 0 failed, 0 inconclusive**.
+- Exact-head Sequential Development Gate run `44708243866`: SUCCESS.
+- Exact-head Security and Dependency Audit run `44708243871`: SUCCESS (Python and JavaScript/TypeScript CodeQL, full-history secret scan, Python/Node dependency audit).
+- Preflight explicitly reports model inference was not performed and clinical accuracy was not evaluated. No live inference, GPU use or clinical validation is claimed.
+- U09–U10 remains `IN PROGRESS`; `docs/development_plan.json` is unchanged (`active_step=U09-U10`, U12 baseline `5284483a26e87028f919966e304c472ed537e839`). PR #5 remains open and unmerged pending independent review.
+- **Next U09–U10 work:** continue the remaining alias/normalization edge cases and audit saved-case/run provenance and failure-path handling. Keep legacy snapshots read-only; do not relabel or silently migrate v1/legacy records.
 
