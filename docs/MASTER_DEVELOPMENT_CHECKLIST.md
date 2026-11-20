@@ -6686,3 +6686,73 @@ For pathological T/N/M assertion audit:
 
 **Next action:** continue U09–U10 with typed clinical, pathological and untyped stage-group state/provenance tests. Verify explicit non-PRESENT state blocking, INVALID raw handling, CONFLICTING source retention, PRESENT matching/mismatch and field-type separation. Do not change active step, modify intake or activate U04.
 
+## U10 typed stage-group state/provenance matrix — test-first failure record
+
+- Test-only commit `f4b2200023e43cbeef1ffda548e8b9ae8782945f`, changing only `backend/tests/test_case_integrity.py`.
+- Added 30 typed stage-group tests across untyped `stage_group`, `clinical_stage_group` and `pathological_stage_group`:
+  - 18 explicit non-PRESENT state cases (UNKNOWN, NOT_REPORTED, NOT_ASSESSED, PENDING, DECLINED, NOT_APPLICABLE × three field types);
+  - 3 INVALID raw-value preservation cases;
+  - 3 CONFLICTING source-candidate/no-selection cases;
+  - 6 PRESENT controls (matching plus mismatched structured-value assertion for each field type).
+- Exact-head Backend Tests run `44756018365`, job `136355828399`: **754 passed, 26 failed, 0 errors, 0 skipped** (780 total).
+- Failure composition:
+  1. 18 non-PRESENT tests: the audit blocks case-summary fallback but its warning does not identify the relevant canonical field ID and explicit state.
+  2. 3 INVALID tests: the audit rejects the assertion but its warning does not identify the INVALID field/raw value status.
+  3. 3 CONFLICTING tests: the audit rejects the assertion but does not identify unresolved source conflict and no-selection requirement.
+  4. 2 PRESENT mismatch tests (clinical and pathological typed groups): mismatch is rejected, but warning lacks the corresponding canonical field ID. The untyped PRESENT mismatch control passed.
+- The current generic message still states that the group assertion is unsupported or type-conflicting. This test checkpoint demonstrates that it is too generic for typed field/source audit; it does not show that source blocking has been bypassed.
+- Deterministic preflight artifact `14636159646`, SHA-256 `a6d396494116b8adca75a8a1a3d25ea3fa94141f059c20c8bf9963469ce09cb1`.
+- Pytest diagnostics artifact `14636074898`, SHA-256 `427b57ae761eb017081223c4fc865a931d7033f3833d6156b714fdc2f08c8a72`.
+- Sequential Development Gate run `44756018142`: SUCCESS.
+- Security and Dependency Audit run `44756018562`: SUCCESS; all four jobs passed (Python CodeQL, JavaScript/TypeScript CodeQL, dependency audit, full-history secret scan).
+- No application code changed in this test increment. Preserve the failed checkpoint.
+
+### Required narrow correction
+
+For each unsupported generated stage-group record, retain the generic assertion warning and add field-specific supporting/reason text for the generated kind:
+- Map UNSPECIFIED to `stage_group`, CLINICAL to `clinical_stage_group`, PATHOLOGICAL to `pathological_stage_group`.
+- If the field is INVALID, name the field and state that its preserved raw value cannot support the generated stage-group claim.
+- If CONFLICTING, name the field and state that the source candidates remain unresolved and no single group may be selected.
+- If any other explicit non-PRESENT state is recorded, name the field and exact state and state that it cannot support the claim or permit case-summary fallback.
+- If PRESENT structured data exists but differs, name the field and structured value as the conflict.
+- If there is no explicit state/value or typed source record, retain a distinct missing/unsupported typed-source explanation.
+- Keep type-specific source pools separate; a clinical group never supports a pathological or untyped group, and vice versa. Do not infer a substage from a parent group or broaden stage compatibility.
+
+### Master Checklist — Current Status
+
+| Workstream | Status | Current evidence / outstanding boundary |
+|---|---|---|
+| Repository, PR and protected branch | VERIFIED | PR #5 OPEN/unmerged at test-only head `f4b2200`; base remains `feature/four-round-mdt-and-performance`; main untouched. |
+| Approved sequence / machine-plan gate | VERIFIED | Active step U09–U10; Sequential Gate `44756018142` SUCCESS. |
+| U09 immutable clinical registry v2 and typed contract | IN PROGRESS | Stable IDs, aliases, immutable version/hash and typed states exist; full field/state/source/provenance/migration/compatibility acceptance remains. |
+| U10 pathological T/N/M state/warning matrix | VERIFIED for tested cases | Code `2577d2d`; Backend `44754287371`, 726/726; explicit state, INVALID, CONFLICTING and PRESENT controls pass. |
+| U10 clinical T/N/M state/warning matrix | VERIFIED for tested cases | Code `0110df0`; Backend `44755411266`, 753/753; explicit state, INVALID, CONFLICTING and PRESENT controls pass. |
+| U10 typed stage-group source blocking | VERIFIED for tested cases | The 30-case test increment confirms unsupported group assertions are rejected by typed source matching; warning specificity remains defective. |
+| U10 typed stage-group warning/provenance precision | FAILED | Test-only `f4b2200`; Backend `44756018365`, 754/780; 26 failures across non-PRESENT, INVALID, CONFLICTING and two typed PRESENT mismatch warning assertions. |
+| U10 staging primary-site/system/edition | VERIFIED for tested cases | Missing context and explicit UNKNOWN site/system/edition controls pass; full staging applicability/migration matrix remains. |
+| U10 diagnosis date/caregiver/investigation | VERIFIED | Codes `9b0d4cf` and `c4d5c63`; Backend 661/661 and 666/666. |
+| U10 positive history assertions | VERIFIED | Code `25635e9`; Backend 674/674. |
+| U10 social/resource assertion audit | VERIFIED | Code `5571074`; Backend 683/683. |
+| U10 goal/preference/willingness separation | VERIFIED | Code `ad98a10`; Backend 690/690. |
+| U10 known-unknown willingness/treatment-consent gate | VERIFIED for tested cases | Code `ae4e5af`; Backend 693/693. |
+| U10 educational consent status mapping | VERIFIED for tested cases | Code `9b0b56b`; Backend 699/699. |
+| U10 negative/absence and CONFIRMED_ABSENT provenance | IN PROGRESS | Selected tests pass; full canonical field/state/source/mismatch matrix remains. |
+| U10 remaining known-unknown mappings | IN PROGRESS | Willingness/consent fields pass; other canonical field mappings remain. |
+| Backend suite | FAILED | Test-only head `f4b2200`; run `44756018365`; 754/780, 26 warning specificity/provenance failures. |
+| Deterministic preflight | VERIFIED | Run `44756018365`; artifact `14636159646`, SHA-256 recorded above. |
+| Sequential Development Gate | VERIFIED | Run `44756018142` SUCCESS. |
+| Security/dependency/secret scan/CodeQL | VERIFIED | Run `44756018562` SUCCESS; all four jobs passed. |
+| R1–R4 saved contributions and Chair reconciliation | IN PROGRESS | Mocked provenance/context tests exist; live saved R1–R3 and Chair R4 remain unverified. |
+| Case snapshots/hashes/audit/failure/resume | IN PROGRESS | Deterministic controls exist; full saved-run tamper and partial/failure/resume acceptance remains. |
+| Evidence retrieval and claim-to-passage verification | IN PROGRESS | Independent current-source verification remains outstanding. |
+| U04 Case Intake and Completeness Screener | BLOCKED | Do not activate before U09–U10 acceptance is complete. |
+| U05–U08 | BLOCKED | Remain in approved order after U04. |
+| U03 intelligent Ollama installer | BLOCKED | Remains after U08. |
+| U01–U02 desktop experience/removal of development surfaces | BLOCKED | Remain after U03. |
+| Live 45-role R1–R4 | NOT STARTED | No live run ID or inspected saved artefact claimed. |
+| RTX 4060 request-time GPU inference | NOT STARTED | No request-time GPU/offload telemetry claimed. |
+| Independent clinical validation | NOT STARTED | No qualified independent review claimed. |
+| Integrated release acceptance | BLOCKED | Typed stage-group warning/provenance precision and remaining U09–U10 matrix, plus all ordered downstream/live/GPU/clinical gates, remain. |
+
+**Next action:** implement typed-field-specific stage-group warning reasons without modifying the typed source gates or parser; then rerun exact-head backend/preflight, Sequential Gate and Security Audit. Keep active step U09–U10 and do not activate U04.
+
