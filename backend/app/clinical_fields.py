@@ -299,7 +299,7 @@ def normalize_clinical_tnm_component(field_id: str, raw_value: str) -> str:
         raise ValueError(f"{field_id} requires a {expected}-component, not {component}.")
     if not _TNM_COMPONENT_PATTERNS[expected].fullmatch(value):
         raise ValueError(f"Unrecognised {expected}-component value: {raw_value!r}")
-    return expected + value
+    return ("YC" if prefix == "YC" else "") + expected + value
 
 
 def normalize_pathological_tnm_component(field_id: str, raw_value: str) -> str:
