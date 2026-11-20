@@ -1466,19 +1466,72 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         for kind in ("UNSPECIFIED", "CLINICAL", "PATHOLOGICAL")
     }
     unsupported_stage_groups: list[str] = []
+    unsupported_stage_group_reasons: list[str] = []
     for generated_kind, generated_key, snippet in generated_group_records:
         supported = (
             structured_group_keys[generated_kind]
             | summary_group_keys[generated_kind]
         )
-        if not any(_stage_group_supported(generated_key, {source_key}) for source_key in supported):
-            unsupported_stage_groups.append(snippet)
+        if any(_stage_group_supported(generated_key, {source_key}) for source_key in supported):
+            continue
+
+        unsupported_stage_groups.append(snippet)
+        field_id = stage_group_field_by_kind[generated_kind]
+        state = field_state(field_id)
+        structured_value = getattr(case, field_id)
+
+        if state == "INVALID":
+            reason = (
+                f"{field_id} is marked INVALID; its preserved raw value cannot support "
+                f"a {generated_kind.lower()} stage-group assertion."
+            )
+        elif state == "CONFLICTING":
+            reason = (
+                f"{field_id} has unresolved conflicting source values; all candidates "
+                "remain unselected and no single stage group may be asserted."
+            )
+        elif state not in (None, "PRESENT"):
+            reason = (
+                f"{field_id} is marked {state}; that state cannot support a selected "
+                f"{generated_kind.lower()} stage-group assertion or permit case-summary fallback."
+            )
+        elif structured_value not in (None, ""):
+            reason = (
+                f"the generated {generated_kind.lower()} group conflicts with "
+                f"structured {field_id}={structured_value!s}."
+            )
+        else:
+            other_typed_fields = [
+                other_field
+                for other_kind, other_field in stage_group_field_by_kind.items()
+                if other_kind != generated_kind
+                and (
+                    getattr(case, other_field) not in (None, "")
+                    or summary_group_keys[other_kind]
+                )
+            ]
+            other_source_note = (
+                " Other typed source(s) "
+                + ", ".join(other_typed_fields[:3])
+                + " cannot support this assertion."
+                if other_typed_fields
+                else ""
+            )
+            reason = (
+                f"{field_id} has no assertable structured value or matching "
+                f"{generated_kind.lower()} stage-group record in the verbatim case summary."
+                + other_source_note
+            )
+        unsupported_stage_group_reasons.append(reason)
+
     if unsupported_stage_groups:
         flags.append(
             "Generated narrative assigns a stage group ("
             + ", ".join(unsupported_stage_groups[:4])
             + "); this is an unsupported or type-conflicting stage group assertion and may conflict with structured stage_group. "
-            + "Clinical, pathological and untyped stage groups must be explicitly sourced separately."
+            + "Clinical, pathological and untyped stage groups must be explicitly sourced separately. "
+            + "Typed field audit: "
+            + " ".join(unsupported_stage_group_reasons[:4])
         )
 
     if generated_group_records:
