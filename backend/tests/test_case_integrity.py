@@ -1,6 +1,6 @@
 import pytest
 
-from app.schemas import SyntheticCase
+from app.schemas import InvestigationRecord, SyntheticCase
 from app.services.case_integrity import (
     audit_unverified_case_claims,
     build_case_prompt_context,
@@ -2696,4 +2696,58 @@ def test_reported_family_caregiver_support_can_support_matching_claim():
         "provisional_conclusion": statement,
     })
     assert not any("family_caregiver_context" in item for item in flags)
+
+@pytest.mark.parametrize("status", ["PENDING", "NOT_AVAILABLE", "DECLINED"])
+def test_noncompleted_investigation_record_cannot_support_a_finding(status):
+    statement = "CT chest shows a 9 mm pulmonary nodule."
+    record = InvestigationRecord(
+        investigation_name="CT chest",
+        result_summary="A 9 mm pulmonary nodule is described.",
+        status=status,
+        source_excerpt=statement,
+    )
+    case = _case(
+        investigation_records=[record],
+        clinical_field_states={"investigation_records": "PRESENT"},
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert any("investigation_records" in item for item in flags)
+
+
+def test_completed_investigation_record_can_support_its_matching_finding():
+    statement = "CT chest shows a 9 mm pulmonary nodule."
+    record = InvestigationRecord(
+        investigation_name="CT chest",
+        result_summary="A 9 mm pulmonary nodule is described.",
+        status="COMPLETED",
+        source_excerpt=statement,
+    )
+    case = _case(
+        investigation_records=[record],
+        clinical_field_states={"investigation_records": "PRESENT"},
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert not any("investigation_records" in item for item in flags)
+
+
+def test_unknown_investigation_records_state_cannot_support_a_finding():
+    statement = "CT chest shows a 9 mm pulmonary nodule."
+    record = InvestigationRecord(
+        investigation_name="CT chest",
+        result_summary="A 9 mm pulmonary nodule is described.",
+        status="COMPLETED",
+        source_excerpt=statement,
+    )
+    case = _case(
+        investigation_records=[record],
+        clinical_field_states={"investigation_records": "UNKNOWN"},
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert any("investigation_records" in item and "UNKNOWN" in item for item in flags)
 
