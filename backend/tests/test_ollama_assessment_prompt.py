@@ -164,8 +164,8 @@ def test_all_45_specialist_roles_receive_identical_v2_canonical_case_context(mon
     assert len(captured_requests) == EXPECTED_AGENT_COUNT
     assert all(item["path"] == "/api/generate" for item in captured_requests)
 
-    marker = "Fictional case JSON:\\n"
-    ending = "\\nReturn one concise JSON object."
+    marker = "Fictional case JSON:\n"
+    ending = "\nReturn one concise JSON object."
     canonical_contexts = []
     for item in captured_requests:
         prompt = item["request"]["prompt"]
