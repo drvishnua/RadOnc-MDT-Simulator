@@ -294,13 +294,13 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
         "interpretation_rules": [
             "The v2 canonical field registry is immutable; field IDs and meanings must not be renamed or repurposed.",
             "Registry constants standardise identifiers and semantics; they do not guarantee model adherence or prevent every hallucination.",
-            "not_reported means not supplied; UNKNOWN, NOT_ASSESSED, PENDING, DECLINED and NOT_APPLICABLE remain distinct and are never normal/negative findings.",
-            "CONFIRMED_ABSENT requires explicit source provenance; an empty list or missing value is not a negative finding.",
+            "NOT_REPORTED, UNKNOWN, NOT_ASSESSED, PENDING, DECLINED and NOT_APPLICABLE are distinct states and are never normal/negative findings.",
+            "CONFIRMED_ABSENT requires explicit source provenance; an empty or omitted field is not a confirmed absent or negative finding.",
             "CONFLICTING fields retain all source-specific candidate values and remain unresolved; do not select or average a source.",
             "The raw case snapshot and source excerpts must be preserved; canonical comparison values are analysis-only and do not overwrite the source.",
             "Clinical and pathological T/N/M components and stage groups are separate fields. Pathological values never establish clinical stage.",
             "A T/N/M token is not interpreted without the supplied primary site, staging system and edition; lexical normalization is not staging validation.",
-            "A lesion's size or anatomical subsite alone does not establish a T category or stage group; never infer N0, M0, stage group or resectability from missing data.",
+            "A lesion's size or anatomical subsite alone does not establish a T category or stage group; never infer a T category from lesion size, or infer nodal/metastatic status, stage group or resectability from missing data.",
             "Performance-status scores require their named scale; do not infer ECOG/WHO/Karnofsky equivalence.",
             "Separate source facts, clinical interpretations, hypotheses/assumptions and unknowns. Flag contradictions; never silently reconcile them.",
             "Automatically labelled case-input provenance is user-supplied provenance, not independent verification of a source document.",
@@ -1147,9 +1147,10 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             unsupported_stage_groups.append(snippet)
     if unsupported_stage_groups:
         flags.append(
-            "Generated narrative assigns unsupported or type-conflicting stage group(s) ("
+            "Generated narrative assigns a stage group ("
             + ", ".join(unsupported_stage_groups[:4])
-            + "); clinical, pathological and untyped stage groups must be explicitly sourced separately."
+            + "); this is an unsupported or type-conflicting stage group assertion and may conflict with structured stage_group. "
+            + "Clinical, pathological and untyped stage groups must be explicitly sourced separately."
         )
     sex_pattern = re.compile(r"\b(?:male|female|man|woman|boy|girl)\b", re.IGNORECASE)
     generated_sex_terms = _unqualified_matches(sex_pattern, text)
