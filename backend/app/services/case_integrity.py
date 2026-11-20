@@ -17,6 +17,7 @@ from app.clinical_fields import (
     clinical_field_registry_sha256,
     normalize_clinical_tnm_component,
     normalize_pathological_tnm_component,
+    normalize_stage_group_token,
 )
 
 
@@ -232,6 +233,13 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
             elif field_id in (PATHOLOGICAL_T_STAGE, PATHOLOGICAL_N_STAGE, PATHOLOGICAL_M_STAGE) and value not in (None, ""):
                 try:
                     item["canonical_comparison_value"] = normalize_pathological_tnm_component(field_id, value)
+                except ValueError as exc:
+                    item["canonical_comparison_value"] = None
+                    item["normalization_warning"] = str(exc)
+                    normalization_warnings.append(f"{field_id}: {exc}")
+            elif field_id in {"stage_group", "clinical_stage_group", "pathological_stage_group"} and value not in (None, ""):
+                try:
+                    item["canonical_comparison_value"] = normalize_stage_group_token(value)
                 except ValueError as exc:
                     item["canonical_comparison_value"] = None
                     item["normalization_warning"] = str(exc)
@@ -816,17 +824,11 @@ def _stage_group_records(value: str) -> list[tuple[str, str, str]]:
 
 
 def _stage_group_value_key(value: str) -> str | None:
-    """Normalize a bare or labelled stage-group value without assigning TNM."""
-    token = value.strip().upper()
-    token = re.sub(r"^(?:CLINICAL|PATHOLOGICAL)\\s+", "", token)
-    token = re.sub(r"^STAGE(?:\\s+GROUP)?\\s*", "", token)
-    match = re.fullmatch(r"(IV|III|II|I|[1-4])([ABC])?", token)
-    if match is None:
-        records = _stage_group_records(value)
-        return records[0][1] if len(records) == 1 else None
-    roman_values = {"I": 1, "II": 2, "III": 3, "IV": 4}
-    number = roman_values.get(match.group(1), int(match.group(1)) if match.group(1).isdigit() else None)
-    return f"{number}{match.group(2) or ''}" if number is not None else None
+    """Delegate stage-group lexical normalization to the canonical registry."""
+    try:
+        return normalize_stage_group_token(value)
+    except ValueError:
+        return None
 
 
 def _stage_group_values(value: str) -> set[str]:
