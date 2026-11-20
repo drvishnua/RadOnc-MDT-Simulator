@@ -294,7 +294,7 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
         "interpretation_rules": [
             "The v2 canonical field registry is immutable; field IDs and meanings must not be renamed or repurposed.",
             "Registry constants standardise identifiers and semantics; they do not guarantee model adherence or prevent every hallucination.",
-            "NOT_REPORTED, UNKNOWN, NOT_ASSESSED, PENDING, DECLINED and NOT_APPLICABLE are distinct states and are never normal/negative findings.",
+            "UNKNOWN, NOT_REPORTED, NOT_ASSESSED, PENDING, DECLINED and NOT_APPLICABLE are distinct states and are never normal/negative findings.",
             "CONFIRMED_ABSENT requires explicit source provenance; an empty or omitted field is not a confirmed absent or negative finding.",
             "CONFLICTING fields retain all source-specific candidate values and remain unresolved; do not select or average a source.",
             "The raw case snapshot and source excerpts must be preserved; canonical comparison values are analysis-only and do not overwrite the source.",
