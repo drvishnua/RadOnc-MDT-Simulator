@@ -6986,3 +6986,19 @@ Application and test code is unchanged from `4a44b3e8d6796dee21d25e396d611091c79
 - All three workflow runs identify exact SHA `529fb83f7be063d18bfa410cfb89734b66bdd983`.
 
 **Master checklist current interpretation:** U09–U10 remains IN PROGRESS despite the verified software test/gate/security results; independent review and remaining acceptance work are outstanding. PR #5 remains OPEN, NOT MERGED. No U04 or later workstream has started. No live model, RTX 4060 request-time GPU or clinical validation is claimed.
+
+
+### U09–U10 source-text preservation regression — 20 November 2026
+
+**Reproducible gap:** the shared `StrictModel` had `str_strip_whitespace=True`; the SyntheticCase list-item validator also stripped every clinical list item. This silently altered user-supplied family-history, comorbidity, known-unknown and other list text before provenance/audit could retain it.
+
+**Test-first and correction history**
+- Regression test commit `4240cbe8dbd928ce4e27da5072cb3a2c91acbe14`: Backend run `44768208958` failed as expected; **789 passed, 1 failed**. The failure demonstrated that leading/trailing source whitespace was silently removed.
+- First validator-only correction `b170c22d972fc918806ab625c6f05c63850e2525` did not resolve the issue because Pydantic's inherited string constraints had already stripped list items before the after-validator.
+- Corrected implementation commit `b628eb26d3aa97c4b3116f0c964fa04ea21187e0`: introduced a dedicated `PreservedListText` type with `StringConstraints(strip_whitespace=False)` for SyntheticCase clinical list values; retained blank-only validation without modifying supplied values.
+- Exact-head Backend run `44768611465`: SUCCESS; **790/790 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive**; diagnostic errors 0. Pytest artifact `14646673237`; deterministic preflight artifact `14645858760`.
+- Exact-head Sequential Development Gate run `44768611390`: SUCCESS.
+- Exact-head Security and Dependency Audit run `44768611487`: SUCCESS; both CodeQL analyses, dependency audit and secret scan completed successfully.
+- All three successful runs identify exact SHA `b628eb26d3aa97c4b3116f0c964fa04ea21187e0`.
+
+**Current status:** clinical list source-text preservation is VERIFIED by regression and exact-head CI. U09–U10 remains IN PROGRESS; registry-wide field/state/source/provenance and legacy migration acceptance remains incomplete. PR #5 remains OPEN and NOT MERGED. No U04 or later workstream is started. No live-model, GPU or clinical validation is claimed.
