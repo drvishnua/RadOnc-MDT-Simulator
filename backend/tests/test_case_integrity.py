@@ -2736,14 +2736,9 @@ def test_completed_investigation_record_can_support_its_matching_finding():
 
 def test_unknown_investigation_records_state_cannot_support_a_finding():
     statement = "CT chest shows a 9 mm pulmonary nodule."
-    record = InvestigationRecord(
-        investigation_name="CT chest",
-        result_summary="A 9 mm pulmonary nodule is described.",
-        status="COMPLETED",
-        source_excerpt=statement,
-    )
     case = _case(
-        investigation_records=[record],
+        case_summary="Synthetic case. " + statement,
+        investigation_records=[],
         clinical_field_states={"investigation_records": "UNKNOWN"},
     )
     flags = audit_unverified_case_claims(case, {
