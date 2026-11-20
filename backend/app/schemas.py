@@ -20,6 +20,7 @@ class StrictModel(BaseModel):
 # Clinical list entries are source text, not normalised identifiers. Override
 # shared-model whitespace stripping so supplied strings remain faithful.
 PreservedListText = Annotated[str, StringConstraints(strip_whitespace=False)]
+PreservedSourceText = Annotated[str, StringConstraints(strip_whitespace=False)]
 
 
 class ClinicalFieldProvenance(StrictModel):
@@ -151,7 +152,7 @@ class InvestigationRecord(StrictModel):
     performed_on: date | None = None
     reported_on: date | None = None
     source_reference: str | None = Field(default=None, max_length=300)
-    source_excerpt: str | None = Field(default=None, max_length=500000)
+    source_excerpt: PreservedSourceText | None = Field(default=None, max_length=500000)
 
 
 class SyntheticCase(StrictModel):
