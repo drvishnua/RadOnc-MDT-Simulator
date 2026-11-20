@@ -1058,6 +1058,12 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     )
 
     def known_unknown_blocks_field(field_id: str) -> bool:
+        # The list is reliable gap evidence only while its own canonical field
+        # state is PRESENT (or unannotated legacy input). Fail closed for
+        # UNKNOWN/CONFLICTING/etc., even if a corrupted in-memory object carries
+        # stale list contents that bypassed SyntheticCase validation.
+        if field_state("known_unknowns") not in (None, "PRESENT"):
+            return False
         aliases = known_unknown_field_aliases.get(field_id, ())
         if not aliases:
             return False
