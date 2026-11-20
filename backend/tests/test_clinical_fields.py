@@ -33,7 +33,7 @@ from app.clinical_fields import (
     normalize_stage_group_token,
 )
 from app.schemas import ClinicalFieldProvenance, SyntheticCase
-from app.services.case_integrity import build_case_prompt_context
+from app.services.case_integrity import build_case_prompt_context, build_source_case_facts
 
 
 def _case(**overrides):
@@ -783,17 +783,23 @@ def test_invalid_state_requires_raw_value_without_canonicalizing_it():
         clinical_t_stage="T9",
         clinical_field_states={"clinical_t_stage": "INVALID"},
     )
-    field = build_case_prompt_context(case)["canonical_field_values"]["clinical_t_stage"]
+    context = build_case_prompt_context(case)
+    field = context["canonical_field_values"]["clinical_t_stage"]
     assert field["state"] == "INVALID"
-    assert field["raw_value"] == "T9"
+    assert field["raw_value"] is None
     assert field["canonical_comparison_value"] is None
     assert field["provenance"][0]["verification_status"] == (
         "user_supplied_not_independently_verified"
     )
+    assert "source_excerpt" not in field["provenance"][0]
+    assert field["provenance"][0]["source_excerpt_redacted"] is True
+    assert field["provenance"][0]["source_sha256"] == hashlib.sha256(b"T9").hexdigest()
+    assert context["case_snapshot"]["clinical_t_stage"] is None
+    assert "T9" not in repr(context)
     assert any(
         "INVALID means a supplied raw value failed validation" in rule
         and "do not treat it as a valid clinical fact" in rule
-        for rule in build_case_prompt_context(case)["interpretation_rules"]
+        for rule in context["interpretation_rules"]
     )
 
 def test_conflicting_values_require_distinct_source_excerpt_provenance():
@@ -849,3 +855,94 @@ def test_non_negativeable_list_fields_reject_confirmed_absent(field_id):
     with pytest.raises(ValidationError, match="does not allow clinical data state"):
         _case(clinical_field_states={field_id: "CONFIRMED_ABSENT"})
 
+
+
+
+def test_invalid_and_conflicting_values_are_withheld_from_generation_context_but_preserved_in_audit():
+    invalid_summary = "TEST_ONLY_INVALID_CASE_SUMMARY_SENTINEL"
+    invalid_stage_excerpt = "TEST_ONLY_INVALID_T_STAGE_SOURCE_EXCERPT"
+    case = _case(
+        case_summary=invalid_summary,
+        clinical_t_stage="T9",
+        clinical_n_stage="N0",
+        clinical_field_states={
+            "case_summary": "INVALID",
+            "clinical_t_stage": "INVALID",
+            "clinical_n_stage": "CONFLICTING",
+        },
+        clinical_field_provenance={
+            "clinical_t_stage": [{
+                "source_type": "CLINICIAN_NOTE",
+                "source_reference": "test-only-invalid-stage-source",
+                "source_excerpt": invalid_stage_excerpt,
+            }],
+        },
+        clinical_field_conflicts={
+            "clinical_n_stage": [
+                {
+                    "raw_value": "N0",
+                    "provenance": {
+                        "source_type": "CLINICIAN_NOTE",
+                        "source_reference": "test-only-n-stage-note-a",
+                        "source_excerpt": "Test-only source A records N0.",
+                    },
+                },
+                {
+                    "raw_value": "N1",
+                    "provenance": {
+                        "source_type": "PATHOLOGY_REPORT",
+                        "source_reference": "test-only-n-stage-report-b",
+                        "source_excerpt": "Test-only source B records N1.",
+                    },
+                },
+            ],
+        },
+    )
+
+    context = build_case_prompt_context(case)
+    assert context["case_snapshot"]["case_summary"] is None
+    assert context["case_snapshot"]["clinical_t_stage"] is None
+    assert context["case_snapshot"]["clinical_n_stage"] is None
+    assert "case_summary" in context["case_snapshot_redacted_invalid_fields"]
+    assert "clinical_t_stage" in context["case_snapshot_redacted_invalid_fields"]
+    assert "clinical_n_stage" in context["case_snapshot_redacted_conflicting_fields"]
+
+    assert context["field_status"]["case_summary"]["value"] is None
+    assert context["field_status"]["clinical_t_stage"]["value"] is None
+    assert context["canonical_field_values"]["case_summary"]["raw_value"] is None
+    assert context["canonical_field_values"]["clinical_t_stage"]["raw_value"] is None
+    invalid_provenance = context["canonical_field_values"]["clinical_t_stage"]["provenance"][0]
+    assert invalid_provenance["source_reference"] == "test-only-invalid-stage-source"
+    assert invalid_provenance["source_excerpt_redacted"] is True
+    assert "source_excerpt" not in invalid_provenance
+    assert invalid_provenance["source_sha256"] == hashlib.sha256(
+        invalid_stage_excerpt.encode("utf-8")
+    ).hexdigest()
+    snapshot_provenance = context["case_snapshot"]["clinical_field_provenance"]["clinical_t_stage"][0]
+    assert snapshot_provenance["source_excerpt_redacted"] is True
+    assert "source_excerpt" not in snapshot_provenance
+
+    # Distinct conflict candidates remain visible, but the flat N0 value is
+    # not promoted to a selected model-facing assertion.
+    candidates = context["canonical_field_values"]["clinical_n_stage"]["conflict_candidates"]
+    assert [candidate["raw_value"] for candidate in candidates] == ["N0", "N1"]
+    assert context["canonical_field_values"]["clinical_n_stage"]["raw_value"] is None
+
+    serialized_context = repr(context)
+    assert invalid_summary not in serialized_context
+    assert invalid_stage_excerpt not in serialized_context
+    assert "T9" not in serialized_context
+
+    source_facts = " ".join(build_source_case_facts(case))
+    assert invalid_summary not in source_facts
+    assert invalid_stage_excerpt not in source_facts
+    assert "T9" not in source_facts
+    assert "Clinical N stage: N0" not in source_facts
+
+    # The original immutable case and audit provenance retain all raw material.
+    original = case.model_dump(mode="json", exclude_none=True)
+    assert original["case_summary"] == invalid_summary
+    assert original["clinical_t_stage"] == "T9"
+    assert original["clinical_field_provenance"]["clinical_t_stage"][0]["source_excerpt"] == invalid_stage_excerpt
+    assert original["clinical_n_stage"] == "N0"
+    assert [item["raw_value"] for item in original["clinical_field_conflicts"]["clinical_n_stage"]] == ["N0", "N1"]
