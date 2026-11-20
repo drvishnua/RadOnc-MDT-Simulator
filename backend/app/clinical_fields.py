@@ -302,6 +302,27 @@ def normalize_clinical_tnm_component(field_id: str, raw_value: str) -> str:
     return ("YC" if prefix == "YC" else "") + expected + value
 
 
+def normalize_stage_group_token(raw_value: str) -> str:
+    """Return a lexical stage-group key while retaining the original raw value.
+
+    This does not infer clinical versus pathological class or validate a site,
+    staging system or edition. The caller must keep those dimensions separate.
+    """
+    if not isinstance(raw_value, str) or not raw_value.strip():
+        raise ValueError("Stage-group token must be a non-empty string.")
+    value = raw_value.strip().upper()
+    value = re.sub(r"^(?:CLINICAL|PATHOLOGICAL)\\s+", "", value)
+    value = re.sub(r"^STAGE(?:\\s+GROUP)?\\s*", "", value)
+    match = re.fullmatch(r"(IV|III|II|I|[1-4])([ABC])?", value)
+    if match is None:
+        raise ValueError(f"Unrecognised stage-group syntax: {raw_value!r}")
+    roman_values = {"I": 1, "II": 2, "III": 3, "IV": 4}
+    number = roman_values.get(match.group(1), int(match.group(1)) if match.group(1).isdigit() else None)
+    if number is None:
+        raise ValueError(f"Unrecognised stage-group syntax: {raw_value!r}")
+    return f"{number}{match.group(2) or ''}"
+
+
 def normalize_pathological_tnm_component(field_id: str, raw_value: str) -> str:
     """Normalize a pathological TNM token while retaining p/yp provenance class."""
     if field_id not in {PATHOLOGICAL_T_STAGE, PATHOLOGICAL_N_STAGE, PATHOLOGICAL_M_STAGE}:
