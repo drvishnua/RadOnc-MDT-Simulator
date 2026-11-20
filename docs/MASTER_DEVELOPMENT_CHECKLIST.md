@@ -5405,3 +5405,68 @@ A regression-first review found that `case_summary` itself can be marked `INVALI
 | Security/dependency/secret scan/CodeQL | VERIFIED | `b62d44b`; run `44730018891` SUCCESS; all four jobs passed. |
 
 **Next action remains within U09–U10:** reproduce and explain the staging-context test discrepancy using the exact PR head and controlled test invocation. If the two tests are consistently passing, identify why the earlier run failed and retain both run records. If they fail, make the smallest code/test correction, then rerun all required gates. Do not advance to U04 or another later step until U09–U10 acceptance criteria are demonstrably met.
+
+## Staging-context regression reconciliation — 20 November 2026
+
+This entry supersedes the staging-context attribution and current-status statements in the preceding 20 November 2026 sections. The older entries are retained as audit history; they are not deleted.
+
+### Reconstructed test and code chronology
+
+- Failed Backend Tests run `44729275307`, job `136264550734`, executed against workflow head `66b38211ea11949628308c38261be0c142554ecf` (confirmed by the run artifact metadata). It did **not** execute against application-code checkpoint `3a271d8e7399193b93194ff324a377fcd4dcec7b`.
+- At `66b3821`, the new regression tests existed, but the stage-group claim audit did not yet contain the `generated_group_records` staging-context prerequisite. The two tests therefore correctly received an empty audit-flag result:
+  - `test_clinical_stage_group_is_not_presented_as_validated_without_site_system_edition`
+  - `test_explicit_unknown_staging_system_cannot_validate_clinical_stage_group`
+  Result: **652 passed, 2 failed, 0 errors, 0 skipped**. The complete-context control passed. The failed run and its diagnostics remain preserved.
+- The source at application checkpoint `3a271d8e7399193b93194ff324a377fcd4dcec7b` contains the deterministic `if generated_group_records` gate. It checks `primary_site`, `staging_system` and `staging_edition`; a missing or non-assertable field is added to the staging-context warning. Explicit non-PRESENT states, including UNKNOWN, are included in that warning. The original stage-group token is preserved and is not silently rewritten.
+- Commit `3a271d8` itself changes the warning wording; it is not being misrepresented as the commit that first introduced the gate. The gate is present in the application tree by `3a271d8`.
+- Comparison of `3a271d8` with current PR head `9c8b4c273e5f69519014c717a8d4acd8f2ef503f` shows two later commits affecting only `docs/MASTER_DEVELOPMENT_CHECKLIST.md`; no application-code files changed after the recorded application checkpoint.
+- Current exact-PR-head Backend Tests run `44730496450`, job `136268699660`, ran against head `9c8b4c273e5f69519014c717a8d4acd8f2ef503f`: **654 passed, 0 failed, 0 errors, 0 skipped**. Its test diagnostics explicitly record both staging-context regression tests as **passed**. This resolves the historical discrepancy: the failed and passing runs used different application-code states; it was not evidence of a flaky test on unchanged code.
+- No additional application-code change is indicated by these results. Do not add a speculative fix or alter the original test expectations.
+
+### Exact current PR-head verification
+
+- PR #5 remains OPEN, unmerged and not draft. Head branch: `docs/reconcile-master-checklist-after-pr4-merge`; head SHA: `9c8b4c273e5f69519014c717a8d4acd8f2ef503f`. Base/development branch: `feature/four-round-mdt-and-performance`, base SHA `df90e4a380bef06a7d37def753b385db4ae86c30`. `main` is not the PR target.
+- Backend Tests run `44730496450`: **654/654 passed**. Both affected staging-context tests are explicitly listed as passed in the job diagnostics. Deterministic preflight: **7/7 passed**.
+- Sequential Development Gate run `44730496453`: SUCCESS; its ordered-plan, scope and exact-SHA evidence checks passed.
+- Security and Dependency Audit run `44730496469`: SUCCESS; Python CodeQL, JavaScript/TypeScript CodeQL, Python/Node dependency audit and full-history secret scan all passed.
+- PR review submissions: 0. Inline review threads: 0. Independent review/approval is still outstanding.
+- Application-code checkpoint remains `3a271d8e7399193b93194ff324a377fcd4dcec7b`; current PR head is a later checklist-only update relative to that application checkpoint.
+- Approved machine plan remains `active_step=U09-U10`, plan SHA `7c4bd894af1ef21f8bf54d48ad7e09353fd6471a`. The exact-head Sequential Development Gate passed; no step advancement is recorded.
+
+### Master Checklist — Current Status
+
+| Workstream | Status | Current evidence / outstanding boundary |
+|---|---|---|
+| Repository, branch, PR, commit and checklist verification | VERIFIED | PR #5 head `9c8b4c2`, OPEN/unmerged; targets development branch `feature/four-round-mdt-and-performance` at `df90e4a`; same authoritative checklist file updated on the PR head; no main-branch change. |
+| Approved sequence / machine-plan gate | VERIFIED | Active step remains U09–U10; plan SHA `7c4bd894af1ef21f8bf54d48ad7e09353fd6471a`; Sequential Gate run `44730496453` SUCCESS. |
+| U09 canonical clinical registry v2 | IN PROGRESS | Canonical registry and typed field contract exist; full field/alias, version immutability, legacy compatibility and migration acceptance remain outstanding. |
+| U10 deterministic state-aware hallucination controls | IN PROGRESS | Existing field-state, conflict, negative-claim, consent/willingness, laterality, grade, primary-site/subsite, investigation and stage-context tests are covered; remaining registry-field/source-path audit remains open. |
+| Clinical stage-group site/system/edition prerequisite | VERIFIED | Current exact-head suite `44730496450`: both missing-context and explicit-UNKNOWN regressions passed; full suite 654/654. Historical pre-gate run `44729275307` remains FAILED on head `66b3821` and is retained as a pre-fix checkpoint. |
+| Historical staging-context failed run and provenance | FAILED | Run `44729275307`, head `66b38211`, 652/654. The earlier status text incorrectly attributed this run to `3a271d8`; this reconciliation corrects that attribution without erasing the failure. |
+| Deterministic preflight | VERIFIED | Exact current PR head; 7/7 passed in backend verification run `44730496450`. |
+| Backend regression suite | VERIFIED | Exact current PR head `9c8b4c2`; run `44730496450`; 654/654 passed; both staging-context tests explicitly passed. |
+| Sequential Development Gate | VERIFIED | Exact current PR head; run `44730496453` SUCCESS. |
+| Security, dependency, secret scan and CodeQL | VERIFIED | Exact current PR head; run `44730496469` SUCCESS; all four jobs passed. |
+| R1–R4 shared canonical context | IN PROGRESS | Mocked all-45-role R1/R2/R3 context-equivalence tests exist; live saved R1–R3 and Chair R4 execution is not verified. |
+| Case integrity, source hashes and audit history | IN PROGRESS | Deterministic provenance/conflict protections exist; full saved case-version/run tamper and failure-path acceptance remains open. |
+| Provenance and evidence retrieval | IN PROGRESS | User-supplied provenance is not independently verified; external source retrieval and claim-to-passage validation remain outstanding. |
+| Chair consensus, conditionality, dissent and traceability | IN PROGRESS | Deterministic safeguards exist; full saved-contribution R4 reconciliation and live dissent/consensus audit remain outstanding. |
+| Missing/failed specialist and partial-run handling | IN PROGRESS | Deterministic regression coverage exists; full live 45-role failure/resume inspection remains outstanding. |
+| Frontend build, browser E2E and dashboard/API | IN PROGRESS | No frontend files changed in this backend-only staging-context slice; retain prior frontend evidence and do not infer new frontend verification. |
+| Deferred intake snapshot/terminal-event binding | BLOCKED | Outside U09–U10 allowed scope; retain for U04. |
+| U04 Case Intake and Completeness Screener | BLOCKED | Must not activate until U09–U10 acceptance is complete. |
+| U05 specialist conditional reasoning | BLOCKED | Later in the approved sequence. |
+| U06 four-round specialist arguments | BLOCKED | Later in the approved sequence; preserve existing R1–R4 architecture. |
+| U07 evidence/reference library | BLOCKED | Later in the approved sequence; no evidence verification claimed. |
+| U08 specialist quality / anti-copying | BLOCKED | Later in the approved sequence. |
+| U03 intelligent Ollama installer | BLOCKED | Later in the approved sequence; installed-but-stopped and existing-model reuse remain unverified. |
+| U01–U02 desktop experience / removal of development surfaces | BLOCKED | Later in the approved sequence; no new desktop acceptance claimed. |
+| Live 45-role R1–R4 and saved-run audit | NOT STARTED | No live run ID or inspected saved MDT artefact is claimed. |
+| RTX 4060 request-time GPU inference | NOT STARTED | No request-time GPU telemetry or Ollama offload trace is claimed. |
+| Independent clinical validation | NOT STARTED | No qualified independent clinical review or guideline concordance is claimed. |
+| Integrated release acceptance | BLOCKED | U09–U10 and all ordered downstream, live-model, GPU, evidence and clinical-review requirements remain outstanding. |
+
+**Next U09–U10 action:** continue the canonical-registry field-by-field audit and inspect remaining deterministic claim-support paths. Add tests or code only when a reproducible gap is demonstrated. Keep the machine plan at U09–U10; do not modify intake code, activate U04 or start later workstreams.
+
+**Clinical/verification boundary:** these results verify deterministic software tests and CI controls only. They do not establish correct patient-specific staging, guideline compliance, LLM adherence, live 45-role execution, GPU inference or clinical validity.
+
