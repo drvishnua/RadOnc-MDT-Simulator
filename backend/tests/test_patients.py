@@ -787,3 +787,111 @@ def test_promoted_intake_cannot_be_promoted_twice(monkeypatch, tmp_path):
     )
     assert duplicate.status_code == 409
     assert "already been promoted" in duplicate.json()["detail"]
+
+
+
+def test_patient_registry_round_trips_field_states_provenance_and_conflicts_after_database_reopen(
+    monkeypatch, tmp_path
+):
+    import hashlib
+
+    monkeypatch.setattr(run_store, "DB_PATH", tmp_path / "case_metadata_roundtrip.sqlite3")
+    case_payload = {
+        **_case("TEST_ONLY metadata roundtrip"),
+        "age_years": 63,
+        "clinical_t_stage": "T9",
+        "patient_goals": ["TEST_ONLY patient-stated goal"],
+        "relevant_comorbidities": [],
+        "known_unknowns": ["TEST_ONLY staging system and edition not supplied"],
+        "clinical_field_states": {
+            "age_years": "CONFLICTING",
+            "clinical_t_stage": "INVALID",
+            "patient_goals": "PRESENT",
+            "relevant_comorbidities": "CONFIRMED_ABSENT",
+            "known_unknowns": "PRESENT",
+        },
+        "clinical_field_provenance": {
+            "clinical_t_stage": [{
+                "source_type": "CLINICIAN_NOTE",
+                "source_reference": "TEST_ONLY_stage_note",
+                "source_excerpt": "TEST_ONLY clinical T token recorded as T9.",
+            }],
+            "patient_goals": [{
+                "source_type": "PATIENT_REPORT",
+                "source_reference": "TEST_ONLY_goal_report",
+                "source_excerpt": "TEST_ONLY patient states this goal.",
+            }],
+            "relevant_comorbidities": [{
+                "source_type": "CLINICIAN_NOTE",
+                "source_reference": "TEST_ONLY_comorbidity_note",
+                "source_excerpt": "TEST_ONLY no relevant comorbidities recorded in this source.",
+            }],
+        },
+        "clinical_field_conflicts": {
+            "age_years": [
+                {
+                    "raw_value": 63,
+                    "provenance": {
+                        "source_type": "CLINICIAN_NOTE",
+                        "source_reference": "TEST_ONLY_age_note_A",
+                        "source_excerpt": "TEST_ONLY age recorded as 63 years.",
+                    },
+                },
+                {
+                    "raw_value": 65,
+                    "provenance": {
+                        "source_type": "PATIENT_REPORT",
+                        "source_reference": "TEST_ONLY_age_report_B",
+                        "source_excerpt": "TEST_ONLY patient reports age as 65 years.",
+                    },
+                },
+            ]
+        },
+    }
+    validated_case = SyntheticCase.model_validate(case_payload)
+    expected_case = validated_case.model_dump(exclude_none=True)
+    expected_hash = hashlib.sha256(
+        validated_case.model_dump_json(exclude_none=True).encode("utf-8")
+    ).hexdigest()
+
+    created = client.post(
+        "/api/patients",
+        json=_registration(case_payload, "Metadata Roundtrip Training Example"),
+    )
+    assert created.status_code == 200
+    patient_id = created.json()["patient_id"]
+    first_version = created.json()["versions"][0]
+
+    assert first_version["case"] == expected_case
+    assert first_version["case_snapshot_sha256"] == expected_hash
+    assert first_version["case"]["clinical_field_states"] == case_payload["clinical_field_states"]
+    assert first_version["case"]["clinical_field_conflicts"]["age_years"][1]["raw_value"] == 65
+    assert first_version["case"]["clinical_field_provenance"]["clinical_t_stage"][0][
+        "source_sha256"
+    ] == hashlib.sha256(
+        case_payload["clinical_field_provenance"]["clinical_t_stage"][0]["source_excerpt"].encode("utf-8")
+    ).hexdigest()
+
+    # Reinitialise and reopen through a separate request/store connection.
+    run_store.initialize_database()
+    restored_patient = client.get(f"/api/patients/{patient_id}")
+    assert restored_patient.status_code == 200
+    restored_version = restored_patient.json()["versions"][0]
+    assert restored_version["case"] == expected_case
+    assert restored_version["case_snapshot_sha256"] == expected_hash
+    assert restored_version["case"]["clinical_field_states"] == case_payload["clinical_field_states"]
+    assert [
+        item["raw_value"]
+        for item in restored_version["case"]["clinical_field_conflicts"]["age_years"]
+    ] == [63, 65]
+    assert all(
+        item["provenance"]["verification_status"] == "user_supplied_not_independently_verified"
+        for item in restored_version["case"]["clinical_field_conflicts"]["age_years"]
+    )
+
+    restored_direct = run_store.get_patient_case_version(
+        patient_id,
+        first_version["case_version_id"],
+    )
+    assert restored_direct["case"] == expected_case
+    assert restored_direct["case_snapshot_sha256"] == expected_hash
