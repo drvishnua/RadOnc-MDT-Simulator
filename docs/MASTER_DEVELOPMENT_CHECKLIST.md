@@ -5201,3 +5201,61 @@ A regression-first review found that `case_summary` itself can be marked `INVALI
 **Next U09–U10 action:** continue auditing the remaining registry fields and deterministic claim-support fallbacks for any non-PRESENT value that could still support a generated assertion. Add regression tests only for reproducible gaps; preserve all current summary, state, negative-list, consent and laterality protections. Run exact-head backend/preflight, Sequential Gate and Security Audit; inspect logs/artifacts; update this same checklist. Do not modify `intake_store.py`, alter the machine plan, activate U04 or begin later steps.
 
 **Clinical/verification boundary:** these checks verify deterministic software behavior only. They do not prove model adherence, live 45-role execution, saved Chair reconciliation, clinical staging correctness, guideline verification, GPU inference or independent clinical validation.
+
+# Master Checklist — Current Status (20 November 2026; histological-grade source audit verification)
+
+**Exact code/test commit:** `cc0de39eb70237e82b16be4f4022a9695500871f`  
+**PR #5:** OPEN, not draft, not merged; head branch `docs/reconcile-master-checklist-after-pr4-merge`; base `feature/four-round-mdt-and-performance` at `df90e4a380bef06a7d37def753b385db4ae86c30`. Independent reviews: 0; inline review threads: 0.  
+**Approved machine plan:** `active_step=U09-U10`; U09-U10 remains IN PROGRESS. U04 and all later steps remain BLOCKED. U12 scope baseline remains `5284483a26e87028f919966e304c472ed537e839`.
+
+## Latest U09–U10 change: canonical histological-grade source audit
+
+- Pathology audit review found that the generic pathology/biomarker matcher consumed pathology summary and case-summary text, but did not use the dedicated `histological_grade` registry field. Therefore a free-text grade could be accepted over a conflicting structured grade; explicit UNKNOWN/CONFLICTING states could also be bypassed by summary text.
+- Regression-only commit `c78c41e1f96288daeddd74496af551c2a0e2225b` added four tests: structured-grade support, structured-grade precedence over contradictory summary text, UNKNOWN-state summary rejection and CONFLICTING-state non-selection. Exact-head Backend Tests reproduced **640 passed, 4 failed, 0 errors, 0 skipped, 0 inconclusive**; three of the four new cases exposed the summary fallback gaps.
+- Fix commit `5fcfcc77d8cc8576a7b0875439ed7fdfcdb36ea7` separates grade assertions from the generic pathology/biomarker matcher. A PRESENT structured `histological_grade` is now the selected source; a non-PRESENT explicit state supplies no selected grade and cannot fall back to the case summary. If no explicit histological-grade state/value exists, pathology summary and eligible case-summary text may support the grade.
+- A grade-token normalization correction was committed in `fc51731ca0f25932db004de6adca7ba2014a82e9`; it extracts the numeric grade from values such as `G2` as well as `Grade 2`. Test assertions were adjusted in `cc0de39` to check the dedicated histological-grade audit flag rather than the generic biomarker flag.
+- Exact-head Backend Tests run `44727416070`: **644 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive**. Deterministic preflight: **7 passed, 0 failed, 0 inconclusive**.
+- Exact-head Sequential Development Gate run `44727416075`: SUCCESS.
+- Exact-head Security and Dependency Audit run `44727416142`: SUCCESS. Python CodeQL, JavaScript/TypeScript CodeQL, Python/Node dependency audit and full-history secret scan all completed successfully.
+- Exact-head artifacts: deterministic preflight artifact `14624781760`, SHA-256 `f1239705c377f3d5694a82bbefe39c7c46c3f0b4398f20970f0d4d3d8f9bb691`; pytest/JUnit diagnostics artifact `14624053828`, SHA-256 `9481d06e5bc006044a43db472308c2f247c971c6bc14fed408f24867505c190f`.
+- The reproduced failures on `c78c41e` remain recorded as regression history, not acceptance. Successful verification is tied to exact code/test SHA `cc0de39`.
+
+## Master Checklist — Current Status
+
+| Workstream | Status | Current evidence / outstanding boundary |
+|---|---|---|
+| Repository, branch, PR, commit and checklist verification | VERIFIED | PR #5 head is `cc0de39`; targets the protected development branch, not `main`. PR remains open/unmerged; no independent review recorded. |
+| U12 protected sequential development gate | VERIFIED | Exact-head Sequential Gate run `44727416075` SUCCESS; machine plan and step order unchanged. |
+| U09 canonical clinical registry v2 | IN PROGRESS | Immutable v2 registry and stable IDs exist; complete U09/U10 acceptance and legacy-case compatibility/recovery remain outstanding. |
+| U10 deterministic state-aware hallucination controls | IN PROGRESS | Invalid/conflicting summary quarantine, field-specific absence states, negative-list claims, willingness/consent separation, laterality checks and histological-grade state audit pass exact-head tests; other typed-field source paths remain to be audited. |
+| Per-field epistemic-state allowlist | VERIFIED | Only five explicitly negativeable list fields allow CONFIRMED_ABSENT; registry/schema regressions passed on `c9f64c3`. |
+| Negative claims for allergies, medications, comorbidities, prior treatment and family history | VERIFIED | Exact-head tests on `f78e8ac` cover UNKNOWN/empty sources and populated structured values contradicting free-text negative claims. |
+| Patient preference/willingness and educational consent separation | VERIFIED | Exact-head tests on `8c784eb` cover UNKNOWN-state summary bypass, structured willingness, educational-scenario GIVEN/DECLINED consent and no inference of treatment consent from scenario status. |
+| Canonical laterality claim audit | VERIFIED | Exact-head tests on `f44730a` cover structured mismatch/match, UNKNOWN/CONFLICTING non-selection and summary fallback only without explicit state. |
+| Histological-grade claim audit | VERIFIED | Exact-head tests on `cc0de39` cover structured support, contradictory summary rejection, UNKNOWN-state summary rejection and CONFLICTING-state non-selection. |
+| Investigation summary and typed-record state gates | VERIFIED | Source inspection confirms imaging_summary, relevant_investigations and investigation_records are used as supporting sources only in implicit/explicit PRESENT state; detailed clinical result interpretation remains unvalidated. |
+| R1–R4 shared canonical case-data flow | IN PROGRESS | Mocked all-45-role R1, R2 and R3 prompt-context equivalence tests are recorded earlier; saved live R1–R3 and Chair R4 execution remains unverified. |
+| Clinical safety and staging | IN PROGRESS | Deterministic epistemic-state/provenance, TNM phase separation, laterality and grade safeguards pass; site/system/edition-aware clinical classification and independent review are not established. |
+| Case integrity, hashes and audit | IN PROGRESS | Source hashes, immutable provenance/conflict data and typed clinical claim audits pass; saved case-version/run tamper and failure-path acceptance remains open. |
+| Provenance and evidence retrieval | IN PROGRESS | User-supplied provenance remains explicitly unverified; external evidence retrieval/source-document verification are not established. |
+| Chair consensus, conditionality, dissent and traceability | IN PROGRESS | Deterministic safeguards exist; full saved-contribution Chair reconciliation and live dissent/consensus audit remain outstanding. |
+| Missing/failed specialist and partial-run handling | IN PROGRESS | Deterministic regression coverage exists; full live 45-role failure/resume inspection remains outstanding. |
+| Backend tests | VERIFIED | Exact code/test SHA `cc0de39`; run `44727416070`: 644/644 passed. |
+| Deterministic preflight | VERIFIED | Exact code/test SHA `cc0de39`; 7/7 passed; no model inference or clinical accuracy evaluation. |
+| Sequential development gate | VERIFIED | Exact code/test SHA `cc0de39`; run `44727416075` SUCCESS. |
+| Security, dependency, secret scan and CodeQL | VERIFIED | Exact code/test SHA `cc0de39`; run `44727416142` SUCCESS; all four jobs passed. |
+| Frontend build and browser E2E | VERIFIED | Latest post-merge baseline on `df90e4a`: runs `44702343341` and `44702343471`; no frontend files changed in this U09–U10 slice. |
+| Dashboard/API integration | IN PROGRESS | Backend API/unit coverage passes; no new browser E2E run was triggered by these backend-only changes. |
+| Windows packaging prerequisites and installer | VERIFIED | Latest post-merge baseline on `df90e4a`: runs `44702343520` and `44702343432`; no packaging files changed in this slice. |
+| Deferred intake snapshot/terminal-event binding | BLOCKED | `intake_store.py` is outside U09–U10 allowed paths; retain for U04. No intake code changed. |
+| Legacy saved-case recovery/migration | BLOCKED | Historical v1/legacy snapshots remain read-only and fail-closed; no relabelling or silent migration. |
+| Ollama discovery and installed/stopped/model reuse | BLOCKED | U03 is later in the approved sequence; local installed-but-stopped and existing-model reuse remain unverified. |
+| Live 45-role R1–R4 run and saved-run audit | NOT STARTED | No live run ID or saved MDT artifact is claimed. |
+| RTX 4060 request-time GPU inference | NOT STARTED | No request-time `nvidia-smi` telemetry, Ollama offload trace or measured GPU inference. |
+| Independent clinical validation | NOT STARTED | No independent clinical validation or guideline concordance is claimed. |
+| U04, U05–U06, U06–U08, U07, U03 and U01–U02 | BLOCKED | All remain later than active U09–U10 in the approved dependency sequence. |
+| Integrated release acceptance | BLOCKED | U09–U10 remains IN PROGRESS; ordered later work, live model, GPU, evidence and clinical validation remain outstanding. |
+
+**Next U09–U10 action:** continue auditing the remaining canonical registry fields and deterministic claim-support fallbacks for state/provenance gaps, prioritising primary site/anatomical subsite and other fields not yet explicitly reconciled by the claim auditor. Add regression tests only for reproducible gaps. Preserve all current summary, state, negative-list, willingness/consent, laterality and histological-grade protections. Run exact-head backend/preflight, Sequential Gate and Security Audit; inspect logs/artifacts; update this same checklist. Do not modify `intake_store.py`, alter the machine plan, activate U04 or begin later steps.
+
+**Clinical/verification boundary:** these checks verify deterministic software behavior only. They do not prove model adherence, live 45-role execution, saved Chair reconciliation, clinical staging correctness, guideline verification, GPU inference or independent clinical validation.
