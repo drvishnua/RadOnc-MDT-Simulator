@@ -2301,30 +2301,27 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             + "); suitability cannot be established without explicit supporting case information."
         )
 
+    # Patient goals/preferences and willingness are distinct clinical fields.
+    # A goal or preference must never be used as evidence of willingness,
+    # acceptance or refusal of a specific treatment.
     preference_pattern = re.compile(
-        # This checks treatment preferences/willingness, not educational-scenario
-        # consent. Formal treatment consent must never be inferred from the
-        # separate patient_consent_status field.
-        r"\bpatient(?:'s)?\s+(?:prefers?|wishes?|wants?|chooses?|declines?|refuses?|agrees?|has chosen|does not want|doesn't want)\b[^.!?;\n]{0,100}",
+        r"\bpatient(?:'s)?\s+(?:prefers?|wishes?|wants?|chooses?|has chosen|"
+        r"does not want|doesn't want)\b[^.!?;\n]{0,100}",
         re.IGNORECASE,
     )
     goals_state = field_state("patient_goals")
     preferences_state = field_state("patient_preferences")
-    willingness_state = field_state("patient_willingness")
     preference_sources: list[str] = []
     if goals_state in (None, "PRESENT"):
         preference_sources.extend(f"patient {goal}" for goal in (case.patient_goals or []))
     if preferences_state in (None, "PRESENT"):
         preference_sources.extend(f"patient {item}" for item in (case.patient_preferences or []))
-    if willingness_state in (None, "PRESENT") and case.patient_willingness:
-        preference_sources.append(f"patient {case.patient_willingness}")
 
-    # A supplied structured preference/willingness value takes precedence over
-    # free text. The summary is a fallback only when no structured source is
-    # present and none of these fields is explicitly non-PRESENT.
+    # Use the verbatim case summary for preference claims only when neither
+    # preference field has an explicit non-PRESENT state or structured value.
     if not preference_sources and all(
         state in (None, "PRESENT")
-        for state in (goals_state, preferences_state, willingness_state)
+        for state in (goals_state, preferences_state)
     ):
         preference_sources.append(case_summary_text)
 
@@ -2336,10 +2333,57 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     )
     if unsupported_preferences:
         flags.append(
-            "Generated narrative attributes patient preference/decision or willingness statement(s) "
+            "Generated narrative attributes unsupported patient preference/goal statement(s) ("
             + "; ".join(unsupported_preferences[:2])
-            + ", which are not explicitly supported by PRESENT structured patient_goals, "
-            "patient_preferences or patient_willingness, or an assertable case summary."
+            + "), which are not explicitly supported by PRESENT structured patient_goals "
+            "or patient_preferences, or an assertable case summary."
+        )
+
+    # Direct willingness, agreement, acceptance and refusal claims are checked
+    # only against patient_willingness. Goals and preferences are not substitutes.
+    willingness_pattern = re.compile(
+        r"\bpatient(?:'s)?\s+"
+        r"(?:(?:is|is not|isn't|was|was not|wasn't|remains|has been|has not been|not)\s+)?"
+        r"(?:willing|unwilling|reluctant|ready)\s+[^.!?;\n]{1,100}|"
+        r"\bpatient(?:'s)?\s+(?:(?:has|had)\s+)?"
+        r"(?:agrees?|agreed|declines?|declined|refuses?|refused|accepts?|accepted)\s+"
+        r"(?:to\s+)?[^.!?;\n]{1,100}",
+        re.IGNORECASE,
+    )
+    willingness_state = field_state("patient_willingness")
+    willingness_source_text = ""
+    if willingness_state in (None, "PRESENT"):
+        if case.patient_willingness:
+            willingness_source_text = f"patient {case.patient_willingness}"
+        elif willingness_state is None:
+            willingness_source_text = case_summary_text
+
+    unsupported_willingness = _unsupported_matches(
+        willingness_pattern,
+        text,
+        willingness_source_text,
+    )
+    if unsupported_willingness:
+        if willingness_state == "CONFLICTING":
+            willingness_reason = "patient_willingness has unresolved conflicting source values."
+        elif willingness_state not in (None, "PRESENT"):
+            willingness_reason = (
+                f"patient_willingness is marked {willingness_state}; "
+                "that state cannot support a willingness statement or permit summary fallback."
+            )
+        elif case.patient_willingness:
+            willingness_reason = (
+                "the generated willingness statement does not match the PRESENT structured patient_willingness value."
+            )
+        else:
+            willingness_reason = (
+                "patient_willingness has no explicit structured value or permitted verbatim case-summary statement."
+            )
+        flags.append(
+            "Generated narrative asserts unsupported patient preference/decision or patient_willingness statement(s) ("
+            + "; ".join(unsupported_willingness[:2])
+            + "), but "
+            + willingness_reason
         )
 
     treatment_consent_pattern = re.compile(
