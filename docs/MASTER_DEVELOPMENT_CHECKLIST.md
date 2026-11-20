@@ -4778,6 +4778,7 @@ This is the latest authoritative status. Earlier entries above are retained as h
 | Pathological TNM requires explicit p/yp prefix | VERIFIED | Unprefixed T/N/M values in pathological fields are rejected; explicit p/yp prefixes are retained. This prevents silently defaulting to p and does not perform staging interpretation. |
 | Registry aliases are unique and preserve canonical IDs | VERIFIED | Regression checks v1 and v2 alias maps for duplicates, exact declared mappings and valid canonical target IDs.
 | Explicit source-excerpt hashes, exact whitespace and immutable provenance records | VERIFIED | SHA-256 is calculated from the exact preserved UTF-8 excerpt; actual newlines/tabs are not trimmed, blank excerpts are rejected, provenance records are frozen, and verification status remains `user_supplied_not_independently_verified`. |
+| Source-specific conflict candidate immutability | VERIFIED | Conflict records are frozen and nested JSON lists/objects are recursively immutable after validation; JSON-mode serialization restores ordinary arrays/objects without changing the saved conflict values. |
 | R1–R4 saved contribution data flow | IN PROGRESS | Must continue to preserve round separation and use actual saved R1–R3 inputs for R4. Full live execution has not been verified by this CI. |
 | Chair consensus, conditional positions, dissent, minority views and source traceability | IN PROGRESS | Deterministic safeguards/tests exist; end-to-end saved-run synthesis and audit remain outstanding. |
 | Missing/failed-agent handling and partial-run integrity | IN PROGRESS | Unit/regression coverage exists; live failure-path execution and saved artefact inspection remain outstanding. |
@@ -4878,4 +4879,16 @@ This is the latest authoritative status. Earlier entries above are retained as h
 - This is a static code-review finding only. No tampering regression has been executed and no production code has been changed for it.
 - The implementation and regression test belong in `backend/app/services/intake_store.py` and `backend/tests/test_intake_store.py`. `intake_store.py` is not in active U09–U10 `allowed_paths`; this item is **BLOCKED** until the approved U04 intake scope. Do not broaden U09–U10 scope or change the machine plan.
 - Preserve existing accepted intake records and historical snapshots as-is. The later fix must fail closed on a mismatch; it must not silently rewrite current state or rebuild the audit chain.
+
+### U09–U10 source-specific conflict candidate immutability — 20 November 2026
+
+- Regression-first commit `a9a608a1e154251c7581d060019fb9b9047f1b49` added `test_conflict_candidates_are_immutable_and_keep_json_shape`. Backend run `44711734482` reproduced the gap: **604 passed, 1 failed** because `ClinicalFieldConflict.raw_value` could be reassigned after validation.
+- Fix commit `5867acf92a2642e5af4b908fd38ed0502fcb481b` freezes `ClinicalFieldConflict` records and recursively freezes nested JSON arrays/objects in `raw_value`. JSON-mode serialization explicitly thaws these private immutable containers back to ordinary JSON lists and dictionaries; the actual saved/model-facing shape and competing values are preserved.
+- The regression checks (1) reassignment of the conflict candidate is rejected, (2) append/mutation of a nested list/object is rejected, and (3) `SyntheticCase.model_dump(mode="json")` and `build_case_prompt_context` preserve the original JSON candidate values.
+- Exact-head Backend Tests run `44711898079`: **605 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive**; deterministic preflight **7 passed, 0 failed, 0 inconclusive**.
+- Exact-head Sequential Development Gate run `44711898118`: SUCCESS.
+- Exact-head Security and Dependency Audit run `44711898073`: SUCCESS (Python and JavaScript/TypeScript CodeQL, full-history secret scan, Python/Node dependency audit).
+- These are deterministic software integrity tests. They do not authenticate the source documents, verify clinical facts, establish staging accuracy or replace live-model validation.
+- U09–U10 remains `IN PROGRESS`; the machine plan and U12 scope baseline remain unchanged. PR #5 remains open and unmerged pending independent review.
+- **Next U09–U10 work:** continue reviewing field-state/provenance transitions and prompt/audit projections for contradictions, while preserving the deferred U04 intake snapshot/event finding. Keep production changes within the active allowed paths.
 
