@@ -6871,3 +6871,49 @@ For each unsupported generated stage-group record, retain the generic assertion 
 
 **Next action:** correct the invalid known_unknowns test fixture and implement field-specific canonical mapping for only explicit, unambiguous unresolved items. Add positive and unrelated-field controls, then run exact-head Backend/preflight, Sequential Gate and Security Audit. Do not modify intake or advance to U04.
 
+
+
+### U09/U10 field-specific unresolved-note mapping — 20 November 2026
+
+**Current PR #5 head:** `99ae8c0394d0a2a33e8cc04df013ec83f73647db` (OPEN, NOT MERGED; base remains development branch SHA `df90e4a380bef06a7d37def753b385db4ae86c30`).
+
+**Implementation changes committed on the PR head branch**
+- Added a deterministic, clause-local mapping from explicit unresolved statements in `known_unknowns` to a bounded set of canonical field IDs: clinical/pathological T/N/M, typed/untyped stage group, staging system/edition, relevant comorbidity history and patient willingness.
+- The mapping recognises explicit unresolved markers such as not reported, not confirmed, not verified, pending and unresolved. It intentionally does not classify the literal phrase “not unknown” as unresolved.
+- Applied the mapping to clinical/pathological TNM summary fallback, typed stage-group summary fallback, populated stage-group validation where staging edition is explicitly unresolved, and positive comorbidity/patient-willingness support.
+- Added specific audit wording that identifies the affected field and `known_unknowns`; unresolved staging edition blocks stage-group validation even when a structured edition value is populated.
+- Corrected the regression fixture that had a populated `known_unknowns` list while marking that same list `UNKNOWN`. The fixture now uses `PRESENT`, consistent with the schema's state/value contract.
+- Added negative regression tests for “not unknown” and clause-local unrelated qualifiers. Existing targeted tests cover clinical T, pathological N, clinical stage group, staging edition, comorbidity history, patient willingness and unrelated unresolved fields.
+
+**Verification boundary**
+- Implementation/test commits: `ba7f305814e5f4ddbec24d839fa3f4b4df5e6d58`, `8a49a093289a15177661e215144560ffda3d4c2e`, `cc57d7b721248fc95cb2941900acb0882a148931`, `963096891f9be42ed32709e2dec6ed4855ecbfdb`, `d1e3b8154680b2d2cb78859030d901202470e76c`, `99ae8c0394d0a2a33e8cc04df013ec83f73647db`.
+- No local Python execution environment connected to this GitHub repository was used; syntax and runtime correctness are not yet verified by a test run.
+- GitHub Actions query for exact head `99ae8c0394d0a2a33e8cc04df013ec83f73647db` returned no workflow runs at the time of this update. Earlier Backend run `44758270491` remains FAILED (781 passed, 6 failed) on the previous head; it is not acceptance evidence for the new commits.
+- Prior Sequential Gate and Security Audit successes apply to earlier SHAs only. No exact-head CI pass is claimed.
+
+### Master Checklist — Current Status (PR #5 unresolved-field mapping)
+
+| Workstream | Status | Evidence / outstanding boundary |
+|---|---|---|
+| U09 canonical clinical registry v2 | IN PROGRESS | Registry implemented; full acceptance and legacy-case recovery remain outstanding |
+| U10 deterministic field-state/provenance controls | IN PROGRESS | Field-specific unresolved mapping committed; exact-head tests pending |
+| Known-unknown field mapping | IN PROGRESS | Clause-local matching and negative qualifier tests committed; runtime/CI verification pending |
+| Clinical/pathological TNM and stage-group separation | IN PROGRESS | Existing regressions plus new unresolved-field safeguards; exact-head test run pending |
+| Source provenance, hashes and conflict preservation | IN PROGRESS | Prior PR #5 code; exact-head acceptance remains pending |
+| R1–R3 shared context across 45 roles | IN PROGRESS | Mocked coverage recorded in PR #5; live saved-run verification remains outstanding |
+| R4 Chair synthesis, consensus, dissent and traceability | IN PROGRESS | Live saved R1–R3 to R4 provenance audit remains outstanding |
+| Backend tests | FAILED (previous head) / IN PROGRESS (new head unverified) | Previous run `44758270491`: 781 passed, 6 failed; new head `99ae8c0` has no workflow run returned yet |
+| Deterministic preflight | IN PROGRESS | Earlier preflight passed on earlier SHA; exact-head rerun pending |
+| Sequential Development Gate | IN PROGRESS | Earlier gate passed on earlier SHA; exact-head rerun pending |
+| Security/dependency/secret scan/CodeQL | IN PROGRESS | Earlier audit passed on earlier SHA; exact-head rerun pending |
+| Frontend/browser E2E | NOT STARTED | No frontend change or current browser evidence |
+| U04 Case Intake and Completeness Screener | BLOCKED | Must not begin until U09–U10 acceptance |
+| U05–U08 | BLOCKED | Preserve approved sequence |
+| U03 Ollama installer/model reuse | BLOCKED | Preserve approved sequence |
+| U01–U02 standalone desktop UX | BLOCKED | Preserve approved sequence |
+| Live 45-role R1–R4 | NOT STARTED | No live run ID or inspected saved artefact |
+| RTX 4060 request-time GPU inference | NOT STARTED | No request-time telemetry |
+| Independent clinical validation | NOT STARTED | No independent review |
+| Integrated release acceptance | BLOCKED | U09–U10 acceptance and all later gates outstanding |
+
+**Next action:** obtain an exact-head backend/preflight, Sequential Gate and Security Audit run for the current PR #5 head; inspect every failure and the generated artifacts. Do not merge PR #5, modify the protected development branch directly, or advance to U04.
