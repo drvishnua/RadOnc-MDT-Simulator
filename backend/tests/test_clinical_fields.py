@@ -355,7 +355,7 @@ def test_context_remains_json_serializable_with_typed_investigations_and_dates()
 
 
 def test_typed_investigation_source_excerpt_preserves_exact_text():
-    excerpt = "\\n  Original investigation report excerpt.  \\t"
+    excerpt = "\n  Original investigation report excerpt.  \t"
     case = _case(
         investigation_records=[{
             "investigation_name": "MRI",
