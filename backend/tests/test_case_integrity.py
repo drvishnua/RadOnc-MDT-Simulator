@@ -3698,3 +3698,27 @@ def test_known_unknowns_list_maps_patient_willingness_to_its_matching_field():
     })
     assert any("patient_willingness" in item for item in flags)
 
+
+def test_non_present_known_unknowns_state_is_not_used_as_gap_evidence_even_if_memory_is_corrupt():
+    case = _case(
+        case_summary="Synthetic source summary records clinical cT2 disease.",
+        clinical_t_stage=None,
+        known_unknowns=[],
+        clinical_field_states={"known_unknowns": "UNKNOWN"},
+    )
+    # Simulate a corrupted/historical in-memory object that bypassed current
+    # Pydantic validation. Audit logic must still refuse non-PRESENT list data.
+    object.__setattr__(case, "known_unknowns", ["Clinical T stage is not reported."])
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The clinical T component is cT2.",
+    })
+    assert not any("clinical_t_stage" in item for item in flags)
+
+
+def test_non_empty_known_unknowns_list_cannot_be_marked_unknown():
+    with pytest.raises(ValueError, match="cannot carry a supplied value while marked UNKNOWN"):
+        _case(
+            known_unknowns=["Clinical T stage is not reported."],
+            clinical_field_states={"known_unknowns": "UNKNOWN"},
+        )
+
