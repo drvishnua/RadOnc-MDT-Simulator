@@ -147,7 +147,7 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
         field_status[field] = {
             "label": label,
             "status": status.casefold(),
-            "value": value if provided else None,
+            "value": snapshot.get(field) if provided else None,
         }
     for field, label in _LIST_FIELDS.items():
         values = getattr(case, field) or []
@@ -156,7 +156,7 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
         field_status[field] = {
             "label": label,
             "status": status.casefold(),
-            "value": values if values else None,
+            "value": snapshot.get(field) if values else None,
         }
     field_status["scenario_title"] = {
         "label": "Scenario title", "status": "provided", "value": case.scenario_title,
@@ -188,7 +188,9 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
             provenance = [{
                 "source_type": source_type,
                 "source_reference": f"SyntheticCase.{field_id}",
-                "source_excerpt": value if isinstance(value, str) else json.dumps(value, ensure_ascii=False, default=str),
+                "source_excerpt": value if isinstance(value, str) else json.dumps(
+                    snapshot.get(field_id), ensure_ascii=False, sort_keys=True, separators=(",", ":")
+                ),
                 "verification_status": "user_supplied_not_independently_verified",
             }]
         else:
@@ -199,7 +201,7 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
             "label": definition.label,
             "value_type": definition.value_type,
             "state": state,
-            "raw_value": value,
+            "raw_value": snapshot.get(field_id),
             "canonical_comparison_value": None,
             "unit": definition.unit,
             "allowed_values": list(definition.allowed_values),
@@ -211,8 +213,14 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
             ],
         }
 
+        # A conflicting flat-field value is retained in the immutable case
+        # snapshot and in source-specific conflict_candidates, but is not shown
+        # as a selected model-facing raw value.
+        if state == "CONFLICTING":
+            item["raw_value"] = None
+
         if state == "PRESENT":
-            item["canonical_comparison_value"] = value
+            item["canonical_comparison_value"] = snapshot.get(field_id)
             if field_id in (CLINICAL_T_STAGE, CLINICAL_N_STAGE, CLINICAL_M_STAGE) and value not in (None, ""):
                 try:
                     item["canonical_comparison_value"] = normalize_clinical_tnm_component(field_id, value)
