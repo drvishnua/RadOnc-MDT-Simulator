@@ -1299,11 +1299,6 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             elif explicit_state == "INVALID":
                 flags.append(
                     f"Generated narrative contains {component}-stage value(s) {unsupported_list}, "
-                    f"but {label} is explicitly unresolved in known_unknowns; structured and case-summary values cannot support this assertion."
-                )
-            elif explicit_state == "INVALID":
-                flags.append(
-                    f"Generated narrative contains {component}-stage value(s) {unsupported_list}, "
                     f"but {label} is marked INVALID; its preserved raw value cannot support a clinical staging assertion."
                 )
             elif explicit_state == "CONFLICTING":
