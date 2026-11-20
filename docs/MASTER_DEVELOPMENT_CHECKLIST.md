@@ -6624,3 +6624,65 @@ For pathological T/N/M assertion audit:
 
 **Next action:** make the narrow clinical T/N/M warning-state correction, preserve existing INVALID/CONFLICTING messages and state blocking, then rerun exact-head Backend/preflight, Sequential Gate and Security Audit. Keep active step U09–U10; do not modify intake or activate U04.
 
+## U10 clinical T/N/M explicit-state warning correction — exact-head verified
+
+- Application commit: `0110df0a5037b8bf0f1706b62a3a9689d6a1f6ac`; only `backend/app/services/case_integrity.py` changed.
+- The clinical T/N/M source-blocking logic remains unchanged. Warning output now distinguishes:
+  - INVALID: dedicated raw-value warning retained.
+  - CONFLICTING: unresolved-source warning retained.
+  - Explicit non-PRESENT states other than INVALID/CONFLICTING: exact canonical field ID and state are reported; the warning states that the state cannot support a clinical staging assertion or permit case-summary fallback.
+  - PRESENT mismatch: the structured-value conflict warning remains intact.
+  - No explicit state and no supplied structured value: implicit missing/source-summary warning remains separate.
+- Exact-head Backend Tests run `44755411266`, job `136353719806`, on `0110df0`: **753 passed, 0 failed, 0 errors, 0 skipped** (one existing warning).
+- All 18 explicit-state cases passed (UNKNOWN, NOT_REPORTED, NOT_ASSESSED, PENDING, DECLINED, NOT_APPLICABLE × clinical T/N/M).
+- All 3 INVALID raw-preservation cases passed.
+- All 3 CONFLICTING source-preservation/no-selection cases passed.
+- All 3 PRESENT structured match/mismatch controls passed.
+- Deterministic preflight artifact `14636054338`, SHA-256 `25c9221b5f62532cba053be55c053da4196241c4d3390adfae381b0155713ec8`.
+- Pytest diagnostics artifact `14638360873`, SHA-256 `cfbb07c315b05d420b2e6ede5887a5530ee2f665bc9a291106ef9ef8b724ced6`.
+- Exact-head Sequential Development Gate run `44755411177`: SUCCESS.
+- Exact-head Security and Dependency Audit run `44755411152`: SUCCESS; all four jobs passed (Python CodeQL, JavaScript/TypeScript CodeQL, dependency audit, full-history secret scan).
+- Preserve the failed test-only checkpoint `151bd05` and run `44754855132` (735 passed, 18 failed due only to warning state omissions); the correction did not erase the historical failure.
+
+### Master Checklist — Current Status
+
+| Workstream | Status | Current evidence / remaining boundary |
+|---|---|---|
+| Repository, PR and protected branch | VERIFIED | PR #5 OPEN/unmerged at application head `0110df0`; base `feature/four-round-mdt-and-performance`; `main` untouched. |
+| Approved sequence / machine-plan gate | VERIFIED | Active step remains U09–U10; exact-head Sequential Gate `44755411177` SUCCESS. |
+| U09 immutable clinical registry v2 and typed contract | IN PROGRESS | Stable IDs, aliases, immutability, version/hash and typed states exist; full field-by-field source/state/provenance/migration/backward-compatibility acceptance remains. |
+| U10 clinical T/N/M non-PRESENT source blocking | VERIFIED for tested cases | All 18 cases confirm explicit non-PRESENT state blocks structured and case-summary fallback. |
+| U10 clinical T/N/M warning state precision | VERIFIED for tested cases | Code `0110df0`; Backend `44755411266`, 753/753; exact field ID/state emitted for non-PRESENT states. |
+| U10 clinical T/N/M INVALID raw handling | VERIFIED for tested cases | Three INVALID tests pass; raw values remain preserved and cannot support claims. |
+| U10 clinical T/N/M CONFLICTING provenance | VERIFIED for tested cases | Three CONFLICTING tests pass; source candidates remain unresolved and no single value is selected. |
+| U10 clinical T/N/M PRESENT match/mismatch | VERIFIED for tested cases | Three PRESENT tests pass; matching structured component accepted and mismatched claim flagged. |
+| U10 pathological T/N/M state and warning precision | VERIFIED for tested cases | Code `2577d2d`; Backend `44754287371`, 726/726; explicit state names, INVALID and CONFLICTING behavior tested. |
+| U10 clinical/pathological TNM and stage-group separation | IN PROGRESS | Clinical and pathological T/N/M matrices now have direct coverage; typed stage-group state/provenance matrix remains under audit. |
+| U10 staging primary-site/system/edition | VERIFIED for tested cases | Missing context and explicit UNKNOWN system/edition controls pass; broader staging applicability/migration remains. |
+| U10 diagnosis date and family/caregiver | VERIFIED | Code `9b0d4cf`; Backend `44737660862`, 661/661. |
+| U10 investigation-record status/fallback | VERIFIED | Code `c4d5c63`; Backend `44738779218`, 666/666. |
+| U10 positive clinical-history assertions | VERIFIED | Code `25635e9`; Backend `44740400697`, 674/674. |
+| U10 social/resource assertions | VERIFIED | Code `5571074`; Backend `44741865637`, 683/683. |
+| U10 goals/preferences versus willingness | VERIFIED | Code `ad98a10`; Backend `44745009819`, 690/690. |
+| U10 known-unknown willingness/treatment consent | VERIFIED for tested cases | Code `ae4e5af`; Backend `44749806362`, 693/693. |
+| U10 educational-consent state mapping | VERIFIED for tested cases | Code `9b0b56b`; Backend `44750998934`, 699/699. |
+| U10 negative/absence claims and CONFIRMED_ABSENT provenance | IN PROGRESS | Selected controls pass; full canonical field/state/source/mismatch matrix remains. |
+| U10 remaining known-unknown mappings | IN PROGRESS | Willingness and consent controls pass; other field-specific mappings remain. |
+| Backend suite | VERIFIED | Exact application head `0110df0`; run `44755411266`; 753/753. |
+| Deterministic preflight | VERIFIED | Exact head; artifact `14636054338`, SHA-256 recorded above. |
+| Sequential Development Gate | VERIFIED | Exact head; run `44755411177` SUCCESS. |
+| Security/dependency/secret scan/CodeQL | VERIFIED | Exact head; run `44755411152` SUCCESS; all four jobs passed. |
+| R1–R4 saved contributions and Chair reconciliation | IN PROGRESS | Mocked provenance/context coverage exists; live saved R1–R3 and Chair R4 audit remains outstanding. |
+| Case snapshots/hashes/audit/failure/resume paths | IN PROGRESS | Deterministic safeguards exist; full saved-run tamper and failure/resume validation remains. |
+| Evidence retrieval and claim-to-passage verification | IN PROGRESS | Independent current-source verification remains outstanding. |
+| U04 Case Intake and Completeness Screener | BLOCKED | Do not activate before U09–U10 acceptance is complete. |
+| U05–U08 | BLOCKED | Remain in the approved order after U04. |
+| U03 intelligent Ollama installer | BLOCKED | Remains after U08. |
+| U01–U02 desktop experience/removal of development surfaces | BLOCKED | Remain after U03. |
+| Live 45-role R1–R4 | NOT STARTED | No live run ID or inspected saved artefact claimed. |
+| RTX 4060 request-time GPU inference | NOT STARTED | No actual request-time GPU/offload telemetry claimed. |
+| Independent clinical validation | NOT STARTED | No qualified independent review claimed. |
+| Integrated release acceptance | BLOCKED | Typed stage-group state/provenance and remaining U09–U10 matrix, plus all ordered downstream/live/GPU/clinical gates, remain. |
+
+**Next action:** continue U09–U10 with typed clinical, pathological and untyped stage-group state/provenance tests. Verify explicit non-PRESENT state blocking, INVALID raw handling, CONFLICTING source retention, PRESENT matching/mismatch and field-type separation. Do not change active step, modify intake or activate U04.
+
