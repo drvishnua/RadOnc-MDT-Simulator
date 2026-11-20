@@ -330,7 +330,7 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
             "Model-facing projection only. Conflicting flat values and INVALID raw values are redacted; "
             "source-specific conflict candidates remain available. INVALID source excerpts are withheld while "
             "source references and original excerpt hashes remain available. The persisted immutable case "
-            "snapshot and full audit provenance are unchanged."
+            "snapshot is unchanged, and the full audit provenance is retained."
         ),
         "canonical_field_values": canonical_field_values,
         "field_status": field_status,
