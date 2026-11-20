@@ -33,7 +33,7 @@ class ClinicalFieldProvenance(StrictModel):
         "OTHER",
     ]
     source_reference: str = Field(min_length=1, max_length=300)
-    source_excerpt: str = Field(min_length=1, max_length=12000)
+    source_excerpt: str = Field(min_length=1, max_length=500000)
     verification_status: Literal["USER_SUPPLIED_NOT_INDEPENDENTLY_VERIFIED"] = "USER_SUPPLIED_NOT_INDEPENDENTLY_VERIFIED"
     observed_at: datetime | None = None
     recorded_at: datetime | None = None
@@ -64,7 +64,7 @@ class InvestigationRecord(StrictModel):
     performed_on: date | None = None
     reported_on: date | None = None
     source_reference: str | None = Field(default=None, max_length=300)
-    source_excerpt: str | None = Field(default=None, max_length=12000)
+    source_excerpt: str | None = Field(default=None, max_length=500000)
 
 
 class SyntheticCase(StrictModel):
