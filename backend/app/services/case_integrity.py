@@ -1683,7 +1683,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     )
     if unsupported_preferences:
         flags.append(
-            "Generated narrative attributes patient preference/willingness statement(s) "
+            "Generated narrative attributes patient preference/decision or willingness statement(s) "
             + "; ".join(unsupported_preferences[:2])
             + ", which are not explicitly supported by PRESENT structured patient_goals, "
             "patient_preferences or patient_willingness, or an assertable case summary."
