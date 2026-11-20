@@ -4773,7 +4773,7 @@ This is the latest authoritative status. Earlier entries above are retained as h
 | U09 canonical clinical registry v2 and immutable field identifiers | IN PROGRESS | v2.0.0 implementation merged; registry uses read-only mappings and frozen field-definition records, with mutation-rejection tests. Legacy-case recovery/migration acceptance remains open. |
 | U10 deterministic state-aware hallucination controls | IN PROGRESS | Merged code and test suite pass; remaining acceptance and role-wide/live validation are not complete. |
 | Explicit epistemic states, per-field provenance, source hashes, conflict preservation/redaction, TNM type separation | VERIFIED | Regression coverage is included in the 593 passing pytest tests. This is software verification, not clinical validation. |
-| Canonical case context across all 45 specialist roles | IN PROGRESS | New exact-head mocked R1 regression asserts byte-equivalent canonical v2 context for all 45 configured profiles and preserves UNKNOWN / NOT_ASSESSED TNM states. Live saved-case R1–R4 model execution remains unverified. |
+| Canonical case context across all 45 specialist roles | IN PROGRESS | Mocked regression tests now exercise all 45 profiles in R1, R2 and R3 and assert identical canonical v2 context in every prompt, preserving UNKNOWN / NOT_ASSESSED TNM states. Live saved-case R1–R4 model execution remains unverified. |
 | R1–R4 saved contribution data flow | IN PROGRESS | Must continue to preserve round separation and use actual saved R1–R3 inputs for R4. Full live execution has not been verified by this CI. |
 | Chair consensus, conditional positions, dissent, minority views and source traceability | IN PROGRESS | Deterministic safeguards/tests exist; end-to-end saved-run synthesis and audit remain outstanding. |
 | Missing/failed-agent handling and partial-run integrity | IN PROGRESS | Unit/regression coverage exists; live failure-path execution and saved artefact inspection remain outstanding. |
@@ -4801,7 +4801,7 @@ This is the latest authoritative status. Earlier entries above are retained as h
 
 **Clinical-safety boundary:** synthetic educational use only. Unknown remains unknown. Do not infer N0/M0, stage group, performance status, resectability, negative comorbidities or patient preferences. Preserve conflicts, source-specific provenance, uncertainty, prerequisites, conditionality and dissent. R4 must use actual saved R1–R3 contributions. The CI preflight explicitly records that model inference was not performed; no clinical accuracy or guideline compliance is established.
 
-**Next action:** continue within U09–U10 only. Complete the remaining R2/R3 shared-context regression and role-wide/data-flow acceptance checks. Keep legacy saved-case recovery read-only and fail-closed until a separately scoped, auditable re-intake/recovery design is approved; do not relabel historical snapshots as v2. Re-run exact-head tests/gate/security after each in-scope change. Keep U04 and every later step blocked until U09–U10 acceptance is independently reviewed.
+**Next action:** continue within U09–U10 only. Complete the remaining provenance, alias/normalization edge-case and saved-data-flow acceptance checks, including failure-path audit inspection. Keep legacy saved-case recovery read-only and fail-closed until a separately scoped, auditable re-intake/recovery design is approved; do not relabel historical snapshots as v2. Re-run exact-head tests/gate/security after each in-scope change. Keep U04 and every later step blocked until U09–U10 acceptance is independently reviewed.
 
 ### U09–U10 all-45-role canonical-context regression — 20 November 2026
 
@@ -4814,5 +4814,10 @@ This is the latest authoritative status. Earlier entries above are retained as h
 - An earlier test-only commit `776a3ab8aa98d053a8696fdf5f46cb51d82b0bb6` had one failed assertion caused by incorrectly escaped prompt delimiters (`44703619135`). The test delimiter was corrected in `d1ad3d79a90ff500b4235231e92d90ec48c859d2`; its exact-head run passed. The failure was in the test, not application code.
 - This is mocked prompt-contract verification. It does not demonstrate live model inference, 45-role live R1–R4 execution, GPU offload, staging validity or clinical accuracy.
 - Registry immutability guard: `CLINICAL_FIELD_REGISTRY` and alias maps are read-only mappings, field definitions are frozen dataclasses, and `test_registry_is_immutable_and_field_ids_are_stable` verifies mutation attempts fail.
+- Additional exact test/code commit `24946c4eac121b42e6d34ca62435dfc47bfbce01` adds `test_all_45_roles_receive_identical_canonical_context_in_rounds_2_and_3`: all 45 role profiles run through the actual R2 and R3 generation entry points with model calls mocked. The test compares the exact canonical context embedded in each of the 90 prompts.
+- Exact-head Backend Tests run `44704345766`: **595 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive**; deterministic preflight **7 passed, 0 failed, 0 inconclusive**. Both the R1 all-role test and the combined R2/R3 all-role test passed.
+- Exact-head Sequential Development Gate run `44704345933`: SUCCESS.
+- Exact-head Security and Dependency Audit run `44704345886`: SUCCESS (Python and JavaScript/TypeScript CodeQL, full-history secret scan, Python/Node dependency audit).
+- The mocked R1, R2 and R3 prompt checks establish shared prompt-context construction only. They do not establish live round orchestration, persisted R1–R3 integrity, R4 Chair reconciliation, real Ollama behavior, GPU offload, staging validity or clinical accuracy.
 - U09–U10 remains `IN PROGRESS`; the machine plan and U12 scope baseline are unchanged. PR #5 remains open and unmerged pending review.
 
