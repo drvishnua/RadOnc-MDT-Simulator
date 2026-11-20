@@ -1256,6 +1256,11 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
                     f"Generated narrative contains {component}-stage value(s) {unsupported_list}, "
                     f"but {label} has unresolved conflicting source values; no single value may be selected."
                 )
+            elif explicit_state is not None and explicit_state != "PRESENT":
+                flags.append(
+                    f"Generated narrative contains {component}-stage value(s) {unsupported_list}, "
+                    f"but {label} is marked {explicit_state}; that state cannot support a selected clinical staging assertion or permit case-summary fallback."
+                )
             elif structured_value not in (None, ""):
                 flags.append(
                     f"Generated narrative contains {component}-stage value(s) "
