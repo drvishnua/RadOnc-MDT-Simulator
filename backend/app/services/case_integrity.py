@@ -2350,9 +2350,27 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         r"(?:to\s+)?[^.!?;\n]{1,100}",
         re.IGNORECASE,
     )
+    known_unknowns_state = field_state("known_unknowns")
+    known_unknowns_text = (
+        "\n".join(case.known_unknowns)
+        if known_unknowns_state in (None, "PRESENT")
+        else ""
+    )
+    willingness_gap_pattern = re.compile(
+        r"\b(?:patient(?:'s)?\s+)?willingness\b[^.!?;\n]{0,100}"
+        r"\b(?:unknown|unclear|pending|awaiting(?:\s+confirmation)?|"
+        r"not\s+(?:yet\s+)?(?:been\s+)?(?:established|documented|reported|assessed|"
+        r"confirmed|provided|supplied|known))\b|"
+        r"\b(?:unknown|unclear|pending|awaiting(?:\s+confirmation)?|"
+        r"not\s+(?:yet\s+)?(?:been\s+)?(?:established|documented|reported|assessed|"
+        r"confirmed|provided|supplied|known))\b[^.!?;\n]{0,100}"
+        r"\b(?:patient(?:'s)?\s+)?willingness\b",
+        re.IGNORECASE,
+    )
+    willingness_gap_recorded = bool(willingness_gap_pattern.search(known_unknowns_text))
     willingness_state = field_state("patient_willingness")
     willingness_source_text = ""
-    if willingness_state in (None, "PRESENT"):
+    if not willingness_gap_recorded and willingness_state in (None, "PRESENT"):
         if case.patient_willingness:
             willingness_source_text = f"patient {case.patient_willingness}"
         elif willingness_state is None:
@@ -2364,7 +2382,12 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         willingness_source_text,
     )
     if unsupported_willingness:
-        if willingness_state == "CONFLICTING":
+        if willingness_gap_recorded:
+            willingness_reason = (
+                "known_unknowns explicitly records patient_willingness as unresolved; "
+                "the matching summary or structured statement conflicts with that gap and must not be selected."
+            )
+        elif willingness_state == "CONFLICTING":
             willingness_reason = "patient_willingness has unresolved conflicting source values."
         elif willingness_state not in (None, "PRESENT"):
             willingness_reason = (
@@ -2394,16 +2417,44 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         r"[^.!?;\n]{1,100}",
         re.IGNORECASE,
     )
+    treatment_consent_gap_pattern = re.compile(
+        r"\b(?:treatment[- ]specific\s+informed|informed\s+treatment|treatment)\s+consent\b"
+        r"[^.!?;\n]{0,100}\b(?:unknown|unclear|pending|awaiting(?:\s+confirmation)?|"
+        r"not\s+(?:yet\s+)?(?:been\s+)?(?:established|documented|reported|asked|obtained|"
+        r"assessed|confirmed|provided|supplied|known))\b|"
+        r"\b(?:unknown|unclear|pending|awaiting(?:\s+confirmation)?|"
+        r"not\s+(?:yet\s+)?(?:been\s+)?(?:established|documented|reported|asked|obtained|"
+        r"assessed|confirmed|provided|supplied|known))\b[^.!?;\n]{0,100}"
+        r"\b(?:treatment[- ]specific\s+informed|informed\s+treatment|treatment)\s+consent\b",
+        re.IGNORECASE,
+    )
+    treatment_consent_gap_recorded = bool(
+        treatment_consent_gap_pattern.search(known_unknowns_text)
+    )
+    treatment_consent_source_text = (
+        "" if treatment_consent_gap_recorded else case_summary_text
+    )
     unsupported_treatment_consent = _unsupported_matches(
         treatment_consent_pattern,
         text,
-        case_summary_text,
+        treatment_consent_source_text,
     )
     if unsupported_treatment_consent:
+        if treatment_consent_gap_recorded:
+            treatment_consent_reason = (
+                "known_unknowns explicitly records treatment-specific consent as unresolved; "
+                "a matching case-summary statement conflicts with that gap and cannot resolve it."
+            )
+        else:
+            treatment_consent_reason = (
+                "educational-scenario consent status and patient willingness are not proxies "
+                "for informed treatment consent."
+            )
         flags.append(
             "Generated narrative asserts treatment-specific consent ("
             + "; ".join(unsupported_treatment_consent[:2])
-            + "); educational-scenario consent status and patient willingness are not proxies for informed treatment consent."
+            + "), but "
+            + treatment_consent_reason
         )
 
     scenario_consent_pattern = re.compile(
