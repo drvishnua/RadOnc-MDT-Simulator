@@ -1556,8 +1556,54 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             + "), which are not supported by the available structured histology/pathology field or verbatim case summary."
         )
 
+    histological_grade_pattern = re.compile(
+        r"\b(?:histological\s+)?grade\s*(?:G\s*)?[1-4]\b|\bG\s*[1-4]\b",
+        re.IGNORECASE,
+    )
+
+    def histological_grade_values(value: str) -> set[str]:
+        return {
+            number
+            for statement in _unqualified_matches(histological_grade_pattern, value)
+            for number in re.findall(r"\b[1-4]\b", statement)
+        }
+
+    histological_grade_state = field_state("histological_grade")
+    pathology_summary_state = field_state("pathology_summary")
+    if histological_grade_state in (None, "PRESENT") and case.histological_grade not in (None, ""):
+        supported_histological_grades = histological_grade_values(str(case.histological_grade))
+    elif histological_grade_state is None:
+        grade_source_parts = [
+            case.pathology_summary
+            if pathology_summary_state in (None, "PRESENT") else "",
+            case_summary_text if pathology_summary_state is None else "",
+        ]
+        supported_histological_grades = histological_grade_values("\n".join(
+            part for part in grade_source_parts if part
+        ))
+    else:
+        supported_histological_grades = set()
+
+    generated_histological_grades = histological_grade_values(text)
+    unsupported_histological_grades = sorted(
+        generated_histological_grades - supported_histological_grades
+    )
+    if unsupported_histological_grades:
+        claims = ", ".join(f"G{grade}" for grade in unsupported_histological_grades[:3])
+        if histological_grade_state == "CONFLICTING":
+            reason = "histological_grade has conflicting source values and no single grade may be selected"
+        elif histological_grade_state not in (None, "PRESENT"):
+            reason = f"histological_grade is marked {histological_grade_state} and cannot support a selected grade"
+        elif case.histological_grade not in (None, ""):
+            reason = f"the generated grade conflicts with structured histological_grade={case.histological_grade}"
+        else:
+            reason = "the grade is not explicitly supported by the available pathology summary or assertable case summary"
+        flags.append(
+            f"Generated narrative asserts histological grade value(s) {claims}, but {reason}."
+        )
+
     pathology_pattern = re.compile(
-        r"\b(?:p16|HPV|HER2|ER|PR|PD-L1|Ki-67)\s*(?:positive|negative|high|low|[+-])\b|\b(?:grade|G)\s*[1-4]\b|\b(?:lymphovascular|perineural) invasion\b|\b(?:positive|negative) margins?\b",
+        r"\b(?:p16|HPV|HER2|ER|PR|PD-L1|Ki-67)\s*(?:positive|negative|high|low|[+-])\b|\b(?:lymphovascular|perineural) invasion\b|\b(?:positive|negative) margins?\b",
         re.IGNORECASE,
     )
     pathology_summary_state = field_state("pathology_summary")
