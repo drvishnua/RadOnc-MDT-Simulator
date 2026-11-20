@@ -1091,6 +1091,98 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             f"Generated narrative asserts laterality value(s) {claims}, but {reason}."
         )
 
+    primary_site_claim_pattern = re.compile(
+        r"\\bprimary\\s+(?:anatomical\\s+)?site\\s*(?:is|:|=)\\s*[^.!?;,\\n]{1,100}",
+        re.IGNORECASE,
+    )
+    primary_site_value_pattern = re.compile(
+        r"\\bprimary\\s+(?:anatomical\\s+)?site\\s*(?:is|:|=)\\s*(.+)$",
+        re.IGNORECASE,
+    )
+    anatomical_subsite_claim_pattern = re.compile(
+        r"\\b(?:anatomical\\s+)?subsite\\s*(?:is|:|=)\\s*[^.!?;,\\n]{1,100}",
+        re.IGNORECASE,
+    )
+    anatomical_subsite_value_pattern = re.compile(
+        r"\\b(?:anatomical\\s+)?subsite\\s*(?:is|:|=)\\s*(.+)$",
+        re.IGNORECASE,
+    )
+
+    def normalise_site_value(value: str) -> str:
+        normalised = re.sub(r"[^a-z0-9]+", " ", value.casefold()).strip()
+        tokens = normalised.split()
+        while tokens and tokens[0] in {"the", "a", "an"}:
+            tokens.pop(0)
+        if tokens and tokens[0] == "ca":
+            tokens.pop(0)
+        elif tokens and tokens[0] in {"cancer", "carcinoma", "malignancy"}:
+            tokens.pop(0)
+            if tokens and tokens[0] == "of":
+                tokens.pop(0)
+            while tokens and tokens[0] in {"the", "a", "an"}:
+                tokens.pop(0)
+        return " ".join(tokens)
+
+    def asserted_site_values(
+        value: str,
+        claim_pattern: re.Pattern[str],
+        value_pattern: re.Pattern[str],
+    ) -> set[str]:
+        values: set[str] = set()
+        for statement in _unqualified_matches(claim_pattern, value):
+            match = value_pattern.search(statement)
+            if match:
+                normalised = normalise_site_value(match.group(1))
+                if normalised:
+                    values.add(normalised)
+        return values
+
+    for field_id, label, claim_pattern, value_pattern in (
+        (
+            "primary_site",
+            "primary_site",
+            primary_site_claim_pattern,
+            primary_site_value_pattern,
+        ),
+        (
+            "anatomical_subsite",
+            "anatomical_subsite",
+            anatomical_subsite_claim_pattern,
+            anatomical_subsite_value_pattern,
+        ),
+    ):
+        state = field_state(field_id)
+        structured_value = getattr(case, field_id)
+        if structured_value not in (None, "") and field_assertable(field_id):
+            supported_values = {normalise_site_value(str(structured_value))}
+        elif state is None:
+            supported_values = asserted_site_values(
+                case_summary_text, claim_pattern, value_pattern
+            )
+        else:
+            supported_values = set()
+
+        generated_values = asserted_site_values(text, claim_pattern, value_pattern)
+        unsupported_values = sorted(generated_values - supported_values)
+        if not unsupported_values:
+            continue
+
+        claims = "; ".join(unsupported_values[:3])
+        if state == "CONFLICTING":
+            reason = f"{label} has conflicting source values and no single value may be selected"
+        elif state not in (None, "PRESENT"):
+            reason = f"{label} is marked {state} and cannot support a selected anatomical value"
+        elif structured_value not in (None, ""):
+            reason = f"the generated value conflicts with structured {label}={structured_value}"
+        else:
+            reason = (
+                f"{label} is not supplied and the generated value is not explicitly "
+                "supported by the verbatim case summary"
+            )
+        flags.append(
+            f"Generated narrative asserts {label} value(s) {claims}, but {reason}."
+        )
+
     # Compare generated stage components with the exact structured value when
     # present; otherwise compare with the verbatim case summary. A supplied
     # structured stage must not silently legitimise a contradictory generated
