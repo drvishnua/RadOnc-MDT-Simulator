@@ -2477,7 +2477,14 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             "WITHDRAWN": "patient withdrew consent to participate in this educational scenario",
         }
         if case.patient_consent_status is not None:
-            consent_sources.append(consent_status_text[case.patient_consent_status])
+            status_source = consent_status_text[case.patient_consent_status]
+            consent_sources.append(status_source)
+            if case.patient_consent_status in {"NOT_ASKED", "PENDING"}:
+                # Preserve both common possessive and non-possessive renderings
+                # of the same structured educational-consent state.
+                consent_sources.append(
+                    status_source.replace("patient consent", "patient's consent", 1)
+                )
         else:
             consent_sources.append(case_summary_text)
 
