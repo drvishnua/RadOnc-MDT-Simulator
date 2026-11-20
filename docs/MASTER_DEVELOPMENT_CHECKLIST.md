@@ -7988,3 +7988,57 @@ A SHA-256 hash establishes integrity of the supplied text, not authenticity or c
 | Integrated release acceptance | BLOCKED | U09–U10 acceptance, downstream work, live/GPU, evidence and independent validation remain |
 
 **Next approved action:** continue only the remaining U09–U10 field/state/source/provenance acceptance in the existing order. The caller-traced R2/R3/R4 source-summary bypass remains an explicit acceptance blocker because its implementation path is outside current allowed_paths. Do not edit the machine plan, begin U04, merge PR #5, or modify the protected development branch or main.
+
+
+---
+
+## GOV-01 plan-before-execution extension — 21 November 2026
+
+**Owner's exact additional instruction:** "Whenever u r attempting to solve a requirement, you must first create a complete detailed plan of how to do the requirements and stick to the plan!"
+
+**Requirement identity:** This extends the existing GOV-01 execution-governance requirement. Do not create a duplicate GOV-01 record or replace its original wording.
+
+**Mandatory procedure before attempting any project requirement:**
+
+1. Capture the full owner-supplied wording and intent. Reuse an existing stable requirement ID when the requirement is already represented; otherwise assign a permanent new ID. Preserve the original wording and record acceptance criteria, evidence status, dependencies and affected areas in this single checklist.
+2. Re-establish the baseline: inspect the approved Master Implementation Plan, current machine-plan active step, repository and development branch, active PR and its base/head SHAs, relevant checklist revision, permitted file paths, relevant implementation, tests, prior failures and exact-head CI.
+3. Write and display a complete, ordered implementation plan before changing application code or attempting a functional workaround. The plan must state:
+   - objective, user-visible outcome and root cause/evidence gap;
+   - in-scope and explicitly out-of-scope work;
+   - dependency order, prerequisites and active-plan placement;
+   - affected modules, APIs, schemas, persistence, UI, installer or workflows as applicable;
+   - exact ordered implementation tasks and expected result of each task;
+   - preservation requirements for original data, field states, source provenance, hashes, run IDs, timestamps and audit history;
+   - clinical-safety invariants, unknown/negative distinction, staging constraints, conditionality, dissent and source-attribution risks where applicable;
+   - failure modes, recovery/rollback considerations and risks to existing functionality;
+   - focused unit/regression tests, positive and negative controls, integration/E2E tests, and manual/live checks where required;
+   - exact CI workflows, required artefacts, acceptance thresholds and evidence needed to verify completion.
+4. Confirm every proposed file is within the active step's hard-coded and machine-plan allowlists. A documentation change to the machine plan cannot by itself widen a validator-enforced scope. Do not edit protected paths, weaken the gate or start a dependent step to work around a blocker.
+5. Execute the tasks in their stated order. Record each planned task's result and evidence. Do not skip, reorder, repeat completed work without a demonstrated regression, add unrelated work, or silently change acceptance criteria.
+6. If investigation reveals a new root cause, missing prerequisite, out-of-scope file, failing test, conflicting evidence or unavailable verification, stop that affected work item. Record the exact finding, preserve the failed attempt and existing audit history, and obtain owner authorisation before any required scope or sequence amendment. Do not represent a proposed fix as implemented.
+7. Verify the final implementation against the original requirement and every acceptance criterion. Record exact commit SHA, commands/results, CI run IDs and conclusions, test artefacts, live-run IDs and validation boundaries. Keep software tests, model inference, GPU verification, installer testing and independent clinical review as separate evidence classes.
+8. Update this same Master Checklist in place at each meaningful checkpoint. Retain known failures and unresolved risks; do not downgrade or remove them without a documented, evidence-supported reason. Every project response must display the current status and distinguish repository-recorded facts from chat-only notes.
+
+**Acceptance criteria for GOV-01 extension:**
+
+- The original owner instruction is preserved verbatim and linked to the existing GOV-01 identity.
+- Every future requirement has a stable ID (or a documented mapping to an existing ID), original wording, objective, scope, dependencies and acceptance criteria before implementation.
+- A complete ordered plan is displayed before any implementation attempt and includes affected files, safety/data risks, test matrix, CI and required evidence.
+- No implementation begins outside the active step's approved file paths or before its prerequisites.
+- Work follows the plan in order; deviations are stopped, documented and authorised before scope/order changes.
+- Completion claims are traceable to exact SHAs, test outputs and required workflow results; live-model, GPU and clinical-validation claims require their own evidence.
+- The single repository checklist and project status reports remain consistent, with unverified work visibly outstanding.
+
+**Status:** IN PROGRESS. The procedure and acceptance criteria are now recorded. Continued application to subsequent requirements is required; this governance entry alone does not prove future compliance.
+
+**No algorithm or active-step change:** this extension does not alter the approved clinical algorithm, dependency order, machine-plan active step or U09–U10 allowed paths.
+
+### Exact-head CI verification for preceding checklist revision
+
+The checklist-only PR #5 head `c6b8cced7484410292d221a53364d72a4335d338` was independently checked after the earlier code/test head CI. Its own associated workflows completed successfully:
+
+- Backend Tests — run `44800981532`: SUCCESS.
+- Sequential Development Gate — run `44800981850`: SUCCESS.
+- Security and Dependency Audit — run `44800981541`: SUCCESS.
+
+All jobs returned for these three runs were completed with SUCCESS. These runs validate the preceding checklist revision only; they do not constitute live MDT inference, GPU verification or clinical validation. The new GOV-01 checklist update will trigger its own exact-head workflows and must be checked separately.
