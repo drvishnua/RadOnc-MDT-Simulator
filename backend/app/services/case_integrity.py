@@ -1308,7 +1308,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         )
 
     allergy_absence_pattern = re.compile(
-        r"\\b(?:no (?:known )?(?:drug )?allergies|denies? (?:any )?(?:known )?(?:drug )?allergies)\\b",
+        r"\b(?:no (?:known )?(?:drug )?allergies|denies? (?:any )?(?:known )?(?:drug )?allergies)\b",
         re.IGNORECASE,
     )
     allergy_source = list_field_source("known_allergies", case.known_allergies or [])
@@ -1323,8 +1323,8 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         )
 
     current_medication_absence_pattern = re.compile(
-        r"\\b(?:no (?:current )?medications?|taking no (?:current )?medications?|"
-        r"not taking any (?:current )?medications?)\\b",
+        r"\b(?:no (?:current )?medications?|taking no (?:current )?medications?|"
+        r"not taking any (?:current )?medications?)\b",
         re.IGNORECASE,
     )
     medication_source = list_field_source("current_medications", case.current_medications or [])
@@ -1339,8 +1339,8 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         )
 
     family_history_absence_pattern = re.compile(
-        r"\\b(?:no (?:known )?family history(?: of [^.!?;\\n]{1,100})?|"
-        r"negative family history(?: of [^.!?;\\n]{1,100})?)\\b",
+        r"\b(?:no (?:known )?family history(?: of [^.!?;\n]{1,100})?|"
+        r"negative family history(?: of [^.!?;\n]{1,100})?)\b",
         re.IGNORECASE,
     )
     family_history_source = list_field_source("family_history", case.family_history or [])
