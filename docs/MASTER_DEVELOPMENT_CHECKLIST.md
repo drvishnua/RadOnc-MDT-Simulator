@@ -7002,3 +7002,21 @@ Application and test code is unchanged from `4a44b3e8d6796dee21d25e396d611091c79
 - All three successful runs identify exact SHA `b628eb26d3aa97c4b3116f0c964fa04ea21187e0`.
 
 **Current status:** clinical list source-text preservation is VERIFIED by regression and exact-head CI. U09–U10 remains IN PROGRESS; registry-wide field/state/source/provenance and legacy migration acceptance remains incomplete. PR #5 remains OPEN and NOT MERGED. No U04 or later workstream is started. No live-model, GPU or clinical validation is claimed.
+
+
+### Typed investigation source-excerpt preservation — 20 November 2026
+
+**Reproducible gap:** `InvestigationRecord.source_excerpt` inherited the shared `StrictModel` whitespace-stripping behaviour, so leading/trailing whitespace and line boundaries in a supplied investigation excerpt were lost.
+
+**Test-first and correction history**
+- The initial regression fixture used literal backslash characters rather than actual whitespace; that test did not exercise the intended condition and is superseded.
+- Corrected test fixture commit `d39e8d0ab7ff407bf54b52cc32dad52a83a74646` used actual newline/tab characters and failed as expected: Backend run `44769603441`, 790 passed and 1 failed.
+- Implementation commit `d507d6958ea07b9a729df98c615b8d6f66074b28` introduced a dedicated `PreservedSourceText` string constraint for typed investigation source excerpts.
+- Regression test commit `f061f69b0a1513692e9aa3a04818f04f8af2de4e` contained an escaped-literal fixture and is not accepted as proof for this investigation excerpt behaviour.
+- Corrected test commit `d39e8d0ab7ff407bf54b52cc32dad52a83a74646` failed as expected on the real whitespace fixture.
+- Exact implementation/test head `d507d6958ea07b9a729df98c615b8d6f66074b28` Backend run `44769796620`: SUCCESS; **791/791 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive**; pytest artifact `14646478180`; deterministic preflight artifact `14645978264`.
+- Sequential Development Gate run `44769796644`: SUCCESS.
+- Security and Dependency Audit run `44769796593`: SUCCESS; both CodeQL analyses, dependency audit and secret scan successful.
+- All three successful runs identify exact implementation/test SHA `d507d6958ea07b9a729df98c615b8d6f66074b28`.
+
+**Status:** typed investigation source-excerpt preservation is VERIFIED on the exact implementation/test SHA. Clinical list text preservation is VERIFIED on `b628eb2`. U09–U10 remains IN PROGRESS pending full registry field/state/source/provenance and legacy migration acceptance. PR #5 remains OPEN and NOT MERGED. No U04 or later workstream is started; no live-model, GPU or clinical validation is claimed.
