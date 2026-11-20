@@ -575,6 +575,7 @@ def test_historical_v1_case_version_remains_hash_verified_readable_and_read_only
 
 
 def test_historical_v1_run_remains_viewable_but_cannot_resume_or_advance(monkeypatch, tmp_path):
+    import hashlib
     import sqlite3
 
     db_path = tmp_path / "historical_v1_run.sqlite3"
