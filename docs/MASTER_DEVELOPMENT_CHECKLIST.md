@@ -4761,35 +4761,44 @@ The following exact-head backend failures are retained in GitHub Actions and exp
 - Code inspection confirms the v2 registry guard is called when starting a saved-case assessment, when promoting an accepted intake to a patient case version, when creating a run from a saved case version, when resuming/advancing a run and before later MDT round execution. Intake, patient-case-version and run records persist their registry-version metadata.
 - Existing v1/legacy snapshots are not silently rewritten. Unsupported historical versions are rejected from new/resumed generation until a new immutable v2 case version is created. An automatic migration is deliberately not performed. A user-visible recovery path for old saved cases and migration tests remain a release/product compatibility item; preserve historical snapshots and their hashes.
 
-### Master Checklist — Current Status (U09/U10 code/test head 26f775f; before checklist-only CI refresh)
+### Master Checklist — Current Status (post-merge verification; df90e4a380bef06a7d37def753b385db4ae86c30)
 
-| Workstream | Status | Evidence / outstanding boundary |
+This is the latest authoritative status. Earlier entries above are retained as historical audit records and are superseded by this checkpoint.
+
+| Workstream | Status | Evidence / boundary |
 |---|---|---|
-| STEP-A repository verification | VERIFIED | Historical exact application-code checkpoint and six successful workflows |
-| U12 sequential gate, active ruleset and negative control | VERIFIED | PR #2 merge SHA `5284483a26e87028f919966e304c472ed537e839`; development-only active ruleset and recorded rejected skip attempts |
-| U12 reconciliation and U09/U10 activation | VERIFIED | PR #3 merge SHA `e2e8d7d106a17b897c30db52ac01c5bb5f9ea2ab`; exact merge CI successful |
-| U09 canonical clinical registry v2 | IN PROGRESS | Additive immutable v2.0.0 and stable field IDs implemented; user-facing legacy-case migration/recovery remains outstanding |
-| U10 deterministic state-aware hallucination controls | IN PROGRESS | 600 exact-head tests pass; lexical/staging checks are not staging classification or clinical validation |
-| Case-field schema and epistemic states | VERIFIED (software tests) | PRESENT/UNKNOWN/NOT_REPORTED/NOT_ASSESSED/PENDING/DECLINED/NOT_APPLICABLE/CONFIRMED_ABSENT/CONFLICTING/INVALID validation regression suite passes |
-| Per-field provenance and source hashes | VERIFIED (software tests) | Supplied values receive explicit user-supplied, not independently verified provenance; source excerpt hash and conflict candidate tests pass |
-| Model-facing conflict redaction | VERIFIED (software tests) | Explicit conflicting flat values redacted from prompt snapshot; persisted source snapshot remains intact; source candidates retained |
-| Clinical/pathological TNM and stage-group separation | VERIFIED (software tests) | Prefix, type-separation, unsupported assertion and conflict tests pass; lexical comparison only |
-| R1-R4 shared canonical context | IN PROGRESS | Five inspected prompt construction call sites use the shared builder; exact all-45-role/live saved-input equivalence still untested |
-| Chair synthesis, consensus, dissent and source traceability | IN PROGRESS | No Chair logic changed in this slice; must continue to consume only actual saved R1-R3 contributions |
-| Backend deterministic preflight and tests | VERIFIED | Exact head `26f775f55266c129c6818b7f25ddc05492348028`; run `44670608976`, 600/600 per-test diagnostic records passed |
-| Sequential development gate | VERIFIED | Exact head run `44670608975` SUCCESS |
-| Security/dependency/secret/CodeQL checks | VERIFIED | Exact head run `44670609394` SUCCESS |
-| Frontend build / browser E2E | NOT APPLICABLE | No frontend files changed in this backend-only slice; no UI claim made |
-| Ollama discovery/reuse and Windows installer | BLOCKED | U03 remains later in the approved order; hosted installer success is not local GPU/model reuse proof |
-| Conversational intake and completeness screener | BLOCKED | U04 depends on U09/U10 |
-| Specialist reasoning/round refinements | BLOCKED | U05-U06 and U06-U08 remain later steps |
-| Versioned external evidence retrieval | BLOCKED | U07 remains later; no guideline/evidence verification claimed |
-| Standalone desktop UX | BLOCKED | U01-U02 remain later |
-| Live 45-role R1-R4 execution and saved-run audit | NOT STARTED | Unit tests do not prove live model behaviour |
-| RTX 4060 request-time inference verification | NOT STARTED | No local GPU telemetry or inference trace retrieved |
-| Independent clinical validation | NOT STARTED | No independent clinical review claimed |
-| Integrated release acceptance | BLOCKED | Legacy migration/recovery, remaining ordered steps, live-model/GPU and independent validation outstanding |
+| STEP-A repository, branch, PR, commit and CI baseline | VERIFIED | PR #4 merged into the development branch. Exact merge/development HEAD: `df90e4a380bef06a7d37def753b385db4ae86c30`. |
+| Development branch protection / sequence gate (U12) | VERIFIED | Sequential Development Gate PR run `44702343395` and push run `44702336613` succeeded on the exact merge SHA. |
+| Main branch isolation | VERIFIED | `main` remains at `39a356b8eb09399aa2da1b9b9085965999f5105a`; no merge to main. |
+| U09 canonical clinical registry v2 and immutable field identifiers | IN PROGRESS | v2.0.0 implementation merged; legacy-case recovery/migration acceptance remains open. |
+| U10 deterministic state-aware hallucination controls | IN PROGRESS | Merged code and test suite pass; remaining acceptance and role-wide/live validation are not complete. |
+| Explicit epistemic states, per-field provenance, source hashes, conflict preservation/redaction, TNM type separation | VERIFIED | Regression coverage is included in the 593 passing pytest tests. This is software verification, not clinical validation. |
+| Canonical case context across all 45 specialist roles | IN PROGRESS | Existing inspected prompt paths use shared builder; exact all-role equivalence in live saved-case runs remains unverified. |
+| R1–R4 saved contribution data flow | IN PROGRESS | Must continue to preserve round separation and use actual saved R1–R3 inputs for R4. Full live execution has not been verified by this CI. |
+| Chair consensus, conditional positions, dissent, minority views and source traceability | IN PROGRESS | Deterministic safeguards/tests exist; end-to-end saved-run synthesis and audit remain outstanding. |
+| Missing/failed-agent handling and partial-run integrity | IN PROGRESS | Unit/regression coverage exists; live failure-path execution and saved artefact inspection remain outstanding. |
+| Backend tests on merge SHA | VERIFIED | Run `44702343569`: pytest `593 passed, 0 failed, 0 errors, 0 skipped` (one warning); deterministic preflight `7 passed, 0 failed, 0 inconclusive`. Do not describe this as 600 pytest tests. |
+| Frontend type-check/build | VERIFIED | Run `44702343341` succeeded on the exact merge SHA. |
+| Patient registry / saved MDT dashboard browser E2E | VERIFIED | Run `44702343471` succeeded on the exact merge SHA. This does not constitute full live 45-role clinical workflow validation. |
+| Security, dependency, secret scan and CodeQL | VERIFIED | Run `44702343458`: Python CodeQL, JavaScript/TypeScript CodeQL, full-history secret scan and Python/Node dependency audit all succeeded. |
+| Windows installer packaging build | VERIFIED | Run `44702343432` succeeded. The hosted clean-machine Ollama/model bootstrap job was SKIPPED; local model reuse/startup is not verified. |
+| Hosted Windows packaging prerequisites | VERIFIED | Read-only prerequisites run `44702343520` succeeded. |
+| Ollama discovery/startup, reuse of an existing Qwen model and request-time GPU offload | BLOCKED | U03 is later in the approved sequence. No local inference/GPU telemetry has been collected. |
+| Conversational intake and completeness screener (U04) | BLOCKED | Must wait for U09–U10 acceptance. |
+| Specialist role reasoning and round-specific debate/review refinements (U05–U06) | BLOCKED | Must wait for U04. |
+| Round orchestration and Chair reconciliation refinements (U06–U08) | BLOCKED | Must wait for U05–U06 and preserve the saved-contribution contract. |
+| Versioned external evidence retrieval (U07) | BLOCKED | No guideline/evidence verification is claimed. |
+| Standalone desktop UI; remove Mission Control and Development Monitor (U01–U02) | BLOCKED | Must follow the approved sequence; no browser-loading replacement is claimed. |
+| Legacy saved-case user recovery / migration path | IN PROGRESS | Existing v1 snapshots are not silently rewritten; unsupported legacy versions are rejected for new/resumed generation. User-visible recovery to a new immutable v2 case version and migration tests remain open. Preserve old snapshots and hashes. |
+| Live 45-role R1–R4 execution and saved-run audit | NOT STARTED | CI test suites are not a live simulation. No live run ID or audit artefact is recorded here. |
+| RTX 4060 request-time inference verification | NOT STARTED | No `nvidia-smi` request-time telemetry, Ollama offload trace or measured local inference run is recorded. |
+| Independent clinical validation | NOT STARTED | No independent clinical validation is claimed. |
+| Integrated release acceptance | BLOCKED | U09–U10 remains active; subsequent ordered steps, legacy recovery, live model/GPU evidence and independent validation remain outstanding. |
 
-**Clinical-safety boundary remains unchanged:** synthetic educational use only; unknown remains unknown; no inferred N0/M0, stage group, performance status, resectability, comorbidity negative or patient preference. Conflicts remain unresolved and source-specific. Conditional recommendations, uncertainty and dissent are preserved. R4 Chair synthesis may use only saved R1-R3 contributions. No guideline compliance or evidence verification is claimed.
+**Post-merge CI evidence on exact SHA `df90e4a380bef06a7d37def753b385db4ae86c30`:** PR-triggered runs — Sequential Development Gate `44702343395`, Backend Tests `44702343569`, Security and Dependency Audit `44702343458`, Frontend Build `44702343341`, Patient Registry and Four-Round Dashboard Browser E2E `44702343471`, Windows Installer Build `44702343432`, and GitHub-hosted Windows Packaging Prerequisites `44702343520` — all completed successfully. Push-triggered Sequential Development Gate `44702336613`, Backend Tests `44702336604`, Security and Dependency Audit `44702336759`, and Windows Installer Build `44702336600` also completed successfully.
 
-**Next action:** re-run the sequential gate, backend tests and security workflows on the new checklist-bearing PR #4 head, then request one independent approval. Do not merge PR #4 or mark U09/U10 VERIFIED until exact-head CI, acceptance criteria and independent review are complete.
+**Machine plan:** `docs/development_plan.json` remains unchanged and was accepted by the successful sequential gate. U09–U10 remains `IN PROGRESS`; `active_step` remains `U09-U10`; scope baseline remains `5284483a26e87028f919966e304c472ed537e839`. Do not mark U09–U10 complete or activate U04 until the remaining acceptance criteria have been verified.
+
+**Clinical-safety boundary:** synthetic educational use only. Unknown remains unknown. Do not infer N0/M0, stage group, performance status, resectability, negative comorbidities or patient preferences. Preserve conflicts, source-specific provenance, uncertainty, prerequisites, conditionality and dissent. R4 must use actual saved R1–R3 contributions. The CI preflight explicitly records that model inference was not performed; no clinical accuracy or guideline compliance is established.
+
+**Next action:** continue within U09–U10 only. Inspect and complete the legacy-case recovery/migration boundary and the remaining role-wide/data-flow acceptance checks; add regression tests, then rerun the required exact-head sequential gate, backend tests and security audit. Keep U04 and every later step blocked until U09–U10 acceptance is independently reviewed.
