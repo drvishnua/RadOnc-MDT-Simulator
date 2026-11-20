@@ -608,6 +608,11 @@ def test_invalid_state_requires_raw_value_without_canonicalizing_it():
     assert field["provenance"][0]["verification_status"] == (
         "user_supplied_not_independently_verified"
     )
+    assert any(
+        "INVALID means a supplied raw value failed validation" in rule
+        and "do not treat it as a valid clinical fact" in rule
+        for rule in build_case_prompt_context(case)["interpretation_rules"]
+    )
 
 def test_conflicting_values_require_distinct_source_excerpt_provenance():
     same_source = {
