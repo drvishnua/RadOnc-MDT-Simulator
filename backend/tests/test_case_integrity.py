@@ -3810,6 +3810,32 @@ def test_known_unknown_for_demographic_diagnosis_histology_and_status_blocks_str
     assert "known_unknowns" in flags or "unresolved" in flags
 
 
+@pytest.mark.parametrize(
+    ("field_id", "case_values", "generated_claim", "field_flag"),
+    [
+        ("age_years", {"age_years": 68}, "The patient is 68 years old.", "assigns an age"),
+        ("sex_at_birth", {"sex_at_birth": "female"}, "The female patient needs further assessment.", "sex/gender"),
+        ("diagnosis_date", {"diagnosis_date": "2024-02-10"}, "The diagnosis date was 2024-02-10.", "diagnosis_date"),
+        ("histology", {"histology": "adenocarcinoma"}, "Histology is adenocarcinoma.", "histological diagnosis"),
+        ("histological_grade", {"histological_grade": "G2"}, "The tumour is histological grade G2.", "histological grade"),
+        ("performance_status", {"performance_status": "1", "performance_status_scale": "ECOG"}, "The patient has ECOG 1.", "performance-status"),
+        ("performance_status_scale", {"performance_status": "1", "performance_status_scale": "ECOG"}, "The patient has ECOG 1.", "performance-status"),
+    ],
+)
+def test_unrelated_patient_willingness_gap_does_not_block_other_demographic_or_diagnosis_field(
+    field_id, case_values, generated_claim, field_flag
+):
+    case = _case(
+        known_unknowns=["Patient willingness has not been established."],
+        **case_values,
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": generated_claim,
+    })
+
+    assert not any(field_flag in item.casefold() for item in flags), field_id
+
+
 
 
 def test_non_present_known_unknowns_state_is_not_used_as_gap_evidence_even_if_memory_is_corrupt():
