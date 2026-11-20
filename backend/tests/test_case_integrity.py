@@ -2456,3 +2456,123 @@ def test_conflicting_histological_grade_cannot_select_matching_summary_grade():
 
     assert "histological grade" in flags
 
+def test_structured_primary_site_flags_contradictory_generated_site():
+    case = _case(
+        primary_site="lung",
+        case_summary="Synthetic case narrative; the primary site is separately structured.",
+    )
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The primary site is breast.",
+    })).casefold()
+
+    assert "primary_site" in flags
+    assert "lung" in flags
+    assert "breast" in flags
+
+
+def test_structured_primary_site_supports_matching_generated_site():
+    case = _case(
+        primary_site="lung",
+        case_summary="Synthetic case narrative; the primary site is separately structured.",
+    )
+
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The primary site is lung.",
+    })
+
+    assert not any("primary_site" in item for item in flags)
+
+
+def test_unknown_primary_site_cannot_use_case_summary_as_selected_site():
+    case = _case(
+        primary_site=None,
+        case_summary="Referral text: the primary site is breast.",
+        clinical_field_states={"primary_site": "UNKNOWN"},
+    )
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The primary site is breast.",
+    })).casefold()
+
+    assert "primary_site" in flags
+    assert "unknown" in flags
+
+
+def test_conflicting_primary_site_cannot_select_matching_summary_site():
+    case = _case(
+        primary_site=None,
+        case_summary="Referral text: the primary site is breast.",
+        clinical_field_states={"primary_site": "CONFLICTING"},
+        clinical_field_conflicts={
+            "primary_site": [
+                {
+                    "raw_value": "lung",
+                    "provenance": {
+                        "source_type": "CLINICIAN_NOTE",
+                        "source_reference": "site-a",
+                        "source_excerpt": "Primary site is lung.",
+                    },
+                },
+                {
+                    "raw_value": "breast",
+                    "provenance": {
+                        "source_type": "IMAGING_REPORT",
+                        "source_reference": "site-b",
+                        "source_excerpt": "Primary site is breast.",
+                    },
+                },
+            ]
+        },
+    )
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The primary site is breast.",
+    })).casefold()
+
+    assert "primary_site" in flags
+    assert "conflicting" in flags
+
+
+def test_primary_site_can_fall_back_to_summary_only_without_explicit_state():
+    case = _case(
+        primary_site=None,
+        case_summary="Referral text: the primary site is glottis.",
+    )
+
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The primary site is glottis.",
+    })
+
+    assert not any("primary_site" in item for item in flags)
+
+
+def test_unknown_anatomical_subsite_cannot_use_case_summary_as_selected_subsite():
+    case = _case(
+        anatomical_subsite=None,
+        case_summary="Referral text: the anatomical subsite is upper lobe.",
+        clinical_field_states={"anatomical_subsite": "UNKNOWN"},
+    )
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The anatomical subsite is upper lobe.",
+    })).casefold()
+
+    assert "anatomical_subsite" in flags
+    assert "unknown" in flags
+
+
+def test_structured_anatomical_subsite_flags_contradictory_generated_subsite():
+    case = _case(
+        anatomical_subsite="upper lobe",
+        case_summary="Synthetic case; the subsite is supplied separately.",
+    )
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The anatomical subsite is lower lobe.",
+    })).casefold()
+
+    assert "anatomical_subsite" in flags
+    assert "upper lobe" in flags
+    assert "lower lobe" in flags
+
