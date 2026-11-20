@@ -2168,9 +2168,13 @@ def test_invalid_case_summary_is_labelled_invalid_in_prompt_projection():
     context = build_case_prompt_context(case)
 
     assert context["field_status"]["case_summary"]["status"] == "invalid"
-    assert context["field_status"]["case_summary"]["value"] == case.case_summary
+    assert context["field_status"]["case_summary"]["value"] is None
+    assert context["case_snapshot"]["case_summary"] is None
     assert context["canonical_field_values"]["case_summary"]["state"] == "INVALID"
+    assert context["canonical_field_values"]["case_summary"]["raw_value"] is None
     assert context["canonical_field_values"]["case_summary"]["canonical_comparison_value"] is None
+    # The original validated case retains the raw summary for immutable audit.
+    assert case.model_dump(mode="json")["case_summary"] == "Synthetic case summary retained for audit only."
 
 
 def test_conflicting_case_summary_is_not_exposed_as_a_selected_prompt_value():
