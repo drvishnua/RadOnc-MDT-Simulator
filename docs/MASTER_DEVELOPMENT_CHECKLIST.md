@@ -7020,3 +7020,62 @@ Application and test code is unchanged from `4a44b3e8d6796dee21d25e396d611091c79
 - All three successful runs identify exact implementation/test SHA `d507d6958ea07b9a729df98c615b8d6f66074b28`.
 
 **Status:** typed investigation source-excerpt preservation is VERIFIED on the exact implementation/test SHA. Clinical list text preservation is VERIFIED on `b628eb2`. U09–U10 remains IN PROGRESS pending full registry field/state/source/provenance and legacy migration acceptance. PR #5 remains OPEN and NOT MERGED. No U04 or later workstream is started; no live-model, GPU or clinical validation is claimed.
+
+
+### U10 known_unknowns field-state source-eligibility guard — 20 November 2026
+
+**Approved-sequence position:** continuation of U09–U10 canonical field state/source validation. No later workstream was started.
+
+**Test-first failure checkpoint**
+- Test-only commit: `36c7709e74c4c1e5a711ed942eab958b935268b8`.
+- New regression simulates a malformed/historical in-memory `SyntheticCase` that bypassed Pydantic validation: `known_unknowns` contains a clinical-T unresolved note even though the list field state is `UNKNOWN`.
+- Backend run `44771116010`: FAILED as expected; **792 passed, 1 failed, 0 errors, 0 skipped**. The failing test showed the audit helper consumed stale list contents and blocked a cT2 case-summary claim despite `known_unknowns` being non-PRESENT.
+- Deterministic no-inference preflight completed successfully (7 passed, 0 failed). Sequential Development Gate run `44771116245`: SUCCESS. Security and Dependency Audit run `44771116065`: SUCCESS.
+
+**Narrow implementation correction**
+- Implementation commit: `f5f556be9bff7fd3434171b2ce6d6a491baf10aa`.
+- `known_unknown_blocks_field()` now consumes list statements only if the canonical state of `known_unknowns` is absent/legacy-unannotated or explicitly `PRESENT`. For `UNKNOWN`, `CONFLICTING`, `NOT_REPORTED`, `NOT_ASSESSED`, `PENDING`, `DECLINED` or `NOT_APPLICABLE`, it fails closed and does not use stale in-memory list contents.
+- Existing SyntheticCase schema validation remains unchanged: a populated list with `UNKNOWN` state is still rejected. No schema relaxation or clinical inference was added.
+
+**Exact implementation-head verification**
+- Backend Tests run `44771305103`: SUCCESS; **793/793 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive**; diagnostic errors 0. Pytest diagnostics artifact `14646727837`; deterministic preflight artifact `14646937351`.
+- Sequential Development Gate run `44771305238`: SUCCESS.
+- Security and Dependency Audit run `44771305054`: SUCCESS; Python CodeQL, JavaScript/TypeScript CodeQL, Python/Node dependency audit and full-history secret scan all successful.
+- All three successful workflows identify exact code/test SHA `f5f556be9bff7fd3434171b2ce6d6a491baf10aa`.
+
+**Current interpretation**
+- Non-PRESENT `known_unknowns` source gating: VERIFIED by the exact-head software regression suite.
+- Field-specific unresolved-note mapping: VERIFIED for the tested fields and qualifier controls; do not generalise this into a claim that every registry field has completed source-mapping acceptance.
+- U09–U10 remains IN PROGRESS. Remaining ordered acceptance: registry-wide field/state/source validation, remaining declared data types, then explicit legacy/registry-version migration and compatibility acceptance.
+- PR #5 remains OPEN and NOT MERGED. No U04 or later workstream has started. No live model execution, GPU inference, or clinical accuracy is claimed.
+
+### Master Checklist — Current Status (20 November 2026)
+
+| Workstream | Status | Evidence / outstanding boundary |
+|---|---|---|
+| PR #5 and protected branches | VERIFIED | PR #5 head before this checklist-only update: `f5f556b`; base is `feature/four-round-mdt-and-performance` at `df90e4a`; PR OPEN/unmerged; main untouched |
+| Approved sequence | VERIFIED | Active scope remains U09–U10; no U04+ work started |
+| U09 immutable registry v2 and stable IDs | IN PROGRESS | v1 retained for history; v2 registry/hash implemented; complete field/state/source and migration acceptance remains |
+| U10 known-unknown field-specific mapping | VERIFIED (tested fields) | Explicit field/clause matching, qualifier controls and matching-field audit safeguards have passed |
+| U10 known_unknowns list-state gating | VERIFIED | Test-first failure `44771116010`; corrected code `f5f556b`; exact backend `44771305103`, 793/793 pass |
+| Clinical/pathological TNM and typed stage-group separation | VERIFIED (software tests) | Exact-head backend coverage; no site-specific clinical staging validation implied |
+| Clinical list source-text preservation | VERIFIED | `b628eb26`; 790/790 exact-head backend |
+| Typed investigation source-excerpt preservation | VERIFIED | `d507d695`; 791/791 exact-head backend |
+| Provenance hashes, immutable excerpts and conflict candidates | IN PROGRESS | Core tests pass; exhaustive field/state/source provenance acceptance remains |
+| Remaining registry data types and type/state consistency | NOT STARTED | Continue after current mapping guard, before migration compatibility |
+| Legacy/registry-version migration and compatibility | NOT STARTED | Historical snapshots must remain preserved; no silent v1-to-v2 reinterpretation |
+| Backend tests / deterministic preflight | VERIFIED on `f5f556b` | Run `44771305103`; 793/793 pass; diagnostics 0; preflight passed |
+| Sequential Development Gate | VERIFIED on `f5f556b` | Run `44771305238` SUCCESS |
+| Security/dependency/secret scan/CodeQL | VERIFIED on `f5f556b` | Run `44771305054` SUCCESS; all four jobs passed |
+| R1–R3 shared context across 45 roles | IN PROGRESS | Mocked tests pass; live saved-run role coverage remains |
+| R4 Chair consensus, dissent and traceability | IN PROGRESS | Live saved R1–R3 to R4 reconciliation remains unverified |
+| Case snapshots, hashes, audit, failures and resume | IN PROGRESS | Deterministic controls exist; full saved-run tamper/failure/resume acceptance remains |
+| Evidence retrieval and claim-to-passage verification | IN PROGRESS | Current-source verification in live cases remains |
+| Frontend/browser E2E | NOT STARTED | No frontend change in this slice |
+| U04 intake and all later ordered workstreams | BLOCKED | Do not begin before U09–U10 acceptance |
+| Live 45-role R1–R4 | NOT STARTED | No live run ID or inspected saved artefact |
+| RTX 4060 request-time GPU inference | NOT STARTED | No request-time utilisation/VRAM/Ollama offload evidence |
+| Independent clinical validation | NOT STARTED | No qualified independent review |
+| Integrated release acceptance | BLOCKED | U09–U10 and all later live/GPU/clinical gates remain |
+
+**Next approved action:** continue registry-wide field/state/source validation, then verify remaining declared data types against the actual SyntheticCase schema, then address legacy/registry-version migration compatibility. Add regression tests only for reproducible mismatches. Do not modify the machine-plan sequence, merge PR #5, modify the protected development branch, or activate U04.
