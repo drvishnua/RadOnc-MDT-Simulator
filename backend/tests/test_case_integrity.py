@@ -2240,7 +2240,10 @@ def test_unknown_willingness_or_consent_state_cannot_use_case_summary(
         "provisional_conclusion": generated,
     })).casefold()
 
-    assert "patient preference/decision" in flags
+    if field_id == "patient_consent_status":
+        assert "educational-scenario consent status" in flags
+    else:
+        assert "patient preference/willingness" in flags
 
 
 def test_structured_patient_willingness_supports_matching_decision_statement():
@@ -2250,17 +2253,27 @@ def test_structured_patient_willingness_supports_matching_decision_statement():
         "provisional_conclusion": "The patient agrees to surgery.",
     })
 
-    assert not any("patient preference/decision" in item for item in flags)
+    assert not any("patient preference/willingness" in item for item in flags)
 
 
-def test_given_patient_consent_status_supports_matching_consent_statement():
+def test_given_patient_consent_status_supports_matching_educational_scenario_consent():
     case = _case(patient_consent_status="GIVEN")
 
     flags = audit_unverified_case_claims(case, {
         "provisional_conclusion": "The patient has consented to participate in this educational scenario.",
     })
 
-    assert not any("patient preference/decision" in item for item in flags)
+    assert not any("educational-scenario consent status" in item for item in flags)
+
+
+def test_educational_consent_status_is_not_a_proxy_for_treatment_consent():
+    case = _case(patient_consent_status="GIVEN")
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has consented to surgery.",
+    })).casefold()
+
+    assert "treatment-specific consent" in flags
 
 
 def test_declined_patient_consent_status_does_not_support_consent_given_claim():
@@ -2270,7 +2283,7 @@ def test_declined_patient_consent_status_does_not_support_consent_given_claim():
         "provisional_conclusion": "The patient has consented to participate in this educational scenario.",
     })).casefold()
 
-    assert "patient preference/decision" in flags
+    assert "educational-scenario consent status" in flags
 
 
 def test_declined_patient_consent_status_supports_matching_decline_statement():
@@ -2280,5 +2293,5 @@ def test_declined_patient_consent_status_supports_matching_decline_statement():
         "provisional_conclusion": "The patient declined consent to participate in this educational scenario.",
     })
 
-    assert not any("patient preference/decision" in item for item in flags)
+    assert not any("educational-scenario consent status" in item for item in flags)
 
