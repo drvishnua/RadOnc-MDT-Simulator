@@ -33,7 +33,8 @@ class ClinicalFieldProvenance(StrictModel):
         "OTHER",
     ]
     source_reference: str = Field(min_length=1, max_length=300)
-    source_excerpt: str = Field(min_length=1, max_length=4000)
+    source_excerpt: str = Field(min_length=1, max_length=12000)
+    verification_status: Literal["USER_SUPPLIED_NOT_INDEPENDENTLY_VERIFIED"] = "USER_SUPPLIED_NOT_INDEPENDENTLY_VERIFIED"
     observed_at: datetime | None = None
     recorded_at: datetime | None = None
     source_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
@@ -63,7 +64,7 @@ class InvestigationRecord(StrictModel):
     performed_on: date | None = None
     reported_on: date | None = None
     source_reference: str | None = Field(default=None, max_length=300)
-    source_excerpt: str | None = Field(default=None, max_length=4000)
+    source_excerpt: str | None = Field(default=None, max_length=12000)
 
 
 class SyntheticCase(StrictModel):
@@ -193,6 +194,39 @@ class SyntheticCase(StrictModel):
                 raise ValueError(f"{field_id} conflict values require clinical_field_states[{field_id!r}]='CONFLICTING'.")
             if len(conflicts) < 2:
                 raise ValueError(f"{field_id} requires at least two conflict values.")
+
+        # Persist a minimal, hash-bound provenance record for every supplied
+        # value that lacks an explicit source reference. It identifies the
+        # actual request field as its source and explicitly does NOT claim
+        # independent document verification.
+        provenance = dict(self.clinical_field_provenance)
+        serialised_values = self.model_dump(mode="json", exclude_none=True)
+        for field_id in CLINICAL_FIELD_REGISTRY:
+            value = getattr(self, field_id)
+            state = self.clinical_field_states.get(
+                field_id,
+                "PRESENT" if value is not None and value != "" and (not isinstance(value, list) or bool(value)) else "NOT_REPORTED",
+            )
+            if field_id in provenance or state not in {"PRESENT", "INVALID"}:
+                continue
+            if value is None or value == "" or (isinstance(value, list) and not value):
+                continue
+            serialised = serialised_values.get(field_id)
+            excerpt = serialised if isinstance(serialised, str) else json.dumps(
+                serialised, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+            )
+            source_excerpt = excerpt
+            source_hash = hashlib.sha256(source_excerpt.encode("utf-8")).hexdigest()
+            provenance[field_id] = [
+                ClinicalFieldProvenance(
+                    source_type="CASE_SUMMARY" if field_id == "case_summary" else "STRUCTURED_CASE_INPUT",
+                    source_reference=f"SyntheticCase.{field_id}",
+                    source_excerpt=source_excerpt,
+                    source_sha256=source_hash,
+                    verification_status="USER_SUPPLIED_NOT_INDEPENDENTLY_VERIFIED",
+                )
+            ]
+        self.clinical_field_provenance = provenance
 
         return self
 
