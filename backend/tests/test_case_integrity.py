@@ -2626,3 +2626,74 @@ def test_clinical_stage_group_with_explicit_site_system_and_edition_has_context(
 
     assert not any("staging context" in item.casefold() for item in flags)
 
+def test_unreported_diagnosis_date_assertion_is_flagged():
+    case = _case(
+        diagnosis_date=None,
+        case_summary="Synthetic case with no diagnosis date recorded.",
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The diagnosis date was 2024-02-11.",
+    })
+    assert any("diagnosis_date" in item for item in flags)
+
+
+def test_generated_diagnosis_date_must_match_the_structured_value():
+    case = _case(diagnosis_date="2024-02-10")
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The diagnosis date was 2024-02-11.",
+    })
+    assert any("diagnosis_date" in item for item in flags)
+
+
+def test_matching_structured_diagnosis_date_is_not_flagged():
+    case = _case(diagnosis_date="2024-02-10")
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The diagnosis date was 2024-02-10.",
+    })
+    assert not any("diagnosis_date" in item for item in flags)
+
+
+def test_explicit_unknown_diagnosis_date_cannot_use_summary_fallback():
+    case = _case(
+        case_summary="Synthetic case. Diagnosis date: 2024-02-10.",
+        diagnosis_date=None,
+        clinical_field_states={"diagnosis_date": "UNKNOWN"},
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The diagnosis date was 2024-02-10.",
+    })
+    assert any("diagnosis_date" in item and "UNKNOWN" in item for item in flags)
+
+
+def test_unreported_family_caregiver_support_assertion_is_flagged():
+    case = _case(
+        case_summary="Synthetic case; family and caregiver arrangements are not recorded.",
+        family_caregiver_context=[],
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "A caregiver is available to support the patient.",
+    })
+    assert any("family_caregiver_context" in item for item in flags)
+
+
+def test_unknown_family_caregiver_state_cannot_use_summary_fallback():
+    statement = "A caregiver is available to support the patient."
+    case = _case(
+        case_summary="Synthetic case. " + statement,
+        family_caregiver_context=[],
+        clinical_field_states={"family_caregiver_context": "UNKNOWN"},
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert any("family_caregiver_context" in item and "UNKNOWN" in item for item in flags)
+
+
+def test_reported_family_caregiver_support_can_support_matching_claim():
+    statement = "A caregiver is available to support the patient."
+    case = _case(family_caregiver_context=[statement])
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert not any("family_caregiver_context" in item for item in flags)
+
