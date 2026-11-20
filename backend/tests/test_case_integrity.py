@@ -2944,3 +2944,58 @@ def test_resource_context_may_use_summary_fallback_only_without_explicit_state()
     })
     assert not any("resource_context" in item for item in flags)
 
+def test_present_social_context_does_not_support_a_different_living_arrangement():
+    case = _case(social_context=["Lives with a daughter"])
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient lives with a spouse.",
+    })
+    assert any("social_context" in item for item in flags)
+
+
+def test_confirmed_absent_social_context_cannot_fall_back_to_positive_summary_claim():
+    statement = "The patient lives with a spouse."
+    case = _case(
+        case_summary="Referral text: " + statement,
+        social_context=[],
+        clinical_field_states={"social_context": "CONFIRMED_ABSENT"},
+        clinical_field_provenance={
+            "social_context": [{
+                "source_type": "CLINICIAN_NOTE",
+                "source_reference": "social-history-absence",
+                "source_excerpt": "No social history or living arrangement was documented.",
+            }]
+        },
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert any("social_context" in item and "CONFIRMED_ABSENT" in item for item in flags)
+
+
+def test_present_resource_context_does_not_support_a_different_constraint():
+    case = _case(resource_context=["Financial constraints"])
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has transport barriers.",
+    })
+    assert any("resource_context" in item for item in flags)
+
+
+def test_confirmed_absent_resource_context_cannot_fall_back_to_positive_summary_claim():
+    statement = "The patient has financial constraints."
+    case = _case(
+        case_summary="Referral text: " + statement,
+        resource_context=[],
+        clinical_field_states={"resource_context": "CONFIRMED_ABSENT"},
+        clinical_field_provenance={
+            "resource_context": [{
+                "source_type": "CLINICIAN_NOTE",
+                "source_reference": "resource-history-absence",
+                "source_excerpt": "No financial, transport or access constraints were documented.",
+            }]
+        },
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert any("resource_context" in item and "CONFIRMED_ABSENT" in item for item in flags)
+
