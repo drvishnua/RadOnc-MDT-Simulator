@@ -1322,6 +1322,64 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             + reason
         )
 
+    # Diagnosis dates are typed case facts. Audit only explicit ISO-date claims
+    # made about the diagnosis date; unrelated investigation/treatment dates are
+    # outside this field's scope.
+    diagnosis_date_pattern = re.compile(
+        r"\\b(?:diagnosis\\s+date|date\\s+of\\s+diagnosis)\\s*"
+        r"(?:(?:is|was)\\s*)?[:=]?\\s*\\d{4}-\\d{2}-\\d{2}\\b|"
+        r"\\bdiagnosed\\s+(?:on|date\\s+of)\\s+\\d{4}-\\d{2}-\\d{2}\\b|"
+        r"\\bdiagnosis\\s+(?:was\\s+)?(?:made|established|confirmed)\\s+"
+        r"(?:on|at)\\s+\\d{4}-\\d{2}-\\d{2}\\b",
+        re.IGNORECASE,
+    )
+
+    def diagnosis_date_values(value: str) -> set[str]:
+        return {
+            date_match.group(0)
+            for snippet in _unqualified_matches(diagnosis_date_pattern, value)
+            if (date_match := re.search(r"\\b\\d{4}-\\d{2}-\\d{2}\\b", snippet))
+        }
+
+    diagnosis_date_state = field_state("diagnosis_date")
+    if case.diagnosis_date is not None and field_assertable("diagnosis_date"):
+        supported_diagnosis_dates = {case.diagnosis_date.isoformat()}
+    elif diagnosis_date_state is None:
+        # The verbatim summary is a fallback only when no explicit state exists.
+        supported_diagnosis_dates = diagnosis_date_values(case_summary_text)
+    else:
+        supported_diagnosis_dates = set()
+
+    generated_diagnosis_date_snippets = _unqualified_matches(
+        diagnosis_date_pattern, text
+    )
+    unsupported_diagnosis_date_snippets = [
+        (snippet, date_match.group(0))
+        for snippet in generated_diagnosis_date_snippets
+        if (date_match := re.search(r"\\b\\d{4}-\\d{2}-\\d{2}\\b", snippet))
+        and date_match.group(0) not in supported_diagnosis_dates
+    ]
+    if unsupported_diagnosis_date_snippets:
+        unsupported_dates = sorted({value for _snippet, value in unsupported_diagnosis_date_snippets})
+        if diagnosis_date_state == "CONFLICTING":
+            reason = "diagnosis_date has unresolved conflicting source values; no single date may be selected."
+        elif diagnosis_date_state not in (None, "PRESENT"):
+            reason = (
+                f"diagnosis_date is marked {diagnosis_date_state}; that state cannot support a selected diagnosis date."
+            )
+        elif case.diagnosis_date is not None and field_assertable("diagnosis_date"):
+            reason = f"the generated date conflicts with structured diagnosis_date={case.diagnosis_date.isoformat()}."
+        else:
+            reason = (
+                "diagnosis_date is not supplied as an assertable value or explicitly recorded in the verbatim case summary."
+            )
+        flags.append(
+            "Generated narrative asserts diagnosis_date value(s) ("
+            + ", ".join(unsupported_dates[:4])
+            + "), but "
+            + reason
+        )
+
     # Stage groups are audited by declared type. Pathological staging cannot
     # support a clinical stage-group assertion, or vice versa. An untyped legacy
     # stage_group supports only an untyped generated/source statement.
@@ -1517,6 +1575,53 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             "Generated narrative treats family history as absent ("
             + ", ".join(unsupported_family_history_absence[:3])
             + "), but that absence is not explicitly supported by the supplied case."
+        )
+
+    family_caregiver_support_pattern = re.compile(
+        r"\\b(?:family|family\\s+members?|relatives?|caregivers?|carers?|daughter|son|"
+        r"spouse|partner|wife|husband|siblings?|children)\\b"
+        r"[^.!?;:\\n]{0,100}\\b(?:support|care|assistance|available|unavailable|"
+        r"accompany|accompanied|provides?|providing|helps?|helping|present|involved)\\b|"
+        r"\\b(?:support|care|assistance)\\b[^.!?;:\\n]{0,100}\\b"
+        r"(?:family|family\\s+members?|relatives?|caregivers?|carers?|daughter|son|"
+        r"spouse|partner|wife|husband|siblings?|children)\\b",
+        re.IGNORECASE,
+    )
+    family_caregiver_state = field_state("family_caregiver_context")
+    if family_caregiver_state == "PRESENT" and case.family_caregiver_context:
+        family_caregiver_source = "\\n".join(case.family_caregiver_context)
+    elif family_caregiver_state is None:
+        family_caregiver_source = (
+            "\\n".join(case.family_caregiver_context)
+            if case.family_caregiver_context
+            else case_summary_text
+        )
+    else:
+        # Explicit non-PRESENT states, and inconsistent PRESENT-without-a-value,
+        # must not be bypassed by free-text summary fallback.
+        family_caregiver_source = ""
+
+    unsupported_family_caregiver_claims = _unsupported_matches(
+        family_caregiver_support_pattern, text, family_caregiver_source
+    )
+    if unsupported_family_caregiver_claims:
+        if family_caregiver_state not in (None, "PRESENT"):
+            reason = (
+                f"family_caregiver_context is marked {family_caregiver_state}; "
+                "that state cannot support a selected family/caregiver assertion."
+            )
+        elif case.family_caregiver_context:
+            reason = "the generated assertion does not match the structured family/caregiver context."
+        else:
+            reason = (
+                "the assertion is not explicitly supported by structured family/caregiver context "
+                "or the verbatim case summary."
+            )
+        flags.append(
+            "Generated narrative asserts family/caregiver support or availability ("
+            + ", ".join(unsupported_family_caregiver_claims[:3])
+            + "), but "
+            + reason
         )
 
     # High-specificity assertion checks. Questions and qualified uncertainty are not
