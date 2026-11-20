@@ -2116,3 +2116,98 @@ def test_conflicting_case_summary_is_not_exposed_as_a_selected_prompt_value():
     assert context["canonical_field_values"]["case_summary"]["raw_value"] is None
     assert len(context["canonical_field_values"]["case_summary"]["conflict_candidates"]) == 2
 
+@pytest.mark.parametrize(
+    ("field_id", "summary", "generated", "label"),
+    [
+        (
+            "known_allergies",
+            "No known allergies.",
+            "The patient has no known allergies.",
+            "allerg",
+        ),
+        (
+            "current_medications",
+            "No current medications.",
+            "The patient is taking no current medications.",
+            "medication",
+        ),
+        (
+            "family_history",
+            "No known family history of cancer.",
+            "The patient has no known family history of cancer.",
+            "family history",
+        ),
+    ],
+)
+def test_unknown_negativeable_list_state_does_not_use_summary_as_absence_evidence(
+    field_id, summary, generated, label
+):
+    case = _case(
+        case_summary=summary,
+        **{field_id: []},
+        clinical_field_states={field_id: "UNKNOWN"},
+    )
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": generated,
+    })).casefold()
+
+    assert label in flags
+    assert "absence is not explicitly supported" in flags
+
+
+@pytest.mark.parametrize(
+    ("field_id", "positive_value", "summary", "generated", "label"),
+    [
+        (
+            "known_allergies",
+            "penicillin",
+            "No known allergies.",
+            "The patient has no known allergies.",
+            "allerg",
+        ),
+        (
+            "current_medications",
+            "metformin",
+            "No current medications.",
+            "The patient is taking no current medications.",
+            "medication",
+        ),
+        (
+            "relevant_comorbidities",
+            "diabetes",
+            "No known comorbidities.",
+            "The patient has no known comorbidities.",
+            "comorbidit",
+        ),
+        (
+            "prior_treatment",
+            "radiotherapy",
+            "No prior treatment.",
+            "The patient has received no prior treatment.",
+            "prior treatment",
+        ),
+        (
+            "family_history",
+            "maternal breast cancer",
+            "No known family history of cancer.",
+            "The patient has no known family history of cancer.",
+            "family history",
+        ),
+    ],
+)
+def test_positive_negativeable_list_value_overrides_contradictory_summary_absence(
+    field_id, positive_value, summary, generated, label
+):
+    case = _case(
+        case_summary=summary,
+        **{field_id: [positive_value]},
+    )
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": generated,
+    })).casefold()
+
+    assert label in flags
+    assert "absence is not explicitly supported" in flags
+
