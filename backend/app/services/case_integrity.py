@@ -800,6 +800,7 @@ def _tnm_component_values(
 _STAGE_GROUP_ASSERTION_PATTERN = re.compile(
     r"\b(?P<kind>clinical|pathological)?[ \t\r\n]*"
     r"(?:stage[ \t\r\n]?(?:group[ \t\r\n]?)?)"
+    r"(?:[ \t\r\n]*(?:is|was|of)?[ \t\r\n]*[:=]?[ \t\r\n]*)?"
     r"(?P<number>IV|III|II|I|[1-4])(?P<suffix>[ABC])?\b",
     re.IGNORECASE,
 )
