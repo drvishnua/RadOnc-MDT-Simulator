@@ -3661,13 +3661,13 @@ def test_unrelated_known_unknown_does_not_block_supported_clinical_t_stage():
     assert not any("clinical_t_stage" in item for item in flags)
 
 
-def test_unknown_known_unknowns_field_state_does_not_authorise_its_list_contents():
+def test_known_unknowns_list_maps_patient_willingness_to_its_matching_field():
     statement = "The patient is willing to undergo surgery."
     case = _case(
         case_summary="Referral text: " + statement,
         patient_willingness=None,
         known_unknowns=["Patient willingness has not been established."],
-        clinical_field_states={"known_unknowns": "UNKNOWN"},
+        clinical_field_states={"known_unknowns": "PRESENT"},
     )
     flags = audit_unverified_case_claims(case, {
         "provisional_conclusion": statement,
