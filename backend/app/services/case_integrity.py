@@ -1689,6 +1689,26 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             "patient_preferences or patient_willingness, or an assertable case summary."
         )
 
+    treatment_consent_pattern = re.compile(
+        r"\\bpatient(?:'s)?\\s+(?:(?:has|had)\\s+)?"
+        r"(?:consents?\\s+to|consented\\s+to|"
+        r"(?:gave|provided|granted)\\s+(?:their\\s+)?(?:informed\\s+)?consent\\s+to)\\s+"
+        r"(?!participate\\s+in\\s+(?:this|the)\\s+educational\\s+(?:case|scenario|simulation)\\b)"
+        r"[^.!?;\\n]{1,100}",
+        re.IGNORECASE,
+    )
+    unsupported_treatment_consent = _unsupported_matches(
+        treatment_consent_pattern,
+        text,
+        case_summary_text,
+    )
+    if unsupported_treatment_consent:
+        flags.append(
+            "Generated narrative asserts treatment-specific consent ("
+            + "; ".join(unsupported_treatment_consent[:2])
+            + "); educational-scenario consent status and patient willingness are not proxies for informed treatment consent."
+        )
+
     scenario_consent_pattern = re.compile(
         r"\bpatient(?:'s)?\s+(?:has\s+)?consented\s+to\s+participate\s+in\s+"
         r"(?:this|the)\s+educational\s+(?:case|scenario|simulation)\b[^.!?;\n]{0,80}|"
