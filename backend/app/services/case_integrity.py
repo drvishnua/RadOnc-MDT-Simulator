@@ -10,8 +10,13 @@ from app.clinical_fields import (
     CLINICAL_M_STAGE,
     CLINICAL_N_STAGE,
     CLINICAL_T_STAGE,
+    PATHOLOGICAL_M_STAGE,
+    PATHOLOGICAL_N_STAGE,
+    PATHOLOGICAL_T_STAGE,
     build_registry_prompt_payload,
+    clinical_field_registry_sha256,
     normalize_clinical_tnm_component,
+    normalize_pathological_tnm_component,
 )
 
 
@@ -46,19 +51,36 @@ def is_empty_challenge_placeholder(value: object) -> bool:
 
 _SINGLE_FIELDS = {
     "age_years": "Age (years)", "sex_at_birth": "Sex at birth",
-    "primary_site": "Primary site", "histology": "Histology",
+    "primary_site": "Primary site", "anatomical_subsite": "Anatomical subsite",
+    "laterality": "Laterality", "histology": "Histology",
+    "histological_grade": "Histological grade",
     "clinical_t_stage": "Clinical T stage", "clinical_n_stage": "Clinical N stage",
-    "clinical_m_stage": "Clinical M stage", "stage_group": "Stage group",
-    "performance_status": "Performance status", "pathology_summary": "Pathology summary",
-    "imaging_summary": "Imaging summary",
+    "clinical_m_stage": "Clinical M stage",
+    "pathological_t_stage": "Pathological T stage",
+    "pathological_n_stage": "Pathological N stage",
+    "pathological_m_stage": "Pathological M stage",
+    "stage_group": "Unqualified stage group",
+    "clinical_stage_group": "Clinical stage group",
+    "pathological_stage_group": "Pathological stage group",
+    "staging_system": "Staging system", "staging_edition": "Staging edition",
+    "performance_status": "Performance status",
+    "performance_status_scale": "Performance-status scale",
+    "diagnosis_date": "Diagnosis date",
+    "patient_willingness": "Patient willingness",
+    "patient_consent_status": "Patient consent status",
+    "pathology_summary": "Pathology summary", "imaging_summary": "Imaging summary",
 }
 _LIST_FIELDS = {
     "current_medications": "Current medications",
     "known_allergies": "Known allergies",
     "relevant_investigations": "Relevant investigations",
+    "investigation_records": "Typed investigation records",
     "relevant_comorbidities": "Relevant comorbidities",
     "prior_treatment": "Prior treatment",
+    "family_history": "Family history",
+    "family_caregiver_context": "Family/caregiver context",
     "patient_goals": "Patient goals",
+    "patient_preferences": "Patient preferences",
     "social_context": "Social context",
     "resource_context": "Resource context",
     "known_unknowns": "Known unknowns",
@@ -111,25 +133,29 @@ def _source_laterality_integrity_warnings(case_summary: str) -> list[str]:
 
 
 def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
-    """Build the one canonical, versioned case context shared by every round."""
-    snapshot = case.model_dump(exclude_none=True)
+    """Build one deterministic v2 case context without resolving unknowns or conflicts."""
+    snapshot = case.model_dump(exclude_none=True, mode="json")
     field_status: dict[str, dict[str, Any]] = {}
     canonical_field_values: dict[str, dict[str, Any]] = {}
     normalization_warnings: list[str] = []
 
     for field, label in _SINGLE_FIELDS.items():
         value = getattr(case, field)
+        explicit_state = case.clinical_field_states.get(field)
         provided = value is not None and value != ""
+        status = explicit_state or ("PRESENT" if provided else "NOT_REPORTED")
         field_status[field] = {
             "label": label,
-            "status": "provided" if provided else "not_reported",
+            "status": status.casefold(),
             "value": value if provided else None,
         }
     for field, label in _LIST_FIELDS.items():
         values = getattr(case, field) or []
+        explicit_state = case.clinical_field_states.get(field)
+        status = explicit_state or ("PRESENT" if values else "NOT_REPORTED")
         field_status[field] = {
             "label": label,
-            "status": "reported" if values else "not_reported",
+            "status": status.casefold(),
             "value": values if values else None,
         }
     field_status["scenario_title"] = {
@@ -144,52 +170,125 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
     for field_id, definition in CLINICAL_FIELD_REGISTRY.items():
         value = getattr(case, field_id)
         if field_id == "case_summary":
-            status = "PRESENT"
+            default_state = "PRESENT"
         elif isinstance(value, list):
-            status = "PRESENT" if value else "NOT_REPORTED"
+            default_state = "PRESENT" if value else "NOT_REPORTED"
         else:
-            status = "PRESENT" if value is not None and value != "" else "NOT_REPORTED"
+            default_state = "PRESENT" if value is not None and value != "" else "NOT_REPORTED"
+        state = case.clinical_field_states.get(field_id, default_state)
+        explicit_sources = case.clinical_field_provenance.get(field_id, [])
+        conflict_candidates = case.clinical_field_conflicts.get(field_id, [])
+
+        # If no document/source metadata was supplied, identify only the input
+        # field itself. This is not independent verification of the underlying fact.
+        if explicit_sources:
+            provenance = [source.model_dump(mode="json") for source in explicit_sources]
+        elif state == "PRESENT":
+            source_type = "CASE_SUMMARY" if field_id == "case_summary" else "STRUCTURED_CASE_INPUT"
+            provenance = [{
+                "source_type": source_type,
+                "source_reference": f"SyntheticCase.{field_id}",
+                "source_excerpt": value if isinstance(value, str) else json.dumps(value, ensure_ascii=False, default=str),
+                "verification_status": "user_supplied_not_independently_verified",
+            }]
+        else:
+            provenance = []
 
         item: dict[str, Any] = {
             "field_id": field_id,
             "label": definition.label,
-            "status": status,
+            "value_type": definition.value_type,
+            "state": state,
             "raw_value": value,
+            "canonical_comparison_value": None,
+            "unit": definition.unit,
+            "allowed_values": list(definition.allowed_values),
+            "validation_rule": definition.validation_rule,
+            "source_requirement": definition.source_requirement,
+            "provenance": provenance,
+            "conflict_candidates": [
+                candidate.model_dump(mode="json") for candidate in conflict_candidates
+            ],
         }
-        if field_id in (CLINICAL_T_STAGE, CLINICAL_N_STAGE, CLINICAL_M_STAGE) and value not in (None, ""):
-            try:
-                item["canonical_comparison_value"] = normalize_clinical_tnm_component(field_id, value)
-            except ValueError as exc:
-                item["canonical_comparison_value"] = None
-                item["normalization_warning"] = str(exc)
-                normalization_warnings.append(f"{field_id}: {exc}")
-        else:
+
+        if state == "PRESENT":
             item["canonical_comparison_value"] = value
+            if field_id in (CLINICAL_T_STAGE, CLINICAL_N_STAGE, CLINICAL_M_STAGE) and value not in (None, ""):
+                try:
+                    item["canonical_comparison_value"] = normalize_clinical_tnm_component(field_id, value)
+                except ValueError as exc:
+                    item["canonical_comparison_value"] = None
+                    item["normalization_warning"] = str(exc)
+                    normalization_warnings.append(f"{field_id}: {exc}")
+            elif field_id in (PATHOLOGICAL_T_STAGE, PATHOLOGICAL_N_STAGE, PATHOLOGICAL_M_STAGE) and value not in (None, ""):
+                try:
+                    item["canonical_comparison_value"] = normalize_pathological_tnm_component(field_id, value)
+                except ValueError as exc:
+                    item["canonical_comparison_value"] = None
+                    item["normalization_warning"] = str(exc)
+                    normalization_warnings.append(f"{field_id}: {exc}")
+
         canonical_field_values[field_id] = item
 
+    any_tnm_supplied = any(
+        getattr(case, field_id) not in (None, "")
+        for field_id in (
+            CLINICAL_T_STAGE, CLINICAL_N_STAGE, CLINICAL_M_STAGE,
+            PATHOLOGICAL_T_STAGE, PATHOLOGICAL_N_STAGE, PATHOLOGICAL_M_STAGE,
+            "stage_group", "clinical_stage_group", "pathological_stage_group",
+        )
+    )
+    staging_context_warnings: list[str] = []
+    if any_tnm_supplied:
+        missing_context = [
+            name for name, supplied in (
+                ("primary site", case.primary_site),
+                ("staging system", case.staging_system),
+                ("staging edition", case.staging_edition),
+            ) if supplied in (None, "")
+        ]
+        if missing_context:
+            warning = (
+                "Staging interpretation is not validated because "
+                + ", ".join(missing_context)
+                + " is not supplied. Preserve the recorded token; do not infer compatibility or stage."
+            )
+            staging_context_warnings.append(warning)
+            normalization_warnings.append(warning)
+    if (
+        case.performance_status not in (None, "")
+        and case.performance_status_scale in (None, "")
+    ):
+        staging_context_warnings.append(
+            "Performance-status value is recorded without its scale; do not assume ECOG, WHO or Karnofsky equivalence."
+        )
+
+    registry_payload = build_registry_prompt_payload()
     return {
-        "clinical_field_registry": build_registry_prompt_payload(),
+        "clinical_field_registry": registry_payload,
         "clinical_field_registry_version": CLINICAL_FIELD_REGISTRY_VERSION,
+        "clinical_field_registry_sha256": clinical_field_registry_sha256(),
         "case_snapshot": snapshot,
         "canonical_field_values": canonical_field_values,
         "field_status": field_status,
         "tnm_normalization_warnings": normalization_warnings,
+        "staging_context_warnings": staging_context_warnings,
         "source_integrity_warnings": _source_laterality_integrity_warnings(case.case_summary),
         "interpretation_rules": [
-            "not_reported means unknown/not supplied; it never means confirmed absent or negative.",
-            "The case_summary is user-provided free text. Preserve its wording and do not silently normalise shorthand into confirmed structured diagnoses.",
-            "Only explicitly provided clinical_t_stage, clinical_n_stage, clinical_m_stage and stage_group fields establish recorded staging.",
-            "A provided structured clinical T component and an explicitly labelled clinical T token may share a canonical comparison value; preserve the raw source value and never infer a missing component.",
-            "Clinical and pathological staging are distinct. Never copy a pT/pN/pM value into a clinical field.",
-            "TNM lexical normalization does not validate stage; cancer site, staging system and edition are still required.",
-            "A lesion's size or anatomical subsite alone does not establish a T category or stage group; never infer a T category from lesion size or infer nodal/metastatic status from missing data.",
-            "Do not infer age, sex, T/N/M stage, stage group, nodal status, metastatic status, performance status, prior treatment, patient goals or comorbidity negatives.",
-            "Separate source facts, clinical interpretations, hypotheses/assumptions and unknowns.",
-            "If free text and structured fields differ, explicitly flag the discrepancy; do not silently reconcile it.",
-            "When source-attributed laterality statements conflict, preserve both verbatim, report the discrepancy as unresolved, and do not select either source.",
+            "The v2 canonical field registry is immutable; field IDs and meanings must not be renamed or repurposed.",
+            "Registry constants standardise identifiers and semantics; they do not guarantee model adherence or prevent every hallucination.",
+            "not_reported means not supplied; UNKNOWN, NOT_ASSESSED, PENDING, DECLINED and NOT_APPLICABLE remain distinct and are never normal/negative findings.",
+            "CONFIRMED_ABSENT requires explicit source provenance; an empty list or missing value is not a negative finding.",
+            "CONFLICTING fields retain all source-specific candidate values and remain unresolved; do not select or average a source.",
+            "The raw case snapshot and source excerpts must be preserved; canonical comparison values are analysis-only and do not overwrite the source.",
+            "Clinical and pathological T/N/M components and stage groups are separate fields. Pathological values never establish clinical stage.",
+            "A T/N/M token is not interpreted without the supplied primary site, staging system and edition; lexical normalization is not staging validation.",
+            "A lesion's size or anatomical subsite alone does not establish a T category or stage group; never infer N0, M0, stage group or resectability from missing data.",
+            "Performance-status scores require their named scale; do not infer ECOG/WHO/Karnofsky equivalence.",
+            "Separate source facts, clinical interpretations, hypotheses/assumptions and unknowns. Flag contradictions; never silently reconcile them.",
+            "Automatically labelled case-input provenance is user-supplied provenance, not independent verification of a source document.",
         ],
     }
-
 
 _ATTRIBUTED_NOTE_OPINION_PATTERN = re.compile(
     r"\b(?:the\s+)?[A-Za-z][A-Za-z'-]*(?:\s+[A-Za-z][A-Za-z'-]*){0,3}\s+note\s+"
@@ -617,20 +716,38 @@ def _unqualified_tnm_matches(value: str) -> list[str]:
     return findings
 
 
-def _tnm_component_values(value: str, component: str) -> set[str]:
-    """Extract explicit unqualified T/N/M component values from standalone or combined TNM."""
+def _tnm_component_values(
+    value: str,
+    component: str,
+    *,
+    allowed_prefixes: tuple[str, ...] = ("", "C", "YC"),
+    default_prefix: str | None = None,
+) -> set[str]:
+    """Extract component values without collapsing clinical/pathological phases.
+
+    Clinical callers accept unprefixed, c and yc values. Pathological callers
+    explicitly request p/yp values. A y-prefix is retained in the comparison key.
+    """
+    if component not in {"T", "N", "M"}:
+        raise ValueError(f"Unsupported TNM component: {component}")
+    component_pattern = re.compile(
+        rf"(?<![A-Z0-9])(?P<prefix>YC|YP|C|P)?(?P<component>{component})"
+        rf"(?P<value>{'IS|X|0|[1-4][A-D]?' if component == 'T' else 'X|0|[1-3]' if component == 'N' else 'X|0|1'})(?![A-Z0-9])",
+        re.IGNORECASE,
+    )
     values: set[str] = set()
     for snippet in _unqualified_tnm_matches(value):
-        if component == "T":
-            match = re.search(r"(?:c|p|yc|yp)?(T(?:is|x|0|[1-4][a-d]?))", snippet, re.IGNORECASE)
-        elif component == "N":
-            match = re.search(r"N(?:x|0|[1-3])", snippet, re.IGNORECASE)
-        elif component == "M":
-            match = re.search(r"M(?:x|0|1)", snippet, re.IGNORECASE)
-        else:
-            raise ValueError(f"Unsupported TNM component: {component}")
-        if match:
-            values.add(match.group(0).upper().removeprefix("YC").removeprefix("YP").removeprefix("C").removeprefix("P"))
+        for match in component_pattern.finditer(snippet):
+            prefix = (match.group("prefix") or "").upper()
+            if prefix == "" and default_prefix is not None:
+                prefix = default_prefix.upper()
+            if prefix not in allowed_prefixes:
+                continue
+            category = f"{component}{match.group('value').upper()}"
+            # Do not erase treatment-phase modifiers. c/blank are compared as
+            # clinical categories; yc, p and yp remain distinct namespaces.
+            key = f"{prefix}:{category}" if prefix in {"YC", "P", "YP"} else category
+            values.add(key)
     return values
 
 
@@ -839,6 +956,36 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
                     + ", ".join(unsupported_values[:4])
                     + f", but {label} is not supplied and those values are not explicitly recorded in the verbatim case summary."
                 )
+
+    # Pathological stage assertions are audited separately. A p/yp source
+    # can never legitimize a clinical T/N/M assertion, and a clinical source
+    # can never legitimize a pathological assertion.
+    for component, field in (
+        ("T", PATHOLOGICAL_T_STAGE),
+        ("N", PATHOLOGICAL_N_STAGE),
+        ("M", PATHOLOGICAL_M_STAGE),
+    ):
+        structured_value = getattr(case, field)
+        supported_values = (
+            _tnm_component_values(
+                str(structured_value), component,
+                allowed_prefixes=("", "P", "YP"), default_prefix="P",
+            )
+            if structured_value not in (None, "")
+            else _tnm_component_values(
+                case.case_summary, component, allowed_prefixes=("P", "YP")
+            )
+        )
+        generated_values = _tnm_component_values(
+            text, component, allowed_prefixes=("P", "YP")
+        )
+        unsupported_values = sorted(generated_values - supported_values)
+        if unsupported_values:
+            flags.append(
+                f"Generated narrative contains unsupported pathological {component}-stage value(s) "
+                + ", ".join(unsupported_values[:4])
+                + f"; {field} is absent or does not support those exact pathological values."
+            )
 
     # Explicit age assertions are compared with structured age when present,
     # otherwise with the exact age stated in the verbatim source summary.
@@ -1409,4 +1556,20 @@ def build_case_validation_warnings(case: SyntheticCase) -> list[str]:
             warnings.append("The free-text summary mentions hypertension/HTN, but relevant_comorbidities is empty; reconcile the fields before simulation.")
     if re.search(r"\b(smoker|smoking|tobacco)\b", summary):
         warnings.append("Smoking is mentioned in free text; keep it identified as a text-reported risk factor unless explicitly structured/confirmed.")
+    staged_fields = (
+        "clinical_t_stage", "clinical_n_stage", "clinical_m_stage",
+        "pathological_t_stage", "pathological_n_stage", "pathological_m_stage",
+        "stage_group", "clinical_stage_group", "pathological_stage_group",
+    )
+    if any(getattr(case, field) not in (None, "") for field in staged_fields):
+        missing = [label for label, value in (("primary site", case.primary_site), ("staging system", case.staging_system), ("staging edition", case.staging_edition)) if value in (None, "")]
+        if missing:
+            warnings.append("Staging token is retained but site/system/edition compatibility is not validated because " + ", ".join(missing) + " is not supplied. Do not infer stage or compatibility.")
+    if case.performance_status not in (None, "") and case.performance_status_scale in (None, ""):
+        warnings.append("Performance-status value is supplied without a named scale; do not infer ECOG/WHO/Karnofsky equivalence.")
+    if case.stage_group not in (None, "") and case.clinical_stage_group in (None, "") and case.pathological_stage_group in (None, ""):
+        warnings.append("Legacy stage_group is untyped; do not assume it is clinical or pathological staging.")
+    for field_id, state in case.clinical_field_states.items():
+        if state == "CONFLICTING":
+            warnings.append(f"{field_id} has conflicting source values; all candidates are preserved and human/source reconciliation remains outstanding.")
     return warnings
