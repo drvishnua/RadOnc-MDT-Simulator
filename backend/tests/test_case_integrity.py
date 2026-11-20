@@ -3404,3 +3404,184 @@ def test_present_clinical_tnm_supports_only_its_matching_structured_component(
     assert f"{component.casefold()}{unsupported_token[-1]}" in mismatched
     assert getattr(case, field_id) == supported_token
 
+@pytest.mark.parametrize(
+    ("state", "field_id", "summary_statement", "generated_statement"),
+    [
+        (state, field_id, summary_statement, generated_statement)
+        for state in (
+            "UNKNOWN",
+            "NOT_REPORTED",
+            "NOT_ASSESSED",
+            "PENDING",
+            "DECLINED",
+            "NOT_APPLICABLE",
+        )
+        for field_id, summary_statement, generated_statement in (
+            (
+                "stage_group",
+                "Synthetic case summary records stage group III.",
+                "The stage group is III.",
+            ),
+            (
+                "clinical_stage_group",
+                "Synthetic case summary records clinical stage group III.",
+                "The clinical stage group is III.",
+            ),
+            (
+                "pathological_stage_group",
+                "Synthetic pathology summary records pathological stage group III.",
+                "The pathological stage group is III.",
+            ),
+        )
+    ],
+)
+def test_each_nonpresent_typed_stage_group_state_blocks_summary_and_names_state(
+    state, field_id, summary_statement, generated_statement
+):
+    case = _case(
+        case_summary=summary_statement,
+        **{field_id: None},
+        clinical_field_states={field_id: state},
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": generated_statement,
+    })).casefold()
+    assert field_id in flags
+    assert f"marked {state.casefold()}" in flags
+    assert "case-summary fallback" in flags
+
+
+@pytest.mark.parametrize(
+    ("field_id", "invalid_raw", "generated_statement"),
+    [
+        ("stage_group", "Stage V", "The stage group is III."),
+        ("clinical_stage_group", "Stage V", "The clinical stage group is III."),
+        ("pathological_stage_group", "Stage V", "The pathological stage group is III."),
+    ],
+)
+def test_invalid_typed_stage_group_raw_value_is_preserved_but_not_used(
+    field_id, invalid_raw, generated_statement
+):
+    case = _case(
+        **{field_id: invalid_raw},
+        clinical_field_states={field_id: "INVALID"},
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": generated_statement,
+    })).casefold()
+    assert field_id in flags
+    assert "invalid" in flags
+    assert getattr(case, field_id) == invalid_raw
+
+
+@pytest.mark.parametrize(
+    ("field_id", "generated_statement", "first_value", "second_value"),
+    [
+        (
+            "stage_group",
+            "The stage group is II.",
+            "II",
+            "III",
+        ),
+        (
+            "clinical_stage_group",
+            "The clinical stage group is II.",
+            "II",
+            "III",
+        ),
+        (
+            "pathological_stage_group",
+            "The pathological stage group is II.",
+            "II",
+            "III",
+        ),
+    ],
+)
+def test_conflicting_typed_stage_group_sources_remain_unselected(
+    field_id, generated_statement, first_value, second_value
+):
+    kind = {
+        "stage_group": "untyped",
+        "clinical_stage_group": "clinical",
+        "pathological_stage_group": "pathological",
+    }[field_id]
+    case = _case(
+        **{field_id: first_value},
+        clinical_field_states={field_id: "CONFLICTING"},
+        clinical_field_conflicts={
+            field_id: [
+                {
+                    "raw_value": first_value,
+                    "provenance": {
+                        "source_type": "CLINICIAN_NOTE",
+                        "source_reference": f"{field_id}-source-a",
+                        "source_excerpt": f"{kind} source A records stage group {first_value}.",
+                    },
+                },
+                {
+                    "raw_value": second_value,
+                    "provenance": {
+                        "source_type": "IMAGING_REPORT",
+                        "source_reference": f"{field_id}-source-b",
+                        "source_excerpt": f"{kind} source B records stage group {second_value}.",
+                    },
+                },
+            ]
+        },
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": generated_statement,
+    })).casefold()
+    assert field_id in flags
+    assert "conflicting source values" in flags
+    assert getattr(case, field_id) == first_value
+
+
+@pytest.mark.parametrize(
+    ("field_id", "supported_statement", "mismatched_statement", "supported_value"),
+    [
+        (
+            "stage_group",
+            "The stage group is III.",
+            "The stage group is II.",
+            "III",
+        ),
+        (
+            "clinical_stage_group",
+            "The clinical stage group is III.",
+            "The clinical stage group is II.",
+            "III",
+        ),
+        (
+            "pathological_stage_group",
+            "The pathological stage group is III.",
+            "The pathological stage group is II.",
+            "III",
+        ),
+    ],
+)
+def test_present_typed_stage_group_supports_only_its_matching_value(
+    field_id, supported_statement, mismatched_statement, supported_value
+):
+    case = _case(
+        **{field_id: supported_value},
+        clinical_field_states={field_id: "PRESENT"},
+        clinical_field_provenance={
+            field_id: [{
+                "source_type": "CLINICIAN_NOTE",
+                "source_reference": f"{field_id}-present-source",
+                "source_excerpt": f"Source record documents {supported_value}.",
+            }]
+        },
+    )
+    supported = audit_unverified_case_claims(case, {
+        "provisional_conclusion": supported_statement,
+    })
+    mismatched = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": mismatched_statement,
+    })).casefold()
+    assert not any("stage group" in item.casefold() for item in supported)
+    assert "stage group" in mismatched
+    assert field_id in mismatched
+    assert getattr(case, field_id) == supported_value
+
