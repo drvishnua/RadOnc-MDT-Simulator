@@ -4641,3 +4641,80 @@ All eight applicable workflows on exact application-code SHA `c41ead4c37f054ac01
 - Historical failure `44662043733` remains in GitHub Actions history and is recorded here; it has not been deleted or represented as a successful run.
 - This checklist-only follow-up creates a new PR head. The successful run IDs above are explicitly evidence for predecessor SHA `94f862c7bec13c82db3cd06e18d3c5645548f3d3`; the new head must receive fresh exact-head CI before approval/merge.
 - PR #3 remains open and unmerged; independent approval is still required. No clinical application code has been changed and U09-U10 clinical implementation has not started.
+
+
+### U12 final merge verification and U09/U10 first implementation slice — 20 November 2026
+
+**Protected development branch and sequence**
+
+- PR #3, “U12: reconcile merge evidence and activate U09-U10”, was independently approved on exact PR head `10e07d69f277bf9a280cea08fc2f43d9174d5f53` and merged into `feature/four-round-mdt-and-performance` at `e2e8d7d106a17b897c30db52ac01c5bb5f9ea2ab`.
+- The exact merge SHA passed the following CI workflows: Backend Tests `44663413267`; Sequential Development Gate `44663413301`; Windows Packaging Prerequisites `44663413236`; Security and Dependency Audit `44663413368`; Frontend Build `44663413232`; Browser E2E `44663413326`; Windows Installer Build `44663413456`.
+- The exact merge SHA also passed the gate, backend and security on push and pull-request events. The Windows installer smoke test succeeded. Its optional clean-hosted Ollama/model first-run subtest was SKIPPED and is not claimed as verified.
+- Development branch HEAD at the start of U09 implementation: `e2e8d7d106a17b897c30db52ac01c5bb5f9ea2ab`, protected. `main` remains at `39a356b8eb09399aa2da1b9b9085965999f5105a`. PR #1 remains open, draft and unmerged.
+- Machine plan on the protected development branch: `active_step=U09-U10`; U12 is VERIFIED using exact merge-SHA evidence; U09-U10 is IN PROGRESS; all subsequent steps remain BLOCKED. The scope baseline remains the U12 merge SHA.
+
+**U09/U10 implementation in isolated branch `u09-clinical-contract-v2-20261120`**
+
+Current branch head at this checklist update: `c74340faa1e5583dded9530b31d4cf3beca08549`. Changes are limited to the U09/U10 allowlist:
+- `backend/app/clinical_fields.py`
+- `backend/app/schemas.py`
+- `backend/app/services/case_integrity.py`
+- `backend/tests/test_clinical_fields.py`
+- `backend/tests/test_case_integrity.py`
+
+Implemented, not yet CI-verified:
+1. Registry v2.0.0 is additive. Stable v1.0.0 field definitions and its historical prompt payload remain inspectable. Existing field IDs are not renamed or repurposed.
+2. Added stable field identifiers for anatomical subsite, laterality, histological grade, pathological T/N/M, clinical and pathological stage groups, staging system/edition, performance-status scale, diagnosis date, typed investigation records, family history/caregiver context, patient preferences, willingness and consent status.
+3. Added metadata to registry definitions: aliases, units where applicable, closed enumerations, allowed data states, validation-rule identifiers, applicability, source requirements and semantic kind. Registry v2 has a deterministic SHA-256.
+4. Added distinct states UNKNOWN, NOT_REPORTED, NOT_ASSESSED, PENDING, DECLINED, NOT_APPLICABLE, CONFIRMED_ABSENT, CONFLICTING and INVALID. Explicit CONFIRMED_ABSENT requires source provenance; PENDING/unknown/declined values cannot silently carry a definitive field value; CONFLICTING requires at least two distinct source-specific candidates.
+5. Added typed source provenance, exact source-excerpt hash checks, conflict candidates and typed investigation records. Supplied values without explicit source metadata receive a deterministic reference to the actual request field, a serialized source excerpt and SHA-256. The status is explicitly `USER_SUPPLIED_NOT_INDEPENDENTLY_VERIFIED`; this is not independent verification of an external report.
+6. Canonical prompt context now uses JSON-mode case snapshots, retains raw values and conflict candidates, exposes state, source metadata and registry hash, and is serializable with typed dates/investigations. Conflicting values are not exposed as selected model-facing raw values.
+7. Clinical and pathological TNM normalizers/auditors use separate namespaces. Combined p/yp prefixes are propagated to all TNM components; clinical claims cannot be supported by pathological values, or vice versa. The yc prefix remains distinct from c/unprefixed clinical staging. Lexical normalization does not classify a tumour or validate a stage.
+8. Added lexical stage-group normalization and separate clinical/pathological/untyped stage-group audit classes. Parent-stage support from a documented substage is permitted; a parent stage does not establish a substage.
+9. Added deterministic warnings when staging tokens lack primary site, staging system or edition, when performance-status scores lack their named scale, and when the legacy untyped `stage_group` is supplied.
+
+**Important compatibility boundary**
+- Registry v1.0.0 definitions/payloads are retained for historical inspection. This build's `require_supported_registry_version` is intentionally fail-closed for new or resumed runs unless the immutable case version is v2.0.0. No automatic migration of v1 or legacy-unversioned case/run snapshots is implemented. Historical snapshots remain unchanged; a new immutable case version is required before generation under v2. This needs user-visible compatibility messaging and a tested migration pathway before release.
+- A registry constant and lexical normalizer are consistency controls, not a guarantee that an LLM will obey them or that a clinical stage is correct. Site/edition-aware TNM classification and external evidence verification remain outstanding.
+
+**Regression coverage added; pending execution**
+- Registry immutability and stable IDs; additive v2 / inspectable v1 payload; registry hash; expanded case field coverage.
+- Clinical versus pathological TNM normalization; yc-prefix retention; invalid T/N/M component ranges; stage-group normalization.
+- Unknown/pending/declined/not-assessed semantics; explicit confirmed absence with source evidence; conflicting-source preservation; source excerpt hash mismatch.
+- JSON serialization of typed dates and investigation records; persisted per-field source references/hashes.
+- Pathological TNM cannot validate clinical claims; clinical TNM cannot validate pathological claims; combined pathological prefixes apply to every component; conflicting stage data cannot support an asserted value.
+- Clinical and pathological stage groups cannot support one another; exact/substage matching and parent-stage-only matching are tested.
+- **No local test execution or CI result is yet claimed for this U09 branch.** All five changed files are on this isolated branch only. The exact-head sequential gate, backend tests and security checks must pass on a PR before merge. Browser/frontend/installer checks may also run under the normal PR workflow.
+
+### Master Checklist — Current Status (U09/U10 first implementation slice)
+
+| Workstream | Status | Current evidence / outstanding boundary |
+|---|---|---|
+| STEP-A repository verification | VERIFIED | Exact application-code checkpoint and required CI recorded historically |
+| U12 sequential gate, ruleset and skip-step protection | VERIFIED | PR #2 merge SHA `5284483a26e87028f919966e304c472ed537e839`; active development-only ruleset; negative-control failures preserved |
+| U12 reconciliation and ordered activation of U09-U10 | VERIFIED | PR #3 merge SHA `e2e8d7d106a17b897c30db52ac01c5bb5f9ea2ab`; exact merge CI listed above |
+| U09 immutable canonical clinical registry | IN PROGRESS | Additive v2.0.0, stable IDs and hash implemented on isolated branch; exact-head tests pending |
+| U10 deterministic hallucination controls | IN PROGRESS | State/provenance/conflict validation and separate clinical/pathological TNM/stage-group audit implemented; exact-head tests pending |
+| R1-R4 shared canonical case-data flow | IN PROGRESS | Shared prompt-context builder carries v2 registry and facts; round/Chair exact payload equivalence tests still required |
+| Clinical safety and staging | IN PROGRESS | Unknown/declined/conflicting states and phase separation added; site/edition-specific clinical classification and independent review outstanding |
+| Case integrity, hashes and audit | IN PROGRESS | Per-field source excerpt hash and case snapshots implemented; end-to-end immutable snapshot/hash/audit regression pending |
+| Provenance and evidence retrieval | IN PROGRESS | User-supplied provenance is persisted and explicitly unverified; external source-document verification/retrieval not implemented |
+| Chair consensus, dissent and traceability | IN PROGRESS | No Chair logic changed in this slice; must continue using actual saved R1-R3 contributions |
+| Missing/failed specialist handling | VERIFIED (software history) | Historical test evidence only; current live 45-role behaviour remains unverified |
+| Backend exact-head tests | IN PROGRESS | New and existing regression tests committed; no CI result yet |
+| Frontend build and browser E2E | NOT STARTED (this slice) | No frontend files changed; no U09-branch result yet |
+| Security/dependency/secret/CodeQL | NOT STARTED (this slice) | U09 exact-head audit pending |
+| Ollama installed/stopped/absent detection | BLOCKED | Ordered after U07; local installed-but-stopped/model-reuse behaviour not verified |
+| Pre-MDT conversational intake | BLOCKED | Depends on U09/U10 |
+| Conditional specialist reasoning | BLOCKED | Depends on U04 |
+| Specialty-specific evidence retrieval | BLOCKED | U07 remains later in the approved sequence |
+| Repetitive/copied response diagnostics | IN PROGRESS | Existing diagnostics; current model-output corpus review remains outstanding |
+| Standalone desktop UX | BLOCKED | U01-U02 remain later in the sequence |
+| Live R1-R4 execution across 45 roles | NOT STARTED | No live model run in this slice |
+| RTX 4060 request-time GPU inference | NOT STARTED | No local GPU telemetry or request-time inference proof |
+| Independent clinical validation | NOT STARTED | No qualified independent review claimed |
+| Integrated release acceptance | BLOCKED | Ordered implementation, live-model, GPU, security, packaging and independent validation remain outstanding |
+
+**Clinical-safety boundary:** synthetic educational use only. Unknown remains unknown. No inferred N0/M0, stage group, performance status, resectability, comorbidity negative or patient preference. Contradictions remain unresolved and source-specific. Conditional recommendations, uncertainty and dissent must be preserved. R4 Chair synthesis may use only saved R1-R3 contributions. No guideline compliance or evidence verification is claimed.
+
+**Next action:** open the scoped U09/U10 PR from this branch to the protected development branch, then fix any CI failures without changing the approved step order. Do not advance U09-U10 to VERIFIED until all acceptance evidence is exact-head verified.
