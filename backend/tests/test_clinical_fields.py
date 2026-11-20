@@ -632,3 +632,38 @@ def test_conflicting_values_require_distinct_source_excerpt_provenance():
             },
         )
 
+def test_confirmed_absent_is_limited_to_explicitly_negativeable_fields():
+    negativeable_fields = {
+        "current_medications",
+        "known_allergies",
+        "relevant_comorbidities",
+        "prior_treatment",
+        "family_history",
+    }
+
+    actual_fields = {
+        field_id
+        for field_id, definition in CLINICAL_FIELD_REGISTRY.items()
+        if "CONFIRMED_ABSENT" in definition.allowed_states
+    }
+
+    assert actual_fields == negativeable_fields
+
+
+@pytest.mark.parametrize(
+    "field_id",
+    [
+        "relevant_investigations",
+        "patient_goals",
+        "patient_preferences",
+        "family_caregiver_context",
+        "social_context",
+        "resource_context",
+        "known_unknowns",
+        "investigation_records",
+    ],
+)
+def test_non_negativeable_list_fields_reject_confirmed_absent(field_id):
+    with pytest.raises(ValidationError, match="does not allow clinical data state"):
+        _case(clinical_field_states={field_id: "CONFIRMED_ABSENT"})
+
