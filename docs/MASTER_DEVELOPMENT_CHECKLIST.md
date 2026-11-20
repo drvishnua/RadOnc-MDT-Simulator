@@ -5975,3 +5975,55 @@ For positive patient-history assertions concerning comorbidities, prior treatmen
 
 **Next action:** continue the U09–U10 audit of preference, willingness, consent, known-unknowns, and remaining clinical fields. Keep every state allowed by the canonical registry; do not generalise CONFIRMED_ABSENT to fields whose registry vocabulary excludes it. Do not change machine-plan step or activate U04.
 
+## U10 willingness-state distinction — test-first failure record
+
+- Test-only commit e523bfca8bffd80c42766ae47a492cbc31187939, changing only backend/tests/test_case_integrity.py.
+- Exact-head Backend Tests run 44743557102, job 136312991812: **688 passed, 2 failed, 0 errors, 0 skipped** (690 total).
+- Both failures demonstrate that explicit willingness wording is not audited:
+  1. Generated "The patient is willing to undergo surgery" is not flagged when patient_willingness is UNKNOWN, even though the same sentence exists only in the raw case summary.
+  2. The same generated willingness assertion is not flagged when patient_goals contains similar wording while patient_willingness remains UNKNOWN. This shows the current combined source pool can conflate goals/preferences with willingness; the test is not made to pass merely by adding a generic phrase to the existing matcher.
+- Existing tests still confirm that a structured willingness value such as "agrees to surgery" supports its matching statement, an UNKNOWN willingness state blocks summary fallback for matching agreement wording, and educational-scenario consent is not a proxy for treatment consent.
+- Backend run 44743557102 preflight artifact 14630619548 (SHA-256 8fad398cf3212a605c17928f29940fe1e7369c70064f7c267cb7789fc03b5500); pytest diagnostics artifact 14632057068 (SHA-256 fce271afe6eb7d2aee117d0afb568d3f491e470fa24588da059aff7fc3ad8bde).
+- Sequential Development Gate run 44743557088: SUCCESS.
+- Security and Dependency Audit run 44743557220: SUCCESS; all four jobs passed (Python CodeQL, JavaScript/TypeScript CodeQL, dependency audit, full-history secret scan).
+- No application code correction has yet been made for direct willingness statements.
+
+### Required narrow U10 correction
+
+Separate patient preference/goal statements from treatment willingness statements:
+- Goal/preference claims may use patient_goals and patient_preferences only, with field-specific epistemic states. They must not be used as evidence of willingness or refusal.
+- Explicit willingness/refusal/acceptance claims (including "is willing/unwilling to undergo/receive", "agrees to", "declines", "refuses", "accepts") must be checked against patient_willingness only. If that field is UNKNOWN or another non-PRESENT state, case-summary fallback is blocked.
+- A verbatim case-summary fallback for willingness is allowed only when patient_willingness has no explicit state and no structured value.
+- Keep treatment-specific consent separate from patient_willingness and educational-scenario consent. None is a proxy for another.
+- Preserve source-specific conditional statements and uncertainty. Do not convert a goal such as "wants curative treatment" into a willingness statement or formal consent.
+
+### Master Checklist — Current Status
+
+| Workstream | Status | Current evidence / outstanding boundary |
+|---|---|---|
+| Repository/PR/protected branch | VERIFIED | PR #5 OPEN/unmerged at test-only head e523bfc; base feature/four-round-mdt-and-performance; main untouched. |
+| Approved sequence/machine plan | VERIFIED | active_step=U09-U10; plan SHA 7c4bd894af1ef21f8bf54d48ad7e09353fd6471a; Sequential Gate 44743557088 SUCCESS. |
+| U09 immutable registry v2/typed contract | IN PROGRESS | Registry definitions, 40 clinical field IDs, aliases, version hash, immutability and schema coverage tests exist; full state/source/migration/backward compatibility acceptance remains. |
+| U10 stage context and pathological TNM namespace | VERIFIED for tested cases | Missing/UNKNOWN staging context and pathological T/N/M/stage-group UNKNOWN fallback tests passed on f11b55f; broader status/provenance matrix remains IN PROGRESS. |
+| U10 positive history claims (comorbidity/prior treatment/family/allergy/medication) | VERIFIED | Code 25635e9; Backend 44740400697, 674/674. |
+| U10 social/resource context | VERIFIED | Code 5571074; Backend 44741865637, 683/683; UNKNOWN/NOT_REPORTED, value mismatch and matching source tests pass. |
+| U10 date/caregiver/investigation status | VERIFIED | Diagnosis/caregiver code 9b0d4cf, Backend 44737660862, 661/661; investigation code c4d5c63, Backend 44738779218, 666/666. |
+| U10 preference/goal source isolation from willingness | FAILED | Test-only e523bfc; Backend 44743557102, 688/690; direct willingness statements not detected and goal field can be conflated. Correct and retest. |
+| U10 explicit willingness claim detection | FAILED | Same run and exact two tests; add a separate pattern and patient_willingness-only source path. |
+| U10 educational consent vs treatment consent | VERIFIED for tested cases | Existing tests confirm GIVEN/DECLINED education consent matching and treatment-specific consent cannot be inferred from education consent. |
+| U10 social/resource test reconciliation | VERIFIED | Corrected valid-state tests a08434a, Backend 44742778202, 688/688; invalid fixture checkpoint 01d3721 retained as historical. |
+| Backend exact test checkpoint | FAILED | e523bfc Backend 44743557102, 688/690; only the two new willingness tests fail. |
+| Deterministic preflight | VERIFIED | Backend run 44743557102; artifact 14630619548, hash recorded above. |
+| Sequential Development Gate | VERIFIED | Run 44743557088 SUCCESS. |
+| Security/dependency/secret scan/CodeQL | VERIFIED | Run 44743557220 SUCCESS; all four jobs passed. |
+| Known-unknowns and remaining field-level claim audit | IN PROGRESS | Registry and prompt preservation exist; complete generated-claim mapping/source-state audit remains. |
+| U04–U08 | BLOCKED | Do not activate until U09–U10 acceptance is complete. |
+| U03 | BLOCKED | Remains after U08. |
+| U01–U02 | BLOCKED | Remain after U03. |
+| Live 45-role R1–R4 | NOT STARTED | No live run ID or saved MDT artefact claimed. |
+| RTX 4060 request-time inference verification | NOT STARTED | No request-time telemetry/offload evidence claimed. |
+| Independent clinical review | NOT STARTED | No qualified independent review claimed. |
+| Integrated release acceptance | BLOCKED | U09–U10 source/state audit and all later verification gates remain outstanding. |
+
+**Next action:** implement the narrow separate willingness matcher and source path, add positive controls and run exact-head Backend, preflight, Sequential Gate and Security checks. Do not modify U04 intake, advance active_step or begin downstream work.
+
