@@ -5814,3 +5814,59 @@ For positive patient-history assertions concerning comorbidities, prior treatmen
 
 **Next action:** continue U09–U10 field/state audit for preference, willingness, consent, social context, resource context and known-unknowns; test only demonstrable claim-audit gaps. No activation of U04 or other later workstreams.
 
+## U10 social and resource context — test-first failure record
+
+- Test-only commit: `8cbd1c31cf6ad5ea28cbf8c0cdc60162028b621b`, changing only `backend/tests/test_case_integrity.py`.
+- Exact-head Backend Tests run `44741338019`, job `136305456101`: **681 passed, 2 failed, 0 errors, 0 skipped** (683 total).
+- Reproduced U10 audit gaps:
+  1. `social_context`: generated assertion that the patient lives with a spouse is accepted despite the field being explicitly UNKNOWN and empty; a matching sentence in raw summary incorrectly bypasses that state because no claim audit currently exists.
+  2. `resource_context`: generated assertion that the patient has financial constraints is accepted despite the field being explicitly UNKNOWN and empty; matching raw summary also does not remedy the epistemic state.
+- Positive/source controls passed:
+  - matching structured `social_context` supports the living-arrangement claim;
+  - matching case-summary fallback supports it only when no explicit state exists;
+  - matching structured `resource_context` supports the financial-constraint claim;
+  - matching case-summary fallback supports it only when no explicit state exists.
+- Exact-head deterministic preflight completed. Artifact `14631490724`, SHA-256 `ddbffcc7d1d2cb68b1926909bba7e659b7abb869406d096be7d877c034e05270`.
+- Pytest diagnostics artifact `14631495638`, SHA-256 `dc6cacaeefb19430532e69df6fda1c6cced39209c646e2508d7c8c154f975869`.
+- Sequential Development Gate run `44741337962`: SUCCESS.
+- Security and Dependency Audit run `44741337967`: SUCCESS; all four jobs passed (Python CodeQL, JavaScript/TypeScript CodeQL, dependency audit, full-history secret scan).
+- No application-code correction has been made for these two gaps yet.
+
+### Required narrow correction
+
+- Add explicit, high-specificity social-context assertions for documented social facts such as living arrangements and support arrangements.
+- Add explicit, high-specificity resource-context assertions for resource facts such as financial, transport/travel and access constraints.
+- A matching populated structured field may support its own assertion. Verbatim case-summary fallback is permitted only when there is no explicit field state and the structured list is empty. Explicit UNKNOWN/NOT_REPORTED/NOT_ASSESSED/PENDING/DECLINED/CONFLICTING/INVALID blocks fallback. CONFIRMED_ABSENT remains a separate provenance state and cannot support a positive fact.
+- Do not classify hypothetical or conditional statements as patient facts; preserve questions, uncertainty and source attribution.
+- Preserve original social/resource list values and source excerpts. Do not infer living arrangements, caregiver availability, financial barriers or transport constraints from empty fields.
+
+### Master Checklist — Current Status
+
+| Workstream | Status | Current evidence / outstanding boundary |
+|---|---|---|
+| Repository and protected PR | VERIFIED | PR #5 OPEN/unmerged at test-only head `8cbd1c3`; base remains `feature/four-round-mdt-and-performance`; no main-branch modification. |
+| Approved order and machine plan | VERIFIED | `active_step=U09-U10`; plan SHA `7c4bd894af1ef21f8bf54d48ad7e09353fd6471a`; Sequential Gate `44741337962` SUCCESS. |
+| U09 immutable registry and typed data contract | IN PROGRESS | Registry v2/hash/immutable definitions and alias tests exist; complete field/state/source/version/migration acceptance remains. |
+| U10 comorbidity/prior-treatment/family-history/allergy/medication positive claims | VERIFIED | Code `25635e9`; Backend run `44740400697`, 674/674. |
+| U10 social-context living/support claims | FAILED | Test-only `8cbd1c3`; Backend run `44741338019`; UNKNOWN summary bypass not flagged. Correct and retest. |
+| U10 resource-context constraint/access claims | FAILED | Same run; UNKNOWN summary bypass not flagged. Correct and retest. |
+| U10 social/resource matching-source controls | VERIFIED | Same test-only run; structured-source and no-explicit-state summary fallback positive controls passed. |
+| U10 preference/willingness/consent | IN PROGRESS | Existing field-specific state/source tests exist; full state/mismatch/summary/conditionality matrix remains under review. |
+| U10 clinical/pathological TNM and stage group | IN PROGRESS | Pathological T/N/M UNKNOWN and pathological stage group UNKNOWN summary-blocking tests pass on `f11b55f`; other field states and migration/pathway coverage remain. |
+| U10 diagnosis date, caregiver and investigation status | VERIFIED | Diagnosis/caregiver code `9b0d4cf`, run `44737660862` 661/661; investigation code `c4d5c63`, run `44738779218` 666/666. |
+| Backend suite | FAILED | Exact test head `8cbd1c3`; run `44741338019`; 681/683 passed, two social/resource assertion failures. |
+| Deterministic preflight | VERIFIED | Run `44741338019`; artifact `14631490724`, SHA-256 recorded above. |
+| Sequential Development Gate | VERIFIED | Run `44741337962` SUCCESS. |
+| Security/dependency/secret scan/CodeQL | VERIFIED | Run `44741337967` SUCCESS; all four jobs passed. |
+| Evidence retrieval and claim-to-passage verification | IN PROGRESS | Current external retrieval/claim verification not yet accepted. |
+| Case integrity and audit history | IN PROGRESS | Deterministic field provenance/immutability checks exist; full saved-run tamper and failure-path validation remains. |
+| U04–U08 | BLOCKED | Do not start until U09–U10 acceptance. |
+| U03 | BLOCKED | Remains after U08. |
+| U01–U02 | BLOCKED | Remain after U03. |
+| Live 45-role R1–R4 | NOT STARTED | No live run ID or inspected saved MDT artefact claimed. |
+| RTX 4060 inference verification | NOT STARTED | No request-time GPU telemetry or Ollama offload evidence claimed. |
+| Independent clinical validation | NOT STARTED | No qualified independent review claimed. |
+| Release acceptance | BLOCKED | U09–U10 social/resource assertion gaps and all later gates remain. |
+
+**Next action:** implement the narrow social/resource source-aware assertion gates, then run exact-head backend tests, deterministic preflight, Sequential Development Gate and Security Audit. Do not activate U04 or change the machine plan.
+
