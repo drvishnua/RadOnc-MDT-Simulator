@@ -4774,7 +4774,7 @@ This is the latest authoritative status. Earlier entries above are retained as h
 | U10 deterministic state-aware hallucination controls | IN PROGRESS | Merged code and test suite pass; remaining acceptance and role-wide/live validation are not complete. |
 | Explicit epistemic states, per-field provenance, source hashes, conflict preservation/redaction, TNM type separation | VERIFIED | Regression coverage includes the PR #4 merge baseline and follow-up U09 tests; source excerpts are now always SHA-256-addressed. Software verification only, not clinical validation. |
 | Canonical case context across all 45 specialist roles | IN PROGRESS | Mocked regression tests now exercise all 45 profiles in R1, R2 and R3 and assert identical canonical v2 context in every prompt, preserving UNKNOWN / NOT_ASSESSED TNM states. Live saved-case R1–R4 model execution remains unverified. |
-| Explicit source-excerpt hashes for field provenance and conflict candidates | VERIFIED | SHA-256 is generated when omitted, checked when supplied, and does not change `user_supplied_not_independently_verified`; exact-head regression covers field provenance and conflicting source candidates. |
+| Explicit source-excerpt hashes and immutable provenance records | VERIFIED | SHA-256 is generated when omitted and checked when supplied; provenance records are frozen after construction. Exact-head regressions cover explicit field provenance, conflict candidates, hash mismatch and mutation rejection. Verification status remains unverified. |
 | R1–R4 saved contribution data flow | IN PROGRESS | Must continue to preserve round separation and use actual saved R1–R3 inputs for R4. Full live execution has not been verified by this CI. |
 | Chair consensus, conditional positions, dissent, minority views and source traceability | IN PROGRESS | Deterministic safeguards/tests exist; end-to-end saved-run synthesis and audit remain outstanding. |
 | Missing/failed-agent handling and partial-run integrity | IN PROGRESS | Unit/regression coverage exists; live failure-path execution and saved artefact inspection remain outstanding. |
@@ -4834,4 +4834,16 @@ This is the latest authoritative status. Earlier entries above are retained as h
 - Preflight explicitly reports model inference was not performed and clinical accuracy was not evaluated. No live inference, GPU use or clinical validation is claimed.
 - U09–U10 remains `IN PROGRESS`; `docs/development_plan.json` is unchanged (`active_step=U09-U10`, U12 baseline `5284483a26e87028f919966e304c472ed537e839`). PR #5 remains open and unmerged pending independent review.
 - **Next U09–U10 work:** continue the remaining alias/normalization edge cases and audit saved-case/run provenance and failure-path handling. Keep legacy snapshots read-only; do not relabel or silently migrate v1/legacy records.
+
+### U09–U10 provenance record immutability — 20 November 2026
+
+- Follow-up adversarial inspection found that a constructed `ClinicalFieldProvenance` object remained mutable: changing `source_excerpt` after checksum creation left a stale `source_sha256` in the same object.
+- Regression commit `edd2e3aae7b1a621c573dcd12616060950fb273e` added `test_explicit_provenance_record_cannot_be_mutated_after_hashing`; backend run `44708809039` reproduced the defect (596 passed, 1 failed out of 597) because the provenance record allowed the excerpt mutation.
+- Fix commit `20338fdca8839bf31c2853dd71bdb4523660ce08` makes `ClinicalFieldProvenance` a frozen Pydantic model. Missing hashes are calculated in a pre-validation hook, and post-validation verifies the checksum against the exact source excerpt. This keeps hash generation compatible with older serialized records that omit the checksum while preventing ordinary field reassignment after construction.
+- Exact-head Backend Tests run `44708947368`: **597 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive**; deterministic preflight **7 passed, 0 failed, 0 inconclusive**. Hash-completeness and frozen-record mutation regressions both passed.
+- Exact-head Sequential Development Gate run `44708947345`: SUCCESS.
+- Exact-head Security and Dependency Audit run `44708947372`: SUCCESS (Python and JavaScript/TypeScript CodeQL, full-history secret scan, Python/Node dependency audit).
+- These tests verify application data integrity behaviour. They do not independently authenticate source documents or upgrade `user_supplied_not_independently_verified` to verified evidence.
+- U09–U10 remains `IN PROGRESS`; machine plan and U12 scope baseline are unchanged. PR #5 remains open and unmerged pending independent review.
+- **Next U09–U10 work:** continue canonical alias/normalization edge cases and audit saved-case/run provenance plus failure-path handling. Legacy records remain read-only; no historical snapshot is relabelled as v2.
 
