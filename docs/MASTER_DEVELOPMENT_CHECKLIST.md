@@ -6949,3 +6949,16 @@ This section supersedes the immediately preceding “no workflow runs” stateme
 | Integrated release acceptance | BLOCKED | Live-model, GPU, clinical and remaining ordered gates outstanding |
 
 **Checklist-only follow-up:** the checklist update itself will create a documentation-only PR head commit. The application/test code remains unchanged from the verified SHA above; the required PR workflows must be allowed to complete on the new documentation-bearing head before merge consideration.
+
+
+### Final PR #5 exact-head verification — 20 November 2026
+
+The documentation-bearing PR head `a51f4492a6f563aa8e30591150d3ecf8f9de24fa` has now completed all three required workflows successfully:
+
+- Backend Tests run `44766771338`: SUCCESS; **789/789 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive**; deterministic preflight passed. Artifacts: pytest diagnostics `14644457712`; deterministic preflight `14644442762`.
+- Sequential Development Gate run `44766770999`: SUCCESS.
+- Security and Dependency Audit run `44766771015`: SUCCESS; Python CodeQL, JavaScript/TypeScript CodeQL, Python/Node dependency audit and full-history secret scan all successful.
+- All three workflow run records explicitly identify head SHA `a51f4492a6f563aa8e30591150d3ecf8f9de24fa`.
+- PR #5 remains OPEN, NOT MERGED and mergeable. Independent review has not been recorded. No merge action was taken.
+
+**Status interpretation:** field-specific unresolved-note mapping is VERIFIED by the exact-head software regression suite. U09–U10 as a whole remains IN PROGRESS because full acceptance, independent review, live R1–R4 saved-run verification and clinical validation remain outstanding. No live model inference, GPU verification or clinical accuracy is claimed.
