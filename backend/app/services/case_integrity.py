@@ -187,7 +187,7 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
         field_status[field] = {
             "label": label,
             "status": status,
-            "value": None if explicit_state == "CONFLICTING" else (snapshot.get(field) if values else None),
+            "value": None if explicit_state in {"CONFLICTING", "INVALID"} else (snapshot.get(field) if values else None),
         }
     field_status["scenario_title"] = {
         "label": "Scenario title", "status": "provided", "value": case.scenario_title,
