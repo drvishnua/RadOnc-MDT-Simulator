@@ -8042,3 +8042,59 @@ The checklist-only PR #5 head `c6b8cced7484410292d221a53364d72a4335d338` was ind
 - Security and Dependency Audit — run `44800981541`: SUCCESS.
 
 All jobs returned for these three runs were completed with SUCCESS. These runs validate the preceding checklist revision only; they do not constitute live MDT inference, GPU verification or clinical validation. The new GOV-01 checklist update will trigger its own exact-head workflows and must be checked separately.
+
+
+---
+
+## U09 canonical T1 representation contract audit — 21 November 2026
+
+### Exact-head verification after GOV-01 checklist update
+
+- PR #5 remains OPEN and NOT MERGED. Its source branch remains `docs/reconcile-master-checklist-after-pr4-merge`; its target remains `feature/four-round-mdt-and-performance`. The current head at this audit was `2ed4b3518920012b141e3a9c23efa6e4f7989e33`.
+- Backend Tests — run `44802689928`: SUCCESS. Retrieved per-test diagnostics: **859 passed, 0 failed/error/skipped/inconclusive**. Deterministic preflight report artifact `14661927001`; JUnit diagnostics artifact `14662335336`.
+- Sequential Development Gate — run `44802689610`: SUCCESS.
+- Security and Dependency Audit — run `44802689636`: SUCCESS. All four jobs completed successfully: Python CodeQL, JavaScript/TypeScript CodeQL, dependency audit and full-history secret scan.
+- These are exact-head CI checks for `2ed4b3518920012b141e3a9c23efa6e4f7989e33`; they do not establish live model inference, GPU activity or clinical validity.
+
+### T1 mapping — implementation evidence and unresolved input-type interpretation
+
+- The v2 registry currently declares `clinical_t_stage` as `value_type="string"`; `SyntheticCase.clinical_t_stage` is `str | None`.
+- The lexical normalizer accepts string input `"1"` and `"T1"` and maps both to canonical clinical T token `"T1"`. Existing tests verify `normalize_clinical_tnm_component(..., "1") == "T1"`, `normalize_clinical_tnm_component(..., "T1") == "T1"`, and preservation of raw value `"1"` alongside canonical comparison value `"T1"`.
+- The master implementation plan specifies a “Numeric clinical_t_stage representation: 1” but does not explicitly state whether this is a JSON integer `1` or the numeric string `"1"`. The current registry/schema/tests demonstrate the string representation; they do not demonstrate integer input support.
+- **Status: IN PROGRESS for the full wording of the T1 mapping requirement.** Do not claim JSON integer `1` is supported. Do not change the released v2 registry definition or mutate historical case versions to accommodate an assumed type. If integer input is required, first prepare and record a complete additive registry-version/migration plan with preservation and compatibility tests, then implement only within the approved U09 scope.
+
+### Case-summary state boundary review
+
+- `SyntheticCase` rejects a non-empty field value marked `UNKNOWN`, `NOT_REPORTED`, `NOT_ASSESSED`, `PENDING`, `DECLINED` or `NOT_APPLICABLE`. `INVALID` and `CONFLICTING` have separate explicit raw-value/conflict rules.
+- The central model-facing projection withholds INVALID/CONFLICTING case-summary values, while retaining original case material and audit provenance. Existing focused regressions cover the tested redaction paths.
+- No additional field/schema defect was demonstrated in this review. The downstream direct-read bypass remains separately blocked and unresolved.
+
+### Master Checklist — Current Status (21 November 2026)
+
+| Workstream | Status | Evidence / outstanding boundary |
+|---|---|---|
+| PR #5 / development target | IN PROGRESS | PR #5 OPEN, NOT MERGED; head `2ed4b3518920012b141e3a9c23efa6e4f7989e33`; target development branch base `df90e4a380bef06a7d37def753b385db4ae86c30` |
+| GOV-01 detailed-plan-before-execution procedure | IN PROGRESS | Added in place to the existing Master Checklist; future project requirements must demonstrate continued compliance |
+| U12 fail-closed sequential gate | VERIFIED for this head | Exact-head Sequential Development Gate run `44802689610` SUCCESS |
+| U09 stable registry IDs, aliases and declared types | VERIFIED for tested contract | 40 fields, 7 declared value types, immutable definitions/aliases/version hash and schema shape regressions |
+| U09 state vocabulary and field-specific state contract | VERIFIED for tested cases | Registry allowed states map to schema `DataState`; field-specific value/state validation tests remain |
+| U09 source text, provenance hashes and immutable audit | VERIFIED for tested cases | Exact source text/whitespace, hashes, database reopen and immutable record regressions; hashes do not prove source authenticity |
+| U09 legacy v1/unversioned read-only and explicit v1-to-v2 upgrade | VERIFIED for tested transitions | Historical raw JSON/hash/version preserved; new accepted v2 version required before generation |
+| U09 T1 canonical mapping | IN PROGRESS | String `"1"` and `"T1"` normalize to `"T1"`; JSON integer semantics remain unspecified by the current field type and tests |
+| U09 INVALID/CONFLICTING central context projection | VERIFIED for tested cases | Exact code/test head `a0341769820836408065b753ad53322143835193`; backend run `44800666560` passed |
+| R2/R3/R4 direct case-summary source-opinion reads for INVALID/CONFLICTING states | BLOCKED | `mdt_generation.py` bypasses the central projection and is outside current U09–U10 fixed `allowed_paths`; no edit or gate bypass made |
+| Broader U09–U10 field/state/source/provenance acceptance | IN PROGRESS | T1 type interpretation and caller-boundary blocker remain; do not reopen already verified field families absent a regression |
+| Backend tests / deterministic preflight | VERIFIED on `2ed4b3518920012b141e3a9c23efa6e4f7989e33` | Run `44802689928`: 859/859; preflight artifact `14661927001`; JUnit diagnostics `14662335336` |
+| Sequential Development Gate | VERIFIED on `2ed4b3518920012b141e3a9c23efa6e4f7989e33` | Run `44802689610`: SUCCESS |
+| Security/dependency/secret scan/CodeQL | VERIFIED on `2ed4b3518920012b141e3a9c23efa6e4f7989e33` | Run `44802689636`: SUCCESS; all four jobs passed |
+| Frontend build/browser E2E | NOT APPLICABLE | Checklist-only change; no frontend files changed |
+| R1–R3 shared canonical context across 45 roles | IN PROGRESS | Mocked all-role context tests exist; live saved-run coverage unverified |
+| R4 Chair reconciliation, consensus, dissent and traceability | IN PROGRESS | Live saved R1–R3 to R4 reconciliation unverified; caller-boundary issue remains |
+| Case snapshot hashes, audit, failure and resume integrity | IN PROGRESS | Deterministic tests exist; complete live saved-run tamper/failure/resume acceptance remains |
+| Evidence retrieval and claim-to-passage verification | IN PROGRESS | Current external source retrieval and live claim verification remain unverified |
+| Ollama discovery/reuse and RTX 4060 request-time inference | BLOCKED | Later ordered work; no request-time GPU telemetry or local inference |
+| Live 45-role R1–R4 execution and saved artefacts | NOT STARTED | No accepted current-head live run or inspected saved output |
+| Independent clinical validation | NOT STARTED | No qualified independent review |
+| U04 and later workstreams / integrated release | BLOCKED | U09–U10 must be accepted first; no sequence advancement |
+
+**Next approved action:** resolve the T1 input-type interpretation without mutating the immutable v2 registry, and preserve the R2/R3/R4 direct-read bypass as BLOCKED until an authorised scope path exists. Do not edit the machine plan, begin U04, merge PR #5, modify the protected development branch or main, or widen the validator allowlist by editing JSON alone.
