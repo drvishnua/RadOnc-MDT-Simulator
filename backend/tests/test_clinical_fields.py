@@ -23,6 +23,7 @@ from app.clinical_fields import (
     clinical_field_registry_sha256,
     normalize_clinical_tnm_component,
     normalize_pathological_tnm_component,
+    normalize_stage_group_token,
 )
 from app.schemas import SyntheticCase
 from app.services.case_integrity import build_case_prompt_context
@@ -91,6 +92,7 @@ def test_tnm_component_aliases_normalize_without_losing_clinical_semantics():
     assert normalize_clinical_tnm_component(CLINICAL_T_STAGE, "1") == "T1"
     assert normalize_clinical_tnm_component(CLINICAL_T_STAGE, "T1") == "T1"
     assert normalize_clinical_tnm_component(CLINICAL_T_STAGE, "cT1a") == "T1A"
+    assert normalize_clinical_tnm_component(CLINICAL_T_STAGE, "ycT1a") == "YCT1A"
     assert normalize_clinical_tnm_component(CLINICAL_N_STAGE, "N0") == "N0"
     assert normalize_clinical_tnm_component(CLINICAL_M_STAGE, "M0") == "M0"
 
@@ -290,3 +292,51 @@ def test_source_excerpt_hash_must_match_preserved_text():
                 }]
             },
         )
+
+
+
+def test_stage_group_normalizer_is_lexical_and_does_not_assign_stage_type():
+    assert normalize_stage_group_token("Stage II") == "2"
+    assert normalize_stage_group_token("clinical stage group IIA") == "2A"
+    assert normalize_stage_group_token("pathological stage 2B") == "2B"
+    with pytest.raises(ValueError, match="Unrecognised stage-group syntax"):
+        normalize_stage_group_token("Stage V")
+
+
+def test_context_keeps_clinical_and_pathological_stage_groups_separate():
+    case = _case(
+        clinical_stage_group="IIA",
+        pathological_stage_group="pStage III",
+    )
+    context = build_case_prompt_context(case)
+    values = context["canonical_field_values"]
+    assert values["clinical_stage_group"]["canonical_comparison_value"] == "2A"
+    assert values["pathological_stage_group"]["canonical_comparison_value"] == "3"
+    assert values["clinical_stage_group"]["raw_value"] == "IIA"
+    assert values["pathological_stage_group"]["raw_value"] == "pStage III"
+
+
+def test_context_remains_json_serializable_with_typed_investigations_and_dates():
+    case = _case(
+        diagnosis_date="2026-11-20",
+        investigation_records=[{
+            "investigation_name": "MRI",
+            "result_summary": "No result text provided.",
+            "status": "PENDING",
+            "performed_on": "2026-11-20",
+        }],
+    )
+    context = build_case_prompt_context(case)
+    import json
+    encoded = json.dumps(context, ensure_ascii=False)
+    assert "2026-11-20" in encoded
+    assert "investigation_name" in encoded
+    assert context["field_status"]["age_years"]["status"] == "not_reported"
+
+
+def test_field_status_legacy_aliases_are_preserved_for_unannotated_values():
+    case = _case(age_years=70, relevant_comorbidities=["diabetes"])
+    context = build_case_prompt_context(case)
+    assert context["field_status"]["age_years"]["status"] == "provided"
+    assert context["field_status"]["relevant_comorbidities"]["status"] == "reported"
+    assert context["canonical_field_values"]["age_years"]["status"] == "PRESENT"
