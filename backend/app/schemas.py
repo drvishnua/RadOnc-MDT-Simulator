@@ -41,10 +41,14 @@ class ClinicalFieldProvenance(StrictModel):
 
     @model_validator(mode="after")
     def verify_source_hash(self) -> "ClinicalFieldProvenance":
-        if self.source_sha256:
-            actual = hashlib.sha256(self.source_excerpt.encode("utf-8")).hexdigest()
-            if actual != self.source_sha256:
-                raise ValueError("source_sha256 does not match the preserved source_excerpt.")
+        actual = hashlib.sha256(self.source_excerpt.encode("utf-8")).hexdigest()
+        if self.source_sha256 is not None and actual != self.source_sha256:
+            raise ValueError("source_sha256 does not match the preserved source_excerpt.")
+        # Every preserved source excerpt is hash-addressed, including explicitly
+        # supplied provenance and conflict candidates that omit a checksum.
+        # This derives integrity metadata only; it never upgrades source verification.
+        if self.source_sha256 is None:
+            self.source_sha256 = actual
         return self
 
 
