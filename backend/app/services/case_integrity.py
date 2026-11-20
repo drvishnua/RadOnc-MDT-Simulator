@@ -1048,12 +1048,12 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         "patient_willingness": (r"patient\s+willingness", r"patient\s+preference(?:s)?", r"patient\s+decision", r"willingness\s+to\s+(?:undergo|accept|receive)\s+treatment"),
     }
     unresolved_statement_pattern = re.compile(
-        r"(?<!not )\\bunknown\\b|\\b(?:pending|unresolved|not\\s+(?:reported|confirmed|verified|"
+        r"(?<!not )\bunknown\b|\b(?:pending|unresolved|not\s+(?:reported|confirmed|verified|"
         r"established|documented|assessed|available|supplied|provided|determined|recorded)|"
-        r"has\\s+not\\s+been\\s+(?:reported|confirmed|verified|established|documented|assessed|determined)|"
-        r"have\\s+not\\s+been\\s+(?:reported|confirmed|verified|established|documented|assessed|determined)|"
-        r"remains?\\s+(?:unknown|unresolved|unconfirmed|unverified|pending)|"
-        r"not\\s+yet\\s+(?:known|confirmed|verified|available|assessed))\\b",
+        r"has\s+not\s+been\s+(?:reported|confirmed|verified|established|documented|assessed|determined)|"
+        r"have\s+not\s+been\s+(?:reported|confirmed|verified|established|documented|assessed|determined)|"
+        r"remains?\s+(?:unknown|unresolved|unconfirmed|unverified|pending)|"
+        r"not\s+yet\s+(?:known|confirmed|verified|available|assessed))\b",
         re.IGNORECASE,
     )
 
@@ -1061,15 +1061,12 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         aliases = known_unknown_field_aliases.get(field_id, ())
         if not aliases:
             return False
-        field_pattern = re.compile(
-            r"(?:" + "|".join(aliases) + r")",
-            re.IGNORECASE,
-        )
+        field_pattern = re.compile(r"(?:" + "|".join(aliases) + r")", re.IGNORECASE)
         for statement in case.known_unknowns or []:
             if not isinstance(statement, str):
                 continue
-            # Evaluate each clause independently. "not unknown" is explicitly
-            # not an unresolved marker and cannot trigger this mapping.
+            # Evaluate each clause independently. "not unknown" is not an
+            # unresolved marker and cannot trigger this mapping.
             for clause in _CLAUSE_BOUNDARY.split(_collapse_horizontal_whitespace(statement)):
                 if field_pattern.search(clause) and unresolved_statement_pattern.search(clause):
                     return True
@@ -1097,7 +1094,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             # Provenance for confirmed absence can support a negative claim,
             # never a positive patient-history/social/resource assertion.
             return ""
-        if state not in (None, "PRESENT"):
+        if state not in (None, "PRESENT") or known_unknown_blocks_field(field_id):
             return ""
         if not values:
             return case_summary_text if state is None else ""
@@ -1112,6 +1109,8 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
 
     def positive_list_field_reason(field_id: str, values: list[str]) -> str:
         state = field_state(field_id)
+        if known_unknown_blocks_field(field_id):
+            return f"{field_id} is explicitly unresolved in known_unknowns; case-summary fallback cannot support a positive finding."
         if state == "CONFLICTING":
             return f"{field_id} has unresolved conflicting source values; no single positive finding may be selected."
         if state == "CONFIRMED_ABSENT":
@@ -1284,7 +1283,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
                 supported_values = _tnm_component_values(canonical_structured, component)
             except ValueError:
                 supported_values = set()
-        elif explicit_state is not None:
+        elif explicit_state is not None or known_unknown_blocks_field(field):
             supported_values = set()
         else:
             supported_values = _tnm_component_values(case_summary_text, component)
@@ -1340,7 +1339,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
                 )
             except ValueError:
                 supported_values = set()
-        elif explicit_state is not None:
+        elif explicit_state is not None or known_unknown_blocks_field(field):
             supported_values = set()
         else:
             supported_values = _tnm_component_values(
@@ -1506,7 +1505,11 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     summary_group_keys = {
         kind: (
             {key for record_kind, key, _snippet in source_group_records if record_kind == kind}
-            if field_state(stage_group_field_by_kind[kind]) in (None, "PRESENT")
+            if (
+                field_state(stage_group_field_by_kind[kind]) in (None, "PRESENT")
+                and not known_unknown_blocks_field(stage_group_field_by_kind[kind])
+                and not known_unknown_blocks_field("staging_edition")
+            )
             else set()
         )
         for kind in ("UNSPECIFIED", "CLINICAL", "PATHOLOGICAL")
