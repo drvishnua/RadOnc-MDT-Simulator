@@ -353,8 +353,35 @@ def test_patient_registry_round_trips_every_case_field_across_versions_and_datab
         "social_context": ["TEST_ONLY_SOCIAL_CONTEXT_A"],
         "resource_context": ["TEST_ONLY_RESOURCE_CONTEXT_A"],
         "known_unknowns": ["TEST_ONLY_UNKNOWN_A", "TEST_ONLY_UNKNOWN_B"],
+        # Additive v2 registry fields are also persisted and hash-checked.
+        "anatomical_subsite": "TEST_ONLY_ANATOMICAL_SUBSITE",
+        "laterality": "LEFT",
+        "histological_grade": "TEST_ONLY_HISTOLOGICAL_GRADE",
+        "pathological_t_stage": "pT1",
+        "pathological_n_stage": "pN0",
+        "pathological_m_stage": "pM0",
+        "clinical_stage_group": "TEST_ONLY_CLINICAL_STAGE_GROUP",
+        "pathological_stage_group": "TEST_ONLY_PATHOLOGICAL_STAGE_GROUP",
+        "staging_system": "TEST_ONLY_STAGING_SYSTEM",
+        "staging_edition": "TEST_ONLY_STAGING_EDITION",
+        "performance_status_scale": "TEST_ONLY_PERFORMANCE_STATUS_SCALE",
+        "diagnosis_date": "2026-11-20",
+        "investigation_records": [{
+            "investigation_name": "TEST_ONLY_IMAGING",
+            "result_summary": "TEST_ONLY_RESULT_SUMMARY",
+            "status": "COMPLETED",
+            "performed_on": "2026-11-18",
+            "reported_on": "2026-11-19",
+            "source_reference": "TEST_ONLY_INVESTIGATION_SOURCE",
+            "source_excerpt": "TEST_ONLY original investigation excerpt.",
+        }],
+        "family_history": ["TEST_ONLY_FAMILY_HISTORY"],
+        "family_caregiver_context": ["TEST_ONLY_FAMILY_CAREGIVER_CONTEXT"],
+        "patient_preferences": ["TEST_ONLY_PATIENT_PREFERENCE"],
+        "patient_willingness": "TEST_ONLY_EXPLICIT_WILLINGNESS",
+        "patient_consent_status": "PENDING",
     }
-    expected_original = SyntheticCase.model_validate(original_case).model_dump(exclude_none=True)
+    expected_original = SyntheticCase.model_validate(original_case).model_dump(mode="json", exclude_none=True)
     original_hash = hashlib.sha256(
         SyntheticCase.model_validate(original_case).model_dump_json(exclude_none=True).encode("utf-8")
     ).hexdigest()
@@ -376,7 +403,7 @@ def test_patient_registry_round_trips_every_case_field_across_versions_and_datab
 
     # Change exactly one case property; all other scalar and list properties must survive.
     changed_case = {**original_case, "pathology_summary": "TEST_ONLY_PATHOLOGY_SUMMARY_UPDATED"}
-    expected_changed = SyntheticCase.model_validate(changed_case).model_dump(exclude_none=True)
+    expected_changed = SyntheticCase.model_validate(changed_case).model_dump(mode="json", exclude_none=True)
     changed_hash = hashlib.sha256(
         SyntheticCase.model_validate(changed_case).model_dump_json(exclude_none=True).encode("utf-8")
     ).hexdigest()
@@ -800,12 +827,14 @@ def test_patient_registry_round_trips_field_states_provenance_and_conflicts_afte
         **_case("TEST_ONLY metadata roundtrip"),
         "age_years": 63,
         "clinical_t_stage": "T9",
+        "clinical_n_stage": None,
         "patient_goals": ["TEST_ONLY patient-stated goal"],
         "relevant_comorbidities": [],
         "known_unknowns": ["TEST_ONLY staging system and edition not supplied"],
         "clinical_field_states": {
             "age_years": "CONFLICTING",
             "clinical_t_stage": "INVALID",
+            "clinical_n_stage": "UNKNOWN",
             "patient_goals": "PRESENT",
             "relevant_comorbidities": "CONFIRMED_ABSENT",
             "known_unknowns": "PRESENT",
@@ -865,6 +894,7 @@ def test_patient_registry_round_trips_field_states_provenance_and_conflicts_afte
     assert first_version["case"] == expected_case
     assert first_version["case_snapshot_sha256"] == expected_hash
     assert first_version["case"]["clinical_field_states"] == case_payload["clinical_field_states"]
+    assert first_version["case"]["clinical_field_states"]["clinical_n_stage"] == "UNKNOWN"
     assert first_version["case"]["clinical_field_conflicts"]["age_years"][1]["raw_value"] == 65
     assert first_version["case"]["clinical_field_provenance"]["clinical_t_stage"][0][
         "source_sha256"
