@@ -5087,3 +5087,60 @@ A regression-first review found that `case_summary` itself can be marked `INVALI
 **Next U09–U10 action:** continue the remaining typed-field non-PRESENT state/provenance and deterministic audit projections, with regression-first changes only for reproducible gaps. Inspect source-support paths for other registry fields that can affect a generated assertion. Preserve all current invalid/conflicting, CONFIRMED_ABSENT and negative-list tests. Re-run exact-head backend/preflight, Sequential Gate and Security Audit; inspect logs/artifacts; update this same checklist. Do not modify `intake_store.py`, change the machine plan, activate U04 or begin later work.
 
 **Clinical/verification boundary:** this checkpoint verifies deterministic software behavior only. It does not prove model adherence, full live 45-role execution, saved Chair reconciliation, clinical staging correctness, guideline verification, GPU inference or independent clinical validation.
+
+# Master Checklist — Current Status (20 November 2026; patient willingness and consent-state verification)
+
+**Exact code/test commit:** `8c784eb2a90b8add3743826f3491d8ec14058a89`  
+**PR #5:** OPEN, not draft, not merged; head branch `docs/reconcile-master-checklist-after-pr4-merge`; base `feature/four-round-mdt-and-performance` at `df90e4a380bef06a7d37def753b385db4ae86c30`. Independent reviews: 0; inline review threads: 0.  
+**Approved machine plan:** `active_step=U09-U10`; U09-U10 remains IN PROGRESS. U04 and all later steps remain BLOCKED. U12 scope baseline remains `5284483a26e87028f919966e304c472ed537e839`.
+
+## Latest U09–U10 change: patient willingness and educational consent state boundaries
+
+- Audit inspection found that `patient_willingness` and `patient_consent_status` were canonical registry fields but were not inputs to the patient preference/decision audit. That audit could use the case summary even when either field had an explicit UNKNOWN state. It also did not use a PRESENT structured willingness value as evidence.
+- Regression commit `ecb17c71c93ddc84fe312bd876f58eeeaac8f50b` reproduced the UNKNOWN-state summary bypass and the missing structured willingness/consent support paths. Its first version also treated `patient_consent_status=GIVEN/DECLINED` as evidence of consent to surgery. That test interpretation was corrected because the registry definition explicitly states that this field is the consent status for the educational scenario and is **not a proxy for treatment consent**.
+- The tests were refined to separate treatment preference/willingness from educational-scenario consent. They now check that UNKNOWN willingness or scenario-consent state cannot use matching free-text summary text; PRESENT `patient_willingness` supports matching preference/willingness statements; GIVEN/DECLINED scenario-consent values support only matching educational-scenario consent statements; and educational-scenario consent never supports a treatment-consent assertion.
+- Code commit `679267ede8966ba2469a811190383eb111b225d6` separates preference/willingness matching from consent-language matching. The preference audit uses only PRESENT structured goals, preferences and willingness; case-summary fallback is used only when no structured source is supplied and none of those fields is explicitly non-PRESENT. Explicit UNKNOWN/NOT_REPORTED/etc. states cannot be bypassed by the summary.
+- The educational-scenario consent matcher is separate and uses the consent enum's exact mapped meaning (`NOT_ASKED`, `PENDING`, `GIVEN`, `DECLINED`, `WITHDRAWN`). A non-PRESENT consent field cannot use summary text as fallback.
+- A further deterministic check flags treatment-specific consent assertions unless the case summary itself contains an assertable explicit statement. Neither `patient_consent_status` nor general patient willingness is used as supporting evidence for informed treatment consent. The regex was reviewed in the commit diff and corrected to use actual word-boundary/newline escapes before exact-head CI acceptance.
+- Exact-head Backend Tests run `44725897318`: **635 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive**. Deterministic preflight: **7 passed, 0 failed, 0 inconclusive**.
+- Exact-head Sequential Development Gate run `44725897399`: SUCCESS.
+- Exact-head Security and Dependency Audit run `44725897351`: SUCCESS. Python CodeQL, JavaScript/TypeScript CodeQL, Python/Node dependency audit and full-history secret scan all completed successfully.
+- Exact-head artifacts: pytest/JUnit diagnostics artifact `14623887334`, SHA-256 `5cb41000eba64f40bba005fb7a49ac70869836c0b64636072ce1fa85097b8c12`; deterministic preflight artifact `14623543789`, SHA-256 `e772092862c8bb1b8a116c82abe3c35f99325068122942ae504c718519cde26a`.
+- The first failed test run on `ecb17c7` (629 passed, 5 failed) is retained as regression history. The three consent-status expectation failures were corrected to match the registry's stated educational-consent semantics; the two UNKNOWN-state bypass failures led to the state-aware implementation. The final successful evidence is tied to exact code/test SHA `8c784eb`.
+
+## Master Checklist — Current Status
+
+| Workstream | Status | Current evidence / outstanding boundary |
+|---|---|---|
+| Repository, branch, PR, commit and checklist verification | VERIFIED | PR #5 head is `8c784eb`; targets the protected development branch, not `main`. PR remains open/unmerged; no independent review recorded. |
+| U12 protected sequential development gate | VERIFIED | Exact-head Sequential Gate run `44725897399` SUCCESS; approved machine plan and dependency order unchanged. |
+| U09 canonical clinical registry v2 | IN PROGRESS | Immutable v2 registry and stable IDs exist; complete U09/U10 acceptance and legacy-case compatibility/recovery remain outstanding. |
+| U10 deterministic state-aware hallucination controls | IN PROGRESS | INVALID/CONFLICTING summary quarantine, field-specific CONFIRMED_ABSENT eligibility, negative-list claim audit, and willingness/educational-consent state separation pass exact-head backend tests; other typed-field paths remain to be audited. |
+| Per-field epistemic-state allowlist | VERIFIED | Only five explicitly negativeable list fields allow CONFIRMED_ABSENT; registry/schema tests passed on `c9f64c3`. |
+| Negative claims for allergies, medications, comorbidities, prior treatment and family history | VERIFIED | Exact-head tests on `f78e8ac` cover UNKNOWN/empty sources and populated structured values contradicting free-text negative claims. |
+| Patient preference/willingness and educational consent separation | VERIFIED | Exact-head tests on `8c784eb` cover UNKNOWN-state summary bypass, structured willingness, GIVEN/DECLINED educational-scenario consent and the rule that scenario consent is not treatment consent. |
+| R1–R4 shared canonical case-data flow | IN PROGRESS | Mocked all-45-role R1, R2 and R3 prompt-context equivalence tests are recorded earlier; saved live R1–R3 and Chair R4 execution remains unverified. |
+| Clinical safety and staging | IN PROGRESS | Deterministic epistemic-state/provenance and clinical/pathological phase-separation tests pass; site/system/edition-aware clinical classification and independent clinical review are not established. |
+| Case integrity, hashes and audit | IN PROGRESS | Source hashes, immutable provenance/conflict data, invalid-summary quarantine and typed negative-claim safeguards pass; saved case-version/run tamper and failure-path acceptance remains open. |
+| Provenance and evidence retrieval | IN PROGRESS | User-supplied provenance remains explicitly unverified; external evidence retrieval and source-document verification are not established. |
+| Chair consensus, conditionality, dissent and traceability | IN PROGRESS | Deterministic safeguards exist; full saved-contribution Chair reconciliation and live dissent/consensus audit remain outstanding. |
+| Missing/failed specialist and partial-run handling | IN PROGRESS | Deterministic regression coverage exists; full live 45-role failure/resume inspection remains outstanding. |
+| Backend tests | VERIFIED | Exact code/test SHA `8c784eb`; run `44725897318`: 635/635 passed. |
+| Deterministic preflight | VERIFIED | Exact code/test SHA `8c784eb`; 7/7 passed; no model inference or clinical accuracy evaluation. |
+| Sequential development gate | VERIFIED | Exact code/test SHA `8c784eb`; run `44725897399` SUCCESS. |
+| Security, dependency, secret scan and CodeQL | VERIFIED | Exact code/test SHA `8c784eb`; run `44725897351` SUCCESS; all four jobs passed. |
+| Frontend build and browser E2E | VERIFIED | Latest post-merge baseline on `df90e4a`: runs `44702343341` and `44702343471`; no frontend files changed in this U09–U10 slice. |
+| Dashboard/API integration | IN PROGRESS | Backend API/unit coverage passes; no new browser E2E run was triggered by these backend-only changes. |
+| Windows packaging prerequisites and installer | VERIFIED | Latest post-merge baseline on `df90e4a`: runs `44702343520` and `44702343432`; no packaging files changed in this slice. |
+| Deferred intake snapshot/terminal-event binding | BLOCKED | `intake_store.py` is outside U09–U10 allowed paths; retain for U04. No intake code changed. |
+| Legacy saved-case recovery/migration | BLOCKED | Historical v1/legacy snapshots remain read-only and fail-closed; no relabelling or silent migration. |
+| Ollama discovery and installed/stopped/model reuse | BLOCKED | U03 is later in the approved sequence; local installed-but-stopped and existing-model reuse remain unverified. |
+| Live 45-role R1–R4 run and saved-run audit | NOT STARTED | No live run ID or saved MDT artifact is claimed. |
+| RTX 4060 request-time GPU inference | NOT STARTED | No request-time `nvidia-smi` telemetry, Ollama offload trace or measured GPU inference. |
+| Independent clinical validation | NOT STARTED | No independent clinical validation or guideline concordance is claimed. |
+| U04, U05–U06, U06–U08, U07, U03 and U01–U02 | BLOCKED | All remain later than active U09–U10 in the approved dependency sequence. |
+| Integrated release acceptance | BLOCKED | U09–U10 remains IN PROGRESS; ordered later work, live model, GPU, evidence and clinical validation remain outstanding. |
+
+**Next U09–U10 action:** continue the remaining typed-field non-PRESENT state/provenance and deterministic claim-audit projections, using regression-first changes only for reproducible gaps. Review the remaining registry fields and every audit source fallback; preserve current invalid/conflicting summary, CONFIRMED_ABSENT, negative-list and willingness/consent regressions. Run exact-head backend/preflight, Sequential Gate and Security Audit; inspect logs/artifacts; then update this same checklist. Do not modify `intake_store.py`, alter the machine plan, activate U04 or begin later steps.
+
+**Clinical/verification boundary:** these checks verify deterministic software behavior only. They do not prove model adherence, live 45-role execution, saved Chair reconciliation, clinical staging correctness, guideline verification, GPU inference or independent clinical validation.
