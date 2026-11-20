@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "plan_id": "radonc-mdt-master-sequential-plan",
-  "scope_baseline_commit": "5680dfe742c87ada5a263656f12686369d00fa6c",
-  "active_step": "U12",
+  "scope_baseline_commit": "5284483a26e87028f919966e304c472ed537e839",
+  "active_step": "U09-U10",
   "steps": [
     {
       "id": "STEP-A",
@@ -51,7 +51,7 @@
     {
       "id": "U12",
       "title": "Fail-closed sequential development gate",
-      "status": "IN PROGRESS",
+      "status": "VERIFIED",
       "depends_on": [
         "STEP-A"
       ],
@@ -69,12 +69,28 @@
         "Backend Tests",
         "Security and Dependency Audit"
       ],
-      "completion_evidence": null
+      "completion_evidence": {
+        "commit_sha": "5284483a26e87028f919966e304c472ed537e839",
+        "workflow_runs": [
+          {
+            "id": 44660440836,
+            "name": "Sequential Development Gate"
+          },
+          {
+            "id": 44660440918,
+            "name": "Backend Tests"
+          },
+          {
+            "id": 44660440769,
+            "name": "Security and Dependency Audit"
+          }
+        ]
+      }
     },
     {
       "id": "U09-U10",
       "title": "Canonical clinical data contract and deterministic hallucination controls",
-      "status": "BLOCKED",
+      "status": "IN PROGRESS",
       "depends_on": [
         "U12"
       ],

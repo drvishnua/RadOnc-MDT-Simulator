@@ -4576,3 +4576,68 @@ All eight applicable workflows on exact application-code SHA `c41ead4c37f054ac01
 - An intermediate regression run `44634963152` failed due a test parser using escaped `\\n` rather than newline delimiters; a security path-filter omission was also found. Both corrections are present in the latest head and the latest six required status contexts are SUCCESS. Historical failed runs remain preserved.
 - Owner instruction GOV-01 is recorded: follow the governing Master Implementation Plan and ordered development plan without skipping, reordering, repeating completed steps, or introducing unrelated work. It is a process constraint, not a change to the clinical algorithm.
 - **U12 status: IN PROGRESS pending independent review and merge of PR #2 into the protected development branch.** The ruleset and negative-control enforcement are verified; code and checklist updates remain in the PR source branch until approval/merge. U09/U10 remain BLOCKED. No direct protected-branch write, no merge, no force-push, and no main modification.
+
+
+### U12 merge-commit reconciliation and proposed U09-U10 activation — 20 November 2026
+
+**Verified U12 completion evidence**
+
+- PR [#2](https://github.com/drvishnua/RadOnc-MDT-Simulator/pull/2) was independently approved by `vishnuvcr` on PR head `37de9b1f4f67f25bb77e170d276533d836a27a84` and merged into `feature/four-round-mdt-and-performance` at `5284483a26e87028f919966e304c472ed537e839`.
+- The protected development branch HEAD is exactly the merge SHA. The branch API reports `protected=true`; the default `main` branch remains at `39a356b8eb09399aa2da1b9b9085965999f5105a`. PR #1 remains open, draft and unmerged.
+- U12 ruleset `27685003` was independently read back as `ACTIVE`, targeting only `refs/heads/feature/four-round-mdt-and-performance`, with no bypass actors, one required approval, stale-review dismissal, latest-push approval, strict/up-to-date required checks, force-push restriction and deletion restriction.
+- The required U12 workflow evidence is tied to the exact merge SHA:
+  - Sequential Development Gate — run `44660440836`, SUCCESS. Log: `SEQUENTIAL_DEVELOPMENT_GATE_OK`, checked head `5284483a26e87028f919966e304c472ed537e839`, active step U12. The gate regression suite ran 21 tests successfully.
+  - Backend Tests — run `44660440918`, SUCCESS. Job diagnostics record 562 individual tests as passed; no failed, error, skipped or inconclusive test records were found. Diagnostic artifact `14594654864`; deterministic preflight artifact `14596100231`.
+  - Security and Dependency Audit — run `44660440769`, SUCCESS, including Python/Node dependency audits, full-history secret scan and Python plus JavaScript/TypeScript CodeQL.
+- All six ruleset-required check contexts completed SUCCESS on the same SHA: Sequential Development Gate; Install backend dependencies and run tests; Python and Node dependency vulnerability audit; Full-history secret scan; CodeQL static analysis (python); CodeQL static analysis (javascript-typescript).
+- Additional exact-SHA checks: Browser E2E `44660440786` SUCCESS, with both `PATIENT_REGISTRY_BROWSER_E2E_OK` and `FOUR_ROUND_DASHBOARD_BROWSER_E2E_OK`; Frontend Build `44660440854` SUCCESS; Windows Installer Build `44660440776` SUCCESS, including installed-application smoke test; Windows Packaging Prerequisites `44660440834` SUCCESS. The optional clean-hosted Ollama/model first-run bootstrap subtest was SKIPPED and is not claimed as verified.
+- Comparing STEP-A application checkpoint `986593ec8aab00b7885f1db5ff39dab2546278fc` to the U12 merge SHA shows 30 descendant commits and exactly seven changed paths. All seven are inside the fixed U12 allowlist: the machine plan, this checklist, validator, validator tests, sequential gate workflow, backend workflow and security workflow.
+- The skipped-step negative control remains preserved: run `44633978177` rejected the premature plan transition; validation-first gate run `44634542023` rejected it with `SEQUENTIAL_DEVELOPMENT_GATE_BLOCKED`. Neither negative-control revision was merged.
+
+**U12 conclusion:** VERIFIED on exact merge SHA `5284483a26e87028f919966e304c472ed537e839`, supported by the independent approval, active protected-branch ruleset, exact-SHA required CI and recorded negative-control rejection.
+
+**Controlled next-step transition proposed on branch `u12-closeout-activate-u09-u10-20261120`:**
+
+- Machine plan sets U12 to VERIFIED with the three exact successful required workflow IDs above.
+- Machine plan sets `active_step=U09-U10`, U09-U10 to IN PROGRESS, and `scope_baseline_commit` to the verified U12 merge SHA. All later steps remain BLOCKED.
+- The committed-plan regression test is updated to assert the reconciled active state. A positive regression test verifies that U09-U10 activation is accepted only when U12 has a later descendant SHA, exact successful required workflows, and in-scope changed-file evidence.
+- This closeout changes only the machine plan, Master Checklist and development-plan tests. It does not modify clinical application code. U09-U10 clinical schema/constants implementation has not started.
+- This proposed state is not yet on the protected development branch. It requires the new PR's exact-head gate and six required checks to pass, followed by one independent approval and merge. Until that happens, the protected branch continues to retain its existing U12-active plan.
+- No changes to `main`; no merge of PR #1; no force-push.
+
+### Master Checklist — Current Status (post-U12 evidence; proposed transition)
+
+| Workstream | Status | Current evidence / boundary |
+|---|---|---|
+| STEP-A repository verification | VERIFIED | Exact application checkpoint and six successful workflows recorded |
+| U12 sequential gate, ruleset and skip-step protection | VERIFIED | Merge SHA `5284483a26e87028f919966e304c472ed537e839`; exact runs and active ruleset recorded above |
+| U09-U10 clinical constants/data contract/hallucination controls | IN PROGRESS | Next ordered step; proposed activation only; clinical application implementation not yet started |
+| U04 intake and completeness screener | BLOCKED | Depends on U09-U10 |
+| U05-U06 specialist reasoning contract | BLOCKED | Depends on U04 |
+| U06-U08 R1-R4 orchestration and Chair reconciliation | BLOCKED | Preserve saved-round inputs, conditional positions, dissent and source traceability |
+| U07 versioned evidence retrieval | BLOCKED | Depends on round/Chair contract; retrieved evidence must be recorded before guideline claims |
+| U03 Ollama discovery/reuse and installer state machine | BLOCKED | Installer CI passed; local Ollama discovery/reuse and first-run recovery are not yet verified |
+| U01-U02 standalone desktop UX | BLOCKED | Depends on preceding sequence; no unrelated UI work in this step |
+| Backend CI on U12 merge SHA | VERIFIED | Run `44660440918`; 562 passing diagnostic test records; artifacts recorded |
+| Frontend build and existing registry/dashboard browser E2E | VERIFIED | Runs `44660440854` and `44660440786` on the exact merge SHA |
+| Security/dependency/secret/CodeQL checks | VERIFIED | Run `44660440769`; all jobs successful |
+| Windows installer build and smoke test | VERIFIED | Run `44660440776`; optional hosted Ollama/model bootstrap subtest skipped |
+| R1-R4 live 45-role execution and saved-run audit | NOT STARTED | CI/unit/E2E are not a live model simulation |
+| RTX 4060 request-time inference/GPU verification | NOT STARTED | No local GPU inference evidence retrieved |
+| Independent clinical validation | NOT STARTED | No clinical validation is claimed |
+| Integrated release acceptance | BLOCKED | Requires all remaining ordered steps and live, GPU, security, packaging and independent validation |
+
+**Clinical-safety boundary remains unchanged:** synthetic educational use only; unknown remains unknown; no invented TNM/stage, investigations, comorbidities, performance status, resectability or patient preferences; preserve contradictions, uncertainty, conditional recommendations and minority opinions. The Chair may only synthesise saved R1-R3 contributions in R4. Deterministic code must enforce counts, provenance and report structure.
+
+**Outstanding gate:** the reconciliation/activation branch must receive successful exact-head CI and independent approval before U09-U10 work begins on the protected development branch.
+
+
+### PR #3 validation iteration and test-fixture correction — 20 November 2026
+
+- PR #3 initial head `299004e4720e6feaac0e5ebe8d424f3ec4a96399` had a failed Sequential Development Gate run `44662043733`. The deterministic plan validator passed; the adversarial test phase failed in the new positive U12-to-U09/U10 transition test.
+- Root cause: `_fixture()` reused the mutable global `WORKFLOWS` list for STEP-A. The existing negative test `test_required_workflows_cannot_be_removed_from_the_json_plan` calls `.pop()`, contaminating later fixtures. This was test isolation, not a production validator failure.
+- Corrective change on PR #3 head `94f862c7bec13c82db3cd06e18d3c5645548f3d3`: create a fresh `list(WORKFLOWS)` for each fixture. The negative test remains intact; the positive exact-evidence transition test now passes.
+- Exact-head validation on `94f862c7bec13c82db3cd06e18d3c5645548f3d3`: Sequential Development Gate run `44662308543` SUCCESS; Backend Tests run `44662308453` SUCCESS with 563 passing per-test diagnostic records; Security and Dependency Audit run `44662308457` SUCCESS. All six ruleset-required check contexts completed SUCCESS.
+- Historical failure `44662043733` remains in GitHub Actions history and is recorded here; it has not been deleted or represented as a successful run.
+- This checklist-only follow-up creates a new PR head. The successful run IDs above are explicitly evidence for predecessor SHA `94f862c7bec13c82db3cd06e18d3c5645548f3d3`; the new head must receive fresh exact-head CI before approval/merge.
+- PR #3 remains open and unmerged; independent approval is still required. No clinical application code has been changed and U09-U10 clinical implementation has not started.

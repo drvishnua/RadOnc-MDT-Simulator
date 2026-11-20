@@ -33,7 +33,7 @@ def _fixture():
                 "status": "VERIFIED" if index == 0 else ("IN PROGRESS" if index == 1 else "BLOCKED"),
                 "depends_on": [] if index == 0 else [STEP_ORDER[index - 1]],
                 "required_workflow_names": (
-                    WORKFLOWS if index == 0 else
+                    list(WORKFLOWS) if index == 0 else
                     ["Sequential Development Gate", "Backend Tests", "Security and Dependency Audit"] if index == 1 else
                     ["Sequential Development Gate"]
                 ),
@@ -192,10 +192,13 @@ def test_committed_machine_plan_matches_the_validator_contract():
     repository_root = Path(__file__).resolve().parents[2]
     plan = json.loads((repository_root / "docs" / "development_plan.json").read_text(encoding="utf-8"))
     assert plan["plan_id"] == "radonc-mdt-master-sequential-plan"
-    assert plan["active_step"] == "U12"
+    assert plan["active_step"] == "U09-U10"
     assert plan["steps"][0]["status"] == "VERIFIED"
-    assert plan["steps"][1]["status"] == "IN PROGRESS"
-    assert plan["steps"][1]["allowed_paths"] == list(STEP_ALLOWED_PATHS["U12"])
+    assert plan["steps"][1]["status"] == "VERIFIED"
+    assert plan["steps"][1]["completion_evidence"]["commit_sha"] == plan["scope_baseline_commit"]
+    assert plan["steps"][2]["status"] == "IN PROGRESS"
+    assert plan["steps"][2]["allowed_paths"] == list(STEP_ALLOWED_PATHS["U09-U10"])
+    assert plan["steps"][2]["required_workflow_names"] == list(STEP_REQUIRED_WORKFLOWS["U09-U10"])
     assert [step["id"] for step in plan["steps"]] == list(STEP_ORDER)
 
 
@@ -297,3 +300,37 @@ def test_backend_and_security_required_checks_run_for_development_prs_and_u12_ch
             assert "- feature/four-round-mdt-and-performance" in block
             for required_path in expected_paths:
                 assert f'      - "{required_path}"' in block
+
+
+def test_verified_u12_with_exact_descendant_evidence_can_activate_u09_u10():
+    plan, runs = _fixture()
+    u12_sha = "c" * 40
+    u12 = plan["steps"][1]
+    u12["status"] = "VERIFIED"
+    u12["completion_evidence"] = {
+        "commit_sha": u12_sha,
+        "workflow_runs": [
+            {"id": 3000 + i, "name": name}
+            for i, name in enumerate(STEP_REQUIRED_WORKFLOWS["U12"])
+        ],
+    }
+    plan["active_step"] = "U09-U10"
+    plan["steps"][2]["status"] = "IN PROGRESS"
+    plan["steps"][2]["required_workflow_names"] = list(STEP_REQUIRED_WORKFLOWS["U09-U10"])
+    plan["scope_baseline_commit"] = u12_sha
+    for i, name in enumerate(STEP_REQUIRED_WORKFLOWS["U12"]):
+        runs[3000 + i] = {
+            "name": name,
+            "head_sha": u12_sha,
+            "status": "completed",
+            "conclusion": "success",
+        }
+
+    validate_plan(
+        plan,
+        ["docs/development_plan.json"],
+        lambda _sha: True,
+        lambda run_id: runs[run_id],
+        lambda _base, _head: True,
+        {"U12": ["docs/development_plan.json"]},
+    )
