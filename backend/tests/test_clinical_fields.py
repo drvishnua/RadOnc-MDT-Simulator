@@ -3,6 +3,7 @@ from dataclasses import FrozenInstanceError
 import hashlib
 
 import pytest
+from pydantic import ValidationError
 
 from app.clinical_fields import (
     AGE,
@@ -26,7 +27,7 @@ from app.clinical_fields import (
     normalize_pathological_tnm_component,
     normalize_stage_group_token,
 )
-from app.schemas import SyntheticCase
+from app.schemas import ClinicalFieldProvenance, SyntheticCase
 from app.services.case_integrity import build_case_prompt_context
 
 
@@ -462,4 +463,18 @@ def test_explicit_provenance_and_conflict_sources_get_hashes_when_omitted():
         item.verification_status == "user_supplied_not_independently_verified"
         for item in conflict_sources
     )
+
+def test_explicit_provenance_record_cannot_be_mutated_after_hashing():
+    source = ClinicalFieldProvenance(
+        source_type="CLINICIAN_NOTE",
+        source_reference="synthetic-note-immutable",
+        source_excerpt="Original source excerpt remains preserved.",
+    )
+    original_hash = hashlib.sha256(source.source_excerpt.encode("utf-8")).hexdigest()
+
+    assert source.source_sha256 == original_hash
+    with pytest.raises(ValidationError, match="Instance is frozen"):
+        source.source_excerpt = "Altered source excerpt with stale hash."
+    assert source.source_excerpt == "Original source excerpt remains preserved."
+    assert source.source_sha256 == original_hash
 
