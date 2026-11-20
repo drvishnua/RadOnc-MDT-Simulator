@@ -3,7 +3,11 @@ from fastapi.testclient import TestClient
 import pytest
 
 from app.agent_schemas import AgentAssessment
-from app.clinical_fields import CLINICAL_FIELD_REGISTRY_VERSION, LEGACY_FIELD_REGISTRY_VERSION
+from app.clinical_fields import (
+    CLINICAL_FIELD_REGISTRY_VERSION,
+    HISTORICAL_CLINICAL_FIELD_REGISTRY_VERSION,
+    LEGACY_FIELD_REGISTRY_VERSION,
+)
 from app.main import app
 from app.schemas import SyntheticCase
 from app.services import run_store
@@ -516,6 +520,100 @@ def test_legacy_run_cannot_resume_or_advance_into_new_registry_context(monkeypat
     advance = client.post(f"/api/runs/{run['run_id']}/rounds/2")
     assert advance.status_code == 409
     assert "Create a new immutable case version" in advance.json()["detail"]
+
+
+def test_historical_v1_case_version_remains_hash_verified_readable_and_read_only(monkeypatch, tmp_path):
+    import hashlib
+    import sqlite3
+
+    db_path = tmp_path / "historical_v1_case_version.sqlite3"
+    monkeypatch.setattr(run_store, "DB_PATH", db_path)
+
+    created = client.post("/api/patients", json=_registration(_case("Historical v1 case")))
+    assert created.status_code == 200
+    patient = created.json()
+    original_version = patient["versions"][0]
+    case_version_id = original_version["case_version_id"]
+    original_case = original_version["case"]
+    original_hash = original_version["case_snapshot_sha256"]
+
+    with sqlite3.connect(db_path) as db:
+        db.execute(
+            "UPDATE patient_case_versions SET clinical_field_registry_version = ? WHERE case_version_id = ?",
+            (HISTORICAL_CLINICAL_FIELD_REGISTRY_VERSION, case_version_id),
+        )
+
+    # Historical v1 data must stay available for review without being silently
+    # relabelled as the active v2 contract or having its immutable JSON/hash rewritten.
+    restored = client.get(f"/api/patients/{patient['patient_id']}")
+    assert restored.status_code == 200
+    version = restored.json()["versions"][0]
+    assert version["clinical_field_registry_version"] == HISTORICAL_CLINICAL_FIELD_REGISTRY_VERSION
+    assert version["case"] == original_case
+    assert version["case_snapshot_sha256"] == original_hash
+    assert run_store.get_patient_case_version(patient["patient_id"], case_version_id)[
+        "clinical_field_registry_version"
+    ] == HISTORICAL_CLINICAL_FIELD_REGISTRY_VERSION
+
+    response = client.post(
+        f"/api/patients/{patient['patient_id']}/runs",
+        json={"case_version_id": case_version_id},
+    )
+    assert response.status_code == 409
+    assert HISTORICAL_CLINICAL_FIELD_REGISTRY_VERSION in response.json()["detail"]
+    assert "Create a new immutable case version" in response.json()["detail"]
+
+    with sqlite3.connect(db_path) as db:
+        row = db.execute(
+            "SELECT case_json, case_snapshot_sha256, clinical_field_registry_version "
+            "FROM patient_case_versions WHERE case_version_id = ?",
+            (case_version_id,),
+        ).fetchone()
+    assert hashlib.sha256(row[0].encode("utf-8")).hexdigest() == original_hash
+    assert row[1] == original_hash
+    assert row[2] == HISTORICAL_CLINICAL_FIELD_REGISTRY_VERSION
+
+
+def test_historical_v1_run_remains_viewable_but_cannot_resume_or_advance(monkeypatch, tmp_path):
+    import sqlite3
+
+    db_path = tmp_path / "historical_v1_run.sqlite3"
+    monkeypatch.setattr(run_store, "DB_PATH", db_path)
+    case = SyntheticCase.model_validate(_case("Historical v1 run"))
+    run = run_store.create_run(case)
+    original_case_json = run_store.get_case_json(run["run_id"])
+    original_hash = hashlib.sha256(original_case_json.encode("utf-8")).hexdigest()
+
+    with sqlite3.connect(db_path) as db:
+        db.execute(
+            "UPDATE simulation_runs SET clinical_field_registry_version = ? WHERE run_id = ?",
+            (HISTORICAL_CLINICAL_FIELD_REGISTRY_VERSION, run["run_id"]),
+        )
+
+    summary = client.get(f"/api/runs/{run['run_id']}")
+    snapshot = client.get(f"/api/runs/{run['run_id']}/case")
+    assert summary.status_code == 200
+    assert summary.json()["clinical_field_registry_version"] == HISTORICAL_CLINICAL_FIELD_REGISTRY_VERSION
+    assert snapshot.status_code == 200
+    assert snapshot.json()["case_snapshot_sha256"] == original_hash
+    assert snapshot.json()["case_snapshot_json"] == original_case_json
+
+    resume = client.post(f"/api/runs/{run['run_id']}/resume")
+    assert resume.status_code == 409
+    assert HISTORICAL_CLINICAL_FIELD_REGISTRY_VERSION in resume.json()["detail"]
+    assert "Create a new immutable case version" in resume.json()["detail"]
+
+    advance = client.post(f"/api/runs/{run['run_id']}/rounds/2")
+    assert advance.status_code == 409
+    assert HISTORICAL_CLINICAL_FIELD_REGISTRY_VERSION in advance.json()["detail"]
+    assert "Create a new immutable case version" in advance.json()["detail"]
+
+    with sqlite3.connect(db_path) as db:
+        version = db.execute(
+            "SELECT clinical_field_registry_version FROM simulation_runs WHERE run_id = ?",
+            (run["run_id"],),
+        ).fetchone()[0]
+    assert version == HISTORICAL_CLINICAL_FIELD_REGISTRY_VERSION
 
 
 
