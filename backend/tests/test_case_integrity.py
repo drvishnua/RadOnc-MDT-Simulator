@@ -3255,7 +3255,8 @@ def test_present_pathological_tnm_supports_only_its_matching_structured_componen
     })).casefold()
     assert not any(field_id in item for item in supported)
     assert field_id in mismatched
-    assert unsupported_token.casefold() in mismatched
+    canonical_unsupported = f"p:{component}{unsupported_token[-1]}".casefold()
+    assert canonical_unsupported in mismatched
     assert getattr(case, field_id) == supported_token
 
 
