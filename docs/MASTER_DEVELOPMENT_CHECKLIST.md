@@ -8523,3 +8523,28 @@ The tests also assert that case serialization remains unchanged where applicable
 **Scope and sequence:** no production file, machine plan, validator allowlist, schema, case record, clinical field definition, R1–R4 orchestration, model configuration, frontend, installer or runtime dependency changed in this regression increment. The current machine-plan active step remains `U09-U10` IN PROGRESS; U04 and all later steps remain BLOCKED. PR #5 remains OPEN and UNMERGED, with target base `df90e4a380bef06a7d37def753b385db4ae86c30`; the protected development target and `main` were not modified.
 
 **Requirement status:** the R2/R3 register-label scope regression is VERIFIED at the exact code/test SHA above. The parent U09–U10 ordered step remains IN PROGRESS; no live model, four-round saved-run, GPU, evidence retrieval, guideline-compliance or clinical-validation claim is made.
+
+
+---
+
+## DEV-TOOL-02 — Ponytail repository-guidance integration: verification checkpoint — 21 November 2026
+
+**Repository integration status: VERIFIED.** The isolated branch `tooling/ponytail-integration` currently points to `43104ad4ea3be90cac2d5b741b382c78e866eeb3`. Compared with its recorded starting commit `1b9faa828312604c0a6b88b6a2d212a1e5c2aefe`, the branch delta contains exactly 10 paths: six Ponytail skill files, root `AGENTS.md`, the upstream MIT licence copy, `THIRD_PARTY_NOTICES.md`, and this branch's checklist. No backend, frontend, model, runtime dependency, packaging or installer files are changed.
+
+**Pinned upstream and exact-content verification:** Official source `https://github.com/DietrichGebert/ponytail`, tag `v5.3.3`, MIT. All six installed skill files were re-fetched and compared with the corresponding pinned upstream files; all six blob SHAs match exactly:
+- `.agents/skills/ponytail/SKILL.md`: `d64edd32265ba21cbf5270158f04e97d96925f27`.
+- `.agents/skills/ponytail-review/SKILL.md`: `a50e3ac6ded6fccc9edae34ce37877bbce11e3fa`.
+- `.agents/skills/ponytail-audit/SKILL.md`: `ff9a95480700600fe2664d2d0906a4d750b2da0b`.
+- `.agents/skills/ponytail-debt/SKILL.md`: `3124f520a65d2a4fa75a2f5db6225c38ebdb8620`.
+- `.agents/skills/ponytail-gain/SKILL.md`: `1edff0e461fad6b671733ea6796aea9e417e266b`.
+- `.agents/skills/ponytail-help/SKILL.md`: `34fccb3ff542b3b8d4d131e6120a1812c9c4617a`.
+- MIT licence copy matches upstream `LICENSE`: `715d483338cea4365f0d91a27799cf61226d6bcf`.
+
+Root `AGENTS.md` keeps the existing RadOnc mission, four-round architecture, clinical safety, source-of-truth, GPU, performance, and verification requirements. Its added Ponytail section requires reading the actual main skill before every coding task and the review/audit skills as applicable. It explicitly states RadOnc GOV-01, sequence, clinical-safety, provenance and verification rules take precedence wherever stricter. The main, review and audit skill texts were re-read from the installed branch for this checkpoint.
+
+**CI/review boundary: BLOCKED / NOT RUN.** The tooling branch has no PR and no workflow runs for its head; the connected GitHub tooling exposes no workflow-dispatch action. No green CI or independent review is claimed for the standalone tooling branch. It is being held separately rather than opened against the active development target while PR #5 remains open; no merge is authorised.
+
+**Native/local installation boundary:** ChatGPT Android/mobile does not load Ponytail's local Node lifecycle hooks. No native ChatGPT mobile plugin, Windows user-profile hook install, Node runtime change or local Codex CLI install is claimed. The repository-level skills and adapted instructions are available to this development session as the supported mechanism. Actual Windows host installation remains BLOCKED pending access to the user's selected desktop/CLI host.
+
+**Current statuses:** repository-level Ponytail instructions/skills and licence/attribution — VERIFIED; isolated tooling-branch CI/review — BLOCKED / NOT RUN; native ChatGPT mobile hooks — NOT APPLICABLE; Windows user-level host installation — BLOCKED. No MDT application or runtime change was made.
+
