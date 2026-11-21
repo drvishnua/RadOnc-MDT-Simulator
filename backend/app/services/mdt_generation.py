@@ -2294,7 +2294,6 @@ async def generate_adversarial_contribution(
         "Use this exact safe formulation when indication cannot be determined: 'The supplied information does not establish whether either source option is indicated or appropriate; indication and suitability remain undetermined.' "
         "Do not infer a negative indication from agreement that data are missing or from a peer saying that no definitive pathway can yet be established. "
         + source_opinion_review_instructions
-        + source_opinion_review_instructions
         + r3_shared_integrity_instructions
         + "source_excerpt is server-bound metadata; the server binds exact original excerpts only for server-identified source IDs. Do not generate, paraphrase, reconstruct, or invent source excerpts. "
         + f"ROLE: {profile['name']}\nMANDATE: {profile['mandate']}\n"
