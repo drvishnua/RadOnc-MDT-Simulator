@@ -8347,3 +8347,18 @@ On PR head `cf5ddbea63210e3ac78b151741295bed797a0a9`:
 **DEV-TOOL-02 status:** IN PROGRESS.  
 **Branch creation:** VERIFIED.  
 **Application/runtime changes:** NONE.
+
+
+### DEV-TOOL-02 implementation checkpoint — 21 November 2026
+
+- Separate branch `tooling/ponytail-integration` created from PR #5 head `1b9faa828312604c0a6b88b6a2d212a1e5c2aefe`.
+- Plan was recorded on this branch before integration files were written.
+- Root `AGENTS.md` preserved; Ponytail v5.3.3 method appended with explicit RadOnc precedence for GOV-01, approved sequencing, clinical safety, provenance, audit, testing and Master Checklist.
+- Six upstream skill files copied to `.agents/skills/`: `ponytail`, `ponytail-review`, `ponytail-audit`, `ponytail-debt`, `ponytail-gain`, `ponytail-help`.
+- Upstream MIT licence copied to `THIRD_PARTY_LICENSES/PONytail-MIT-LICENSE.txt`; attribution and included-component notice added at `THIRD_PARTY_NOTICES.md`.
+- No executable hooks, Node package/plugin manifest, runtime dependency, installer payload, backend/frontend source or clinical application code was added.
+- Exact-source comparison, full diff/path review, and exact-head CI remain to be completed.
+
+**Current DEV-TOOL-02 status:** IN PROGRESS pending verification.  
+**Native ChatGPT mobile plugin/hooks:** NOT APPLICABLE; repository instructions/skills are the supported mechanism.  
+**U09–U10:** unchanged, IN PROGRESS; no application implementation was performed in this integration branch.
