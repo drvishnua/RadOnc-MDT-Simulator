@@ -85,6 +85,18 @@ def test_case_schema_rejects_blank_list_items() -> None:
     assert response.status_code == 422
 
 
+
+def test_case_validation_rejects_whitespace_only_summary() -> None:
+    response = client.post(
+        "/api/cases/validate",
+        json={
+            "scenario_title": "Synthetic case",
+            "case_summary": " " * 20,
+        },
+    )
+    assert response.status_code == 422
+    assert "case_summary must contain non-whitespace source text." in response.text
+
 def test_runtime_endpoint_returns_ollama_status(monkeypatch) -> None:
     async def fake_status() -> dict[str, object]:
         return {

@@ -275,6 +275,14 @@ def test_free_text_case_and_report_summaries_preserve_exact_whitespace():
     assert snapshot["imaging_summary"] == imaging_summary
 
 
+
+def test_case_summary_rejects_whitespace_only_text():
+    with pytest.raises(
+        ValidationError,
+        match="case_summary must contain non-whitespace source text",
+    ):
+        _case(case_summary=" " * 12)
+
 def test_pathological_stage_prefix_is_flagged_and_raw_source_is_preserved():
     context = build_case_prompt_context(_case(clinical_t_stage="pT1"))
     item = context["canonical_field_values"][CLINICAL_T_STAGE]

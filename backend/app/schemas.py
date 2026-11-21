@@ -211,6 +211,13 @@ class SyntheticCase(StrictModel):
     clinical_field_provenance: dict[str, list[ClinicalFieldProvenance]] = Field(default_factory=dict)
     clinical_field_conflicts: dict[str, list[ClinicalFieldConflict]] = Field(default_factory=dict)
 
+    @field_validator("case_summary")
+    @classmethod
+    def require_nonblank_case_summary(cls, value: PreservedSourceText) -> PreservedSourceText:
+        if not value.strip():
+            raise ValueError("case_summary must contain non-whitespace source text.")
+        return value
+
     @field_validator(
         "relevant_comorbidities",
         "prior_treatment",
