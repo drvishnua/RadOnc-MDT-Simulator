@@ -8325,3 +8325,78 @@ The earlier failed run remains part of the audit history; it is not erased or re
 
 **U09–U10:** IN PROGRESS. The next recorded U09-INT-01 stage is the case-summary-only prompt projection hardening for INVALID/CONFLICTING states, followed by R2/R3 conditional source-review wording and the specified regression tests. U04 and all later steps remain BLOCKED.
 
+
+
+---
+
+## U09-INT-01 — INVALID/CONFLICTING case-summary boundaries: implementation and exact-head verification
+
+**Latest verified implementation/test commit:** `89159004f9bcb9a93d7b4edb6f2eb53d412d9be0` on PR #5 source branch `docs/reconcile-master-checklist-after-pr4-merge`.
+**PR state:** OPEN, NOT MERGED. Target: `feature/four-round-mdt-and-performance`; target base SHA: `df90e4a380bef06a7d37def753b385db4ae86c30`. The protected target branch and `main` were not modified.
+**Active machine-plan step:** `U09-U10` remains IN PROGRESS. Its exact fixed allowlist is unchanged and machine-plan/validator allowlists were rechecked as identical. U04 and later steps remain BLOCKED.
+
+### Implementation now verified at the code head
+
+- **Central case-summary projection:** the earlier projection correction redacts INVALID/CONFLICTING selected summary provenance excerpts and nested conflict-candidate raw values/excerpts in model-facing representations, while retaining permitted source identifiers/hash metadata and redaction markers. Persisted source data and audit records are not rewritten. The original case serialization is asserted unchanged by the R2/R3 quarantine regression.
+- **R2 specialist debate:** the server-owned source-opinion register is constructed only from the state-eligible summary. INVALID/CONFLICTING uses an explicit WITHHELD / UNASSESSABLE notice; no instruction asks the role to inspect, quote or reconstruct the unavailable summary. Empty means unassessable, not “no opinions exist”. Model-invented CASE IDs remain unregistered, flagged and receive no server-bound excerpt.
+- **R3 adversarial review:** the same eligibility boundary gates attributed-opinion review and exact source binding. Saved R2 source-opinion responses are not reused as case-source opinions when the summary is quarantined. Model-reported reviews remain separately retained for audit but are not promoted into canonical source-opinion reviews. General peer-provenance, case-integrity, adversarial-assumption and whole-MDT-scope review instructions remain active for all case states.
+- **R4 Chair synthesis and final postprocessor:** Chair summary retention and review coverage use the shared eligibility rule. The R4 handoff now passes `None` through rather than converting it to an empty string. INVALID/CONFLICTING summary coverage is explicitly unassessable, and this is not presented as evidence that no attributed opinions existed.
+- **Raw case boundary:** a source scan of `mdt_generation.py` at this code head found no direct `case.case_summary` read in the downstream R2/R3/R4 source-opinion paths. The canonical summary helper is the state gate. No schema, clinical-field registry, source text, case hashes, saved role contribution, run ID or audit record format was changed.
+
+### Regression coverage
+
+- `test_quarantined_case_summary_is_unassessable_for_r2_and_r3_source_reviews` covers both INVALID and CONFLICTING, model-invented CASE IDs, withheld prompts, no source-excerpt binding, preserved model-reported R3 audit records, no promotion to canonical reviews and unchanged original case serialization.
+- `test_chair_reconciliation_passes_quarantined_summary_as_none_to_source_review_coverage` covers both INVALID and CONFLICTING through the actual Chair reconciliation function. It supplies a saved/model-reported review containing a raw sentinel and asserts an unassessable Chair disclosure, empty canonical coverage, and no sentinel disclosure.
+- Existing PRESENT/default-PRESENT and exact-source-ID/excerpt positive controls remain in the backend suite.
+- Schema validation was not weakened to accommodate a fixture. CONFLICTING tests provide two distinct source-specific candidates with separate provenance references.
+
+### Exact-head verification — `89159004f9bcb9a93d7b4edb6f2eb53d412d9be0`
+
+| Required check | Status | Run / result |
+|---|---|---|
+| Sequential Development Gate | VERIFIED | Run `44871164729` — SUCCESS |
+| Backend Tests | VERIFIED | Run `44871164829` — **866 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive; 1 warning** |
+| Deterministic no-inference preflight | VERIFIED | Included in backend run — **7 passed, 0 failed, 0 inconclusive** |
+| Security and Dependency Audit | VERIFIED | Run `44871164858` — SUCCESS; Python CodeQL, JavaScript/TypeScript CodeQL, dependency audit and full-history secret scan all passed |
+| Frontend build/browser E2E for this change | NOT APPLICABLE | No frontend files changed in this backend-only amendment |
+
+**Artifacts from Backend Tests run `44871164829`:**
+- Pytest diagnostics: `14694092828`, digest `sha256:17dce31a50f6483b0f5b00eaf91d6e19b3aac5d49ebd2e904dc3c84967c29803`.
+- Deterministic preflight: `14694152497`, digest `sha256:90089e9964cc4f8837224e46121c0e0a3ab83b23fe8e5c6cc576b1e58bafdc3d`.
+
+**Intermediate failed attempts retained in audit history:** Backend run on `87da32965970870ed22d5e0a2f349177075849c2` had four prompt-contract assertion failures (861 passed); the subsequent `2e161517e0a209f117a47fbd07363a4e8d1165d9` run had one R3 role-header separator failure (864 passed). The prompt instructions were corrected without weakening the regression. Commit `14082c9b8a2656687f8819f60db19ed7570dc61b` then passed all three required workflows with 865 backend tests. A later R4 call-chain review found the `None`-to-empty-string handoff defect; commit `89159004f9bcb9a93d7b4edb6f2eb53d412d9be0` fixed it and the new R4 regression passed in the 866-test run. These failures remain visible and are not erased or reclassified as passes.
+
+### Master Checklist — Current Status (21 November 2026)
+
+| Workstream | Status | Current evidence / remaining boundary |
+|---|---|---|
+| PR #5 / development branch protection | IN PROGRESS | PR #5 OPEN, NOT MERGED; implementation head `89159004f9bcb9a93d7b4edb6f2eb53d412d9be0`; target base `df90e4a380bef06a7d37def753b385db4ae86c30`; no direct changes to target branch or `main` |
+| GOV-01 plan-before-execution discipline | VERIFIED | Ordered U09-INT-01 stages and non-goals recorded; no U04 activation |
+| U12 sequential fail-closed gate | VERIFIED | Exact-head Sequential Development Gate `44871164729` SUCCESS |
+| U09 registry IDs, aliases and declared field types | VERIFIED for tested contract | Prior 40-field / 7-value-type contract and immutable registry tests remain the evidence; full acceptance of U09-U10 is not claimed |
+| U09 field-state vocabulary and field-specific state validation | VERIFIED for tested cases | Canonical state/field tests remain passing; remaining U09-U10 acceptance work is still open |
+| U09 source text, provenance hashes and immutable audit | VERIFIED for tested boundaries | Existing exact-text, hash and immutable-record tests plus unchanged SyntheticCase regression; hashes do not establish source authenticity |
+| U09 legacy v1/unversioned read-only and explicit upgrade | VERIFIED for tested transitions | Prior migration/upgrade regressions remain passing in the full backend suite |
+| U09 T1 canonical mapping/type interpretation | IN PROGRESS | Numeric JSON type semantics remain unresolved; next approved task, do not mutate immutable registry definitions |
+| INVALID/CONFLICTING central prompt-context redaction | VERIFIED for tested cases | Selected summary provenance and nested conflict candidates withheld in model-facing projections; original saved case remains unchanged |
+| R2 withheld/unassessable source-opinion input | VERIFIED | Exact-head backend regressions cover both INVALID and CONFLICTING; unregistered CASE responses flagged and unbound |
+| R3 withheld source opinions and preserved general adversarial audits | VERIFIED | Exact-head backend regressions cover withheld source input; general R2 provenance and R3 integrity/assumption/scope checks remain enabled |
+| R4 Chair synthesis and source-opinion coverage | VERIFIED for tested boundaries | R4 null-state handoff and actual Chair reconciliation regression pass for both INVALID and CONFLICTING; live saved-run synthesis remains unverified |
+| Four-round saved data flow and distinct-role accounting | VERIFIED for deterministic tests | Prior R1–R4 data-flow and distinct-role tests pass; not proof of live 45-role execution |
+| Missing/failed-agent and resume handling | VERIFIED for deterministic tests | Existing backend resume/failure tests pass; current live simulation not performed |
+| Backend suite and deterministic preflight | VERIFIED on `89159004f9bcb9a93d7b4edb6f2eb53d412d9be0` | Run `44871164829`: 866/866; preflight 7/7; artifacts recorded above |
+| Security, dependencies, secret scan and CodeQL | VERIFIED on `89159004f9bcb9a93d7b4edb6f2eb53d412d9be0` | Run `44871164858`: all four jobs SUCCESS |
+| Frontend build/browser E2E | NOT APPLICABLE to this amendment | No frontend files changed; project-wide browser E2E is not established by this backend-only run |
+| Dashboard/API | VERIFIED for prior deterministic coverage | Existing API tests pass in the backend suite; no browser interaction test was run for this amendment |
+| Ollama context allocation and RTX 4060 request-time GPU inference | BLOCKED | No local Ollama inference, request-time `nvidia-smi` telemetry, or GPU-layer offload verification in this task |
+| Live 45-role R1–R4 execution and saved artefacts | NOT STARTED | No live model run or saved output review performed |
+| Evidence retrieval and claim-to-passage verification | IN PROGRESS | No evidence-retrieval/live source verification performed in this amendment; guideline compliance is not claimed |
+| Independent clinical validation | NOT STARTED | No qualified independent clinical review |
+| Ponytail repository guidance integration | VERIFIED | Official Ponytail v5.3.3 guidance integrated on its separate tooling branch; used to guide this code review |
+| Ponytail installation on the user's Windows development host | BLOCKED | Actual host/profile access is unavailable from this ChatGPT mobile session; no local installation is claimed |
+| Packaging, installer and release | BLOCKED | Later ordered work; not part of U09-INT-01 |
+| U04 and all later workstreams | BLOCKED | U09–U10 must finish and be accepted first; no sequence advancement |
+
+**Current milestone:** U09-INT-01 R2/R3/R4 case-summary quarantine boundary is VERIFIED for the deterministic test and CI evidence listed above. The broader U09–U10 step remains IN PROGRESS. The next approved item remains resolving T1 input-type interpretation without mutating immutable registry v2 definitions. No live inference, GPU validation, guideline compliance, clinical validation or release claim is made.
+
+**Checklist supersession note:** This latest status supersedes the earlier status row that listed R2/R3/R4 case-summary direct reads as BLOCKED before the authorised U09-INT-01 scope amendment and its implementation. Historical baseline/failure notes above remain intact.
