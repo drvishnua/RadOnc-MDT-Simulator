@@ -12,6 +12,7 @@ from app.agent_schemas import AgentAssessment, AgentDraft
 from app.config import OLLAMA_BASE_URL, OLLAMA_MODEL
 from app.schemas import SyntheticCase
 from app.services.case_integrity import audit_unverified_case_claims, build_case_prompt_context, build_source_case_facts
+from app.services.gpu_telemetry import record_current_telemetry
 
 
 class OllamaUnavailable(Exception):
@@ -126,6 +127,7 @@ async def generate_agent_assessment(
             response = await client.post("/api/generate", json=request_body)
             response.raise_for_status()
             payload = response.json()
+            record_current_telemetry(payload)
     except (httpx.HTTPError, ValueError) as exc:
         raise OllamaUnavailable("The local Ollama server could not complete the request.") from exc
 

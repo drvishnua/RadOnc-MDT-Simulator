@@ -667,7 +667,7 @@ def _minority_history(
     Stable insufficient-information roles are uncertainty contributors, not dissenters.
     Original role records remain stored unchanged.
     """
-    by_agent: dict[str, dict[str, Any]] = defaultdict(lambda: {"name": "Role", "positions": [], "events": [], "rationales": []})
+    by_agent: dict[str, dict[str, Any]] = defaultdict(lambda: {"name": "Role", "positions": [], "events": [], "rationales": [], "challenges": []})
     for round_number, rows, field in ((1, round1_rows, "assessment"), (2, round2_rows, "result"), (3, round3_rows, "result")):
         for row, item in _distinct_role_entries(rows, field, f"Round {round_number}", integrity_flags):
             agent_id = str(row.get("agent_id") or "unknown-role")
@@ -784,6 +784,15 @@ def _minority_history(
                 event += f" — {conclusion}"
             record["events"].append(event)
 
+            substantive = item.get("substantive_challenges") or []
+            if isinstance(substantive, (list, tuple)):
+                for ch in substantive:
+                    if isinstance(ch, str) and ch.strip() and not is_empty_challenge_placeholder(ch):
+                        cleaned_ch = " ".join(ch.split())
+                        if len(cleaned_ch) > 180:
+                            cleaned_ch = cleaned_ch[:179].rstrip() + "…"
+                        record["challenges"].append(f"R{round_number} challenge: {cleaned_ch}")
+
     round3_counts = _position_counts(round3_rows, "result", "Round 3", integrity_flags)
     final_modal = _unique_modal_position(round3_counts)
     output: list[tuple[int, str]] = []
@@ -794,17 +803,19 @@ def _minority_history(
             continue
         changed = len(set(positions)) > 1
         final_position = positions[-1]
+        has_material_challenges = bool(record.get("challenges"))
         qualified_minority = (
             final_position in {"conditional", "supports", "opposes"}
             and (final_modal is None or final_position != final_modal)
         )
-        if not (changed or qualified_minority):
+        if not (changed or qualified_minority or (has_material_challenges and final_position != "insufficient_information")):
             continue
         transition = "Position evolution: " + " → ".join(positions) + ". " if changed else ""
         if changed and record.get("rationales"):
             transition += "Position-change rationales: " + "; ".join(record["rationales"]) + ". "
+        challenge_text = (" Challenges: " + "; ".join(record["challenges"]) + ".") if record.get("challenges") else ""
         priority = 0 if qualified_minority else 1
-        output.append((priority, f"{agent_id} — {record['name']}: " + transition + "; ".join(record["events"])))
+        output.append((priority, f"{agent_id} — {record['name']}: " + transition + "; ".join(record["events"]) + challenge_text))
     return [item for _, item in sorted(output)][:45]
 
 

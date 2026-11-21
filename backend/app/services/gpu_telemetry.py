@@ -2,9 +2,48 @@
 
 from __future__ import annotations
 
+import contextvars
 import csv
 import io
 from typing import Any
+
+generation_telemetry_ctx: contextvars.ContextVar[dict[str, Any] | None] = contextvars.ContextVar(
+    "generation_telemetry_ctx", default=None
+)
+
+
+def extract_ollama_telemetry(payload: dict[str, Any]) -> dict[str, Any]:
+    """Extract performance and token telemetry from an Ollama /api/generate response payload."""
+    prompt_tokens = payload.get("prompt_eval_count")
+    output_tokens = payload.get("eval_count")
+    eval_duration_ns = payload.get("eval_duration")
+    total_duration_ns = payload.get("total_duration")
+    prompt_eval_duration_ns = payload.get("prompt_eval_duration")
+    tokens_per_second: float | None = None
+    if (
+        isinstance(output_tokens, (int, float))
+        and isinstance(eval_duration_ns, (int, float))
+        and eval_duration_ns > 0
+    ):
+        tokens_per_second = round(float(output_tokens) / (float(eval_duration_ns) / 1e9), 2)
+
+    return {
+        "prompt_tokens": prompt_tokens if isinstance(prompt_tokens, int) else None,
+        "output_tokens": output_tokens if isinstance(output_tokens, int) else None,
+        "tokens_per_second": tokens_per_second,
+        "eval_duration_ns": eval_duration_ns if isinstance(eval_duration_ns, (int, float)) else None,
+        "total_duration_ns": total_duration_ns if isinstance(total_duration_ns, (int, float)) else None,
+        "prompt_eval_duration_ns": prompt_eval_duration_ns
+        if isinstance(prompt_eval_duration_ns, (int, float))
+        else None,
+    }
+
+
+def record_current_telemetry(payload: dict[str, Any]) -> None:
+    """Record telemetry into the active context if set."""
+    ctx = generation_telemetry_ctx.get()
+    if ctx is not None and isinstance(payload, dict):
+        ctx.update(extract_ollama_telemetry(payload))
 
 
 def parse_nvidia_smi_csv(output: str) -> list[dict[str, Any]]:

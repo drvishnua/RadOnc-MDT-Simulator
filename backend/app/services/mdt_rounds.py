@@ -18,6 +18,7 @@ from app.services.case_integrity import (
 )
 from app.services.reference_catalogue import audit_claim_citations
 from app.services.chair_report_quality import ensure_chair_report_completeness
+from app.services.gpu_telemetry import generation_telemetry_ctx
 from app.services.mdt_generation import (
     generate_adversarial_contribution,
     generate_chair_report,
@@ -210,9 +211,13 @@ def _attach_r1_case_integrity_flags(peer_views: list[dict], round1_by_id: dict[s
 
 
 async def _with_one_schema_retry(callable_, *args, retry_max_tokens: int):
+    ctx = generation_telemetry_ctx.get()
     try:
         return await callable_(*args)
     except AgentGenerationError:
+        if ctx is not None:
+            ctx["retries"] = ctx.get("retries", 0) + 1
+            ctx["schema_failures"] = ctx.get("schema_failures", 0) + 1
         logger.warning(
             "Retrying invalid structured MDT response with increased output budget (%s tokens).",
             retry_max_tokens,
@@ -361,6 +366,8 @@ async def run_mdt_round(run_id: str, round_number: int) -> None:
                 if "SG-07" not in completed_ids:
                     started = time.perf_counter()
                     run_store.mark_round_agent_running(run_id, 4, "SG-07")
+                    tracker: dict[str, Any] = {"retries": 0, "schema_failures": 0}
+                    token = generation_telemetry_ctx.set(tracker)
                     try:
                         report = await _with_one_schema_retry(
                             generate_chair_report,
@@ -382,13 +389,22 @@ async def run_mdt_round(run_id: str, round_number: int) -> None:
                         run_store.save_round_success(
                             run_id, 4, "SG-07", report.model_dump_json(),
                             time.perf_counter() - started,
+                            prompt_tokens=tracker.get("prompt_tokens"),
+                            output_tokens=tracker.get("output_tokens"),
+                            tokens_per_second=tracker.get("tokens_per_second"),
+                            retries=tracker.get("retries", 0),
+                            schema_failures=tracker.get("schema_failures", 0),
                         )
                     except Exception as exc:
                         logger.exception("Final chair report failed for run %s", run_id)
                         run_store.save_round_failure(
                             run_id, 4, "SG-07", f"{type(exc).__name__}: {exc}",
                             time.perf_counter() - started,
+                            retries=tracker.get("retries", 0),
+                            schema_failures=tracker.get("schema_failures", 0),
                         )
+                    finally:
+                        generation_telemetry_ctx.reset(token)
             else:
                 semaphore = asyncio.Semaphore(RADONC_AGENT_CONCURRENCY)
 
@@ -399,6 +415,8 @@ async def run_mdt_round(run_id: str, round_number: int) -> None:
                     async with semaphore:
                         started = time.perf_counter()
                         run_store.mark_round_agent_running(run_id, round_number, agent_id)
+                        tracker: dict[str, Any] = {"retries": 0, "schema_failures": 0}
+                        token = generation_telemetry_ctx.set(tracker)
                         try:
                             if round_number == 2:
                                 peer_views = _select_peer_views(profile, round1_rows, "assessment")
@@ -428,6 +446,11 @@ async def run_mdt_round(run_id: str, round_number: int) -> None:
                                 agent_id,
                                 result.model_dump_json(),
                                 time.perf_counter() - started,
+                                prompt_tokens=tracker.get("prompt_tokens"),
+                                output_tokens=tracker.get("output_tokens"),
+                                tokens_per_second=tracker.get("tokens_per_second"),
+                                retries=tracker.get("retries", 0),
+                                schema_failures=tracker.get("schema_failures", 0),
                             )
                         except Exception as exc:
                             logger.exception(
@@ -438,7 +461,11 @@ async def run_mdt_round(run_id: str, round_number: int) -> None:
                                 run_id, round_number, agent_id,
                                 f"{type(exc).__name__}: {exc}",
                                 time.perf_counter() - started,
+                                retries=tracker.get("retries", 0),
+                                schema_failures=tracker.get("schema_failures", 0),
                             )
+                        finally:
+                            generation_telemetry_ctx.reset(token)
 
                 await asyncio.gather(*(process_profile(profile) for profile in AGENT_PROFILES))
 

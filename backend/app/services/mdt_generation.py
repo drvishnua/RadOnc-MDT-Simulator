@@ -40,6 +40,7 @@ from app.services.chair_report_quality import (
     build_source_opinion_review_coverage,
     count_distinct_role_positions,
 )
+from app.services.gpu_telemetry import record_current_telemetry
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -98,6 +99,7 @@ async def _generate_structured(prompt: str, schema_type: type[T], max_tokens: in
             response = await client.post("/api/generate", json=request_body)
             response.raise_for_status()
             payload = response.json()
+            record_current_telemetry(payload)
     except (httpx.HTTPError, ValueError) as exc:
         raise OllamaUnavailable("The local Ollama service could not complete this MDT round.") from exc
 

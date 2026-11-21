@@ -173,6 +173,17 @@ def initialize_database() -> None:
             ON patient_case_assessments(case_version_id, created_at DESC);
             """
         )
+        # Additive migration for agent_run_results telemetry fields.
+        agent_run_columns = {row["name"] for row in db.execute("PRAGMA table_info(agent_run_results)")}
+        for column, sql_type in (
+            ("prompt_tokens", "INTEGER"),
+            ("output_tokens", "INTEGER"),
+            ("tokens_per_second", "REAL"),
+            ("retries", "INTEGER DEFAULT 0"),
+            ("schema_failures", "INTEGER DEFAULT 0"),
+        ):
+            if column not in agent_run_columns:
+                db.execute(f"ALTER TABLE agent_run_results ADD COLUMN {column} {sql_type}")
         # Additive migration for databases created before patient-linked simulations.
         run_columns = {row["name"] for row in db.execute("PRAGMA table_info(simulation_runs)")}
         for column, sql_type in (
@@ -644,6 +655,7 @@ def list_results(run_id: str) -> list[dict[str, Any]]:
         assessment = (
             json.loads(row["assessment_json"]) if row["assessment_json"] else None
         )
+        row_keys = row.keys()
         results.append(
             {
                 "agent_id": row["agent_id"],
@@ -655,6 +667,11 @@ def list_results(run_id: str) -> list[dict[str, Any]]:
                 "started_at": row["started_at"],
                 "completed_at": row["completed_at"],
                 "duration_seconds": row["duration_seconds"],
+                "prompt_tokens": row["prompt_tokens"] if "prompt_tokens" in row_keys else None,
+                "output_tokens": row["output_tokens"] if "output_tokens" in row_keys else None,
+                "tokens_per_second": row["tokens_per_second"] if "tokens_per_second" in row_keys else None,
+                "retries": row["retries"] if "retries" in row_keys else 0,
+                "schema_failures": row["schema_failures"] if "schema_failures" in row_keys else 0,
             }
         )
     return results
@@ -695,7 +712,16 @@ def mark_agent_running(run_id: str, agent_id: str) -> None:
 
 
 def save_agent_success(
-    run_id: str, agent_id: str, assessment_json: str, duration_seconds: float
+    run_id: str,
+    agent_id: str,
+    assessment_json: str,
+    duration_seconds: float,
+    *,
+    prompt_tokens: int | None = None,
+    output_tokens: int | None = None,
+    tokens_per_second: float | None = None,
+    retries: int = 0,
+    schema_failures: int = 0,
 ) -> None:
     now = _now()
     with _connect() as db:
@@ -703,10 +729,23 @@ def save_agent_success(
             """
             UPDATE agent_run_results
             SET status = 'completed', assessment_json = ?, error_message = NULL,
-                completed_at = ?, duration_seconds = ?
+                completed_at = ?, duration_seconds = ?,
+                prompt_tokens = ?, output_tokens = ?, tokens_per_second = ?,
+                retries = ?, schema_failures = ?
             WHERE run_id = ? AND agent_id = ?
             """,
-            (assessment_json, now, duration_seconds, run_id, agent_id),
+            (
+                assessment_json,
+                now,
+                duration_seconds,
+                prompt_tokens,
+                output_tokens,
+                tokens_per_second,
+                retries,
+                schema_failures,
+                run_id,
+                agent_id,
+            ),
         )
         db.execute(
             "UPDATE simulation_runs SET updated_at = ? WHERE run_id = ?",
@@ -715,7 +754,13 @@ def save_agent_success(
 
 
 def save_agent_failure(
-    run_id: str, agent_id: str, error_message: str, duration_seconds: float
+    run_id: str,
+    agent_id: str,
+    error_message: str,
+    duration_seconds: float,
+    *,
+    retries: int = 0,
+    schema_failures: int = 0,
 ) -> None:
     now = _now()
     with _connect() as db:
@@ -723,10 +768,19 @@ def save_agent_failure(
             """
             UPDATE agent_run_results
             SET status = 'failed', assessment_json = NULL, error_message = ?,
-                completed_at = ?, duration_seconds = ?
+                completed_at = ?, duration_seconds = ?,
+                retries = ?, schema_failures = ?
             WHERE run_id = ? AND agent_id = ?
             """,
-            (error_message[:500], now, duration_seconds, run_id, agent_id),
+            (
+                error_message[:500],
+                now,
+                duration_seconds,
+                retries,
+                schema_failures,
+                run_id,
+                agent_id,
+            ),
         )
         db.execute(
             "UPDATE simulation_runs SET updated_at = ? WHERE run_id = ?",
@@ -814,11 +868,31 @@ def _ensure_round_tables(db: sqlite3.Connection) -> None:
         ON agent_round_results(run_id, round_number, status);
         """
     )
-    # Additive migration for round timing fields on existing SQLite databases.
+    # Additive migration for round timing and telemetry fields on existing SQLite databases.
     round_columns = {row["name"] for row in db.execute("PRAGMA table_info(round_runs)")}
-    for column in ("started_at", "finished_at"):
+    for column, sql_type in (
+        ("started_at", "TEXT"),
+        ("finished_at", "TEXT"),
+        ("total_prompt_tokens", "INTEGER"),
+        ("total_output_tokens", "INTEGER"),
+        ("avg_tokens_per_second", "REAL"),
+        ("total_retries", "INTEGER DEFAULT 0"),
+        ("total_schema_failures", "INTEGER DEFAULT 0"),
+        ("wall_clock_seconds", "REAL"),
+    ):
         if column not in round_columns:
-            db.execute(f"ALTER TABLE round_runs ADD COLUMN {column} TEXT")
+            db.execute(f"ALTER TABLE round_runs ADD COLUMN {column} {sql_type}")
+
+    round_agent_columns = {row["name"] for row in db.execute("PRAGMA table_info(agent_round_results)")}
+    for column, sql_type in (
+        ("prompt_tokens", "INTEGER"),
+        ("output_tokens", "INTEGER"),
+        ("tokens_per_second", "REAL"),
+        ("retries", "INTEGER DEFAULT 0"),
+        ("schema_failures", "INTEGER DEFAULT 0"),
+    ):
+        if column not in round_agent_columns:
+            db.execute(f"ALTER TABLE agent_round_results ADD COLUMN {column} {sql_type}")
 
 
 def require_run_registry_version(run_id: str) -> None:
@@ -953,12 +1027,42 @@ def get_round_summary(run_id: str, round_number: int) -> dict[str, Any]:
                 (run_id, round_number),
             ).fetchall()
         }
+        completed_results = db.execute(
+            """
+            SELECT result_json FROM agent_round_results
+            WHERE run_id = ? AND round_number = ? AND status = 'completed' AND result_json IS NOT NULL
+            """,
+            (run_id, round_number),
+        ).fetchall()
+
+    position_distribution: dict[str, int] = {}
+    for cr in completed_results:
+        try:
+            parsed = json.loads(cr["result_json"])
+            pos = parsed.get("position")
+            if pos:
+                clean_pos = str(pos).strip().lower().replace("-", "_")
+                position_distribution[clean_pos] = position_distribution.get(clean_pos, 0) + 1
+        except Exception:
+            pass
+
     completed = counts.get("completed", 0)
     failed = counts.get("failed", 0)
     queued = counts.get("queued", 0)
     running = counts.get("running", 0)
     total = row["total_agents"]
     finished = completed + failed
+
+    row_keys = row.keys()
+    wall_clock_seconds = row["wall_clock_seconds"] if "wall_clock_seconds" in row_keys else None
+    if wall_clock_seconds is None and row["finished_at"] and row["started_at"]:
+        try:
+            f_dt = datetime.fromisoformat(str(row["finished_at"]).replace("Z", "+00:00"))
+            s_dt = datetime.fromisoformat(str(row["started_at"]).replace("Z", "+00:00"))
+            wall_clock_seconds = round(max(0.0, (f_dt - s_dt).total_seconds()), 3)
+        except Exception:
+            wall_clock_seconds = None
+
     return {
         "run_id": row["run_id"],
         "round_number": row["round_number"],
@@ -975,6 +1079,13 @@ def get_round_summary(run_id: str, round_number: int) -> dict[str, Any]:
         "updated_at": row["updated_at"],
         "started_at": row["started_at"],
         "finished_at": row["finished_at"],
+        "wall_clock_seconds": wall_clock_seconds,
+        "total_prompt_tokens": row["total_prompt_tokens"] if "total_prompt_tokens" in row_keys else None,
+        "total_output_tokens": row["total_output_tokens"] if "total_output_tokens" in row_keys else None,
+        "avg_tokens_per_second": row["avg_tokens_per_second"] if "avg_tokens_per_second" in row_keys else None,
+        "total_retries": row["total_retries"] if ("total_retries" in row_keys and row["total_retries"] is not None) else 0,
+        "total_schema_failures": row["total_schema_failures"] if ("total_schema_failures" in row_keys and row["total_schema_failures"] is not None) else 0,
+        "position_distribution": position_distribution,
     }
 
 
@@ -995,18 +1106,26 @@ def list_round_results(run_id: str, round_number: int) -> list[dict[str, Any]]:
             (run_id, round_number),
         ).fetchone():
             raise KeyError((run_id, round_number))
-    return [
-        {
-            "agent_id": row["agent_id"],
-            "agent_name": row["agent_name"],
-            "category_label": row["category_label"],
-            "status": row["status"],
-            "result": json.loads(row["result_json"]) if row["result_json"] else None,
-            "error_message": row["error_message"],
-            "duration_seconds": row["duration_seconds"],
-        }
-        for row in rows
-    ]
+    results: list[dict[str, Any]] = []
+    for row in rows:
+        row_keys = row.keys()
+        results.append(
+            {
+                "agent_id": row["agent_id"],
+                "agent_name": row["agent_name"],
+                "category_label": row["category_label"],
+                "status": row["status"],
+                "result": json.loads(row["result_json"]) if row["result_json"] else None,
+                "error_message": row["error_message"],
+                "duration_seconds": row["duration_seconds"],
+                "prompt_tokens": row["prompt_tokens"] if "prompt_tokens" in row_keys else None,
+                "output_tokens": row["output_tokens"] if "output_tokens" in row_keys else None,
+                "tokens_per_second": row["tokens_per_second"] if "tokens_per_second" in row_keys else None,
+                "retries": row["retries"] if "retries" in row_keys else 0,
+                "schema_failures": row["schema_failures"] if "schema_failures" in row_keys else 0,
+            }
+        )
+    return results
 
 
 def get_round_result(run_id: str, round_number: int, agent_id: str) -> dict[str, Any] | None:
@@ -1051,7 +1170,17 @@ def mark_round_agent_running(run_id: str, round_number: int, agent_id: str) -> N
 
 
 def save_round_success(
-    run_id: str, round_number: int, agent_id: str, result_json: str, duration_seconds: float
+    run_id: str,
+    round_number: int,
+    agent_id: str,
+    result_json: str,
+    duration_seconds: float,
+    *,
+    prompt_tokens: int | None = None,
+    output_tokens: int | None = None,
+    tokens_per_second: float | None = None,
+    retries: int = 0,
+    schema_failures: int = 0,
 ) -> None:
     now = _now()
     with _connect() as db:
@@ -1059,10 +1188,24 @@ def save_round_success(
         db.execute(
             """
             UPDATE agent_round_results SET status = 'completed', result_json = ?,
-                error_message = NULL, completed_at = ?, duration_seconds = ?
+                error_message = NULL, completed_at = ?, duration_seconds = ?,
+                prompt_tokens = ?, output_tokens = ?, tokens_per_second = ?,
+                retries = ?, schema_failures = ?
             WHERE run_id = ? AND round_number = ? AND agent_id = ?
             """,
-            (result_json, now, duration_seconds, run_id, round_number, agent_id),
+            (
+                result_json,
+                now,
+                duration_seconds,
+                prompt_tokens,
+                output_tokens,
+                tokens_per_second,
+                retries,
+                schema_failures,
+                run_id,
+                round_number,
+                agent_id,
+            ),
         )
         db.execute(
             "UPDATE round_runs SET updated_at = ? WHERE run_id = ? AND round_number = ?",
@@ -1071,7 +1214,14 @@ def save_round_success(
 
 
 def save_round_failure(
-    run_id: str, round_number: int, agent_id: str, error_message: str, duration_seconds: float
+    run_id: str,
+    round_number: int,
+    agent_id: str,
+    error_message: str,
+    duration_seconds: float,
+    *,
+    retries: int = 0,
+    schema_failures: int = 0,
 ) -> None:
     now = _now()
     with _connect() as db:
@@ -1079,10 +1229,20 @@ def save_round_failure(
         db.execute(
             """
             UPDATE agent_round_results SET status = 'failed', result_json = NULL,
-                error_message = ?, completed_at = ?, duration_seconds = ?
+                error_message = ?, completed_at = ?, duration_seconds = ?,
+                retries = ?, schema_failures = ?
             WHERE run_id = ? AND round_number = ? AND agent_id = ?
             """,
-            (error_message[:500], now, duration_seconds, run_id, round_number, agent_id),
+            (
+                error_message[:500],
+                now,
+                duration_seconds,
+                retries,
+                schema_failures,
+                run_id,
+                round_number,
+                agent_id,
+            ),
         )
         db.execute(
             "UPDATE round_runs SET updated_at = ? WHERE run_id = ? AND round_number = ?",
@@ -1101,13 +1261,57 @@ def mark_round_finished(run_id: str, round_number: int) -> None:
     now = _now()
     with _connect() as db:
         _ensure_round_tables(db)
+        started_row = db.execute(
+            "SELECT started_at FROM round_runs WHERE run_id = ? AND round_number = ?",
+            (run_id, round_number),
+        ).fetchone()
+        started_at = started_row["started_at"] if started_row else None
+        wall_clock_seconds = None
+        if started_at:
+            try:
+                s_dt = datetime.fromisoformat(str(started_at).replace("Z", "+00:00"))
+                n_dt = datetime.fromisoformat(str(now).replace("Z", "+00:00"))
+                wall_clock_seconds = round(max(0.0, (n_dt - s_dt).total_seconds()), 3)
+            except Exception:
+                wall_clock_seconds = None
+
+        telemetry_stats = db.execute(
+            """
+            SELECT
+                SUM(prompt_tokens) AS sum_prompt,
+                SUM(output_tokens) AS sum_output,
+                AVG(tokens_per_second) AS avg_tps,
+                SUM(retries) AS sum_retries,
+                SUM(schema_failures) AS sum_schema_failures
+            FROM agent_round_results
+            WHERE run_id = ? AND round_number = ? AND status = 'completed'
+            """,
+            (run_id, round_number),
+        ).fetchone()
+
         db.execute(
             """
             UPDATE round_runs SET status = ?, current_agent_id = NULL, updated_at = ?,
-                finished_at = CASE WHEN ? IN ('completed', 'completed_with_errors') THEN ? ELSE NULL END
+                finished_at = CASE WHEN ? IN ('completed', 'completed_with_errors') THEN ? ELSE NULL END,
+                total_prompt_tokens = ?, total_output_tokens = ?,
+                avg_tokens_per_second = ?, total_retries = ?, total_schema_failures = ?,
+                wall_clock_seconds = ?
             WHERE run_id = ? AND round_number = ?
             """,
-            (status, now, status, now, run_id, round_number),
+            (
+                status,
+                now,
+                status,
+                now,
+                telemetry_stats["sum_prompt"] if telemetry_stats else None,
+                telemetry_stats["sum_output"] if telemetry_stats else None,
+                round(telemetry_stats["avg_tps"], 2) if (telemetry_stats and telemetry_stats["avg_tps"]) else None,
+                telemetry_stats["sum_retries"] if (telemetry_stats and telemetry_stats["sum_retries"] is not None) else 0,
+                telemetry_stats["sum_schema_failures"] if (telemetry_stats and telemetry_stats["sum_schema_failures"] is not None) else 0,
+                wall_clock_seconds,
+                run_id,
+                round_number,
+            ),
         )
         # The parent timestamp represents the terminal state of the full four-round MDT,
         # not completion of the initial R1 batch.

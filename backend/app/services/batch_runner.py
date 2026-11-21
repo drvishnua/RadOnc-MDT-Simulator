@@ -11,6 +11,7 @@ from app.config import RADONC_AGENT_CONCURRENCY
 from app.schemas import SyntheticCase
 from app.services import run_store
 from app.services.execution_lock import MODEL_EXECUTION_LOCK
+from app.services.gpu_telemetry import generation_telemetry_ctx
 from app.services.mdt_rounds import _run_post_round_quality_gates
 from app.services.ollama import AgentGenerationError, generate_agent_assessment
 
@@ -26,6 +27,7 @@ def batch_is_running() -> bool:
 async def _generate_with_schema_retry(profile, case: SyntheticCase):
     """Retry malformed structured output once with a larger token budget."""
     token_budgets = (1100, 1500)
+    ctx = generation_telemetry_ctx.get()
     for attempt, max_tokens in enumerate(token_budgets, start=1):
         try:
             return await generate_agent_assessment(
@@ -35,6 +37,9 @@ async def _generate_with_schema_retry(profile, case: SyntheticCase):
                 max_tokens=max_tokens,
             )
         except AgentGenerationError:
+            if ctx is not None:
+                ctx["retries"] = ctx.get("retries", 0) + 1
+                ctx["schema_failures"] = ctx.get("schema_failures", 0) + 1
             if attempt >= len(token_budgets):
                 raise
             logger.warning(
@@ -67,6 +72,8 @@ async def run_independent_assessments(run_id: str) -> None:
                 async with semaphore:
                     started = time.perf_counter()
                     run_store.mark_agent_running(run_id, agent_id)
+                    tracker: dict[str, Any] = {"retries": 0, "schema_failures": 0}
+                    token = generation_telemetry_ctx.set(tracker)
                     try:
                         # Each agent receives only the original case and its own role profile.
                         assessment = await _generate_with_schema_retry(profile, case)
@@ -75,6 +82,11 @@ async def run_independent_assessments(run_id: str) -> None:
                             agent_id=agent_id,
                             assessment_json=assessment.model_dump_json(),
                             duration_seconds=time.perf_counter() - started,
+                            prompt_tokens=tracker.get("prompt_tokens"),
+                            output_tokens=tracker.get("output_tokens"),
+                            tokens_per_second=tracker.get("tokens_per_second"),
+                            retries=tracker.get("retries", 0),
+                            schema_failures=tracker.get("schema_failures", 0),
                         )
                     except Exception as exc:
                         logger.exception(
@@ -87,7 +99,11 @@ async def run_independent_assessments(run_id: str) -> None:
                             agent_id=agent_id,
                             error_message=f"{type(exc).__name__}: {exc}",
                             duration_seconds=time.perf_counter() - started,
+                            retries=tracker.get("retries", 0),
+                            schema_failures=tracker.get("schema_failures", 0),
                         )
+                    finally:
+                        generation_telemetry_ctx.reset(token)
 
             await asyncio.gather(*(process_profile(profile) for profile in AGENT_PROFILES))
             run_store.mark_run_finished(run_id)
