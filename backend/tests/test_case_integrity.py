@@ -2181,6 +2181,13 @@ def test_conflicting_case_summary_is_not_exposed_as_a_selected_prompt_value():
     case = _case(
         case_summary="Synthetic case summary: right-sided primary.",
         clinical_field_states={"case_summary": "CONFLICTING"},
+        clinical_field_provenance={
+            "case_summary": [{
+                "source_type": "CASE_SUMMARY",
+                "source_reference": "summary-selected",
+                "source_excerpt": "SECRET selected case-summary source excerpt.",
+            }]
+        },
         clinical_field_conflicts={
             "case_summary": [
                 {
@@ -2210,7 +2217,17 @@ def test_conflicting_case_summary_is_not_exposed_as_a_selected_prompt_value():
     assert context["field_status"]["case_summary"]["status"] == "conflicting"
     assert context["field_status"]["case_summary"]["value"] is None
     assert context["canonical_field_values"]["case_summary"]["raw_value"] is None
-    assert len(context["canonical_field_values"]["case_summary"]["conflict_candidates"]) == 2
+    candidates = context["canonical_field_values"]["case_summary"]["conflict_candidates"]
+    assert len(candidates) == 2
+    assert all(item["raw_value"] is None for item in candidates)
+    assert all(item["provenance"]["source_excerpt_redacted"] for item in candidates)
+    assert all("source_sha256" in item["provenance"] for item in candidates)
+    assert context["case_snapshot"]["clinical_field_conflicts"]["case_summary"][0]["raw_value"] is None
+    assert context["case_snapshot"]["clinical_field_provenance"]["case_summary"][0]["source_excerpt_redacted"] is True
+    serialized_context = json.dumps(context, ensure_ascii=False)
+    assert "right-sided primary" not in serialized_context
+    assert "left-sided primary" not in serialized_context
+    assert "SECRET selected case-summary source excerpt" not in serialized_context
 
 @pytest.mark.parametrize(
     ("field_id", "summary", "generated", "label"),
