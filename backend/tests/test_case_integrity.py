@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 from app.schemas import InvestigationRecord, SyntheticCase
