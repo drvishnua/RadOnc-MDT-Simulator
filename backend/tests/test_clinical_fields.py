@@ -1,6 +1,7 @@
 """Regression tests for the immutable canonical clinical field registry."""
 from dataclasses import FrozenInstanceError
 import hashlib
+import json
 
 import pytest
 from pydantic import ValidationError
@@ -954,3 +955,24 @@ def test_invalid_and_conflicting_values_are_withheld_from_generation_context_but
     assert original["clinical_field_provenance"]["clinical_t_stage"][0]["source_excerpt"] == invalid_stage_excerpt
     assert original["clinical_n_stage"] == "N0"
     assert [item["raw_value"] for item in original["clinical_field_conflicts"]["clinical_n_stage"]] == ["N0", "N1"]
+
+
+def test_clinical_t_stage_json_number_is_rejected_but_digit_string_is_preserved():
+    payload = {
+        "scenario_title": "Synthetic TNM JSON type contract",
+        "case_summary": "Fictional educational case with no additional findings.",
+        "clinical_t_stage": "1",
+    }
+    case = SyntheticCase.model_validate_json(json.dumps(payload))
+    context = build_case_prompt_context(case)
+
+    assert case.clinical_t_stage == "1"
+    assert context["canonical_field_values"][CLINICAL_T_STAGE]["raw_value"] == "1"
+    assert (
+        context["canonical_field_values"][CLINICAL_T_STAGE]["canonical_comparison_value"]
+        == "T1"
+    )
+
+    payload["clinical_t_stage"] = 1
+    with pytest.raises(ValidationError):
+        SyntheticCase.model_validate_json(json.dumps(payload))
