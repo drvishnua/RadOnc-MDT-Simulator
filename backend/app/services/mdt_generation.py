@@ -2068,7 +2068,7 @@ async def generate_adversarial_contribution(
             "explain the limitation. These are source-reported opinions, not verified facts or MDT consensus. "
             "A peer's R2 contribution is never itself a case-summary attributed opinion."
         )
-    elif case_summary_has_attributed_opinions(case.case_summary):
+    elif case_summary_has_attributed_opinions(eligible_summary or ""):
         attribution_instruction = (
             "CASE ATTRIBUTION CHECK: review only clearly speaker-attributed opinions in the verbatim case summary. "
             "A peer's R2 contribution is never itself a case-summary attributed opinion. Do not create a case opinion from a peer role or its R2 ID."
@@ -2729,7 +2729,8 @@ async def generate_adversarial_contribution(
         review_source_is_traceable = (
             source_id in traceable_case_source_ids
             and review_source_excerpt == case_source_id_to_excerpt.get(source_id)
-            and review_source_excerpt in case.case_summary
+            and eligible_case_summary_text(case) is not None
+            and review_source_excerpt in eligible_case_summary_text(case)
         )
         statuses = {
             review.get("option_status"),
