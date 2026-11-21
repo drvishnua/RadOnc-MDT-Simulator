@@ -8481,3 +8481,25 @@ The tests also assert that case serialization remains unchanged where applicable
 **Current milestone:** U09-INT-01 R2/R3/R4 case-summary quarantine boundary is VERIFIED; T1 JSON input-type semantics are VERIFIED for immutable registry v2; the U10 anatomical-subsite context completeness subtask is VERIFIED for the deterministic boundaries and exact-head CI listed below. The parent U09–U10 step remains IN PROGRESS; do not advance U04 or any later workstream. No live inference, GPU validation, site-specific AJCC/UICC compatibility, guideline compliance, clinical validation or release claim is made.
 
 **Checklist supersession note:** This latest status supersedes the earlier status row that listed R2/R3/R4 case-summary direct reads as BLOCKED before the authorised U09-INT-01 scope amendment and its implementation. Historical baseline/failure notes above remain intact.
+
+
+---
+
+### U09-INT-01 — R2/R3 source-opinion register label-scope regression plan
+
+**Baseline:** PR #5 remains OPEN and UNMERGED; source branch `docs/reconcile-master-checklist-after-pr4-merge`; current head `78140e7238da589a994dfcf980d6ec15810679bf`; target `feature/four-round-mdt-and-performance` at `df90e4a380bef06a7d37def753b385db4ae86c30`. The latest source-code head is `f047dd56b918af06ebb7c4ad3389ead5018f0a99`; subsequent `78140e7` is checklist-only. The latest exact-head gate/backend/security workflows on `78140e7` are `44872950903`, `44872950921`, and `44872950931`, all SUCCESS.
+
+**Observed prompt boundary:** the current `mdt_generation.py` uses separate variables: R2 assigns `source_opinion_register_label` and inserts it in the R2 prompt; R3 assigns `r3_source_opinion_register_label` and inserts it in the R3 prompt. The earlier patch attempt exposed a risk of replacing the R3/Chair label when intending to update R2. The production code currently has distinct assignments; this increment will add a prompt-level regression rather than alter already-correct production logic.
+
+**Narrow implementation plan:**
+1. Use a fictional, eligible PRESENT case summary with one explicitly attributed note opinion and a fake structured generator; capture the actual R2 and R3 prompt strings.
+2. Assert the exact R2 register label appears only in the R2 prompt and the exact R3 register label appears only in the R3 prompt. Assert each appears exactly once and retain the source ID/excerpt binding behaviour needed for the prompt path.
+3. Change only `backend/tests/test_ollama_assessment_prompt.py` plus this checklist. Do not modify production prompt code unless the regression demonstrates a real mismatch. No schema, case data, clinical algorithm, machine plan, validator allowlist, runtime, frontend, model, or installer change is authorised.
+4. Run the targeted regression, then full Backend Tests, Sequential Development Gate, and Security and Dependency Audit on the exact final source SHA. Inspect test diagnostics and artifacts; update this checklist with exact results only after the workflows complete.
+
+**Scope:** the test is within the existing U09–U10 `backend/tests/*` allowlist. The parent machine-plan step remains `U09-U10` IN PROGRESS; U04 and all later steps remain BLOCKED. PR #5 must remain OPEN and UNMERGED; do not modify the protected target branch or `main`.
+
+**Stop conditions:** if the test cannot be built from the actual source interface without widening scope, stop and record the blocker. Do not weaken existing assertions or alter clinical/safety behaviour merely to make the test pass.
+
+**Plan status:** RECORDED before this regression change.  
+**Requirement status:** IN PROGRESS.
