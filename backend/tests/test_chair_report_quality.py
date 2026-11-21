@@ -1313,10 +1313,47 @@ def test_quarantined_case_summary_is_unassessable_at_final_chair_source_boundari
     round3 = _rows("result", ["insufficient_information"] * 45)
 
     for state in ("INVALID", "CONFLICTING"):
+        conflict_candidates = (
+            {
+                "case_summary": [
+                    {
+                        "raw_value": (
+                            "SECRET CONFLICTING SUMMARY SOURCE A: "
+                            "Consultant note recommends unsupported option X."
+                        ),
+                        "provenance": {
+                            "source_type": "CASE_SUMMARY",
+                            "source_reference": "test://case-summary/source-a",
+                            "source_excerpt": (
+                                "SECRET CONFLICTING SUMMARY SOURCE A: "
+                                "Consultant note recommends unsupported option X."
+                            ),
+                        },
+                    },
+                    {
+                        "raw_value": (
+                            "SECRET CONFLICTING SUMMARY SOURCE B: "
+                            "A second note recommends unsupported option Y."
+                        ),
+                        "provenance": {
+                            "source_type": "CLINICIAN_NOTE",
+                            "source_reference": "test://case-summary/source-b",
+                            "source_excerpt": (
+                                "SECRET CONFLICTING SUMMARY SOURCE B: "
+                                "A second note recommends unsupported option Y."
+                            ),
+                        },
+                    },
+                ]
+            }
+            if state == "CONFLICTING"
+            else {}
+        )
         case = SyntheticCase(
             scenario_title=f"Chair withheld summary {state}",
             case_summary=sentinel,
             clinical_field_states={"case_summary": state},
+            clinical_field_conflicts=conflict_candidates,
         )
         assert eligible_case_summary_text(case) is None
         positions, position_flags = build_source_opinion_position_summary(round2, None)
