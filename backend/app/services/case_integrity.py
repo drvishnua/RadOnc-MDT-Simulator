@@ -187,19 +187,20 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
                     for candidate in candidates
                     if isinstance(candidate, dict) and isinstance(candidate.get("provenance"), dict)
                 ]
-    else:
-        model_provenance = model_snapshot.get("clinical_field_provenance")
-        if isinstance(model_provenance, dict):
-            for field_id in redacted_invalid_fields:
-                entries = model_provenance.get(field_id)
-                if isinstance(entries, list):
-                    model_provenance[field_id] = [
-                        {
-                            **{key: value for key, value in source.items() if key != "source_excerpt"},
-                            "source_excerpt_redacted": True,
-                        }
-                        for source in entries if isinstance(source, dict)
-                    ]
+    model_provenance = model_snapshot.get("clinical_field_provenance")
+    if isinstance(model_provenance, dict):
+        for field_id in redacted_invalid_fields:
+            if field_id == "case_summary":
+                continue
+            entries = model_provenance.get(field_id)
+            if isinstance(entries, list):
+                model_provenance[field_id] = [
+                    {
+                        **{key: value for key, value in source.items() if key != "source_excerpt"},
+                        "source_excerpt_redacted": True,
+                    }
+                    for source in entries if isinstance(source, dict)
+                ]
     field_status: dict[str, dict[str, Any]] = {}
     canonical_field_values: dict[str, dict[str, Any]] = {}
     normalization_warnings: list[str] = []
