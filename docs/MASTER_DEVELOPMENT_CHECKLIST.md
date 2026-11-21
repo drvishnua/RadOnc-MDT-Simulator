@@ -8230,3 +8230,30 @@ Implementation review also identified that both generation and final Chair postp
 The latest plan-only commit `df0a3117044c7a6aad50fb05085195ba8882f1a5` has successful exact-head workflows: Sequential Development Gate run 44862946237, Backend Tests run 44862946617, Security and Dependency Audit run 44862946407. These validate that checklist-only checkpoint, not the forthcoming implementation.
 
 **Implementation status:** IN PROGRESS. No code changes made yet under this expanded authorisation.
+
+
+### U09-INT-01 implementation review amendment — context projection leak and withheld prompt wording
+
+**Additional root cause confirmed before correction:** `eligible_case_summary_text(case)` is already shared from the authorised `case_integrity.py` module and is used by the amended generation/Chair code. However, the earlier canonical `build_case_prompt_context(case)` projection still has two disclosure paths for `case_summary` when its state is `CONFLICTING`:
+1. Explicit selected-field `clinical_field_provenance["case_summary"]` is serialised with its full `source_excerpt`; the pre-existing context redaction handled `INVALID` provenance, but not the selected provenance for a `CONFLICTING` summary.
+2. `clinical_field_conflicts["case_summary"]` is serialised with both each candidate's `raw_value` and full `provenance.source_excerpt`. This exposes the competing case-summary material even though the selected flat value is null.
+
+This is a source-projection leak, not a reason to alter the schema or discard audit information. The safe projection must, for `case_summary` only when state is `INVALID` or `CONFLICTING`, omit the selected source excerpt and conflict-candidate raw values/excerpts, retain stable source type/reference, timestamps and original `source_sha256` where present, and mark the excerpt/value as redacted. The persisted case, immutable conflicts, hashes and audit material must remain byte-for-byte unchanged.
+
+**Additional prompt contradiction confirmed:** R2 currently begins by instructing the role to inspect the “verbatim case summary” even when `eligible_case_summary_text(case)` returns `None`; R3 likewise has unconditional instructions to review opinions in the verbatim case summary and says the server will attach exact excerpts. The conditional withheld notice does not neutralise those contradictory instructions. Replace these source-review instructions with state-dependent prompt wording: PRESENT/default-PRESENT may inspect and bind exact excerpts; INVALID/CONFLICTING must not inspect or reconstruct text, and an empty register/list means unassessable rather than no opinions.
+
+**Required additions to the recorded implementation/verification plan:**
+- Stage 2: harden `build_case_prompt_context` so INVALID/CONFLICTING `case_summary` does not leak through selected provenance or conflict candidates. Restrict this extra redaction to the `case_summary` field; do not change how other conflicting fields are shown.
+- Stage 3/4: make all R2/R3 source-opinion inspection, excerpt-binding and “no opinions present” instructions conditional on an eligible PRESENT summary. Explicitly describe withheld states as unassessable; do not instruct the model to inspect or review unavailable case-summary text.
+- Stage 6: add direct projection tests for INVALID and CONFLICTING with unique raw sentinel strings in the selected summary, explicit provenance, and both conflict candidates. Assert no sentinel/source excerpt/candidate value appears in the prompt context, source references and original hashes remain present with redaction markers, and the original `SyntheticCase` dump is unchanged. Add R2/R3 prompt-and-response regressions for both states, including fabricated CASE IDs that remain unregistered, source excerpts unbound and no source-opinion review promoted.
+- Chair test fixture: construct a schema-valid CONFLICTING case with at least two distinct source-specific conflict candidates (distinct raw values and distinct provenance references); do not weaken the schema validator to satisfy the test.
+
+### Exact-head CI result and corrective test requirement
+
+On PR head `cf5ddbea63210e3ac78b151741295bed797a0a9`:
+- Sequential Development Gate run `44865316876`: SUCCESS.
+- Security and Dependency Audit run `44865316790`: SUCCESS.
+- Backend Tests run `44865316945`: FAILED. Deterministic preflight and script compilation passed; pytest failed at `tests/test_chair_report_quality.py:1316` because the new CONFLICTING fixture omitted the required two distinct source-specific conflict values. The failure is a fixture defect and must be corrected with valid conflict records; it is not grounds to relax `SyntheticCase` validation.
+- Earlier intermediate gate run `44865083483` failed on a transient plan/validator allowlist mismatch during sequential commits. It remains historical audit evidence; the later current-head gate passed.
+
+**Current requirement status:** IN PROGRESS. The code now has initial shared-state guard changes, but the canonical prompt projection and prompt wording defects above remain open until corrected and tested. No U09–U10 acceptance or completion claim is made.
