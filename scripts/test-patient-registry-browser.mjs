@@ -509,10 +509,14 @@ try {
   );
   await clickButton("Start intake for new patient");
   await waitForExpression(
-    "[...document.querySelectorAll('button')].some(node => (node.innerText || '').trim().startsWith('Accept intake and save'))",
+    "[...document.querySelectorAll('button')].some(node => (node.innerText || '').trim().startsWith('Accept intake and save') || (node.innerText || '').trim().startsWith('Accept with gaps and save'))",
     "the explicit intake acceptance action"
   );
-  await clickButton("Accept intake and save");
+  const acceptButtonText = await page.evaluate(() => {
+    const btn = [...document.querySelectorAll('button')].find(node => (node.innerText || '').trim().startsWith('Accept intake and save') || (node.innerText || '').trim().startsWith('Accept with gaps and save'));
+    return btn ? btn.innerText.trim() : "Accept intake and save";
+  });
+  await clickButton(acceptButtonText);
 
   const firstOption = await waitUntil(() => readPatientOption(originalName), "the newly registered patient in the registry");
   patientIdentifier = firstOption.identifier;
