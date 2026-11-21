@@ -1,7 +1,7 @@
 # RadOnc MDT Simulator — Current Task Checklist
 Snapshot: 21 November 2026  
 Branch: feature/four-round-mdt-and-performance  
-Latest application/test SHA: 154dbeb
+Latest application/test SHA: 77a1834
 
 | Task | Status | Evidence / next action |
 |---|---|---|
@@ -12,8 +12,9 @@ Latest application/test SHA: 154dbeb
 | U05-U06 Specialist Reasoning Depth | VERIFIED — CODE/TEST | Anti-generic non-response guard and multi-round conditional pathways validated. |
 | U07 Reference Catalogue & Citations | VERIFIED — CODE/TEST | Canonical oncology catalogue, SHA-256 registry, and deterministic citation verification. |
 | U08 Anti-Duplication & Role Differentiation | VERIFIED — CODE/TEST | Semantic duplicate detection, ungrounded delegation guards, and R3 adversarial controls. |
+| Post-Round Quality Gates Wiring | VERIFIED — CODE/TEST | Non-blocking post-round U05-U08 audit execution and SQLite persistence (`save_round_quality_audit`). |
 | Concurrency Lock | VERIFIED — CODE/TEST | File-based mutex lock with timeout and stale-lock recovery on Windows. |
-| Backend test suite | VERIFIED — LOCAL | 636 passed, 0 failed, 1 skipped. |
+| Backend test suite | VERIFIED — LOCAL | 644 passed, 0 failed, 1 skipped. |
 | Deterministic preflight | VERIFIED — LOCAL | 7 passed, 0 failed, 0 inconclusive. |
 | R2 structured source ledger | VERIFIED — CODE/TEST | Server-locked exact saved statements and IDs; full source coverage validator. |
 | R2 original source order | VERIFIED — CODE/TEST | Required source_order array; exact order validator and negative regression. |
