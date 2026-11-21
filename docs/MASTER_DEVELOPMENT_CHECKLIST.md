@@ -8300,9 +8300,12 @@ On PR head `cf5ddbea63210e3ac78b151741295bed797a0a9`:
 
 **Current status:** BLOCKED pending confirmation of the actual coding-agent host and access to that Windows user's profile/CLI. This ChatGPT session can inspect the public source and update the repository checklist, but it cannot write into the user's local Windows profile or launch their local Codex CLI. No installation has been performed or claimed.
 
-### Related RadOnc MDT checkpoint at time of this request
+### Latest RadOnc MDT checkpoint — 21 November 2026
 
-- PR #5 remains OPEN and NOT MERGED; current head `1c82597377cdb19c043fd093303a1d48673e0d22`; target development branch base `df90e4a380bef06a7d37def753b385db4ae86c30`.
-- Active machine-plan step remains `U09-U10`; the narrow U09-INT-01 allowlist amendment is present.
-- Exact-head workflows on `1c82597377cdb19c043fd093303a1d48673e0d22`: Sequential Development Gate run `44865813585` SUCCESS; Security and Dependency Audit run `44865813586` SUCCESS; Backend Tests run `44865813622` FAILED. The backend preflight and compile steps passed; pytest still fails at `tests/test_chair_report_quality.py:1316` because the CONFLICTING fixture lacks the two required distinct source-specific conflict candidates. Do not weaken the schema; correct the fixture.
-- The interrupted later code-edit attempt stopped on a missing source-anchor before any new application-code commit was created.
+- PR #5 is OPEN and NOT MERGED. Source branch: `docs/reconcile-master-checklist-after-pr4-merge`; target: `feature/four-round-mdt-and-performance`; latest head before this checklist refresh: `def04f0f91c1bddd49491cab4faba69694ad18f1`; target base: `df90e4a380bef06a7d37def753b385db4ae86c30`.
+- The only commit after the previously recorded head `1c82597377cdb19c043fd093303a1d48673e0d22` was a 46-line documentation-only addition recording DEV-TOOL-01. No application-code files changed in that delta.
+- Active machine-plan step remains `U09-U10`; GOV-01 plan-first requirements and the amended U09-INT-01 exact allowlist are recorded.
+- Exact-head CI on `def04f0f91c1bddd49491cab4faba69694ad18f1`: Sequential Development Gate run `44866171185` SUCCESS; Security and Dependency Audit run `44866171339` SUCCESS; Backend Tests run `44866171200` FAILED. Pytest result: 862 passed, 1 failed. The failure remains `tests/test_chair_report_quality.py::test_quarantined_case_summary_is_unassessable_at_final_chair_source_boundaries` at line 1316: the CONFLICTING fixture lacks the two required distinct source-specific conflict candidates. Do not weaken schema validation; correct the fixture and re-run all required checks on the new exact head.
+- U09-INT-01 implementation remains IN PROGRESS. Additional prompt-context leak through nested `case_summary` provenance/conflict candidates and contradictory unconditional R2/R3 source-review instructions have been recorded; they remain unimplemented. No U09–U10 completion claim is made.
+- DEV-TOOL-01 Ponytail installation remains BLOCKED pending the user's coding-agent host confirmation and access to the local Windows user profile/CLI. The approved approach is user-level installation pinned to official release `v5.3.3`, outside the MDT runtime, source/build dependencies and installer. No install has been performed.
+
