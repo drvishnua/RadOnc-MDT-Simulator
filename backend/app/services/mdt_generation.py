@@ -31,6 +31,7 @@ from app.services.case_integrity import (
     build_case_prompt_context,
     build_case_report_title,
     case_summary_has_attributed_opinions,
+    eligible_case_summary_text,
     extract_attributed_note_opinions,
     is_empty_challenge_placeholder as _is_empty_challenge_placeholder,
     redact_flagged_tnm_values,
@@ -753,15 +754,21 @@ def reconcile_chair_report_draft(
         "No proposition-level consensus is established by the saved free-text agreement "
         "notes; position labels and repeated wording are not counted as votes."
     ]
-    # Retain explicitly attributed competing opinions verbatim, with all conditions.
-    # This is a source record, not a verified fact or MDT-endorsed plan.
-    if (
-        re.search(r"\b(?:two|competing|contrasting)\s+(?:provisional\s+)?opinions\b", case.case_summary, re.IGNORECASE)
-        and re.search(r"\bconditional\b", case.case_summary, re.IGNORECASE)
+    # Retain source opinions only when the canonical field state permits use.
+    eligible_summary = eligible_case_summary_text(case)
+    if eligible_summary is not None and (
+        re.search(r"\b(?:two|competing|contrasting)\s+(?:provisional\s+)?opinions\b", eligible_summary, re.IGNORECASE)
+        and re.search(r"\bconditional\b", eligible_summary, re.IGNORECASE)
     ):
         unresolved.append(
             "Source-case attributed opinions and conditions (verbatim; not verified facts "
-            "or MDT consensus): " + _compact(case.case_summary, 1200)
+            "or MDT consensus): " + _compact(eligible_summary, 1200)
+        )
+    elif eligible_summary is None:
+        unresolved.append(
+            "Case-summary attributed opinions and exact source-opinion coverage are unassessable: "
+            "case_summary is INVALID or CONFLICTING and raw text was withheld. "
+            "This does not mean that no attributed opinions exist."
         )
     # Preserve source-attributed R2/R3 challenge statements in the Chair record.
     # These are recorded model contributions, not independently validated facts.
@@ -779,7 +786,7 @@ def reconcile_chair_report_draft(
     # Aggregate dynamically numbered source reviews only when their identifiers map
     # consistently to exact case-summary excerpts. Counts are distinct roles, not votes.
     source_coverage, source_review_integrity = build_source_opinion_review_coverage(
-        round3_views, case.case_summary
+        round3_views, eligible_summary or ""
     )
     unresolved.extend(source_review_integrity)
     unresolved.extend(_unique_strings(recorded_review_findings, limit=12))
@@ -1233,7 +1240,7 @@ def _source_opinion_repair_preserves_anchors(
     source_excerpt = str(record.get("source_excerpt") or "")
     registered = {
         item["source_id"]: item["source_excerpt"]
-        for item in extract_attributed_note_opinions(case.case_summary)
+        for item in extract_attributed_note_opinions(eligible_case_summary_text(case) or "")
     }
     if not source_id or registered.get(source_id) != source_excerpt:
         return False
@@ -2422,7 +2429,7 @@ async def generate_adversarial_contribution(
                 f"Review for {source_id} does not reproduce its exact server-identified case-summary excerpt."
             )
             continue
-        if not source_excerpt or source_excerpt not in case.case_summary:
+        if not source_excerpt or eligible_case_summary_text(case) is None or source_excerpt not in eligible_case_summary_text(case):
             review_reference_flags.append(
                 f"Review for {source_id} has no exact contiguous source_excerpt from the supplied case_summary."
             )
