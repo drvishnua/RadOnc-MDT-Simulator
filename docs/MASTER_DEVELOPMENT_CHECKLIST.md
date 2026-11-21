@@ -8362,3 +8362,18 @@ On PR head `cf5ddbea63210e3ac78b151741295bed797a0a9`:
 **Current DEV-TOOL-02 status:** IN PROGRESS pending verification.  
 **Native ChatGPT mobile plugin/hooks:** NOT APPLICABLE; repository instructions/skills are the supported mechanism.  
 **U09–U10:** unchanged, IN PROGRESS; no application implementation was performed in this integration branch.
+
+
+### DEV-TOOL-02 verification result — 21 November 2026
+
+- Exact-content comparison against upstream tag `v5.3.3`: **6/6 skills byte-for-byte identical**. Upstream and repository blob SHAs match for Ponytail, review, audit, debt, gain and help.
+- Diff against the tooling branch's starting commit `1b9faa828312604c0a6b88b6a2d212a1e5c2aefe`: **10 files only** — six skill files, root `AGENTS.md`, MIT licence, third-party notice and this checklist. No application/runtime/installer/dependency paths changed.
+- Root `AGENTS.md` retains the existing RadOnc controls; the added section requires reading the actual Ponytail skill contents for every coding task and explicitly subordinates Ponytail to GOV-01, the approved algorithm, clinical safety, provenance and mandatory verification.
+- Upstream licence text and attribution are present.
+- Combined commit status on integration commit `fbbc7de8580ad2ea0fa96fb9759fb0c5cfb27044` returned no status checks; no CI workflow runs were returned for this branch because it has no pull request. No workflow-dispatch action is available through the connected GitHub tooling. **CI verification remains BLOCKED / NOT RUN**, not passed.
+- PR #5 remains OPEN and UNMERGED. No PR was opened for this branch to avoid duplicating the still-open PR #5 changes in a review against the development branch.
+- ChatGPT mobile does not load local Node hooks. No native Ponytail plugin installation is claimed.
+
+**DEV-TOOL-02:** IN PROGRESS — source copy, licence, attribution and scope checks VERIFIED; CI/review integration pending PR #5 reconciliation.  
+**U09–U10:** IN PROGRESS, unchanged.  
+**No merge, force-push, protected-branch write or MDT application change was made.**
