@@ -341,6 +341,26 @@ async def get_mdt_round_results(run_id: str, round_number: int) -> dict[str, obj
         raise HTTPException(status_code=404, detail="MDT round not found.") from exc
 
 
+@app.get("/api/runs/{run_id}/rounds/{round_number}/quality-audit")
+async def get_mdt_round_quality_audit(run_id: str, round_number: int) -> dict[str, object]:
+    """Retrieve post-round quality audit results (U05-U08 flags) for a completed round."""
+    try:
+        # Verify run and round exist
+        if round_number == 1:
+            run_store.get_run(run_id)
+        else:
+            run_store.get_round_summary(run_id, round_number)
+        audit = run_store.get_round_quality_audit(run_id, round_number)
+        return {
+            "run_id": run_id,
+            "round_number": round_number,
+            "quality_audit": audit,
+            "has_audit": audit is not None,
+        }
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Run or round not found.") from exc
+
+
 @app.post("/api/runs/{run_id}/rounds/{round_number}/resume")
 async def resume_mdt_round(
     run_id: str,
