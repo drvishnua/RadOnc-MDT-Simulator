@@ -2567,6 +2567,7 @@ def test_r3_generation_flags_missing_verbatim_peer_evidence_without_dropping_rol
 def test_mdt_and_round_timestamps_cover_all_rounds_and_clear_on_chair_retry(monkeypatch, tmp_path):
     run_id = _create_complete_round1(monkeypatch, tmp_path)
     assert run_store.get_run(run_id)["mdt_finished_at"] is None
+    assert run_store.get_run(run_id)["wall_clock_runtime_seconds"] is None
 
     role_ids = [profile["agent_id"] for profile in run_store.AGENT_PROFILES]
 
@@ -2597,10 +2598,12 @@ def test_mdt_and_round_timestamps_cover_all_rounds_and_clear_on_chair_retry(monk
     run_store.mark_round_finished(run_id, 4)
     assert run_store.get_run(run_id)["status"] == "completed_with_errors"
     assert run_store.get_run(run_id)["mdt_finished_at"] == "2099-01-01T10:14:00+00:00"
+    assert isinstance(run_store.get_run(run_id)["wall_clock_runtime_seconds"], float)
 
     monkeypatch.setattr(run_store, "_now", lambda: "2099-01-01T10:15:00+00:00")
     run_store.reset_failed_round_agents(run_id, 4)
     assert run_store.get_run(run_id)["mdt_finished_at"] is None
+    assert run_store.get_run(run_id)["wall_clock_runtime_seconds"] is None
     reset_summary = run_store.get_round_summary(run_id, 4)
     assert reset_summary["started_at"] is None
     assert reset_summary["finished_at"] is None
@@ -2608,6 +2611,28 @@ def test_mdt_and_round_timestamps_cover_all_rounds_and_clear_on_chair_retry(monk
     complete_round(4, ["SG-07"], "2099-01-01T10:16:00+00:00", "2099-01-01T10:17:00+00:00")
     assert run_store.get_run(run_id)["status"] == "completed"
     assert run_store.get_run(run_id)["mdt_finished_at"] == "2099-01-01T10:17:00+00:00"
+    assert isinstance(run_store.get_run(run_id)["wall_clock_runtime_seconds"], float)
+    assert run_store.get_run(run_id)["wall_clock_runtime_seconds"] > 0
+
+
+def test_wall_clock_runtime_seconds_calculated_from_completion_and_creation(monkeypatch, tmp_path):
+    run_id = _create_complete_round1(monkeypatch, tmp_path)
+    run_initial = run_store.get_run(run_id)
+    assert run_initial["mdt_finished_at"] is None
+    assert run_initial["wall_clock_runtime_seconds"] is None
+
+    # Artificially set created_at and mdt_finished_at with known delta
+    created_at = "2026-11-21T12:00:00+00:00"
+    mdt_finished_at = "2026-11-21T12:05:30.500+00:00"
+    with run_store._connect() as db:
+        db.execute(
+            "UPDATE simulation_runs SET created_at = ?, mdt_finished_at = ? WHERE run_id = ?",
+            (created_at, mdt_finished_at, run_id),
+        )
+
+    run_updated = run_store.get_run(run_id)
+    assert run_updated["mdt_finished_at"] == mdt_finished_at
+    assert run_updated["wall_clock_runtime_seconds"] == 330.5
 
 
 def test_completion_timestamp_columns_migrate_existing_sqlite_database(monkeypatch, tmp_path):
