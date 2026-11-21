@@ -8197,3 +8197,23 @@ All jobs returned for these three runs were completed with SUCCESS. These runs v
 
 **Plan status before implementation:** RECORDED. No validator, machine-plan or application-code implementation has yet been attempted under this amendment.
 **Requirement status:** IN PROGRESS.
+
+
+### U09-INT-01 additional Chair postprocessor boundary — 21 November 2026
+
+**Stop condition discovered during pre-implementation call-chain review:** the final Chair report does not end at `mdt_generation.generate_chair_report`. `backend/app/services/mdt_rounds.py` invokes `ensure_chair_report_completeness(report, case, round1_rows, round2_rows, round3_rows, ...)` after Chair generation. That postprocessor is implemented in `backend/app/services/chair_report_quality.py` and independently rebuilds:
+- R2 source-opinion position summary through `build_source_opinion_position_summary(round2_rows, case.case_summary)`.
+- R3 source-opinion review coverage through `build_source_opinion_review_coverage(round3_rows, case.case_summary)`.
+
+Those calls parse and can re-emit raw source excerpts from an INVALID/CONFLICTING summary, even if `mdt_generation.py` correctly withholds them. They are therefore part of the final Chair/R4 boundary and must be protected for a complete fix. Filtering R2/R3 prompts and the earlier Chair synthesis alone is insufficient.
+
+**Authorisation/scope status:** the owner has authorised the narrow `mdt_generation.py` fix, its validator changes and regression tests. The current recorded U09-INT-01 plan/allowlist authorises only `mdt_generation.py` and `validate_development_plan.py` as additional production/governance paths. `chair_report_quality.py` is not presently authorised by that explicit path list. No code change has been attempted.
+
+**Required additional scope before a complete implementation:**
+1. Add only the exact path `backend/app/services/chair_report_quality.py` to the U09–U10 machine-plan and validator fixed allowlists; do not broaden any wildcard.
+2. Add a shared state-aware guard at both Chair postprocessor call sites so INVALID/CONFLICTING source text produces explicit **unassessable/withheld** disclosures and empty canonical source-opinion position/coverage summaries, not a false statement that no opinions exist.
+3. Preserve actual saved R1–R3 role records, raw original case material, source provenance, hashes, conflict candidates and model-reported audit history; never extract or expose an exact attributed excerpt from a quarantined selected summary.
+4. Add direct positive/default-PRESENT and negative INVALID/CONFLICTING regression tests for both final Chair summary builders, plus tests proving unrelated paths remain rejected and JSON-only allowlist expansion remains blocked.
+5. Include this exact file and tests in the complete three-workflow exact-head verification.
+
+**Current U09-INT-01 status:** BLOCKED before implementation pending owner authorisation for the additional exact path `backend/app/services/chair_report_quality.py`. The approved paths `mdt_generation.py`, `validate_development_plan.py`, machine plan and test scope have not been modified. Active step and scope baseline remain unchanged; U04 and later remain BLOCKED.
