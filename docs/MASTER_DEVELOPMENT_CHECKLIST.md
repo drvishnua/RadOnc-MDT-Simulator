@@ -8609,7 +8609,7 @@ Root `AGENTS.md` keeps the existing RadOnc mission, four-round architecture, cli
 
 | Workstream | Status | Current evidence / remaining boundary |
 |---|---|---|
-| PR #5 / protected development target | IN PROGRESS | PR #5 OPEN, UNMERGED; source HEAD `ddd9e39`; target/base `df90e4a`; feature branch and `main` unchanged |
+| PR #5 / protected development target | IN PROGRESS | PR #5 OPEN, UNMERGED; current source HEAD `65cc1d3` (checklist-only); latest application/test SHA `ddd9e39`; target/base `df90e4a`; feature branch and `main` unchanged |
 | GOV-01 plan-before-execution | VERIFIED | Whitespace-summary plan recorded before implementation; existing machine plan and allowlist unchanged |
 | U09 canonical registry IDs, types and states | VERIFIED for tested contract | Existing registry/schema coverage remains; wider U09–U10 field/state/source/provenance acceptance remains open |
 | U09 data provenance, source hashes, conflicts and immutable history | VERIFIED for tested boundaries | Prior deterministic regressions retained; exact source hashes do not establish source authenticity |
