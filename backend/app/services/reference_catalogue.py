@@ -118,3 +118,55 @@ def verify_citation(
             return False
 
     return True
+
+
+def audit_claim_citations(
+    claims: list[dict[str, Any]],
+    catalogue: list[ReferenceEntry] | None = None,
+) -> dict[str, Any]:
+    """Audit a collection of specialist claims/citations against the reference catalogue (U09).
+
+    Guarantees:
+    - Every cited guideline, trial, or review is deterministically verified.
+    - Hallucinated or non-matching citations are flagged as 'unverified_citation'.
+    - Returns verified citations, unverified citations, and overall citation concordance rate.
+    """
+    entries = catalogue if catalogue is not None else load_reference_catalogue()
+    verified: list[dict[str, Any]] = []
+    unverified: list[dict[str, Any]] = []
+
+    for claim in claims:
+        source_id = str(claim.get("source_id") or claim.get("citation") or "").strip()
+        doi = str(claim.get("doi_or_url") or "").strip() or None
+        claim_text = str(claim.get("claim") or claim.get("statement") or "").strip()
+        role_id = str(claim.get("role_id") or claim.get("agent_id") or "unknown").strip()
+
+        if not source_id:
+            continue
+
+        is_valid = verify_citation(source_id, doi, catalogue=entries)
+        record = {
+            "role_id": role_id,
+            "source_id": source_id,
+            "doi_or_url": doi,
+            "claim": claim_text,
+            "verified": is_valid,
+        }
+        if is_valid:
+            verified.append(record)
+        else:
+            unverified.append(record)
+
+    total_citations = len(verified) + len(unverified)
+    concordance = round(len(verified) / total_citations, 3) if total_citations > 0 else 1.0
+
+    return {
+        "total_citations": total_citations,
+        "verified_count": len(verified),
+        "unverified_count": len(unverified),
+        "concordance_rate": concordance,
+        "verified_citations": verified,
+        "unverified_citations": unverified,
+        "valid": len(unverified) == 0,
+    }
+

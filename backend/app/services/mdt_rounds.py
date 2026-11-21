@@ -16,6 +16,7 @@ from app.services.case_integrity import (
     validate_role_differentiation_and_anti_duplication,
     validate_specialist_reasoning_depth,
 )
+from app.services.reference_catalogue import audit_claim_citations
 from app.services.chair_report_quality import ensure_chair_report_completeness
 from app.services.mdt_generation import (
     generate_adversarial_contribution,
@@ -234,7 +235,45 @@ def _run_post_round_quality_gates(
         "round_number": round_number,
         "reasoning_depth_flags": {},
         "role_differentiation": {},
+        "citation_audit": {},
     }
+
+    # U09: Citation verification across specialist outputs
+    payload_field = "assessment" if round_number == 1 else "result"
+    claims_to_audit: list[dict[str, Any]] = []
+    for row in round_rows:
+        if row.get("status") != "completed":
+            continue
+        payload = row.get(payload_field)
+        if not isinstance(payload, dict):
+            continue
+        agent_id = row.get("agent_id", "unknown")
+        # Check for guideline_references, evidence_references, or citations list
+        citations = payload.get("guideline_references") or payload.get("evidence_references") or payload.get("citations") or []
+        for cite in citations:
+            if isinstance(cite, dict):
+                claims_to_audit.append({
+                    "role_id": agent_id,
+                    "source_id": cite.get("source_id") or cite.get("guideline_id") or cite.get("reference"),
+                    "doi_or_url": cite.get("doi") or cite.get("url"),
+                    "claim": cite.get("claim") or cite.get("statement") or "",
+                })
+            elif isinstance(cite, str):
+                claims_to_audit.append({
+                    "role_id": agent_id,
+                    "source_id": cite,
+                    "doi_or_url": None,
+                    "claim": "",
+                })
+
+    if claims_to_audit:
+        citation_report = audit_claim_citations(claims_to_audit)
+        audit["citation_audit"] = citation_report
+        if not citation_report["valid"]:
+            logger.warning(
+                "U09 unverified citations for run %s R%d: %d unverified",
+                run_id, round_number, citation_report["unverified_count"],
+            )
 
     # U05-U06: Per-agent reasoning depth (applicable to R1 and R2)
     if round_number in (1, 2):
@@ -274,6 +313,7 @@ def _run_post_round_quality_gates(
     total_flags = (
         sum(len(v) for v in audit["reasoning_depth_flags"].values())
         + len(audit.get("role_differentiation", {}).get("flags", []))
+        + audit.get("citation_audit", {}).get("unverified_count", 0)
     )
     audit["total_flags"] = total_flags
     logger.info(
