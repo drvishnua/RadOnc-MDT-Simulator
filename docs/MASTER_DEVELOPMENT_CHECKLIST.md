@@ -8309,3 +8309,19 @@ On PR head `cf5ddbea63210e3ac78b151741295bed797a0a9`:
 - U09-INT-01 implementation remains IN PROGRESS. Additional prompt-context leak through nested `case_summary` provenance/conflict candidates and contradictory unconditional R2/R3 source-review instructions have been recorded; they remain unimplemented. No U09–U10 completion claim is made.
 - DEV-TOOL-01 Ponytail installation remains BLOCKED pending the user's coding-agent host confirmation and access to the local Windows user profile/CLI. The approved approach is user-level installation pinned to official release `v5.3.3`, outside the MDT runtime, source/build dependencies and installer. No install has been performed.
 
+### U09-INT-01 fixture correction and exact-head CI — 21 November 2026
+
+**Exact code/test commit:** `ac414d0f5ef29af2efb9ed107d324652d38e5d5c` on PR #5 source branch `docs/reconcile-master-checklist-after-pr4-merge`. The prior exact-head backend run `44866504939` failed because the Chair regression's CONFLICTING `case_summary` fixture omitted its required source-specific conflict candidates. The schema validation was not weakened.
+
+**Correction:** only `backend/tests/test_chair_report_quality.py` changed. The test now supplies two distinct raw candidate values, separate source types/references and corresponding excerpts when the state is CONFLICTING. The INVALID case remains without conflict candidates. No production file, schema rule, clinical registry, machine-plan allowlist or unrelated test was changed.
+
+**Exact-head verification on `ac414d0f5ef29af2efb9ed107d324652d38e5d5c`:**
+- Sequential Development Gate run `44867758066`: SUCCESS.
+- Backend Tests run `44867758107`: SUCCESS; **863 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive; 1 warning**. Deterministic no-inference preflight: **7 passed, 0 failed, 0 inconclusive**.
+- Security and Dependency Audit run `44867758067`: SUCCESS; Python and JavaScript/TypeScript CodeQL, dependency audits and full-history secret scan completed successfully.
+- Pytest diagnostics artifact `14692468179`, digest `sha256:84ee31cf0e4421b22253d20daa391362e6023eaa0ce035b33919e93a090e9777`; deterministic preflight artifact `14692019839`, digest `sha256:8dbac52d5f7b5fa5e7c57f9cad0565c748194153c3c083f78800324c8c1738b7`.
+
+The earlier failed run remains part of the audit history; it is not erased or relabelled. This verifies the corrected software test fixture and exact-head workflows only. No live LLM inference, GPU utilisation, guideline compliance or clinical validity is established. PR #5 remains OPEN and UNMERGED.
+
+**U09–U10:** IN PROGRESS. The next recorded U09-INT-01 stage is the case-summary-only prompt projection hardening for INVALID/CONFLICTING states, followed by R2/R3 conditional source-review wording and the specified regression tests. U04 and all later steps remain BLOCKED.
+
