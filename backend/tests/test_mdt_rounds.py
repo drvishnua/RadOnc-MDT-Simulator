@@ -4120,3 +4120,72 @@ def test_r2_saved_narrative_appends_verbatim_server_bound_option_and_prerequisit
     )
     assert result.source_opinion_responses[0].source_excerpt == "The " + source_opinion + "."
     assert result.case_data_integrity_flags == []
+
+
+def test_chair_reconciliation_passes_quarantined_summary_as_none_to_source_review_coverage():
+    for summary_state in ("INVALID", "CONFLICTING"):
+        sentinel = f"WITHHELD_CHAIR_SUMMARY_{summary_state}_SECRET"
+        payload = {
+            "scenario_title": "Synthetic Chair summary eligibility boundary",
+            "case_summary": sentinel,
+            "clinical_field_states": {"case_summary": summary_state},
+        }
+        if summary_state == "CONFLICTING":
+            payload["clinical_field_conflicts"] = {
+                "case_summary": [
+                    {
+                        "raw_value": "WITHHELD_CHAIR_CANDIDATE_A_SECRET",
+                        "provenance": {
+                            "source_type": "CASE_SUMMARY",
+                            "source_reference": "test://chair-summary/source-a",
+                            "source_excerpt": "WITHHELD_CHAIR_EXCERPT_A_SECRET",
+                        },
+                    },
+                    {
+                        "raw_value": "WITHHELD_CHAIR_CANDIDATE_B_SECRET",
+                        "provenance": {
+                            "source_type": "CLINICIAN_NOTE",
+                            "source_reference": "test://chair-summary/source-b",
+                            "source_excerpt": "WITHHELD_CHAIR_EXCERPT_B_SECRET",
+                        },
+                    },
+                ]
+            }
+        case = SyntheticCase(**payload)
+        round1 = _chair_rows("assessment", ["insufficient_information"] * 45)
+        round2 = _chair_rows("result", ["insufficient_information"] * 45)
+        round3 = _chair_rows("result", ["insufficient_information"] * 45)
+        # A historical/model-reported review must not make an ineligible source
+        # summary appear assessable during deterministic Chair reconciliation.
+        round3[0]["result"]["source_opinion_reviews"] = [
+            {
+                "source_id": "CASE:case_summary#1",
+                "source_excerpt": sentinel,
+                "option_status": "unclear",
+                "conditions_status": "unclear",
+                "review_basis": "Saved model report, not independently verified.",
+                "source_reference_ids": ["CASE:case_summary#1", "R2:RO-02"],
+                "evidence_peer_id": "R2:RO-02",
+                "evidence_excerpt": "A saved peer contribution excerpt.",
+            }
+        ]
+
+        report = reconcile_chair_report_draft(
+            f"quarantined-chair-summary-{summary_state.lower()}",
+            case,
+            round1,
+            round2,
+            round3,
+            _chair_draft(),
+        )
+        unresolved = " ".join(report.unresolved_disagreements)
+        assert (
+            "R3 case-summary source-opinion review coverage is unassessable"
+            in unresolved
+        )
+        assert (
+            "this does not establish that no attributed opinions exist"
+            in unresolved
+        )
+        assert report.source_opinion_review_coverage == []
+        assert sentinel not in unresolved

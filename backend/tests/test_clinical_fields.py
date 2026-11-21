@@ -1,16 +1,24 @@
 """Regression tests for the immutable canonical clinical field registry."""
 from dataclasses import FrozenInstanceError
+import hashlib
+import json
 
 import pytest
+from pydantic import ValidationError
 
 from app.clinical_fields import (
     AGE,
     CLINICAL_FIELD_REGISTRY,
+    CLINICAL_FIELD_ALIASES,
+    CLINICAL_FIELD_ALIASES_V1,
     CLINICAL_FIELD_REGISTRY_VERSION,
     HISTORICAL_CLINICAL_FIELD_REGISTRY_VERSION,
     CLINICAL_FIELD_REGISTRY_V1,
+    DataState,
     CLINICAL_M_STAGE,
     PATHOLOGICAL_T_STAGE,
+    PATHOLOGICAL_N_STAGE,
+    PATHOLOGICAL_M_STAGE,
     CLINICAL_N_STAGE,
     CLINICAL_T_STAGE,
     SEX,
@@ -25,8 +33,8 @@ from app.clinical_fields import (
     normalize_pathological_tnm_component,
     normalize_stage_group_token,
 )
-from app.schemas import SyntheticCase
-from app.services.case_integrity import build_case_prompt_context
+from app.schemas import ClinicalFieldProvenance, SyntheticCase
+from app.services.case_integrity import build_case_prompt_context, build_source_case_facts
 
 
 def _case(**overrides):
@@ -64,6 +72,99 @@ def test_registry_covers_every_synthetic_case_value_field():
         "clinical_field_conflicts",
     }
     assert set(CLINICAL_FIELD_REGISTRY) == set(SyntheticCase.model_fields) - metadata_fields
+
+
+def test_v2_registry_allowed_states_match_the_schema_state_literal_for_every_field():
+    from typing import get_args
+
+    schema_states = set(get_args(DataState))
+    assert schema_states == {
+        "PRESENT",
+        "CONFIRMED_ABSENT",
+        "UNKNOWN",
+        "NOT_REPORTED",
+        "NOT_ASSESSED",
+        "PENDING",
+        "DECLINED",
+        "NOT_APPLICABLE",
+        "CONFLICTING",
+        "INVALID",
+    }
+
+    registry_states = set()
+    for field_id, definition in CLINICAL_FIELD_REGISTRY.items():
+        declared = set(definition.allowed_states)
+        assert declared, field_id
+        assert len(declared) == len(definition.allowed_states), field_id
+        assert declared <= schema_states, field_id
+        registry_states.update(declared)
+
+    # Every state accepted by the metadata schema must be declared by at
+    # least one v2 field; every field-level state must be schema-representable.
+    assert registry_states == schema_states
+
+
+def test_every_registry_value_type_matches_its_synthetic_case_schema_annotation():
+    from datetime import date
+    from types import UnionType
+    from typing import Annotated, Literal, Union, get_args, get_origin
+
+    from app.schemas import InvestigationRecord
+
+    supported_types = {
+        "string",
+        "free_text",
+        "integer",
+        "enum",
+        "date",
+        "string_list",
+        "object_list",
+    }
+    assert {item.value_type for item in CLINICAL_FIELD_REGISTRY.values()} == supported_types
+
+    def unwrap_optional_and_annotated(annotation):
+        while True:
+            origin = get_origin(annotation)
+            if origin is Annotated:
+                annotation = get_args(annotation)[0]
+                continue
+            if origin in (Union, UnionType):
+                non_none = [arg for arg in get_args(annotation) if arg is not type(None)]
+                assert len(non_none) == 1
+                annotation = non_none[0]
+                continue
+            return annotation
+
+    for field_id, definition in CLINICAL_FIELD_REGISTRY.items():
+        annotation = unwrap_optional_and_annotated(
+            SyntheticCase.model_fields[field_id].annotation
+        )
+
+        if definition.value_type in {"string", "free_text"}:
+            assert annotation is str, field_id
+            if definition.value_type == "enum":
+                pytest.fail(f"{field_id} must declare enum, not {definition.value_type}")
+            assert not definition.allowed_values, field_id
+        elif definition.value_type == "integer":
+            assert annotation is int, field_id
+            assert not definition.allowed_values, field_id
+        elif definition.value_type == "date":
+            assert annotation is date, field_id
+            assert not definition.allowed_values, field_id
+        elif definition.value_type == "enum":
+            assert get_origin(annotation) is Literal, field_id
+            assert set(get_args(annotation)) == set(definition.allowed_values), field_id
+            assert definition.allowed_values, field_id
+        elif definition.value_type == "string_list":
+            assert get_origin(annotation) is list, field_id
+            assert unwrap_optional_and_annotated(get_args(annotation)[0]) is str, field_id
+            assert not definition.allowed_values, field_id
+        elif definition.value_type == "object_list":
+            assert get_origin(annotation) is list, field_id
+            assert unwrap_optional_and_annotated(get_args(annotation)[0]) is InvestigationRecord, field_id
+            assert not definition.allowed_values, field_id
+        else:
+            pytest.fail(f"Unsupported registry value_type for {field_id}: {definition.value_type}")
 
 
 def test_v2_registry_is_additive_and_v1_definitions_remain_inspectable():
@@ -132,6 +233,55 @@ def test_unknown_and_empty_lists_are_not_converted_to_negative_findings():
     assert "CONFIRMED_ABSENT" in comorbidity_definition["allowed_states"]
     assert any("UNKNOWN, NOT_REPORTED, NOT_ASSESSED" in rule for rule in context["interpretation_rules"])
 
+
+def test_clinical_list_values_preserve_original_whitespace():
+    original = "  first-degree relative with cancer  "
+    case = _case(
+        family_history=[original],
+        relevant_comorbidities=["  hypertension  "],
+        known_unknowns=["  staging edition not reported  "],
+    )
+
+    assert case.family_history == [original]
+    assert case.relevant_comorbidities == ["  hypertension  "]
+    assert case.known_unknowns == ["  staging edition not reported  "]
+    assert case.model_dump(mode="json")["family_history"] == [original]
+
+
+def test_free_text_case_and_report_summaries_preserve_exact_whitespace():
+    case_summary = "\n  Fictional case narrative preserves its exact boundary whitespace.  \t"
+    pathology_summary = "\t  Synthetic pathology report text remains byte-faithful.  \n"
+    imaging_summary = "\n\t Synthetic imaging report text remains byte-faithful. \t"
+
+    case = _case(
+        case_summary=case_summary,
+        pathology_summary=pathology_summary,
+        imaging_summary=imaging_summary,
+    )
+
+    assert case.case_summary == case_summary
+    assert case.pathology_summary == pathology_summary
+    assert case.imaging_summary == imaging_summary
+
+    serialized = case.model_dump(mode="json")
+    assert serialized["case_summary"] == case_summary
+    assert serialized["pathology_summary"] == pathology_summary
+    assert serialized["imaging_summary"] == imaging_summary
+
+    context = build_case_prompt_context(case)
+    snapshot = context["case_snapshot"]
+    assert snapshot["case_summary"] == case_summary
+    assert snapshot["pathology_summary"] == pathology_summary
+    assert snapshot["imaging_summary"] == imaging_summary
+
+
+
+def test_case_summary_rejects_whitespace_only_text():
+    with pytest.raises(
+        ValidationError,
+        match="case_summary must contain non-whitespace source text",
+    ):
+        _case(case_summary=" " * 12)
 
 def test_pathological_stage_prefix_is_flagged_and_raw_source_is_preserved():
     context = build_case_prompt_context(_case(clinical_t_stage="pT1"))
@@ -334,6 +484,20 @@ def test_context_remains_json_serializable_with_typed_investigations_and_dates()
     assert context["field_status"]["age_years"]["status"] == "not_reported"
 
 
+def test_typed_investigation_source_excerpt_preserves_exact_text():
+    excerpt = chr(10) + "  Original investigation report excerpt.  " + chr(9)
+    case = _case(
+        investigation_records=[{
+            "investigation_name": "MRI",
+            "result_summary": "Finding recorded.",
+            "source_excerpt": excerpt,
+        }],
+    )
+
+    assert case.investigation_records[0].source_excerpt == excerpt
+    assert build_case_prompt_context(case)["canonical_field_values"]["investigation_records"]["raw_value"][0]["source_excerpt"] == excerpt
+
+
 def test_field_status_legacy_aliases_are_preserved_for_unannotated_values():
     case = _case(age_years=70, relevant_comorbidities=["diabetes"])
     context = build_case_prompt_context(case)
@@ -364,6 +528,39 @@ def test_case_model_persists_hash_bound_user_input_provenance_for_supplied_field
     assert t_source.source_excerpt == "T1"
     assert investigation_source.source_type == "STRUCTURED_CASE_INPUT"
     assert investigation_source.source_sha256
+
+
+@pytest.mark.parametrize(
+    ("case_overrides", "field_id", "expected_excerpt", "expected_state"),
+    [
+        ({"age_years": 70}, "age_years", "70", "PRESENT"),
+        (
+            {
+                "clinical_t_stage": "T9",
+                "clinical_field_states": {"clinical_t_stage": "INVALID"},
+            },
+            "clinical_t_stage",
+            "T9",
+            "INVALID",
+        ),
+    ],
+)
+def test_empty_explicit_provenance_entry_does_not_suppress_required_fallback_provenance(
+    case_overrides, field_id, expected_excerpt, expected_state
+):
+    case = _case(
+        clinical_field_provenance={field_id: []},
+        **case_overrides,
+    )
+
+    records = case.clinical_field_provenance[field_id]
+    assert len(records) == 1
+    assert records[0].source_type == "STRUCTURED_CASE_INPUT"
+    assert records[0].source_reference == f"SyntheticCase.{field_id}"
+    assert records[0].source_excerpt == expected_excerpt
+    assert records[0].source_sha256 == hashlib.sha256(expected_excerpt.encode("utf-8")).hexdigest()
+    assert records[0].verification_status == "user_supplied_not_independently_verified"
+    assert case.clinical_field_states.get(field_id, expected_state) == expected_state
 
 
 
@@ -405,3 +602,385 @@ def test_model_facing_case_snapshot_redacts_conflicting_flat_value_but_preserves
     assert [item["raw_value"] for item in field["conflict_candidates"]] == [70, 72]
     assert "age_years" in context["case_snapshot_redacted_conflicting_fields"]
     assert "persisted immutable case snapshot is unchanged" in context["case_snapshot_projection_note"]
+
+def test_explicit_provenance_and_conflict_sources_get_hashes_when_omitted():
+    """Every retained source excerpt must be hash-addressed without implying verification."""
+    t_excerpt = "Synthetic pathology report states a recorded clinical T token."
+    age_a_excerpt = "Synthetic clinician note records age as 70 years."
+    age_b_excerpt = "Synthetic patient report records age as 72 years."
+
+    case = _case(
+        clinical_t_stage="T1",
+        age_years=70,
+        clinical_field_states={"age_years": "CONFLICTING"},
+        clinical_field_provenance={
+            "clinical_t_stage": [{
+                "source_type": "PATHOLOGY_REPORT",
+                "source_reference": "synthetic-pathology-01",
+                "source_excerpt": t_excerpt,
+            }]
+        },
+        clinical_field_conflicts={
+            "age_years": [
+                {
+                    "raw_value": 70,
+                    "provenance": {
+                        "source_type": "CLINICIAN_NOTE",
+                        "source_reference": "synthetic-age-note",
+                        "source_excerpt": age_a_excerpt,
+                    },
+                },
+                {
+                    "raw_value": 72,
+                    "provenance": {
+                        "source_type": "PATIENT_REPORT",
+                        "source_reference": "synthetic-age-report",
+                        "source_excerpt": age_b_excerpt,
+                    },
+                },
+            ]
+        },
+    )
+
+    t_source = case.clinical_field_provenance["clinical_t_stage"][0]
+    conflict_sources = [
+        item.provenance
+        for item in case.clinical_field_conflicts["age_years"]
+    ]
+
+    assert t_source.source_sha256 == hashlib.sha256(t_excerpt.encode("utf-8")).hexdigest()
+    assert [item.source_sha256 for item in conflict_sources] == [
+        hashlib.sha256(age_a_excerpt.encode("utf-8")).hexdigest(),
+        hashlib.sha256(age_b_excerpt.encode("utf-8")).hexdigest(),
+    ]
+    assert t_source.verification_status == "user_supplied_not_independently_verified"
+    assert all(
+        item.verification_status == "user_supplied_not_independently_verified"
+        for item in conflict_sources
+    )
+
+def test_explicit_provenance_record_cannot_be_mutated_after_hashing():
+    source = ClinicalFieldProvenance(
+        source_type="CLINICIAN_NOTE",
+        source_reference="synthetic-note-immutable",
+        source_excerpt="Original source excerpt remains preserved.",
+    )
+    original_hash = hashlib.sha256(source.source_excerpt.encode("utf-8")).hexdigest()
+
+    assert source.source_sha256 == original_hash
+    with pytest.raises(ValidationError, match="Instance is frozen"):
+        source.source_excerpt = "Altered source excerpt with stale hash."
+    assert source.source_excerpt == "Original source excerpt remains preserved."
+    assert source.source_sha256 == original_hash
+
+def test_provenance_excerpt_preserves_exact_whitespace_before_hashing():
+    excerpt = "\n  Original source wording with preserved spacing.  \t"
+    source = ClinicalFieldProvenance(
+        source_type=" CLINICIAN_NOTE ",
+        source_reference=" synthetic-whitespace-note ",
+        source_excerpt=excerpt,
+    )
+
+    assert source.source_excerpt == excerpt
+    assert source.source_sha256 == hashlib.sha256(excerpt.encode("utf-8")).hexdigest()
+
+def test_provenance_rejects_whitespace_only_excerpt_without_trimming_real_excerpt():
+    with pytest.raises(ValidationError, match="non-whitespace source text"):
+        ClinicalFieldProvenance(
+            source_type="CLINICIAN_NOTE",
+            source_reference="synthetic-blank-note",
+            source_excerpt=" \n  \t ",
+        )
+
+@pytest.mark.parametrize(
+    ("field_id", "value"),
+    [
+        (PATHOLOGICAL_T_STAGE, "T1"),
+        (PATHOLOGICAL_N_STAGE, "N0"),
+        (PATHOLOGICAL_M_STAGE, "M0"),
+    ],
+)
+def test_pathological_tnm_requires_explicit_p_or_yp_prefix(field_id, value):
+    with pytest.raises(ValueError, match="explicit p or yp prefix"):
+        normalize_pathological_tnm_component(field_id, value)
+
+@pytest.mark.parametrize(
+    ("registry", "alias_lookup"),
+    [
+        (CLINICAL_FIELD_REGISTRY_V1, CLINICAL_FIELD_ALIASES_V1),
+        (CLINICAL_FIELD_REGISTRY, CLINICAL_FIELD_ALIASES),
+    ],
+)
+def test_registry_aliases_are_unique_and_resolve_to_declared_field(registry, alias_lookup):
+    declared_aliases = [
+        (alias, definition.field_id)
+        for definition in registry.values()
+        for alias in definition.aliases
+    ]
+    alias_names = [alias for alias, _ in declared_aliases]
+
+    # A duplicate alias would be silently overwritten by the mapping-comprehension
+    # used to build the read-only lookup; reject ambiguity before it reaches a prompt.
+    assert len(alias_names) == len(set(alias_names))
+    expected_lookup = {alias: field_id for alias, field_id in declared_aliases}
+    assert dict(alias_lookup) == expected_lookup
+    assert set(alias_lookup.values()).issubset(set(registry))
+
+def test_conflict_candidates_are_immutable_and_keep_json_shape():
+    """Conflicting raw values and their nested JSON containers remain source-faithful."""
+    first_raw = [{
+        "investigation_name": "MRI",
+        "result_summary": "Synthetic MRI source excerpt.",
+        "status": "COMPLETED",
+    }]
+    second_raw = [{
+        "investigation_name": "CT",
+        "result_summary": "Synthetic CT source excerpt.",
+        "status": "COMPLETED",
+    }]
+    case = _case(
+        clinical_field_states={"investigation_records": "CONFLICTING"},
+        clinical_field_conflicts={
+            "investigation_records": [
+                {
+                    "raw_value": first_raw,
+                    "provenance": {
+                        "source_type": "IMAGING_REPORT",
+                        "source_reference": "synthetic-mri-report",
+                        "source_excerpt": "Synthetic MRI source excerpt.",
+                    },
+                },
+                {
+                    "raw_value": second_raw,
+                    "provenance": {
+                        "source_type": "IMAGING_REPORT",
+                        "source_reference": "synthetic-ct-report",
+                        "source_excerpt": "Synthetic CT source excerpt.",
+                    },
+                },
+            ]
+        },
+    )
+
+    first_candidate = case.clinical_field_conflicts["investigation_records"][0]
+    with pytest.raises(ValidationError, match="frozen"):
+        first_candidate.raw_value = []
+
+    with pytest.raises((AttributeError, TypeError)):
+        first_candidate.raw_value.append({"investigation_name": "US"})
+
+    with pytest.raises(TypeError):
+        first_candidate.raw_value[0]["result_summary"] = "Altered after validation."
+
+    # JSON serialization remains an ordinary object/list shape and preserves
+    # the original competing source values for the model-facing audit context.
+    serialized = case.model_dump(mode="json")["clinical_field_conflicts"]["investigation_records"]
+    assert [item["raw_value"] for item in serialized] == [first_raw, second_raw]
+    context_candidates = build_case_prompt_context(case)["canonical_field_values"][
+        "investigation_records"
+    ]["conflict_candidates"]
+    assert [item["raw_value"] for item in context_candidates] == [first_raw, second_raw]
+
+def test_invalid_state_requires_raw_value_without_canonicalizing_it():
+    with pytest.raises(ValueError, match="INVALID requires a supplied raw value"):
+        _case(
+            clinical_t_stage=None,
+            clinical_field_states={"clinical_t_stage": "INVALID"},
+        )
+
+    case = _case(
+        clinical_t_stage="T9",
+        clinical_field_states={"clinical_t_stage": "INVALID"},
+    )
+    context = build_case_prompt_context(case)
+    field = context["canonical_field_values"]["clinical_t_stage"]
+    assert field["state"] == "INVALID"
+    assert field["raw_value"] is None
+    assert field["canonical_comparison_value"] is None
+    assert field["provenance"][0]["verification_status"] == (
+        "user_supplied_not_independently_verified"
+    )
+    assert "source_excerpt" not in field["provenance"][0]
+    assert field["provenance"][0]["source_excerpt_redacted"] is True
+    assert field["provenance"][0]["source_sha256"] == hashlib.sha256(b"T9").hexdigest()
+    assert context["case_snapshot"]["clinical_t_stage"] is None
+    assert "T9" not in repr(context)
+    assert any(
+        "INVALID means a supplied raw value failed validation" in rule
+        and "do not treat it as a valid clinical fact" in rule
+        for rule in context["interpretation_rules"]
+    )
+
+def test_conflicting_values_require_distinct_source_excerpt_provenance():
+    same_source = {
+        "source_type": "CLINICIAN_NOTE",
+        "source_reference": "synthetic-single-source",
+        "source_excerpt": "The same source excerpt is attached to both conflicting candidates.",
+    }
+    with pytest.raises(ValueError, match="distinct source-specific provenance records"):
+        _case(
+            age_years=70,
+            clinical_field_states={"age_years": "CONFLICTING"},
+            clinical_field_conflicts={
+                "age_years": [
+                    {"raw_value": 70, "provenance": same_source},
+                    {"raw_value": 72, "provenance": same_source},
+                ]
+            },
+        )
+
+def test_confirmed_absent_is_limited_to_explicitly_negativeable_fields():
+    negativeable_fields = {
+        "current_medications",
+        "known_allergies",
+        "relevant_comorbidities",
+        "prior_treatment",
+        "family_history",
+    }
+
+    actual_fields = {
+        field_id
+        for field_id, definition in CLINICAL_FIELD_REGISTRY.items()
+        if "CONFIRMED_ABSENT" in definition.allowed_states
+    }
+
+    assert actual_fields == negativeable_fields
+
+
+@pytest.mark.parametrize(
+    "field_id",
+    [
+        "relevant_investigations",
+        "patient_goals",
+        "patient_preferences",
+        "family_caregiver_context",
+        "social_context",
+        "resource_context",
+        "known_unknowns",
+        "investigation_records",
+    ],
+)
+def test_non_negativeable_list_fields_reject_confirmed_absent(field_id):
+    with pytest.raises(ValidationError, match="does not allow clinical data state"):
+        _case(clinical_field_states={field_id: "CONFIRMED_ABSENT"})
+
+
+
+
+def test_invalid_and_conflicting_values_are_withheld_from_generation_context_but_preserved_in_audit():
+    invalid_summary = "TEST_ONLY_INVALID_CASE_SUMMARY_SENTINEL"
+    invalid_stage_excerpt = "TEST_ONLY_INVALID_T_STAGE_SOURCE_EXCERPT"
+    case = _case(
+        case_summary=invalid_summary,
+        clinical_t_stage="T9",
+        clinical_n_stage="N0",
+        relevant_investigations=["TEST_ONLY_INVALID_LIST_SENTINEL"],
+        clinical_field_states={
+            "case_summary": "INVALID",
+            "clinical_t_stage": "INVALID",
+            "clinical_n_stage": "CONFLICTING",
+            "relevant_investigations": "INVALID",
+        },
+        clinical_field_provenance={
+            "clinical_t_stage": [{
+                "source_type": "CLINICIAN_NOTE",
+                "source_reference": "test-only-invalid-stage-source",
+                "source_excerpt": invalid_stage_excerpt,
+            }],
+        },
+        clinical_field_conflicts={
+            "clinical_n_stage": [
+                {
+                    "raw_value": "N0",
+                    "provenance": {
+                        "source_type": "CLINICIAN_NOTE",
+                        "source_reference": "test-only-n-stage-note-a",
+                        "source_excerpt": "Test-only source A records N0.",
+                    },
+                },
+                {
+                    "raw_value": "N1",
+                    "provenance": {
+                        "source_type": "PATHOLOGY_REPORT",
+                        "source_reference": "test-only-n-stage-report-b",
+                        "source_excerpt": "Test-only source B records N1.",
+                    },
+                },
+            ],
+        },
+    )
+
+    context = build_case_prompt_context(case)
+    assert context["case_snapshot"]["case_summary"] is None
+    assert context["case_snapshot"]["clinical_t_stage"] is None
+    assert context["case_snapshot"]["clinical_n_stage"] is None
+    assert context["case_snapshot"]["relevant_investigations"] is None
+    assert "case_summary" in context["case_snapshot_redacted_invalid_fields"]
+    assert "clinical_t_stage" in context["case_snapshot_redacted_invalid_fields"]
+    assert "clinical_n_stage" in context["case_snapshot_redacted_conflicting_fields"]
+
+    assert context["field_status"]["case_summary"]["value"] is None
+    assert context["field_status"]["clinical_t_stage"]["value"] is None
+    assert context["field_status"]["relevant_investigations"]["value"] is None
+    assert context["canonical_field_values"]["case_summary"]["raw_value"] is None
+    assert context["canonical_field_values"]["clinical_t_stage"]["raw_value"] is None
+    assert context["canonical_field_values"]["relevant_investigations"]["raw_value"] is None
+    invalid_provenance = context["canonical_field_values"]["clinical_t_stage"]["provenance"][0]
+    assert invalid_provenance["source_reference"] == "test-only-invalid-stage-source"
+    assert invalid_provenance["source_excerpt_redacted"] is True
+    assert "source_excerpt" not in invalid_provenance
+    assert invalid_provenance["source_sha256"] == hashlib.sha256(
+        invalid_stage_excerpt.encode("utf-8")
+    ).hexdigest()
+    snapshot_provenance = context["case_snapshot"]["clinical_field_provenance"]["clinical_t_stage"][0]
+    assert snapshot_provenance["source_excerpt_redacted"] is True
+    assert "source_excerpt" not in snapshot_provenance
+
+    # Distinct conflict candidates remain visible, but the flat N0 value is
+    # not promoted to a selected model-facing assertion.
+    candidates = context["canonical_field_values"]["clinical_n_stage"]["conflict_candidates"]
+    assert [candidate["raw_value"] for candidate in candidates] == ["N0", "N1"]
+    assert context["canonical_field_values"]["clinical_n_stage"]["raw_value"] is None
+
+    serialized_context = repr(context)
+    assert invalid_summary not in serialized_context
+    assert invalid_stage_excerpt not in serialized_context
+    assert "TEST_ONLY_INVALID_LIST_SENTINEL" not in serialized_context
+    assert "T9" not in serialized_context
+
+    source_facts = " ".join(build_source_case_facts(case))
+    assert invalid_summary not in source_facts
+    assert invalid_stage_excerpt not in source_facts
+    assert "TEST_ONLY_INVALID_LIST_SENTINEL" not in source_facts
+    assert "T9" not in source_facts
+    assert "Clinical N stage: N0" not in source_facts
+
+    # The original immutable case and audit provenance retain all raw material.
+    original = case.model_dump(mode="json", exclude_none=True)
+    assert original["case_summary"] == invalid_summary
+    assert original["clinical_t_stage"] == "T9"
+    assert original["relevant_investigations"] == ["TEST_ONLY_INVALID_LIST_SENTINEL"]
+    assert original["clinical_field_provenance"]["clinical_t_stage"][0]["source_excerpt"] == invalid_stage_excerpt
+    assert original["clinical_n_stage"] == "N0"
+    assert [item["raw_value"] for item in original["clinical_field_conflicts"]["clinical_n_stage"]] == ["N0", "N1"]
+
+
+def test_clinical_t_stage_json_number_is_rejected_but_digit_string_is_preserved():
+    payload = {
+        "scenario_title": "Synthetic TNM JSON type contract",
+        "case_summary": "Fictional educational case with no additional findings.",
+        "clinical_t_stage": "1",
+    }
+    case = SyntheticCase.model_validate_json(json.dumps(payload))
+    context = build_case_prompt_context(case)
+
+    assert case.clinical_t_stage == "1"
+    assert context["canonical_field_values"][CLINICAL_T_STAGE]["raw_value"] == "1"
+    assert (
+        context["canonical_field_values"][CLINICAL_T_STAGE]["canonical_comparison_value"]
+        == "T1"
+    )
+
+    payload["clinical_t_stage"] = 1
+    with pytest.raises(ValidationError):
+        SyntheticCase.model_validate_json(json.dumps(payload))

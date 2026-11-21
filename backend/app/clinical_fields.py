@@ -231,7 +231,7 @@ _PROVENANCE_REQUIRED_FIELDS: Final = frozenset({
 })
 
 def _build_v2_definition(definition: ClinicalFieldDefinition) -> ClinicalFieldDefinition:
-    states = _LIST_DATA_STATES if definition.field_id in _NEGATIVEABLE_LIST_FIELDS or definition.value_type in {"string_list", "object_list"} else _COMMON_DATA_STATES
+    states = _LIST_DATA_STATES if definition.field_id in _NEGATIVEABLE_LIST_FIELDS else _COMMON_DATA_STATES
     return replace(
         definition,
         allowed_states=states,
@@ -335,11 +335,11 @@ def normalize_pathological_tnm_component(field_id: str, raw_value: str) -> str:
     match = _TNM_VALUE_PATTERN.fullmatch(raw_value.strip())
     if match is None:
         raise ValueError(f"Unrecognised pathological TNM component syntax: {raw_value!r}")
-    prefix = (match.group("prefix") or "P").upper()
+    prefix = (match.group("prefix") or "").upper()
     component = (match.group("component") or expected).upper()
     value = match.group("value").upper()
     if prefix not in {"P", "YP"}:
-        raise ValueError("A pathological TNM component must retain a p or yp prefix.")
+        raise ValueError("A pathological TNM component requires an explicit p or yp prefix.")
     if component != expected:
         raise ValueError(f"{field_id} requires a {expected}-component, not {component}.")
     if not _TNM_COMPONENT_PATTERNS[expected].fullmatch(value):

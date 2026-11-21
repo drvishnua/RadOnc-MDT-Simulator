@@ -3,7 +3,11 @@ from fastapi.testclient import TestClient
 import pytest
 
 from app.agent_schemas import AgentAssessment
-from app.clinical_fields import CLINICAL_FIELD_REGISTRY_VERSION, LEGACY_FIELD_REGISTRY_VERSION
+from app.clinical_fields import (
+    CLINICAL_FIELD_REGISTRY_VERSION,
+    HISTORICAL_CLINICAL_FIELD_REGISTRY_VERSION,
+    LEGACY_FIELD_REGISTRY_VERSION,
+)
 from app.main import app
 from app.schemas import SyntheticCase
 from app.services import run_store
@@ -349,8 +353,36 @@ def test_patient_registry_round_trips_every_case_field_across_versions_and_datab
         "social_context": ["TEST_ONLY_SOCIAL_CONTEXT_A"],
         "resource_context": ["TEST_ONLY_RESOURCE_CONTEXT_A"],
         "known_unknowns": ["TEST_ONLY_UNKNOWN_A", "TEST_ONLY_UNKNOWN_B"],
+        # Additive v2 registry fields are also persisted and hash-checked.
+        "anatomical_subsite": "TEST_ONLY_ANATOMICAL_SUBSITE",
+        "laterality": "LEFT",
+        "histological_grade": "TEST_ONLY_HISTOLOGICAL_GRADE",
+        "pathological_t_stage": "pT1",
+        "pathological_n_stage": "pN0",
+        "pathological_m_stage": "pM0",
+        "clinical_stage_group": "TEST_ONLY_CLINICAL_STAGE_GROUP",
+        "pathological_stage_group": "TEST_ONLY_PATHOLOGICAL_STAGE_GROUP",
+        "staging_system": "TEST_ONLY_STAGING_SYSTEM",
+        "staging_edition": "TEST_ONLY_STAGING_EDITION",
+        "performance_status_scale": "TEST_ONLY_PERFORMANCE_STATUS_SCALE",
+        "diagnosis_date": "2026-11-20",
+        "investigation_records": [{
+            "investigation_name": "TEST_ONLY_IMAGING",
+            "result_summary": "TEST_ONLY_RESULT_SUMMARY",
+            "status": "COMPLETED",
+            "performed_on": "2026-11-18",
+            "reported_on": "2026-11-19",
+            "source_reference": "TEST_ONLY_INVESTIGATION_SOURCE",
+            "source_excerpt": "TEST_ONLY original investigation excerpt.",
+        }],
+        "family_history": ["TEST_ONLY_FAMILY_HISTORY"],
+        "family_caregiver_context": ["TEST_ONLY_FAMILY_CAREGIVER_CONTEXT"],
+        "patient_preferences": ["TEST_ONLY_PATIENT_PREFERENCE"],
+        "patient_willingness": "TEST_ONLY_EXPLICIT_WILLINGNESS",
+        "patient_consent_status": "PENDING",
     }
-    expected_original = SyntheticCase.model_validate(original_case).model_dump(exclude_none=True)
+    expected_original = SyntheticCase.model_validate(original_case).model_dump(mode="json", exclude_none=True)
+    expected_original_python = SyntheticCase.model_validate(original_case).model_dump(exclude_none=True)
     original_hash = hashlib.sha256(
         SyntheticCase.model_validate(original_case).model_dump_json(exclude_none=True).encode("utf-8")
     ).hexdigest()
@@ -372,7 +404,7 @@ def test_patient_registry_round_trips_every_case_field_across_versions_and_datab
 
     # Change exactly one case property; all other scalar and list properties must survive.
     changed_case = {**original_case, "pathology_summary": "TEST_ONLY_PATHOLOGY_SUMMARY_UPDATED"}
-    expected_changed = SyntheticCase.model_validate(changed_case).model_dump(exclude_none=True)
+    expected_changed = SyntheticCase.model_validate(changed_case).model_dump(mode="json", exclude_none=True)
     changed_hash = hashlib.sha256(
         SyntheticCase.model_validate(changed_case).model_dump_json(exclude_none=True).encode("utf-8")
     ).hexdigest()
@@ -407,7 +439,7 @@ def test_patient_registry_round_trips_every_case_field_across_versions_and_datab
     assert reloaded_first["case_version_id"] == first["case_version_id"]
 
     restored_original = run_store.get_patient_case_version(patient_id, first["case_version_id"])
-    assert restored_original["case"] == expected_original
+    assert restored_original["case"] == expected_original_python
     assert restored_original["case_snapshot_sha256"] == original_hash
     assert restored_original["case"] != reloaded_second["case"]
 
@@ -516,6 +548,101 @@ def test_legacy_run_cannot_resume_or_advance_into_new_registry_context(monkeypat
     advance = client.post(f"/api/runs/{run['run_id']}/rounds/2")
     assert advance.status_code == 409
     assert "Create a new immutable case version" in advance.json()["detail"]
+
+
+def test_historical_v1_case_version_remains_hash_verified_readable_and_read_only(monkeypatch, tmp_path):
+    import hashlib
+    import sqlite3
+
+    db_path = tmp_path / "historical_v1_case_version.sqlite3"
+    monkeypatch.setattr(run_store, "DB_PATH", db_path)
+
+    created = client.post("/api/patients", json=_registration(_case("Historical v1 case")))
+    assert created.status_code == 200
+    patient = created.json()
+    original_version = patient["versions"][0]
+    case_version_id = original_version["case_version_id"]
+    original_case = original_version["case"]
+    original_hash = original_version["case_snapshot_sha256"]
+
+    with sqlite3.connect(db_path) as db:
+        db.execute(
+            "UPDATE patient_case_versions SET clinical_field_registry_version = ? WHERE case_version_id = ?",
+            (HISTORICAL_CLINICAL_FIELD_REGISTRY_VERSION, case_version_id),
+        )
+
+    # Historical v1 data must stay available for review without being silently
+    # relabelled as the active v2 contract or having its immutable JSON/hash rewritten.
+    restored = client.get(f"/api/patients/{patient['patient_id']}")
+    assert restored.status_code == 200
+    version = restored.json()["versions"][0]
+    assert version["clinical_field_registry_version"] == HISTORICAL_CLINICAL_FIELD_REGISTRY_VERSION
+    assert version["case"] == original_case
+    assert version["case_snapshot_sha256"] == original_hash
+    assert run_store.get_patient_case_version(patient["patient_id"], case_version_id)[
+        "clinical_field_registry_version"
+    ] == HISTORICAL_CLINICAL_FIELD_REGISTRY_VERSION
+
+    response = client.post(
+        f"/api/patients/{patient['patient_id']}/runs",
+        json={"case_version_id": case_version_id},
+    )
+    assert response.status_code == 409
+    assert HISTORICAL_CLINICAL_FIELD_REGISTRY_VERSION in response.json()["detail"]
+    assert "Create a new immutable case version" in response.json()["detail"]
+
+    with sqlite3.connect(db_path) as db:
+        row = db.execute(
+            "SELECT case_json, case_snapshot_sha256, clinical_field_registry_version "
+            "FROM patient_case_versions WHERE case_version_id = ?",
+            (case_version_id,),
+        ).fetchone()
+    assert hashlib.sha256(row[0].encode("utf-8")).hexdigest() == original_hash
+    assert row[1] == original_hash
+    assert row[2] == HISTORICAL_CLINICAL_FIELD_REGISTRY_VERSION
+
+
+def test_historical_v1_run_remains_viewable_but_cannot_resume_or_advance(monkeypatch, tmp_path):
+    import hashlib
+    import sqlite3
+
+    db_path = tmp_path / "historical_v1_run.sqlite3"
+    monkeypatch.setattr(run_store, "DB_PATH", db_path)
+    case = SyntheticCase.model_validate(_case("Historical v1 run"))
+    run = run_store.create_run(case)
+    original_case_json = run_store.get_case_json(run["run_id"])
+    original_hash = hashlib.sha256(original_case_json.encode("utf-8")).hexdigest()
+
+    with sqlite3.connect(db_path) as db:
+        db.execute(
+            "UPDATE simulation_runs SET clinical_field_registry_version = ? WHERE run_id = ?",
+            (HISTORICAL_CLINICAL_FIELD_REGISTRY_VERSION, run["run_id"]),
+        )
+
+    summary = client.get(f"/api/runs/{run['run_id']}")
+    snapshot = client.get(f"/api/runs/{run['run_id']}/case")
+    assert summary.status_code == 200
+    assert summary.json()["clinical_field_registry_version"] == HISTORICAL_CLINICAL_FIELD_REGISTRY_VERSION
+    assert snapshot.status_code == 200
+    assert snapshot.json()["case_snapshot_sha256"] == original_hash
+    assert snapshot.json()["case_snapshot_json"] == original_case_json
+
+    resume = client.post(f"/api/runs/{run['run_id']}/resume")
+    assert resume.status_code == 409
+    assert HISTORICAL_CLINICAL_FIELD_REGISTRY_VERSION in resume.json()["detail"]
+    assert "Create a new immutable case version" in resume.json()["detail"]
+
+    advance = client.post(f"/api/runs/{run['run_id']}/rounds/2")
+    assert advance.status_code == 409
+    assert HISTORICAL_CLINICAL_FIELD_REGISTRY_VERSION in advance.json()["detail"]
+    assert "Create a new immutable case version" in advance.json()["detail"]
+
+    with sqlite3.connect(db_path) as db:
+        version = db.execute(
+            "SELECT clinical_field_registry_version FROM simulation_runs WHERE run_id = ?",
+            (run["run_id"],),
+        ).fetchone()[0]
+    assert version == HISTORICAL_CLINICAL_FIELD_REGISTRY_VERSION
 
 
 
@@ -688,3 +815,219 @@ def test_promoted_intake_cannot_be_promoted_twice(monkeypatch, tmp_path):
     )
     assert duplicate.status_code == 409
     assert "already been promoted" in duplicate.json()["detail"]
+
+
+
+def test_patient_registry_round_trips_field_states_provenance_and_conflicts_after_database_reopen(
+    monkeypatch, tmp_path
+):
+    import hashlib
+
+    monkeypatch.setattr(run_store, "DB_PATH", tmp_path / "case_metadata_roundtrip.sqlite3")
+    case_payload = {
+        **_case("TEST_ONLY metadata roundtrip"),
+        "age_years": 63,
+        "clinical_t_stage": "T9",
+        "clinical_n_stage": None,
+        "patient_goals": ["TEST_ONLY patient-stated goal"],
+        "relevant_comorbidities": [],
+        "known_unknowns": ["TEST_ONLY staging system and edition not supplied"],
+        "clinical_field_states": {
+            "age_years": "CONFLICTING",
+            "clinical_t_stage": "INVALID",
+            "clinical_n_stage": "UNKNOWN",
+            "patient_goals": "PRESENT",
+            "relevant_comorbidities": "CONFIRMED_ABSENT",
+            "known_unknowns": "PRESENT",
+        },
+        "clinical_field_provenance": {
+            "clinical_t_stage": [{
+                "source_type": "CLINICIAN_NOTE",
+                "source_reference": "TEST_ONLY_stage_note",
+                "source_excerpt": "TEST_ONLY clinical T token recorded as T9.",
+            }],
+            "patient_goals": [{
+                "source_type": "PATIENT_REPORT",
+                "source_reference": "TEST_ONLY_goal_report",
+                "source_excerpt": "TEST_ONLY patient states this goal.",
+            }],
+            "relevant_comorbidities": [{
+                "source_type": "CLINICIAN_NOTE",
+                "source_reference": "TEST_ONLY_comorbidity_note",
+                "source_excerpt": "TEST_ONLY no relevant comorbidities recorded in this source.",
+            }],
+        },
+        "clinical_field_conflicts": {
+            "age_years": [
+                {
+                    "raw_value": 63,
+                    "provenance": {
+                        "source_type": "CLINICIAN_NOTE",
+                        "source_reference": "TEST_ONLY_age_note_A",
+                        "source_excerpt": "TEST_ONLY age recorded as 63 years.",
+                    },
+                },
+                {
+                    "raw_value": 65,
+                    "provenance": {
+                        "source_type": "PATIENT_REPORT",
+                        "source_reference": "TEST_ONLY_age_report_B",
+                        "source_excerpt": "TEST_ONLY patient reports age as 65 years.",
+                    },
+                },
+            ]
+        },
+    }
+    validated_case = SyntheticCase.model_validate(case_payload)
+    expected_case = validated_case.model_dump(exclude_none=True)
+    expected_hash = hashlib.sha256(
+        validated_case.model_dump_json(exclude_none=True).encode("utf-8")
+    ).hexdigest()
+
+    created = client.post(
+        "/api/patients",
+        json=_registration(case_payload, "Metadata Roundtrip Training Example"),
+    )
+    assert created.status_code == 200
+    patient_id = created.json()["patient_id"]
+    first_version = created.json()["versions"][0]
+
+    assert first_version["case"] == expected_case
+    assert first_version["case_snapshot_sha256"] == expected_hash
+    assert first_version["case"]["clinical_field_states"] == case_payload["clinical_field_states"]
+    assert first_version["case"]["clinical_field_states"]["clinical_n_stage"] == "UNKNOWN"
+    assert first_version["case"]["clinical_field_conflicts"]["age_years"][1]["raw_value"] == 65
+    assert first_version["case"]["clinical_field_provenance"]["clinical_t_stage"][0][
+        "source_sha256"
+    ] == hashlib.sha256(
+        case_payload["clinical_field_provenance"]["clinical_t_stage"][0]["source_excerpt"].encode("utf-8")
+    ).hexdigest()
+
+    # Reinitialise and reopen through a separate request/store connection.
+    run_store.initialize_database()
+    restored_patient = client.get(f"/api/patients/{patient_id}")
+    assert restored_patient.status_code == 200
+    restored_version = restored_patient.json()["versions"][0]
+    assert restored_version["case"] == expected_case
+    assert restored_version["case_snapshot_sha256"] == expected_hash
+    assert restored_version["case"]["clinical_field_states"] == case_payload["clinical_field_states"]
+    assert [
+        item["raw_value"]
+        for item in restored_version["case"]["clinical_field_conflicts"]["age_years"]
+    ] == [63, 65]
+    assert all(
+        item["provenance"]["verification_status"] == "user_supplied_not_independently_verified"
+        for item in restored_version["case"]["clinical_field_conflicts"]["age_years"]
+    )
+
+    restored_direct = run_store.get_patient_case_version(
+        patient_id,
+        first_version["case_version_id"],
+    )
+    assert restored_direct["case"] == expected_case
+    assert restored_direct["case_snapshot_sha256"] == expected_hash
+
+
+
+def test_historical_v1_case_requires_new_accepted_v2_version_before_generation(
+    monkeypatch, tmp_path
+):
+    import sqlite3
+
+    monkeypatch.setattr(run_store, "DB_PATH", tmp_path / "explicit_v1_to_v2_upgrade.sqlite3")
+
+    async def no_inference(run_id):
+        return None
+
+    monkeypatch.setattr("app.main.run_independent_assessments", no_inference)
+
+    # Start with a historical patient version and record its exact persisted bytes/hash.
+    patient = client.post(
+        "/api/patients",
+        json=_registration(_case("Historical v1 source version")),
+    ).json()
+    patient_id = patient["patient_id"]
+    original = patient["versions"][0]
+    original_version_id = original["case_version_id"]
+    with sqlite3.connect(run_store.DB_PATH) as db:
+        original_row = db.execute(
+            "SELECT case_json, case_snapshot_sha256 FROM patient_case_versions "
+            "WHERE case_version_id = ?",
+            (original_version_id,),
+        ).fetchone()
+        assert original_row is not None
+        original_json, original_hash = original_row
+
+        # Reproduce a real historical v1 record; the migration path must not relabel it.
+        db.execute(
+            "UPDATE patient_case_versions SET clinical_field_registry_version = ? "
+            "WHERE case_version_id = ?",
+            (HISTORICAL_CLINICAL_FIELD_REGISTRY_VERSION, original_version_id),
+        )
+
+    blocked = client.post(
+        f"/api/patients/{patient_id}/runs",
+        json={"case_version_id": original_version_id},
+    )
+    assert blocked.status_code == 409
+    assert HISTORICAL_CLINICAL_FIELD_REGISTRY_VERSION in blocked.json()["detail"]
+    assert CLINICAL_FIELD_REGISTRY_VERSION in blocked.json()["detail"]
+
+    # The only upgrade path is a separately accepted, hash-verified intake
+    # promoted into a new immutable v2 version for the same patient.
+    updated_case = _case(
+        "Explicitly reaccepted v2 version",
+        "New fictional intake content; the historical v1 snapshot must remain unchanged.",
+    )
+    intake = client.post("/api/intakes", json={"case": updated_case}).json()
+    accepted = client.post(
+        f"/api/intakes/{intake['session_id']}/accept",
+        json={"confirmed": True},
+    )
+    assert accepted.status_code == 200
+    promoted = client.post(
+        f"/api/intakes/{intake['session_id']}/promote",
+        json={
+            "patient_name": "Explicit v2 Training Version",
+            "patient_id": patient_id,
+        },
+    )
+    assert promoted.status_code == 200
+
+    detail = promoted.json()
+    assert len(detail["versions"]) == 2
+    current, preserved = detail["versions"]
+    assert current["version_number"] == 2
+    assert current["case_version_id"] != original_version_id
+    assert current["clinical_field_registry_version"] == CLINICAL_FIELD_REGISTRY_VERSION
+    assert current["intake_backed"] is True
+    assert current["intake_session_id"] == intake["session_id"]
+    assert current["case_snapshot_sha256"] == accepted.json()["case_snapshot_sha256"]
+    assert current["case"]["scenario_title"] == updated_case["scenario_title"]
+
+    assert preserved["case_version_id"] == original_version_id
+    assert preserved["clinical_field_registry_version"] == HISTORICAL_CLINICAL_FIELD_REGISTRY_VERSION
+    assert preserved["case_snapshot_sha256"] == original_hash
+    assert preserved["case"] == original["case"]
+
+    with sqlite3.connect(run_store.DB_PATH) as db:
+        restored_legacy_row = db.execute(
+            "SELECT case_json, case_snapshot_sha256, clinical_field_registry_version "
+            "FROM patient_case_versions WHERE case_version_id = ?",
+            (original_version_id,),
+        ).fetchone()
+    assert restored_legacy_row == (
+        original_json,
+        original_hash,
+        HISTORICAL_CLINICAL_FIELD_REGISTRY_VERSION,
+    )
+
+    # Generation is permitted only from the newly accepted v2 version.
+    started = client.post(
+        f"/api/patients/{patient_id}/runs",
+        json={"case_version_id": current["case_version_id"]},
+    )
+    assert started.status_code == 200
+    assert started.json()["case_version_id"] == current["case_version_id"]
+    assert started.json()["clinical_field_registry_version"] == CLINICAL_FIELD_REGISTRY_VERSION
+    assert started.json()["case_snapshot_sha256"] == current["case_snapshot_sha256"]

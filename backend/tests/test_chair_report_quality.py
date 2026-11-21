@@ -1,5 +1,6 @@
 from app.round_schemas import FinalMDTReport
 from app.schemas import SyntheticCase
+from app.services.case_integrity import eligible_case_summary_text
 from app.services.chair_report_quality import (
     SECTION_LIMITS,
     build_recorded_agreements,
@@ -1303,3 +1304,78 @@ def test_chair_synthesis_traces_examples_to_saved_role_records_in_all_three_roun
     assert "not exhaustive" in synthesis
     assert "verified clinical facts" in synthesis
     assert "not an exhaustive summary" in synthesis
+
+
+def test_quarantined_case_summary_is_unassessable_at_final_chair_source_boundaries():
+    sentinel = "SECRET RAW INVALID SUMMARY: Consultant note recommends unsupported option X."
+    round1 = _rows("assessment", ["insufficient_information"] * 45)
+    round2 = _rows("result", ["insufficient_information"] * 45)
+    round3 = _rows("result", ["insufficient_information"] * 45)
+
+    for state in ("INVALID", "CONFLICTING"):
+        conflict_candidates = (
+            {
+                "case_summary": [
+                    {
+                        "raw_value": (
+                            "SECRET CONFLICTING SUMMARY SOURCE A: "
+                            "Consultant note recommends unsupported option X."
+                        ),
+                        "provenance": {
+                            "source_type": "CASE_SUMMARY",
+                            "source_reference": "test://case-summary/source-a",
+                            "source_excerpt": (
+                                "SECRET CONFLICTING SUMMARY SOURCE A: "
+                                "Consultant note recommends unsupported option X."
+                            ),
+                        },
+                    },
+                    {
+                        "raw_value": (
+                            "SECRET CONFLICTING SUMMARY SOURCE B: "
+                            "A second note recommends unsupported option Y."
+                        ),
+                        "provenance": {
+                            "source_type": "CLINICIAN_NOTE",
+                            "source_reference": "test://case-summary/source-b",
+                            "source_excerpt": (
+                                "SECRET CONFLICTING SUMMARY SOURCE B: "
+                                "A second note recommends unsupported option Y."
+                            ),
+                        },
+                    },
+                ]
+            }
+            if state == "CONFLICTING"
+            else {}
+        )
+        case = SyntheticCase(
+            scenario_title=f"Chair withheld summary {state}",
+            case_summary=sentinel,
+            clinical_field_states={"case_summary": state},
+            clinical_field_conflicts=conflict_candidates,
+        )
+        assert eligible_case_summary_text(case) is None
+        positions, position_flags = build_source_opinion_position_summary(round2, None)
+        coverage, coverage_flags = build_source_opinion_review_coverage(round3, None)
+        assert positions and "unassessable" in positions[0]
+        assert "no attributed opinions exist" in positions[0]
+        assert coverage == []
+        assert coverage_flags and "unassessable" in coverage_flags[0]
+
+        report = ensure_chair_report_completeness(
+            _empty_report(), case, round1, round2, round3
+        )
+        unresolved = " ".join(report.unresolved_disagreements).casefold()
+        assert "unassessable" in unresolved
+        assert "does not mean that no attributed opinions exist" in unresolved
+        assert sentinel not in " ".join(report.source_opinion_position_summary)
+        assert report.source_opinion_review_coverage == []
+
+
+def test_present_case_summary_remains_eligible_for_source_opinion_extraction():
+    case = SyntheticCase(
+        scenario_title="Chair present summary control",
+        case_summary="Consultant note recommends a conditional educational option pending staging.",
+    )
+    assert eligible_case_summary_text(case) == case.case_summary

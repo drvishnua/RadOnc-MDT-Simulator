@@ -1,4 +1,8 @@
-from app.schemas import SyntheticCase
+import json
+
+import pytest
+
+from app.schemas import InvestigationRecord, SyntheticCase
 from app.services.case_integrity import (
     audit_unverified_case_claims,
     build_case_prompt_context,
@@ -901,6 +905,96 @@ def test_negative_n_and_m_claims_conflict_with_structured_positive_stages():
     })).casefold()
     assert "node-negative status" in flags
     assert "absence of metastatic disease" in flags
+
+
+def test_unreported_positive_comorbidity_claim_is_flagged():
+    case = _case(
+        case_summary="Synthetic case. Comorbidity history is not reported.",
+        relevant_comorbidities=[],
+        clinical_field_states={"relevant_comorbidities": "UNKNOWN"},
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has diabetes mellitus."
+    })
+    assert any("relevant_comorbidities" in item for item in flags)
+
+
+def test_matching_structured_positive_comorbidity_claim_is_supported():
+    case = _case(relevant_comorbidities=["Diabetes mellitus"])
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has diabetes mellitus."
+    })
+    assert not any("relevant_comorbidities" in item for item in flags)
+
+
+def test_unknown_comorbidity_state_blocks_positive_case_summary_fallback():
+    statement = "The patient has diabetes mellitus."
+    case = _case(
+        case_summary="Synthetic case. " + statement,
+        relevant_comorbidities=[],
+        clinical_field_states={"relevant_comorbidities": "UNKNOWN"},
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement
+    })
+    assert any("relevant_comorbidities" in item and "UNKNOWN" in item for item in flags)
+
+
+def test_unreported_positive_prior_treatment_claim_is_flagged():
+    case = _case(
+        case_summary="Synthetic case. Prior treatment history is not reported.",
+        prior_treatment=[],
+        clinical_field_states={"prior_treatment": "UNKNOWN"},
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient previously received radiotherapy."
+    })
+    assert any("prior_treatment" in item for item in flags)
+
+
+def test_matching_structured_positive_prior_treatment_claim_is_supported():
+    case = _case(prior_treatment=["Prior radiotherapy"])
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient previously received radiotherapy."
+    })
+    assert not any("prior_treatment" in item for item in flags)
+
+
+def test_unreported_positive_family_history_claim_is_flagged():
+    statement = "The patient's mother had breast cancer."
+    case = _case(
+        case_summary="Synthetic case. Family history is not reported.",
+        family_history=[],
+        clinical_field_states={"family_history": "UNKNOWN"},
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement
+    })
+    assert any("family_history" in item for item in flags)
+
+
+def test_unreported_positive_allergy_claim_is_flagged():
+    case = _case(
+        case_summary="Synthetic case. Allergy history is not reported.",
+        known_allergies=[],
+        clinical_field_states={"known_allergies": "UNKNOWN"},
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has a penicillin allergy."
+    })
+    assert any("known_allergies" in item for item in flags)
+
+
+def test_unreported_positive_current_medication_claim_is_flagged():
+    case = _case(
+        case_summary="Synthetic case. Current medications are not reported.",
+        current_medications=[],
+        clinical_field_states={"current_medications": "UNKNOWN"},
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient is currently taking metformin."
+    })
+    assert any("current_medications" in item for item in flags)
 
 
 def test_comorbidity_and_prior_treatment_absence_claims_are_checked_against_supplied_lists():
@@ -2021,3 +2115,2403 @@ def test_conflicting_stage_group_state_cannot_be_supported_by_the_matching_free_
         "provisional_conclusion": "The clinical stage group is II."
     })).casefold()
     assert "unsupported or type-conflicting stage group" in flags
+
+def test_invalid_structured_tnm_value_is_not_presented_as_a_conflict():
+    case = _case(
+        clinical_t_stage="T1",
+        clinical_field_states={"clinical_t_stage": "INVALID"},
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The supplied case establishes clinical T1 disease."
+    })).casefold()
+
+    assert "clinical_t_stage" in flags
+    assert "invalid" in flags
+    assert "cannot support" in flags
+    assert "conflict with structured clinical_t_stage" not in flags
+
+def test_invalid_case_summary_is_not_used_as_supporting_evidence():
+    case = _case(
+        case_summary=(
+            "Synthetic case: cT1N0M0, 64-year-old male; "
+            "no known comorbidities and no prior treatment."
+        ),
+        age_years=None,
+        clinical_t_stage=None,
+        clinical_n_stage=None,
+        clinical_m_stage=None,
+        sex_at_birth=None,
+        relevant_comorbidities=[],
+        prior_treatment=[],
+        clinical_field_states={"case_summary": "INVALID"},
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": (
+            "The patient has cT1N0M0, is a 64-year-old male, "
+            "has no known comorbidities and received no prior treatment."
+        )
+    })).casefold()
+
+    assert "t-stage value" in flags
+    assert "n-stage value" in flags
+    assert "m-stage value" in flags
+    assert "assigns an age" in flags
+    assert "sex/gender descriptor" in flags
+    assert "comorbidities as absent" in flags
+    assert "prior treatment as absent" in flags
+
+
+def test_invalid_case_summary_is_labelled_invalid_in_prompt_projection():
+    case = _case(
+        case_summary="Synthetic case summary retained for audit only.",
+        clinical_field_states={"case_summary": "INVALID"},
+    )
+
+    context = build_case_prompt_context(case)
+
+    assert context["field_status"]["case_summary"]["status"] == "invalid"
+    assert context["field_status"]["case_summary"]["value"] is None
+    assert context["case_snapshot"]["case_summary"] is None
+    assert context["canonical_field_values"]["case_summary"]["state"] == "INVALID"
+    assert context["canonical_field_values"]["case_summary"]["raw_value"] is None
+    assert context["canonical_field_values"]["case_summary"]["canonical_comparison_value"] is None
+    # The original validated case retains the raw summary for immutable audit.
+    assert case.model_dump(mode="json")["case_summary"] == "Synthetic case summary retained for audit only."
+
+
+def test_conflicting_case_summary_is_not_exposed_as_a_selected_prompt_value():
+    case = _case(
+        case_summary="Synthetic case summary: right-sided primary.",
+        clinical_field_states={"case_summary": "CONFLICTING"},
+        clinical_field_provenance={
+            "case_summary": [{
+                "source_type": "CASE_SUMMARY",
+                "source_reference": "summary-selected",
+                "source_excerpt": "SECRET selected case-summary source excerpt.",
+            }]
+        },
+        clinical_field_conflicts={
+            "case_summary": [
+                {
+                    "raw_value": "Synthetic case summary: right-sided primary.",
+                    "provenance": {
+                        "source_type": "CLINICIAN_NOTE",
+                        "source_reference": "summary-a",
+                        "source_excerpt": "Primary is right-sided.",
+                    },
+                },
+                {
+                    "raw_value": "Synthetic case summary: left-sided primary.",
+                    "provenance": {
+                        "source_type": "MEDICAL_RECORD",
+                        "source_reference": "summary-b",
+                        "source_excerpt": "Primary is left-sided.",
+                    },
+                },
+            ]
+        },
+    )
+
+    context = build_case_prompt_context(case)
+
+    assert "case_summary" in context["case_snapshot_redacted_conflicting_fields"]
+    assert context["case_snapshot"]["case_summary"] is None
+    assert context["field_status"]["case_summary"]["status"] == "conflicting"
+    assert context["field_status"]["case_summary"]["value"] is None
+    assert context["canonical_field_values"]["case_summary"]["raw_value"] is None
+    candidates = context["canonical_field_values"]["case_summary"]["conflict_candidates"]
+    assert len(candidates) == 2
+    assert all(item["raw_value"] is None for item in candidates)
+    assert all(item["provenance"]["source_excerpt_redacted"] for item in candidates)
+    assert all("source_sha256" in item["provenance"] for item in candidates)
+    assert context["case_snapshot"]["clinical_field_conflicts"]["case_summary"][0]["raw_value"] is None
+    assert context["case_snapshot"]["clinical_field_provenance"]["case_summary"][0]["source_excerpt_redacted"] is True
+    serialized_context = json.dumps(context, ensure_ascii=False)
+    assert "right-sided primary" not in serialized_context
+    assert "left-sided primary" not in serialized_context
+    assert "SECRET selected case-summary source excerpt" not in serialized_context
+
+@pytest.mark.parametrize(
+    ("field_id", "summary", "generated", "label"),
+    [
+        (
+            "known_allergies",
+            "No known allergies.",
+            "The patient has no known allergies.",
+            "allerg",
+        ),
+        (
+            "current_medications",
+            "No current medications.",
+            "The patient is taking no current medications.",
+            "medication",
+        ),
+        (
+            "family_history",
+            "No known family history of cancer.",
+            "The patient has no known family history of cancer.",
+            "family history",
+        ),
+    ],
+)
+def test_unknown_negativeable_list_state_does_not_use_summary_as_absence_evidence(
+    field_id, summary, generated, label
+):
+    case = _case(
+        case_summary=summary,
+        **{field_id: []},
+        clinical_field_states={field_id: "UNKNOWN"},
+    )
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": generated,
+    })).casefold()
+
+    assert label in flags
+    assert "absence is not explicitly supported" in flags
+
+
+@pytest.mark.parametrize(
+    ("field_id", "positive_value", "summary", "generated", "label"),
+    [
+        (
+            "known_allergies",
+            "penicillin",
+            "No known allergies.",
+            "The patient has no known allergies.",
+            "allerg",
+        ),
+        (
+            "current_medications",
+            "metformin",
+            "No current medications.",
+            "The patient is taking no current medications.",
+            "medication",
+        ),
+        (
+            "relevant_comorbidities",
+            "diabetes",
+            "No known comorbidities.",
+            "The patient has no known comorbidities.",
+            "comorbidit",
+        ),
+        (
+            "prior_treatment",
+            "radiotherapy",
+            "No prior treatment.",
+            "The patient has received no prior treatment.",
+            "prior treatment",
+        ),
+        (
+            "family_history",
+            "maternal breast cancer",
+            "No known family history of cancer.",
+            "The patient has no known family history of cancer.",
+            "family history",
+        ),
+    ],
+)
+def test_positive_negativeable_list_value_overrides_contradictory_summary_absence(
+    field_id, positive_value, summary, generated, label
+):
+    case = _case(
+        case_summary=summary,
+        **{field_id: [positive_value]},
+    )
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": generated,
+    })).casefold()
+
+    assert label in flags
+    assert "absence is not explicitly supported" in flags
+
+@pytest.mark.parametrize(
+    ("field_id", "summary", "generated"),
+    [
+        (
+            "patient_willingness",
+            "Referral text: the patient agrees to surgery.",
+            "The patient agrees to surgery.",
+        ),
+        (
+            "patient_consent_status",
+            "Referral text: the patient has consented to participate in this educational scenario.",
+            "The patient has consented to participate in this educational scenario.",
+        ),
+    ],
+)
+def test_unknown_willingness_or_consent_state_cannot_use_case_summary(
+    field_id, summary, generated
+):
+    case = _case(
+        case_summary=summary,
+        clinical_field_states={field_id: "UNKNOWN"},
+    )
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": generated,
+    })).casefold()
+
+    if field_id == "patient_consent_status":
+        assert "educational-scenario consent status" in flags
+    else:
+        assert "patient preference/decision" in flags
+
+
+def test_structured_patient_willingness_supports_matching_decision_statement():
+    case = _case(patient_willingness="agrees to surgery")
+
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient agrees to surgery.",
+    })
+
+    assert not any("patient preference/decision" in item for item in flags)
+
+
+def test_given_patient_consent_status_supports_matching_educational_scenario_consent():
+    case = _case(patient_consent_status="GIVEN")
+
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has consented to participate in this educational scenario.",
+    })
+
+    assert not any("educational-scenario consent status" in item for item in flags)
+
+
+def test_educational_consent_status_is_not_a_proxy_for_treatment_consent():
+    case = _case(patient_consent_status="GIVEN")
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has consented to surgery.",
+    })).casefold()
+
+    assert "treatment-specific consent" in flags
+
+
+def test_declined_patient_consent_status_does_not_support_consent_given_claim():
+    case = _case(patient_consent_status="DECLINED")
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has consented to participate in this educational scenario.",
+    })).casefold()
+
+    assert "educational-scenario consent status" in flags
+
+
+def test_declined_patient_consent_status_supports_matching_decline_statement():
+    case = _case(patient_consent_status="DECLINED")
+
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient declined consent to participate in this educational scenario.",
+    })
+
+    assert not any("educational-scenario consent status" in item for item in flags)
+
+def test_structured_laterality_flags_contradictory_generated_primary_side():
+    case = _case(laterality="LEFT")
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The primary tumour is right-sided.",
+    })).casefold()
+
+    assert "laterality" in flags
+    assert "left" in flags
+    assert "right" in flags
+
+
+def test_structured_laterality_supports_matching_generated_primary_side():
+    case = _case(laterality="RIGHT")
+
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The primary tumour is right-sided.",
+    })
+
+    assert not any("laterality" in item.casefold() for item in flags)
+
+
+def test_unknown_laterality_cannot_use_case_summary_as_selected_side():
+    case = _case(
+        laterality=None,
+        case_summary="Fictional referral: the primary tumour is right-sided.",
+        clinical_field_states={"laterality": "UNKNOWN"},
+    )
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The primary tumour is right-sided.",
+    })).casefold()
+
+    assert "laterality" in flags
+    assert "unknown" in flags
+
+
+def test_conflicting_laterality_cannot_support_either_single_primary_side():
+    case = _case(
+        laterality=None,
+        clinical_field_states={"laterality": "CONFLICTING"},
+        clinical_field_conflicts={
+            "laterality": [
+                {
+                    "raw_value": "LEFT",
+                    "provenance": {
+                        "source_type": "CLINICIAN_NOTE",
+                        "source_reference": "laterality-a",
+                        "source_excerpt": "Primary laterality is left.",
+                    },
+                },
+                {
+                    "raw_value": "RIGHT",
+                    "provenance": {
+                        "source_type": "IMAGING_REPORT",
+                        "source_reference": "laterality-b",
+                        "source_excerpt": "Primary laterality is right.",
+                    },
+                },
+            ]
+        },
+    )
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The primary tumour is left-sided.",
+    })).casefold()
+
+    assert "laterality" in flags
+    assert "conflicting" in flags
+
+
+def test_laterality_can_fall_back_to_case_summary_only_when_state_is_not_explicit():
+    case = _case(
+        laterality=None,
+        case_summary="Fictional referral: the primary tumour is right-sided.",
+    )
+
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The primary tumour is right-sided.",
+    })
+
+    assert not any("laterality" in item.casefold() for item in flags)
+
+def test_structured_histological_grade_supports_matching_grade_claim():
+    case = _case(
+        histological_grade="G2",
+        case_summary="Synthetic case; a separate structured histological grade is supplied.",
+        pathology_summary=None,
+    )
+
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The biopsy is histological grade G2.",
+    })
+
+    assert not any("pathology/biomarker" in item for item in flags)
+
+
+def test_structured_histological_grade_overrides_conflicting_free_text_grade():
+    case = _case(
+        histological_grade="G2",
+        case_summary="Synthetic referral describes histological grade G3.",
+        pathology_summary=None,
+    )
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The biopsy is histological grade G3.",
+    })).casefold()
+
+    assert "histological grade" in flags
+    assert "g3" in flags
+
+
+def test_unknown_histological_grade_cannot_use_case_summary_as_selected_grade():
+    case = _case(
+        histological_grade=None,
+        case_summary="Synthetic referral describes histological grade G2.",
+        pathology_summary=None,
+        clinical_field_states={"histological_grade": "UNKNOWN"},
+    )
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The biopsy is histological grade G2.",
+    })).casefold()
+
+    assert "histological grade" in flags
+
+
+def test_conflicting_histological_grade_cannot_select_matching_summary_grade():
+    case = _case(
+        histological_grade=None,
+        case_summary="Synthetic referral describes histological grade G2.",
+        pathology_summary=None,
+        clinical_field_states={"histological_grade": "CONFLICTING"},
+        clinical_field_conflicts={
+            "histological_grade": [
+                {
+                    "raw_value": "G2",
+                    "provenance": {
+                        "source_type": "PATHOLOGY_REPORT",
+                        "source_reference": "grade-a",
+                        "source_excerpt": "Histological grade G2.",
+                    },
+                },
+                {
+                    "raw_value": "G3",
+                    "provenance": {
+                        "source_type": "PATHOLOGY_REPORT",
+                        "source_reference": "grade-b",
+                        "source_excerpt": "Histological grade G3.",
+                    },
+                },
+            ]
+        },
+    )
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The biopsy is histological grade G2.",
+    })).casefold()
+
+    assert "histological grade" in flags
+
+def test_structured_primary_site_flags_contradictory_generated_site():
+    case = _case(
+        primary_site="lung",
+        case_summary="Synthetic case narrative; the primary site is separately structured.",
+    )
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The primary site is breast.",
+    })).casefold()
+
+    assert "primary_site" in flags
+    assert "lung" in flags
+    assert "breast" in flags
+
+
+def test_structured_primary_site_supports_matching_generated_site():
+    case = _case(
+        primary_site="lung",
+        case_summary="Synthetic case narrative; the primary site is separately structured.",
+    )
+
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The primary site is lung.",
+    })
+
+    assert not any("primary_site" in item for item in flags)
+
+
+def test_unknown_primary_site_cannot_use_case_summary_as_selected_site():
+    case = _case(
+        primary_site=None,
+        case_summary="Referral text: the primary site is breast.",
+        clinical_field_states={"primary_site": "UNKNOWN"},
+    )
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The primary site is breast.",
+    })).casefold()
+
+    assert "primary_site" in flags
+    assert "unknown" in flags
+
+
+def test_conflicting_primary_site_cannot_select_matching_summary_site():
+    case = _case(
+        primary_site=None,
+        case_summary="Referral text: the primary site is breast.",
+        clinical_field_states={"primary_site": "CONFLICTING"},
+        clinical_field_conflicts={
+            "primary_site": [
+                {
+                    "raw_value": "lung",
+                    "provenance": {
+                        "source_type": "CLINICIAN_NOTE",
+                        "source_reference": "site-a",
+                        "source_excerpt": "Primary site is lung.",
+                    },
+                },
+                {
+                    "raw_value": "breast",
+                    "provenance": {
+                        "source_type": "IMAGING_REPORT",
+                        "source_reference": "site-b",
+                        "source_excerpt": "Primary site is breast.",
+                    },
+                },
+            ]
+        },
+    )
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The primary site is breast.",
+    })).casefold()
+
+    assert "primary_site" in flags
+    assert "conflicting" in flags
+
+
+def test_primary_site_can_fall_back_to_summary_only_without_explicit_state():
+    case = _case(
+        primary_site=None,
+        case_summary="Referral text: the primary site is glottis.",
+    )
+
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The primary site is glottis.",
+    })
+
+    assert not any("primary_site" in item for item in flags)
+
+
+@pytest.mark.parametrize(
+    ("field_id", "case_values", "known_unknown", "generated_claim"),
+    [
+        (
+            "primary_site",
+            {"primary_site": "lung"},
+            "The primary site has not been confirmed.",
+            "The primary site is lung.",
+        ),
+        (
+            "anatomical_subsite",
+            {"anatomical_subsite": "upper lobe"},
+            "The anatomical subsite has not been reported.",
+            "The anatomical subsite is upper lobe.",
+        ),
+        (
+            "laterality",
+            {"laterality": "LEFT"},
+            "Tumour laterality remains unknown.",
+            "The primary tumour is left-sided.",
+        ),
+    ],
+)
+def test_known_unknown_for_anatomical_field_blocks_matching_structured_claim(
+    field_id, case_values, known_unknown, generated_claim
+):
+    case = _case(
+        case_summary="Referral narrative; anatomical detail is recorded in a separate structured field.",
+        known_unknowns=[known_unknown],
+        **case_values,
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": generated_claim,
+    })).casefold()
+
+    assert field_id in flags
+    assert "known_unknowns" in flags
+    assert "unresolved" in flags or "not been" in flags
+
+
+def test_unknown_anatomical_subsite_cannot_use_case_summary_as_selected_subsite():
+    case = _case(
+        anatomical_subsite=None,
+        case_summary="Referral text: the anatomical subsite is upper lobe.",
+        clinical_field_states={"anatomical_subsite": "UNKNOWN"},
+    )
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The anatomical subsite is upper lobe.",
+    })).casefold()
+
+    assert "anatomical_subsite" in flags
+    assert "unknown" in flags
+
+
+def test_structured_anatomical_subsite_flags_contradictory_generated_subsite():
+    case = _case(
+        anatomical_subsite="upper lobe",
+        case_summary="Synthetic case; the subsite is supplied separately.",
+    )
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The anatomical subsite is lower lobe.",
+    })).casefold()
+
+    assert "anatomical_subsite" in flags
+    assert "upper lobe" in flags
+    assert "lower lobe" in flags
+
+def test_clinical_stage_group_is_not_presented_as_validated_without_site_system_edition():
+    case = _case(
+        primary_site=None,
+        clinical_stage_group="IIA",
+        staging_system=None,
+        staging_edition=None,
+    )
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has clinical stage group IIA disease.",
+    })).casefold()
+
+    assert "staging context" in flags
+    assert "primary site" in flags
+    assert "staging system" in flags
+    assert "staging edition" in flags
+
+
+def test_explicit_unknown_staging_system_cannot_validate_clinical_stage_group():
+    case = _case(
+        primary_site="lung",
+        clinical_stage_group="IIA",
+        staging_system=None,
+        staging_edition="8",
+        clinical_field_states={"staging_system": "UNKNOWN"},
+    )
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has clinical stage group IIA disease.",
+    })).casefold()
+
+    assert "staging context" in flags
+    assert "staging system" in flags
+    assert "unknown" in flags
+
+
+def test_clinical_stage_group_with_explicit_site_system_edition_and_subsite_has_context():
+    case = _case(
+        primary_site="lung",
+        anatomical_subsite="upper lobe",
+        clinical_stage_group="IIA",
+        staging_system="AJCC",
+        staging_edition="8",
+    )
+
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has clinical stage group IIA disease.",
+    })
+
+    assert not any("staging context" in item.casefold() for item in flags)
+
+def test_unreported_diagnosis_date_assertion_is_flagged():
+    case = _case(
+        diagnosis_date=None,
+        case_summary="Synthetic case with no diagnosis date recorded.",
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The diagnosis date was 2024-02-11.",
+    })
+    assert any("diagnosis_date" in item for item in flags)
+
+
+def test_generated_diagnosis_date_must_match_the_structured_value():
+    case = _case(diagnosis_date="2024-02-10")
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The diagnosis date was 2024-02-11.",
+    })
+    assert any("diagnosis_date" in item for item in flags)
+
+
+def test_matching_structured_diagnosis_date_is_not_flagged():
+    case = _case(diagnosis_date="2024-02-10")
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The diagnosis date was 2024-02-10.",
+    })
+    assert not any("diagnosis_date" in item for item in flags)
+
+
+def test_explicit_unknown_diagnosis_date_cannot_use_summary_fallback():
+    case = _case(
+        case_summary="Synthetic case. Diagnosis date: 2024-02-10.",
+        diagnosis_date=None,
+        clinical_field_states={"diagnosis_date": "UNKNOWN"},
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The diagnosis date was 2024-02-10.",
+    })
+    assert any("diagnosis_date" in item and "UNKNOWN" in item for item in flags)
+
+
+def test_unreported_family_caregiver_support_assertion_is_flagged():
+    case = _case(
+        case_summary="Synthetic case; family and caregiver arrangements are not recorded.",
+        family_caregiver_context=[],
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "A caregiver is available to support the patient.",
+    })
+    assert any("family_caregiver_context" in item for item in flags)
+
+
+def test_unknown_family_caregiver_state_cannot_use_summary_fallback():
+    statement = "A caregiver is available to support the patient."
+    case = _case(
+        case_summary="Synthetic case. " + statement,
+        family_caregiver_context=[],
+        clinical_field_states={"family_caregiver_context": "UNKNOWN"},
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert any("family_caregiver_context" in item and "UNKNOWN" in item for item in flags)
+
+
+def test_reported_family_caregiver_support_can_support_matching_claim():
+    statement = "A caregiver is available to support the patient."
+    case = _case(family_caregiver_context=[statement])
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert not any("family_caregiver_context" in item for item in flags)
+
+@pytest.mark.parametrize("status", ["PENDING", "NOT_AVAILABLE", "DECLINED"])
+def test_noncompleted_investigation_record_cannot_support_a_finding(status):
+    statement = "CT chest shows a 9 mm pulmonary nodule."
+    record = InvestigationRecord(
+        investigation_name="CT chest",
+        result_summary="A 9 mm pulmonary nodule is described.",
+        status=status,
+        source_excerpt=statement,
+    )
+    case = _case(
+        investigation_records=[record],
+        clinical_field_states={"investigation_records": "PRESENT"},
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert any("investigation_records" in item for item in flags)
+
+
+def test_completed_investigation_record_can_support_its_matching_finding():
+    statement = "CT chest shows a 9 mm pulmonary nodule."
+    record = InvestigationRecord(
+        investigation_name="CT chest",
+        result_summary="A 9 mm pulmonary nodule is described.",
+        status="COMPLETED",
+        source_excerpt=statement,
+    )
+    case = _case(
+        investigation_records=[record],
+        clinical_field_states={"investigation_records": "PRESENT"},
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert not any("investigation_records" in item for item in flags)
+
+
+def test_unknown_investigation_records_state_cannot_support_a_finding():
+    statement = "CT chest shows a 9 mm pulmonary nodule."
+    case = _case(
+        case_summary="Synthetic case. " + statement,
+        investigation_records=[],
+        clinical_field_states={"investigation_records": "UNKNOWN"},
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert any("investigation_records" in item and "UNKNOWN" in item for item in flags)
+
+def test_unknown_pathological_tnm_fields_cannot_use_matching_case_summary_fallback():
+    case = _case(
+        case_summary="Synthetic pathology report records pT2N1M0.",
+        pathological_t_stage=None,
+        pathological_n_stage=None,
+        pathological_m_stage=None,
+        clinical_field_states={
+            "pathological_t_stage": "UNKNOWN",
+            "pathological_n_stage": "UNKNOWN",
+            "pathological_m_stage": "UNKNOWN",
+        },
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "Pathological staging is pT2N1M0.",
+    })).casefold()
+    assert "pathological_t_stage" in flags
+    assert "pathological_n_stage" in flags
+    assert "pathological_m_stage" in flags
+
+
+def test_unknown_pathological_stage_group_cannot_use_matching_case_summary_fallback():
+    case = _case(
+        case_summary="Synthetic pathology report records pathological stage group III.",
+        stage_group=None,
+        clinical_stage_group=None,
+        pathological_stage_group=None,
+        clinical_field_states={"pathological_stage_group": "UNKNOWN"},
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The pathological stage group is III.",
+    })
+    assert any("unsupported or type-conflicting stage group" in item for item in flags)
+
+
+def test_unknown_staging_edition_blocks_clinical_stage_group_context():
+    case = _case(
+        primary_site="lung",
+        clinical_stage_group="IIA",
+        staging_system="AJCC",
+        staging_edition=None,
+        clinical_field_states={"staging_edition": "UNKNOWN"},
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has clinical stage group IIA disease.",
+    })).casefold()
+    assert "staging context" in flags
+    assert "staging edition" in flags
+    assert "unknown" in flags
+
+def test_unknown_social_context_cannot_support_generated_living_arrangement():
+    statement = "The patient lives with a spouse."
+    case = _case(
+        case_summary="Referral text: " + statement,
+        social_context=[],
+        clinical_field_states={"social_context": "UNKNOWN"},
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert any("social_context" in item for item in flags)
+
+
+def test_structured_social_context_supports_matching_living_arrangement():
+    case = _case(social_context=["Lives with a spouse"])
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient lives with a spouse.",
+    })
+    assert not any("social_context" in item for item in flags)
+
+
+def test_social_context_may_use_summary_fallback_only_without_explicit_state():
+    statement = "The patient lives with a spouse."
+    case = _case(case_summary="Referral text: " + statement)
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert not any("social_context" in item for item in flags)
+
+
+def test_unknown_resource_context_cannot_support_generated_financial_constraint():
+    statement = "The patient has financial constraints."
+    case = _case(
+        case_summary="Referral text: " + statement,
+        resource_context=[],
+        clinical_field_states={"resource_context": "UNKNOWN"},
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert any("resource_context" in item for item in flags)
+
+
+def test_structured_resource_context_supports_matching_financial_constraint():
+    case = _case(resource_context=["Financial constraints"])
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has financial constraints.",
+    })
+    assert not any("resource_context" in item for item in flags)
+
+
+def test_resource_context_may_use_summary_fallback_only_without_explicit_state():
+    statement = "The patient has financial constraints."
+    case = _case(case_summary="Referral text: " + statement)
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert not any("resource_context" in item for item in flags)
+
+def test_present_social_context_does_not_support_a_different_living_arrangement():
+    case = _case(social_context=["Lives with a daughter"])
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient lives with a spouse.",
+    })
+    assert any("social_context" in item for item in flags)
+
+
+def test_not_reported_social_context_cannot_fall_back_to_positive_summary_claim():
+    statement = "The patient lives with a spouse."
+    case = _case(
+        case_summary="Referral text: " + statement,
+        social_context=[],
+        clinical_field_states={"social_context": "NOT_REPORTED"},
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert any("social_context" in item and "NOT_REPORTED" in item for item in flags)
+
+
+def test_present_resource_context_does_not_support_a_different_constraint():
+    case = _case(resource_context=["Financial constraints"])
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has transport barriers.",
+    })
+    assert any("resource_context" in item for item in flags)
+
+
+def test_not_reported_resource_context_cannot_fall_back_to_positive_summary_claim():
+    statement = "The patient has financial constraints."
+    case = _case(
+        case_summary="Referral text: " + statement,
+        resource_context=[],
+        clinical_field_states={"resource_context": "NOT_REPORTED"},
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert any("resource_context" in item and "NOT_REPORTED" in item for item in flags)
+
+def test_confirmed_absent_comorbidity_cannot_support_a_positive_summary_claim():
+    statement = "The patient has diabetes mellitus."
+    case = _case(
+        case_summary="Referral text: " + statement,
+        relevant_comorbidities=[],
+        clinical_field_states={"relevant_comorbidities": "CONFIRMED_ABSENT"},
+        clinical_field_provenance={
+            "relevant_comorbidities": [{
+                "source_type": "CLINICIAN_NOTE",
+                "source_reference": "comorbidity-absence",
+                "source_excerpt": "No known comorbidities.",
+            }]
+        },
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert any(
+        "relevant_comorbidities" in item and "CONFIRMED_ABSENT" in item
+        for item in flags
+    )
+
+def test_unknown_patient_willingness_blocks_direct_willingness_claim_in_case_summary():
+    statement = "The patient is willing to undergo surgery."
+    case = _case(
+        case_summary="Referral text: " + statement,
+        patient_willingness=None,
+        clinical_field_states={"patient_willingness": "UNKNOWN"},
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert any("patient_willingness" in item or "patient preference/decision" in item for item in flags)
+
+
+def test_patient_goal_cannot_substitute_for_explicit_patient_willingness():
+    statement = "The patient is willing to undergo surgery."
+    case = _case(
+        patient_goals=["is willing to undergo surgery"],
+        patient_willingness=None,
+        clinical_field_states={"patient_willingness": "UNKNOWN"},
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert any("patient_willingness" in item or "patient preference/decision" in item for item in flags)
+
+def test_known_unknown_willingness_blocks_matching_case_summary_fallback():
+    statement = "The patient is willing to undergo surgery."
+    case = _case(
+        case_summary="Referral text: " + statement,
+        patient_willingness=None,
+        known_unknowns=["Patient willingness has not been established."],
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert any("patient_willingness" in item for item in flags)
+
+
+def test_known_unknown_treatment_consent_blocks_matching_case_summary_fallback():
+    statement = "The patient has consented to surgery."
+    case = _case(
+        case_summary="Referral text: " + statement,
+        known_unknowns=["Treatment-specific informed consent has not been documented."],
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert any("treatment-specific consent" in item for item in flags)
+
+
+def test_unrelated_known_unknown_does_not_block_matching_treatment_consent_source():
+    statement = "The patient has consented to surgery."
+    case = _case(
+        case_summary="Referral text: " + statement,
+        known_unknowns=["The staging system and edition are not supplied."],
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert not any("treatment-specific consent" in item for item in flags)
+
+@pytest.mark.parametrize(
+    ("status", "statement"),
+    [
+        (
+            "NOT_ASKED",
+            "The patient's consent to participate in this educational scenario has not been asked.",
+        ),
+        (
+            "PENDING",
+            "The patient's consent to participate in this educational scenario is pending.",
+        ),
+        (
+            "WITHDRAWN",
+            "The patient withdrew consent to participate in this educational scenario.",
+        ),
+    ],
+)
+def test_not_asked_pending_and_withdrawn_consent_statuses_support_only_matching_statements(
+    status, statement
+):
+    case = _case(patient_consent_status=status)
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert not any("educational-scenario consent status" in item for item in flags)
+
+
+@pytest.mark.parametrize(
+    ("status", "statement"),
+    [
+        (
+            "NOT_ASKED",
+            "The patient has consented to participate in this educational scenario.",
+        ),
+        (
+            "PENDING",
+            "The patient has consented to participate in this educational scenario.",
+        ),
+        (
+            "WITHDRAWN",
+            "The patient has consented to participate in this educational scenario.",
+        ),
+    ],
+)
+def test_not_asked_pending_and_withdrawn_consent_do_not_support_consent_given(
+    status, statement
+):
+    case = _case(patient_consent_status=status)
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })).casefold()
+    assert "educational-scenario consent status" in flags
+
+@pytest.mark.parametrize(
+    ("field_id", "component", "source_token", "generated_token"),
+    [
+        ("pathological_t_stage", "T", "pT2", "pT3"),
+        ("pathological_n_stage", "N", "pN1", "pN2"),
+        ("pathological_m_stage", "M", "pM1", "pM0"),
+    ],
+)
+@pytest.mark.parametrize(
+    "state",
+    ["UNKNOWN", "NOT_REPORTED", "NOT_ASSESSED", "PENDING", "DECLINED", "NOT_APPLICABLE"],
+)
+def test_each_nonpresent_pathological_tnm_state_blocks_matching_summary_and_names_state(
+    field_id, component, source_token, generated_token, state
+):
+    case = _case(
+        case_summary=f"Synthetic pathology text records {source_token}.",
+        **{field_id: None},
+        clinical_field_states={field_id: state},
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": (
+            f"The pathological {component} component is {source_token}."
+        ),
+    })).casefold()
+    assert field_id in flags
+    assert f"marked {state.casefold()}" in flags
+
+
+@pytest.mark.parametrize(
+    ("field_id", "component", "invalid_raw", "generated_token"),
+    [
+        ("pathological_t_stage", "T", "pT9", "pT2"),
+        ("pathological_n_stage", "N", "pN4", "pN1"),
+        ("pathological_m_stage", "M", "pM2", "pM1"),
+    ],
+)
+def test_invalid_pathological_tnm_raw_value_is_preserved_but_never_supports_claim(
+    field_id, component, invalid_raw, generated_token
+):
+    case = _case(
+        **{field_id: invalid_raw},
+        clinical_field_states={field_id: "INVALID"},
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": (
+            f"The pathological {component} component is {generated_token}."
+        ),
+    })).casefold()
+    assert field_id in flags
+    assert "marked invalid" in flags
+    assert getattr(case, field_id) == invalid_raw
+
+
+@pytest.mark.parametrize(
+    ("field_id", "component", "first_raw", "second_raw"),
+    [
+        ("pathological_t_stage", "T", "pT1", "pT2"),
+        ("pathological_n_stage", "N", "pN0", "pN1"),
+        ("pathological_m_stage", "M", "pM0", "pM1"),
+    ],
+)
+def test_conflicting_pathological_tnm_values_remain_unselected_for_generated_claim(
+    field_id, component, first_raw, second_raw
+):
+    case = _case(
+        **{field_id: first_raw},
+        clinical_field_states={field_id: "CONFLICTING"},
+        clinical_field_conflicts={
+            field_id: [
+                {
+                    "raw_value": first_raw,
+                    "provenance": {
+                        "source_type": "PATHOLOGY_REPORT",
+                        "source_reference": f"{field_id}-report-a",
+                        "source_excerpt": f"Pathology report A records {first_raw}.",
+                    },
+                },
+                {
+                    "raw_value": second_raw,
+                    "provenance": {
+                        "source_type": "CLINICIAN_NOTE",
+                        "source_reference": f"{field_id}-note-b",
+                        "source_excerpt": f"Clinician note B records {second_raw}.",
+                    },
+                },
+            ]
+        },
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": (
+            f"The pathological {component} component is {first_raw}."
+        ),
+    })).casefold()
+    assert field_id in flags
+    assert "unresolved conflicting source values" in flags
+    assert getattr(case, field_id) == first_raw
+
+
+@pytest.mark.parametrize(
+    ("field_id", "component", "supported_token", "unsupported_token"),
+    [
+        ("pathological_t_stage", "T", "pT2", "pT3"),
+        ("pathological_n_stage", "N", "pN1", "pN2"),
+        ("pathological_m_stage", "M", "pM1", "pM0"),
+    ],
+)
+def test_present_pathological_tnm_supports_only_its_matching_structured_component(
+    field_id, component, supported_token, unsupported_token
+):
+    case = _case(
+        case_summary=f"Synthetic summary contains conflicting free text {unsupported_token}.",
+        **{field_id: supported_token},
+        clinical_field_states={field_id: "PRESENT"},
+        clinical_field_provenance={
+            field_id: [{
+                "source_type": "PATHOLOGY_REPORT",
+                "source_reference": f"{field_id}-structured-report",
+                "source_excerpt": f"Pathology report records {supported_token}.",
+            }]
+        },
+    )
+    supported = audit_unverified_case_claims(case, {
+        "provisional_conclusion": (
+            f"The pathological {component} component is {supported_token}."
+        ),
+    })
+    mismatched = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": (
+            f"The pathological {component} component is {unsupported_token}."
+        ),
+    })).casefold()
+    assert not any(field_id in item for item in supported)
+    assert field_id in mismatched
+    canonical_unsupported = f"p:{component}{unsupported_token[-1]}".casefold()
+    assert canonical_unsupported in mismatched
+    assert getattr(case, field_id) == supported_token
+
+@pytest.mark.parametrize(
+    ("state", "field_id", "component", "source_token", "generated_token"),
+    [
+        (state, field_id, component, source_token, generated_token)
+        for state in (
+            "UNKNOWN",
+            "NOT_REPORTED",
+            "NOT_ASSESSED",
+            "PENDING",
+            "DECLINED",
+            "NOT_APPLICABLE",
+        )
+        for field_id, component, source_token, generated_token in (
+            ("clinical_t_stage", "T", "cT2", "cT3"),
+            ("clinical_n_stage", "N", "cN1", "cN2"),
+            ("clinical_m_stage", "M", "cM0", "cM1"),
+        )
+    ],
+)
+def test_each_nonpresent_clinical_tnm_state_blocks_matching_summary_and_names_state(
+    state, field_id, component, source_token, generated_token
+):
+    case = _case(
+        case_summary=f"Synthetic clinical staging summary records {source_token}.",
+        **{field_id: None},
+        clinical_field_states={field_id: state},
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": (
+            f"The clinical {component} component is {source_token}."
+        ),
+    })).casefold()
+    assert field_id in flags
+    assert f"marked {state.casefold()}" in flags
+    assert "case-summary fallback" in flags
+
+
+@pytest.mark.parametrize(
+    ("field_id", "component", "invalid_raw", "generated_token"),
+    [
+        ("clinical_t_stage", "T", "T9", "cT2"),
+        ("clinical_n_stage", "N", "N4", "cN1"),
+        ("clinical_m_stage", "M", "M2", "cM1"),
+    ],
+)
+def test_invalid_clinical_tnm_raw_value_is_preserved_but_never_supports_claim(
+    field_id, component, invalid_raw, generated_token
+):
+    case = _case(
+        **{field_id: invalid_raw},
+        clinical_field_states={field_id: "INVALID"},
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": (
+            f"The clinical {component} component is {generated_token}."
+        ),
+    })).casefold()
+    assert field_id in flags
+    assert "marked invalid" in flags
+    assert getattr(case, field_id) == invalid_raw
+
+
+@pytest.mark.parametrize(
+    ("field_id", "component", "first_raw", "second_raw"),
+    [
+        ("clinical_t_stage", "T", "T1", "T2"),
+        ("clinical_n_stage", "N", "N0", "N1"),
+        ("clinical_m_stage", "M", "M0", "M1"),
+    ],
+)
+def test_conflicting_clinical_tnm_values_remain_unselected_for_generated_claim(
+    field_id, component, first_raw, second_raw
+):
+    case = _case(
+        **{field_id: first_raw},
+        clinical_field_states={field_id: "CONFLICTING"},
+        clinical_field_conflicts={
+            field_id: [
+                {
+                    "raw_value": first_raw,
+                    "provenance": {
+                        "source_type": "CLINICIAN_NOTE",
+                        "source_reference": f"{field_id}-clinical-source-a",
+                        "source_excerpt": f"Clinical report A records {first_raw}.",
+                    },
+                },
+                {
+                    "raw_value": second_raw,
+                    "provenance": {
+                        "source_type": "IMAGING_REPORT",
+                        "source_reference": f"{field_id}-clinical-source-b",
+                        "source_excerpt": f"Clinical report B records {second_raw}.",
+                    },
+                },
+            ]
+        },
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": (
+            f"The clinical {component} component is {first_raw}."
+        ),
+    })).casefold()
+    assert field_id in flags
+    assert "unresolved conflicting source values" in flags
+    assert getattr(case, field_id) == first_raw
+
+
+@pytest.mark.parametrize(
+    ("field_id", "component", "supported_token", "unsupported_token"),
+    [
+        ("clinical_t_stage", "T", "T2", "T3"),
+        ("clinical_n_stage", "N", "N1", "N2"),
+        ("clinical_m_stage", "M", "M0", "M1"),
+    ],
+)
+def test_present_clinical_tnm_supports_only_its_matching_structured_component(
+    field_id, component, supported_token, unsupported_token
+):
+    case = _case(
+        case_summary=f"Synthetic summary contains conflicting free text c{unsupported_token}.",
+        **{field_id: supported_token},
+        clinical_field_states={field_id: "PRESENT"},
+        clinical_field_provenance={
+            field_id: [{
+                "source_type": "CLINICIAN_NOTE",
+                "source_reference": f"{field_id}-clinical-structured-source",
+                "source_excerpt": f"Clinical record documents {supported_token}.",
+            }]
+        },
+    )
+    supported = audit_unverified_case_claims(case, {
+        "provisional_conclusion": (
+            f"The clinical {component} component is c{supported_token}."
+        ),
+    })
+    mismatched = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": (
+            f"The clinical {component} component is c{unsupported_token}."
+        ),
+    })).casefold()
+    assert not any(field_id in item for item in supported)
+    assert field_id in mismatched
+    assert f"{component.casefold()}{unsupported_token[-1]}" in mismatched
+    assert getattr(case, field_id) == supported_token
+
+@pytest.mark.parametrize(
+    ("state", "field_id", "summary_statement", "generated_statement"),
+    [
+        (state, field_id, summary_statement, generated_statement)
+        for state in (
+            "UNKNOWN",
+            "NOT_REPORTED",
+            "NOT_ASSESSED",
+            "PENDING",
+            "DECLINED",
+            "NOT_APPLICABLE",
+        )
+        for field_id, summary_statement, generated_statement in (
+            (
+                "stage_group",
+                "Synthetic case summary records stage group III.",
+                "The stage group is III.",
+            ),
+            (
+                "clinical_stage_group",
+                "Synthetic case summary records clinical stage group III.",
+                "The clinical stage group is III.",
+            ),
+            (
+                "pathological_stage_group",
+                "Synthetic pathology summary records pathological stage group III.",
+                "The pathological stage group is III.",
+            ),
+        )
+    ],
+)
+def test_each_nonpresent_typed_stage_group_state_blocks_summary_and_names_state(
+    state, field_id, summary_statement, generated_statement
+):
+    case = _case(
+        case_summary=summary_statement,
+        **{field_id: None},
+        clinical_field_states={field_id: state},
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": generated_statement,
+    })).casefold()
+    assert field_id in flags
+    assert f"marked {state.casefold()}" in flags
+    assert "case-summary fallback" in flags
+
+
+@pytest.mark.parametrize(
+    ("field_id", "invalid_raw", "generated_statement"),
+    [
+        ("stage_group", "Stage V", "The stage group is III."),
+        ("clinical_stage_group", "Stage V", "The clinical stage group is III."),
+        ("pathological_stage_group", "Stage V", "The pathological stage group is III."),
+    ],
+)
+def test_invalid_typed_stage_group_raw_value_is_preserved_but_not_used(
+    field_id, invalid_raw, generated_statement
+):
+    case = _case(
+        **{field_id: invalid_raw},
+        clinical_field_states={field_id: "INVALID"},
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": generated_statement,
+    })).casefold()
+    assert field_id in flags
+    assert "invalid" in flags
+    assert getattr(case, field_id) == invalid_raw
+
+
+@pytest.mark.parametrize(
+    ("field_id", "generated_statement", "first_value", "second_value"),
+    [
+        (
+            "stage_group",
+            "The stage group is II.",
+            "II",
+            "III",
+        ),
+        (
+            "clinical_stage_group",
+            "The clinical stage group is II.",
+            "II",
+            "III",
+        ),
+        (
+            "pathological_stage_group",
+            "The pathological stage group is II.",
+            "II",
+            "III",
+        ),
+    ],
+)
+def test_conflicting_typed_stage_group_sources_remain_unselected(
+    field_id, generated_statement, first_value, second_value
+):
+    kind = {
+        "stage_group": "untyped",
+        "clinical_stage_group": "clinical",
+        "pathological_stage_group": "pathological",
+    }[field_id]
+    case = _case(
+        **{field_id: first_value},
+        clinical_field_states={field_id: "CONFLICTING"},
+        clinical_field_conflicts={
+            field_id: [
+                {
+                    "raw_value": first_value,
+                    "provenance": {
+                        "source_type": "CLINICIAN_NOTE",
+                        "source_reference": f"{field_id}-source-a",
+                        "source_excerpt": f"{kind} source A records stage group {first_value}.",
+                    },
+                },
+                {
+                    "raw_value": second_value,
+                    "provenance": {
+                        "source_type": "IMAGING_REPORT",
+                        "source_reference": f"{field_id}-source-b",
+                        "source_excerpt": f"{kind} source B records stage group {second_value}.",
+                    },
+                },
+            ]
+        },
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": generated_statement,
+    })).casefold()
+    assert field_id in flags
+    assert "conflicting source values" in flags
+    assert getattr(case, field_id) == first_value
+
+
+@pytest.mark.parametrize(
+    ("field_id", "supported_statement", "mismatched_statement", "supported_value"),
+    [
+        (
+            "stage_group",
+            "The stage group is III.",
+            "The stage group is II.",
+            "III",
+        ),
+        (
+            "clinical_stage_group",
+            "The clinical stage group is III.",
+            "The clinical stage group is II.",
+            "III",
+        ),
+        (
+            "pathological_stage_group",
+            "The pathological stage group is III.",
+            "The pathological stage group is II.",
+            "III",
+        ),
+    ],
+)
+def test_present_typed_stage_group_supports_only_its_matching_value(
+    field_id, supported_statement, mismatched_statement, supported_value
+):
+    case = _case(
+        **{field_id: supported_value},
+        clinical_field_states={field_id: "PRESENT"},
+        clinical_field_provenance={
+            field_id: [{
+                "source_type": "CLINICIAN_NOTE",
+                "source_reference": f"{field_id}-present-source",
+                "source_excerpt": f"Source record documents {supported_value}.",
+            }]
+        },
+    )
+    supported = audit_unverified_case_claims(case, {
+        "provisional_conclusion": supported_statement,
+    })
+    mismatched = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": mismatched_statement,
+    })).casefold()
+    assert not any("stage group" in item.casefold() for item in supported)
+    assert "stage group" in mismatched
+    assert field_id in mismatched
+    assert getattr(case, field_id) == supported_value
+
+def test_known_unknown_clinical_t_stage_blocks_matching_case_summary_claim():
+    case = _case(
+        case_summary="Synthetic source summary records clinical cT2 disease.",
+        clinical_t_stage=None,
+        known_unknowns=["Clinical T stage is not reported."],
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The clinical T component is cT2.",
+    })
+    assert any("clinical_t_stage" in item and "known_unknowns" in item for item in flags)
+
+
+def test_known_unknown_pathological_n_stage_blocks_matching_case_summary_claim():
+    case = _case(
+        case_summary="Synthetic pathology summary records pN1 disease.",
+        pathological_n_stage=None,
+        known_unknowns=["Pathological N component remains unresolved."],
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The pathological N component is pN1.",
+    })
+    assert any("pathological_n_stage" in item and "known_unknowns" in item for item in flags)
+
+
+def test_known_unknown_clinical_stage_group_blocks_matching_case_summary_claim():
+    case = _case(
+        case_summary="Synthetic referral records clinical stage group III.",
+        clinical_stage_group=None,
+        known_unknowns=["Clinical stage group has not been confirmed."],
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The clinical stage group is III.",
+    })
+    assert any("clinical_stage_group" in item and "known_unknowns" in item for item in flags)
+
+
+def test_known_unknown_staging_edition_blocks_structured_value_from_validating_group():
+    case = _case(
+        primary_site="lung",
+        clinical_stage_group="IIIA",
+        staging_system="AJCC",
+        staging_edition="8",
+        known_unknowns=["The staging edition has not been verified."],
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has clinical stage group IIIA disease.",
+    })).casefold()
+    assert "staging edition" in flags
+    assert "known_unknowns" in flags
+
+
+def test_known_unknown_comorbidity_history_blocks_matching_summary_positive_claim():
+    statement = "The patient has diabetes mellitus."
+    case = _case(
+        case_summary="Referral summary: " + statement,
+        relevant_comorbidities=[],
+        known_unknowns=["Relevant comorbidity history is not reported."],
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert any("relevant_comorbidities" in item and "known_unknowns" in item for item in flags)
+
+
+def test_unrelated_known_unknown_does_not_block_supported_clinical_t_stage():
+    case = _case(
+        case_summary="Synthetic source summary records clinical cT2 disease.",
+        clinical_t_stage=None,
+        known_unknowns=["Diagnosis date has not been reported."],
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The clinical T component is cT2.",
+    })
+    assert not any("clinical_t_stage" in item for item in flags)
+
+
+def test_not_unknown_wording_does_not_mark_a_field_unresolved():
+    case = _case(
+        case_summary="Synthetic source summary records clinical cT2 disease.",
+        clinical_t_stage=None,
+        known_unknowns=["Clinical T stage is not unknown."],
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The clinical T component is cT2.",
+    })
+    assert not any("clinical_t_stage" in item for item in flags)
+
+
+def test_known_unknown_mapping_is_clause_local():
+    case = _case(
+        case_summary="Synthetic source summary records clinical cT2 disease.",
+        clinical_t_stage=None,
+        known_unknowns=["Clinical T stage is documented, but diagnosis date is not reported."],
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The clinical T component is cT2.",
+    })
+    assert not any("clinical_t_stage" in item for item in flags)
+
+
+def test_known_unknowns_list_maps_patient_willingness_to_its_matching_field():
+    statement = "The patient is willing to undergo surgery."
+    case = _case(
+        case_summary="Referral text: " + statement,
+        patient_willingness=None,
+        known_unknowns=["Patient willingness has not been established."],
+        clinical_field_states={"known_unknowns": "PRESENT"},
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+    assert any("patient_willingness" in item for item in flags)
+
+
+@pytest.mark.parametrize(
+    ("field_id", "case_values", "known_unknown", "generated_claim", "expected_flag"),
+    [
+        (
+            "age_years",
+            {"age_years": 68},
+            "Patient age has not been confirmed.",
+            "The patient is 68 years old.",
+            "assigns an age",
+        ),
+        (
+            "sex_at_birth",
+            {"sex_at_birth": "female"},
+            "Sex at birth is not reported.",
+            "The female patient needs further assessment.",
+            "sex/gender",
+        ),
+        (
+            "diagnosis_date",
+            {"diagnosis_date": "2024-02-10"},
+            "Diagnosis date has not been reported.",
+            "The diagnosis date was 2024-02-10.",
+            "diagnosis_date",
+        ),
+        (
+            "histology",
+            {"histology": "adenocarcinoma"},
+            "Histology has not been confirmed.",
+            "The biopsy confirms adenocarcinoma.",
+            "histological diagnosis",
+        ),
+        (
+            "histological_grade",
+            {"histological_grade": "G2"},
+            "Histological grade has not been confirmed.",
+            "The tumour is histological grade G2.",
+            "histological grade",
+        ),
+        (
+            "performance_status",
+            {"performance_status": "1", "performance_status_scale": "ECOG"},
+            "Performance status has not been assessed.",
+            "The patient has ECOG 1.",
+            "performance-status",
+        ),
+        (
+            "performance_status_scale",
+            {"performance_status": "1", "performance_status_scale": "ECOG"},
+            "Performance status scale has not been reported.",
+            "The patient has ECOG 1.",
+            "performance-status",
+        ),
+    ],
+)
+def test_known_unknown_for_demographic_diagnosis_histology_and_status_blocks_structured_claim(
+    field_id, case_values, known_unknown, generated_claim, expected_flag
+):
+    case = _case(
+        case_summary="Synthetic source narrative; the corresponding detail is separately structured.",
+        known_unknowns=[known_unknown],
+        **case_values,
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": generated_claim,
+    })).casefold()
+
+    assert expected_flag in flags
+    assert field_id in flags or expected_flag in flags
+    assert "known_unknowns" in flags or "unresolved" in flags
+
+
+@pytest.mark.parametrize(
+    ("field_id", "case_values", "generated_claim", "field_flag"),
+    [
+        ("age_years", {"age_years": 68}, "The patient is 68 years old.", "assigns an age"),
+        ("sex_at_birth", {"sex_at_birth": "female"}, "The female patient needs further assessment.", "sex/gender"),
+        ("diagnosis_date", {"diagnosis_date": "2024-02-10"}, "The diagnosis date was 2024-02-10.", "diagnosis_date"),
+        ("histology", {"histology": "adenocarcinoma"}, "Histology is adenocarcinoma.", "histological diagnosis"),
+        ("histological_grade", {"histological_grade": "G2"}, "The tumour is histological grade G2.", "histological grade"),
+        ("performance_status", {"performance_status": "1", "performance_status_scale": "ECOG"}, "The patient has ECOG 1.", "performance-status"),
+        ("performance_status_scale", {"performance_status": "1", "performance_status_scale": "ECOG"}, "The patient has ECOG 1.", "performance-status"),
+    ],
+)
+def test_unrelated_patient_willingness_gap_does_not_block_other_demographic_or_diagnosis_field(
+    field_id, case_values, generated_claim, field_flag
+):
+    case = _case(
+        known_unknowns=["Patient willingness has not been established."],
+        **case_values,
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": generated_claim,
+    })
+
+    assert not any(field_flag in item.casefold() for item in flags), field_id
+
+
+
+
+def test_non_present_known_unknowns_state_is_not_used_as_gap_evidence_even_if_memory_is_corrupt():
+    case = _case(
+        case_summary="Synthetic source summary records clinical cT2 disease.",
+        clinical_t_stage=None,
+        known_unknowns=[],
+        clinical_field_states={"known_unknowns": "UNKNOWN"},
+    )
+    # Simulate a corrupted/historical in-memory object that bypassed current
+    # Pydantic validation. Audit logic must still refuse non-PRESENT list data.
+    object.__setattr__(case, "known_unknowns", ["Clinical T stage is not reported."])
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The clinical T component is cT2.",
+    })
+    assert not any("clinical_t_stage" in item for item in flags)
+
+
+def test_non_empty_known_unknowns_list_cannot_be_marked_unknown():
+    with pytest.raises(ValueError, match="cannot carry a supplied value while marked UNKNOWN"):
+        _case(
+            known_unknowns=["Clinical T stage is not reported."],
+            clinical_field_states={"known_unknowns": "UNKNOWN"},
+        )
+
+
+
+@pytest.mark.parametrize(
+    ("field_id", "case_values", "known_unknown", "generated_claim"),
+    [
+        (
+            "family_history",
+            {"family_history": ["Mother had breast cancer."]},
+            "Family history has not been established.",
+            "The patient's mother had breast cancer.",
+        ),
+        (
+            "family_caregiver_context",
+            {"family_caregiver_context": ["A daughter provides support to the patient."]},
+            "Family/caregiver context has not been documented.",
+            "A daughter provides support to the patient.",
+        ),
+    ],
+)
+def test_matching_list_field_known_unknown_blocks_positive_structured_claim(
+    field_id, case_values, known_unknown, generated_claim
+):
+    case = _case(
+        case_summary="Synthetic case narrative; list fields are supplied separately.",
+        known_unknowns=[known_unknown],
+        **case_values,
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": generated_claim,
+    })).casefold()
+
+    assert field_id in flags
+    assert "known_unknowns" in flags
+    assert "unresolved" in flags or "not been" in flags
+
+
+@pytest.mark.parametrize(
+    ("field_id", "case_values", "generated_claim"),
+    [
+        (
+            "family_history",
+            {"family_history": ["Mother had breast cancer."]},
+            "The patient's mother had breast cancer.",
+        ),
+        (
+            "family_caregiver_context",
+            {"family_caregiver_context": ["A daughter provides support to the patient."]},
+            "A daughter provides support to the patient.",
+        ),
+    ],
+)
+def test_unrelated_known_unknown_does_not_block_matching_family_or_caregiver_claim(
+    field_id, case_values, generated_claim
+):
+    case = _case(
+        case_summary="Synthetic case narrative; list fields are supplied separately.",
+        known_unknowns=["Patient willingness has not been established."],
+        **case_values,
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": generated_claim,
+    })
+
+    assert not any(field_id in item for item in flags)
+
+
+@pytest.mark.parametrize(
+    ("field_id", "case_values", "known_unknown", "generated_claim"),
+    [
+        (
+            "current_medications",
+            {"current_medications": ["metformin"]},
+            "Current medications have not been reported.",
+            "The patient is currently taking metformin.",
+        ),
+        (
+            "known_allergies",
+            {"known_allergies": ["penicillin"]},
+            "Known allergies have not been documented.",
+            "The patient has a penicillin allergy.",
+        ),
+        (
+            "prior_treatment",
+            {"prior_treatment": ["radiotherapy"]},
+            "Prior treatment has not been established.",
+            "The patient previously received radiotherapy.",
+        ),
+    ],
+)
+def test_matching_list_field_known_unknown_blocks_positive_medication_allergy_or_treatment_claim(
+    field_id, case_values, known_unknown, generated_claim
+):
+    case = _case(
+        case_summary="Synthetic case narrative; medication, allergy and treatment lists are supplied separately.",
+        known_unknowns=[known_unknown],
+        **case_values,
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": generated_claim,
+    })).casefold()
+
+    assert field_id in flags
+    assert "known_unknowns" in flags
+    assert "unresolved" in flags or "not been" in flags
+
+
+@pytest.mark.parametrize(
+    ("field_id", "case_values", "generated_claim"),
+    [
+        (
+            "current_medications",
+            {"current_medications": ["metformin"]},
+            "The patient is currently taking metformin.",
+        ),
+        (
+            "known_allergies",
+            {"known_allergies": ["penicillin"]},
+            "The patient has a penicillin allergy.",
+        ),
+        (
+            "prior_treatment",
+            {"prior_treatment": ["radiotherapy"]},
+            "The patient previously received radiotherapy.",
+        ),
+    ],
+)
+def test_unrelated_known_unknown_does_not_block_matching_medication_allergy_or_treatment_claim(
+    field_id, case_values, generated_claim
+):
+    case = _case(
+        case_summary="Synthetic case narrative; list fields are supplied separately.",
+        known_unknowns=["Patient willingness has not been established."],
+        **case_values,
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": generated_claim,
+    })
+
+    assert not any(field_id in item for item in flags)
+
+
+@pytest.mark.parametrize(
+    ("field_id", "case_values", "generated_claim"),
+    [
+        (
+            "current_medications",
+            {"current_medications": ["metformin"]},
+            "The patient is currently taking metformin.",
+        ),
+        (
+            "known_allergies",
+            {"known_allergies": ["penicillin"]},
+            "The patient has a penicillin allergy.",
+        ),
+        (
+            "prior_treatment",
+            {"prior_treatment": ["radiotherapy"]},
+            "The patient previously received radiotherapy.",
+        ),
+    ],
+)
+def test_matching_medication_allergy_or_treatment_claim_is_supported_without_unresolved_note(
+    field_id, case_values, generated_claim
+):
+    case = _case(
+        case_summary="Synthetic case narrative; list fields are supplied separately.",
+        **case_values,
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": generated_claim,
+    })
+
+    assert not any(field_id in item for item in flags)
+
+
+def test_matching_known_unknown_blocks_relevant_investigations_list_finding():
+    statement = "CT chest shows a 9 mm pulmonary nodule."
+    case = _case(
+        case_summary="Synthetic case narrative; investigation information is held in structured fields.",
+        relevant_investigations=[statement],
+        investigation_records=[],
+        clinical_field_states={
+            "imaging_summary": "NOT_REPORTED",
+            "relevant_investigations": "PRESENT",
+            "investigation_records": "NOT_REPORTED",
+        },
+        known_unknowns=["Relevant investigations have not been reported."],
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })).casefold()
+
+    assert "relevant_investigations" in flags
+    assert "known_unknowns" in flags
+    assert "unresolved" in flags or "not been" in flags
+
+
+def test_matching_known_unknown_blocks_completed_typed_investigation_record_finding():
+    statement = "CT chest shows a 9 mm pulmonary nodule."
+    record = InvestigationRecord(
+        investigation_name="CT chest",
+        result_summary="A 9 mm pulmonary nodule is described.",
+        status="COMPLETED",
+        source_excerpt=statement,
+    )
+    case = _case(
+        case_summary="Synthetic case narrative; investigation information is held in structured fields.",
+        relevant_investigations=[],
+        investigation_records=[record],
+        clinical_field_states={
+            "imaging_summary": "NOT_REPORTED",
+            "relevant_investigations": "NOT_REPORTED",
+            "investigation_records": "PRESENT",
+        },
+        known_unknowns=["Typed investigation records have not been verified."],
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })).casefold()
+
+    assert "investigation_records" in flags
+    assert "known_unknowns" in flags
+    assert "unresolved" in flags or "not been" in flags
+
+
+def test_unrelated_known_unknown_does_not_block_matching_relevant_investigation_finding():
+    statement = "CT chest shows a 9 mm pulmonary nodule."
+    case = _case(
+        case_summary="Synthetic case narrative; investigation information is held in structured fields.",
+        relevant_investigations=[statement],
+        investigation_records=[],
+        clinical_field_states={
+            "imaging_summary": "NOT_REPORTED",
+            "relevant_investigations": "PRESENT",
+            "investigation_records": "NOT_REPORTED",
+        },
+        known_unknowns=["Patient willingness has not been established."],
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+
+    assert not any("relevant_investigations" in item for item in flags)
+
+
+def test_unrelated_known_unknown_does_not_block_matching_completed_investigation_record_finding():
+    statement = "CT chest shows a 9 mm pulmonary nodule."
+    record = InvestigationRecord(
+        investigation_name="CT chest",
+        result_summary="A 9 mm pulmonary nodule is described.",
+        status="COMPLETED",
+        source_excerpt=statement,
+    )
+    case = _case(
+        case_summary="Synthetic case narrative; investigation information is held in structured fields.",
+        relevant_investigations=[],
+        investigation_records=[record],
+        clinical_field_states={
+            "imaging_summary": "NOT_REPORTED",
+            "relevant_investigations": "NOT_REPORTED",
+            "investigation_records": "PRESENT",
+        },
+        known_unknowns=["Patient willingness has not been established."],
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+
+    assert not any("investigation_records" in item for item in flags)
+
+
+def test_relevant_investigation_list_supports_matching_finding_without_unresolved_note():
+    statement = "CT chest shows a 9 mm pulmonary nodule."
+    case = _case(
+        case_summary="Synthetic case narrative; investigation information is held in structured fields.",
+        relevant_investigations=[statement],
+        investigation_records=[],
+        clinical_field_states={
+            "imaging_summary": "NOT_REPORTED",
+            "relevant_investigations": "PRESENT",
+            "investigation_records": "NOT_REPORTED",
+        },
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+
+    assert not any("relevant_investigations" in item for item in flags)
+
+
+def test_completed_typed_investigation_record_supports_matching_finding_without_unresolved_note():
+    statement = "CT chest shows a 9 mm pulmonary nodule."
+    record = InvestigationRecord(
+        investigation_name="CT chest",
+        result_summary="A 9 mm pulmonary nodule is described.",
+        status="COMPLETED",
+        source_excerpt=statement,
+    )
+    case = _case(
+        case_summary="Synthetic case narrative; investigation information is held in structured fields.",
+        relevant_investigations=[],
+        investigation_records=[record],
+        clinical_field_states={
+            "imaging_summary": "NOT_REPORTED",
+            "relevant_investigations": "NOT_REPORTED",
+            "investigation_records": "PRESENT",
+        },
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+
+    assert not any("investigation_records" in item for item in flags)
+
+
+
+def test_matching_relevant_investigation_gap_blocks_generic_case_summary_fallback():
+    statement = "CT chest shows a 9 mm pulmonary nodule."
+    case = _case(
+        case_summary=statement,
+        relevant_investigations=[],
+        investigation_records=[],
+        known_unknowns=["Relevant investigations have not been reported."],
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })).casefold()
+
+    assert "relevant_investigations" in flags
+    assert "explicitly unresolved in known_unknowns" in flags
+
+
+def test_matching_typed_investigation_gap_blocks_generic_case_summary_fallback():
+    statement = "CT chest shows a 9 mm pulmonary nodule."
+    record = InvestigationRecord(
+        investigation_name="CT chest",
+        result_summary="A 9 mm pulmonary nodule is described.",
+        status="COMPLETED",
+        source_excerpt=statement,
+    )
+    case = _case(
+        case_summary=statement,
+        relevant_investigations=[],
+        investigation_records=[record],
+        clinical_field_states={"investigation_records": "PRESENT"},
+        known_unknowns=["Typed investigation records have not been verified."],
+    )
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })).casefold()
+
+    assert "investigation_records" in flags
+    assert "explicitly unresolved in known_unknowns" in flags
+
+
+
+@pytest.mark.parametrize(
+    ("field_id", "values", "statement", "unresolved_note"),
+    [
+        (
+            "patient_goals",
+            ["prefers surgery"],
+            "The patient prefers surgery.",
+            "Patient goals have not been documented.",
+        ),
+        (
+            "patient_preferences",
+            ["prefers surgery"],
+            "The patient prefers surgery.",
+            "Patient preferences have not been reported.",
+        ),
+        (
+            "social_context",
+            ["Lives with a spouse"],
+            "The patient lives with a spouse.",
+            "Social context has not been established.",
+        ),
+        (
+            "resource_context",
+            ["Financial constraints"],
+            "The patient has financial constraints.",
+            "Resource context has not been documented.",
+        ),
+    ],
+)
+def test_matching_known_unknown_blocks_positive_goal_or_context_claim(
+    field_id, values, statement, unresolved_note
+):
+    case = _case(
+        **{
+            field_id: values,
+            "known_unknowns": [unresolved_note],
+        }
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+
+    assert any(field_id in item for item in flags)
+
+
+@pytest.mark.parametrize(
+    ("field_id", "statement", "unresolved_note"),
+    [
+        (
+            "patient_goals",
+            "The patient prefers surgery.",
+            "Patient goals have not been documented.",
+        ),
+        (
+            "patient_preferences",
+            "The patient prefers surgery.",
+            "Patient preferences have not been reported.",
+        ),
+        (
+            "social_context",
+            "The patient lives with a spouse.",
+            "Social context has not been established.",
+        ),
+        (
+            "resource_context",
+            "The patient has financial constraints.",
+            "Resource context has not been documented.",
+        ),
+    ],
+)
+def test_matching_known_unknown_blocks_generic_summary_fallback_for_goal_or_context(
+    field_id, statement, unresolved_note
+):
+    case = _case(
+        case_summary="Referral text: " + statement,
+        known_unknowns=[unresolved_note],
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+
+    assert any(field_id in item for item in flags)
+
+
+@pytest.mark.parametrize(
+    ("field_id", "values", "statement", "unrelated_note"),
+    [
+        (
+            "patient_goals",
+            ["prefers surgery"],
+            "The patient prefers surgery.",
+            "Social context has not been established.",
+        ),
+        (
+            "patient_preferences",
+            ["prefers surgery"],
+            "The patient prefers surgery.",
+            "Resource context has not been documented.",
+        ),
+        (
+            "social_context",
+            ["Lives with a spouse"],
+            "The patient lives with a spouse.",
+            "Patient goals have not been documented.",
+        ),
+        (
+            "resource_context",
+            ["Financial constraints"],
+            "The patient has financial constraints.",
+            "Patient preferences have not been reported.",
+        ),
+    ],
+)
+def test_unrelated_known_unknown_does_not_block_goal_or_context_claim(
+    field_id, values, statement, unrelated_note
+):
+    case = _case(
+        **{
+            field_id: values,
+            "known_unknowns": [unrelated_note],
+        }
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+
+    assert not any(field_id in item for item in flags)
+
+
+@pytest.mark.parametrize(
+    ("field_id", "values", "statement"),
+    [
+        ("patient_goals", ["prefers surgery"], "The patient prefers surgery."),
+        ("patient_preferences", ["prefers surgery"], "The patient prefers surgery."),
+        ("social_context", ["Lives with a spouse"], "The patient lives with a spouse."),
+        ("resource_context", ["Financial constraints"], "The patient has financial constraints."),
+    ],
+)
+def test_structured_goal_or_context_claim_remains_supported_without_matching_gap(
+    field_id, values, statement
+):
+    case = _case(**{field_id: values, "known_unknowns": []})
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": statement,
+    })
+
+    assert not any(field_id in item for item in flags)
+
+
+def test_patient_preferences_remain_distinct_from_unresolved_patient_goals():
+    case = _case(
+        patient_goals=["prefers chemotherapy"],
+        patient_preferences=["prefers radiotherapy"],
+        known_unknowns=["Patient goals have not been documented."],
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient prefers radiotherapy.",
+    })
+
+    assert not any("patient_preferences" in item for item in flags)
+
+
+def test_patient_goals_remain_distinct_from_unresolved_patient_preferences():
+    case = _case(
+        patient_goals=["prefers surgery"],
+        patient_preferences=["prefers radiotherapy"],
+        known_unknowns=["Patient preferences have not been reported."],
+    )
+    flags = audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient prefers surgery.",
+    })
+
+    assert not any("patient_goals" in item for item in flags)
+
+
+def _staged_context_case(**overrides):
+    values = {
+        "primary_site": "lung",
+        "staging_system": "AJCC",
+        "staging_edition": "8",
+        "clinical_stage_group": "IIA",
+        "case_summary": "Synthetic staging context record.",
+    }
+    values.update(overrides)
+    return _case(**values)
+
+
+def test_prompt_and_intake_warn_when_staging_context_subsite_is_missing():
+    case = _staged_context_case(anatomical_subsite=None)
+    original = case.model_dump_json()
+
+    context = build_case_prompt_context(case)
+    prompt_warnings = " ".join(context["staging_context_warnings"]).casefold()
+    intake_warnings = " ".join(build_case_validation_warnings(case)).casefold()
+
+    assert "anatomical subsite" in prompt_warnings
+    assert "missing or unresolved" in prompt_warnings
+    assert "anatomical-subsite context is not validated" in intake_warnings
+    assert case.model_dump_json() == original
+
+
+def test_unknown_subsite_blocks_stage_group_context_even_when_summary_mentions_subsite():
+    case = _staged_context_case(
+        anatomical_subsite=None,
+        case_summary="Referral text states the anatomical subsite is upper lobe.",
+        clinical_field_states={"anatomical_subsite": "UNKNOWN"},
+    )
+    original = case.model_dump_json()
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has clinical stage group IIA disease.",
+    })).casefold()
+    prompt_warnings = " ".join(
+        build_case_prompt_context(case)["staging_context_warnings"]
+    ).casefold()
+    intake_warnings = " ".join(build_case_validation_warnings(case)).casefold()
+
+    assert "staging context" in flags
+    assert "anatomical subsite (unknown)" in flags
+    assert "anatomical subsite (unknown)" in prompt_warnings
+    assert "anatomical-subsite context is not validated" in intake_warnings
+    assert "upper lobe" in case.case_summary
+    assert case.model_dump_json() == original
+
+
+def test_known_unknown_subsite_blocks_staging_context_even_with_structured_value():
+    case = _staged_context_case(
+        anatomical_subsite="upper lobe",
+        known_unknowns=["Anatomical subsite remains unknown."],
+    )
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has clinical stage group IIA disease.",
+    })).casefold()
+    prompt_warnings = " ".join(
+        build_case_prompt_context(case)["staging_context_warnings"]
+    ).casefold()
+    intake_warnings = " ".join(build_case_validation_warnings(case)).casefold()
+
+    assert "anatomical subsite (unresolved in known_unknowns)" in flags
+    assert "anatomical subsite (unresolved in known_unknowns)" in prompt_warnings
+    assert "anatomical-subsite context is not validated" in intake_warnings
+
+
+def test_explicit_not_applicable_subsite_resolves_staging_context_without_inference():
+    case = _staged_context_case(
+        anatomical_subsite=None,
+        clinical_field_states={"anatomical_subsite": "NOT_APPLICABLE"},
+    )
+    context = build_case_prompt_context(case)
+    warnings = " ".join(build_case_validation_warnings(case)).casefold()
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has clinical stage group IIA disease.",
+    })).casefold()
+
+    assert not any("anatomical subsite" in item.casefold() for item in context["staging_context_warnings"])
+    assert "anatomical-subsite context is not validated" not in warnings
+    assert "staging context" not in flags
+
+
+def test_present_structured_subsite_resolves_staging_context():
+    case = _staged_context_case(
+        anatomical_subsite="upper lobe",
+        clinical_field_states={"anatomical_subsite": "PRESENT"},
+    )
+    context = build_case_prompt_context(case)
+    warnings = " ".join(build_case_validation_warnings(case)).casefold()
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has clinical stage group IIA disease.",
+    })).casefold()
+
+    assert not any("anatomical subsite" in item.casefold() for item in context["staging_context_warnings"])
+    assert "anatomical-subsite context is not validated" not in warnings
+    assert "staging context" not in flags

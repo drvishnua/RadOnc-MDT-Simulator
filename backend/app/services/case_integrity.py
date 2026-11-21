@@ -4,6 +4,12 @@ from __future__ import annotations
 import re
 from typing import Any
 from app.schemas import SyntheticCase
+
+
+def eligible_case_summary_text(case: SyntheticCase) -> str | None:
+    """Return source text only when case_summary is explicitly/default PRESENT."""
+    state = case.clinical_field_states.get("case_summary", "PRESENT")
+    return case.case_summary if state == "PRESENT" else None
 from app.clinical_fields import (
     CLINICAL_FIELD_REGISTRY,
     CLINICAL_FIELD_REGISTRY_VERSION,
@@ -142,8 +148,59 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
         for field_id, state in case.clinical_field_states.items()
         if state == "CONFLICTING" and field_id in CLINICAL_FIELD_REGISTRY
     )
-    for field_id in redacted_conflicting_fields:
+    redacted_invalid_fields = sorted(
+        field_id
+        for field_id, state in case.clinical_field_states.items()
+        if state == "INVALID" and field_id in CLINICAL_FIELD_REGISTRY
+    )
+    for field_id in set(redacted_conflicting_fields) | set(redacted_invalid_fields):
         model_snapshot[field_id] = None
+
+    # INVALID source excerpts and all nested case-summary source text remain in
+    # the persisted audit snapshot, but are withheld from model generation.
+    # Keep source identity and original excerpt hashes for traceability.
+    def redact_summary_source(source: dict[str, Any]) -> dict[str, Any]:
+        return {
+            **{key: value for key, value in source.items() if key != "source_excerpt"},
+            "source_excerpt_redacted": True,
+        }
+
+    case_summary_state = case.clinical_field_states.get("case_summary")
+    if case_summary_state in {"INVALID", "CONFLICTING"}:
+        model_provenance = model_snapshot.get("clinical_field_provenance")
+        if isinstance(model_provenance, dict):
+            entries = model_provenance.get("case_summary")
+            if isinstance(entries, list):
+                model_provenance["case_summary"] = [
+                    redact_summary_source(source)
+                    for source in entries if isinstance(source, dict)
+                ]
+        model_conflicts = model_snapshot.get("clinical_field_conflicts")
+        if isinstance(model_conflicts, dict):
+            candidates = model_conflicts.get("case_summary")
+            if isinstance(candidates, list):
+                model_conflicts["case_summary"] = [
+                    {
+                        "raw_value": None,
+                        "provenance": redact_summary_source(candidate["provenance"]),
+                    }
+                    for candidate in candidates
+                    if isinstance(candidate, dict) and isinstance(candidate.get("provenance"), dict)
+                ]
+    model_provenance = model_snapshot.get("clinical_field_provenance")
+    if isinstance(model_provenance, dict):
+        for field_id in redacted_invalid_fields:
+            if field_id == "case_summary":
+                continue
+            entries = model_provenance.get(field_id)
+            if isinstance(entries, list):
+                model_provenance[field_id] = [
+                    {
+                        **{key: value for key, value in source.items() if key != "source_excerpt"},
+                        "source_excerpt_redacted": True,
+                    }
+                    for source in entries if isinstance(source, dict)
+                ]
     field_status: dict[str, dict[str, Any]] = {}
     canonical_field_values: dict[str, dict[str, Any]] = {}
     normalization_warnings: list[str] = []
@@ -156,7 +213,7 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
         field_status[field] = {
             "label": label,
             "status": status,
-            "value": None if explicit_state == "CONFLICTING" else (snapshot.get(field) if provided else None),
+            "value": None if explicit_state in {"CONFLICTING", "INVALID"} else (snapshot.get(field) if provided else None),
         }
     for field, label in _LIST_FIELDS.items():
         values = getattr(case, field) or []
@@ -165,15 +222,16 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
         field_status[field] = {
             "label": label,
             "status": status,
-            "value": None if explicit_state == "CONFLICTING" else (snapshot.get(field) if values else None),
+            "value": None if explicit_state in {"CONFLICTING", "INVALID"} else (snapshot.get(field) if values else None),
         }
     field_status["scenario_title"] = {
         "label": "Scenario title", "status": "provided", "value": case.scenario_title,
     }
+    case_summary_state = case.clinical_field_states.get("case_summary")
     field_status["case_summary"] = {
         "label": "User-provided free-text case summary",
-        "status": "provided_verbatim_unparsed",
-        "value": case.case_summary,
+        "status": case_summary_state.casefold() if case_summary_state else "provided_verbatim_unparsed",
+        "value": None if case_summary_state in {"CONFLICTING", "INVALID"} else case.case_summary,
     }
 
     for field_id, definition in CLINICAL_FIELD_REGISTRY.items():
@@ -192,6 +250,8 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
         # field itself. This is not independent verification of the underlying fact.
         if explicit_sources:
             provenance = [source.model_dump(mode="json") for source in explicit_sources]
+            if state == "INVALID" or (field_id == "case_summary" and state == "CONFLICTING"):
+                provenance = [redact_summary_source(source) for source in provenance]
         elif state == "PRESENT":
             source_type = "CASE_SUMMARY" if field_id == "case_summary" else "STRUCTURED_CASE_INPUT"
             provenance = [{
@@ -211,7 +271,7 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
             "value_type": definition.value_type,
             "state": state,
             "status": state,
-            "raw_value": snapshot.get(field_id),
+            "raw_value": None if state in {"CONFLICTING", "INVALID"} else snapshot.get(field_id),
             "canonical_comparison_value": None,
             "unit": definition.unit,
             "allowed_values": list(definition.allowed_values),
@@ -219,14 +279,23 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
             "source_requirement": definition.source_requirement,
             "provenance": provenance,
             "conflict_candidates": [
-                candidate.model_dump(mode="json") for candidate in conflict_candidates
+                (
+                    {
+                        "raw_value": None,
+                        "provenance": redact_summary_source(
+                            candidate.provenance.model_dump(mode="json")
+                        ),
+                    }
+                    if field_id == "case_summary" and state in {"INVALID", "CONFLICTING"}
+                    else candidate.model_dump(mode="json")
+                )
+                for candidate in conflict_candidates
             ],
         }
 
-        # A conflicting flat-field value is retained in the immutable case
-        # snapshot and in source-specific conflict_candidates, but is not shown
-        # as a selected model-facing raw value.
-        if state == "CONFLICTING":
+        # Conflicting candidates remain separately visible; neither the flat
+        # selected value nor an INVALID raw value is supplied as model evidence.
+        if state in {"CONFLICTING", "INVALID"}:
             item["raw_value"] = None
 
         if state == "PRESENT":
@@ -280,6 +349,15 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
             )
             staging_context_warnings.append(warning)
             normalization_warnings.append(warning)
+        subsite_gap = _anatomical_subsite_staging_context_gap(case)
+        if subsite_gap:
+            warning = (
+                "Staging interpretation is not validated because "
+                + subsite_gap
+                + " is missing or unresolved. Preserve the recorded token; do not infer compatibility or stage."
+            )
+            staging_context_warnings.append(warning)
+            normalization_warnings.append(warning)
     if (
         case.performance_status not in (None, "")
         and case.performance_status_scale in (None, "")
@@ -295,19 +373,27 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
         "clinical_field_registry_sha256": clinical_field_registry_sha256(),
         "case_snapshot": model_snapshot,
         "case_snapshot_redacted_conflicting_fields": redacted_conflicting_fields,
+        "case_snapshot_redacted_invalid_fields": redacted_invalid_fields,
         "case_snapshot_projection_note": (
-            "Model-facing projection only. Conflicting flat field values are redacted; "
-            "source-specific conflict candidates remain available. The persisted immutable case snapshot is unchanged."
+            "Model-facing projection only. Conflicting flat values and INVALID raw values are redacted; "
+            "source-specific conflict candidates remain available. INVALID source excerpts are withheld while "
+            "source references and original excerpt hashes remain available. The persisted immutable case "
+            "snapshot is unchanged, and the full audit provenance is retained."
         ),
         "canonical_field_values": canonical_field_values,
         "field_status": field_status,
         "tnm_normalization_warnings": normalization_warnings,
         "staging_context_warnings": staging_context_warnings,
-        "source_integrity_warnings": _source_laterality_integrity_warnings(case.case_summary),
+        "source_integrity_warnings": (
+            _source_laterality_integrity_warnings(case.case_summary)
+            if case_summary_state in (None, "PRESENT") else []
+        ),
         "interpretation_rules": [
             "The v2 canonical field registry is immutable; field IDs and meanings must not be renamed or repurposed.",
             "Registry constants standardise identifiers and semantics; they do not guarantee model adherence or prevent every hallucination.",
             "UNKNOWN, NOT_REPORTED, NOT_ASSESSED, PENDING, DECLINED and NOT_APPLICABLE are distinct states and are never normal/negative findings.",
+            "INVALID means a supplied raw value failed validation; preserve it for audit, but do not treat it as a valid clinical fact, use it for canonical comparison, or rely on it to support a conclusion.",
+            "An INVALID or CONFLICTING case_summary is preserved only as raw audit material and cannot support a generated clinical fact; use independently PRESENT fields and their provenance instead.",
             "CONFIRMED_ABSENT requires explicit source provenance; an empty or omitted field is not a confirmed absent or negative finding.",
             "CONFLICTING fields retain all source-specific candidate values and remain unresolved; do not select or average a source.",
             "The raw case snapshot and source excerpts must be preserved; canonical comparison values are analysis-only and do not overwrite the source.",
@@ -396,18 +482,31 @@ def case_summary_has_attributed_opinions(case_summary: str) -> bool:
 
 
 def build_source_case_facts(case: SyntheticCase) -> list[str]:
-    """Create the factual register on the server; model-generated facts are not trusted."""
-    facts = [
-        "User-provided case summary (verbatim; clinical interpretation is not independently confirmed): " + case.case_summary
-    ]
+    """Create a source-fact register without promoting invalid or unresolved values."""
+    facts: list[str] = []
+    summary_state = case.clinical_field_states.get("case_summary")
+    if summary_state in (None, "PRESENT"):
+        facts.append(
+            "User-provided case summary (verbatim; clinical interpretation is not independently confirmed): "
+            + case.case_summary
+        )
+
     for field, label in _SINGLE_FIELDS.items():
+        state = case.clinical_field_states.get(field)
         value = getattr(case, field)
+        if state not in (None, "PRESENT"):
+            continue
         if value is not None and value != "":
             facts.append(f"Structured case field — {label}: {value}")
+
     for field, label in _LIST_FIELDS.items():
+        state = case.clinical_field_states.get(field)
         values = getattr(case, field) or []
+        if state not in (None, "PRESENT"):
+            continue
         if values:
             facts.append(f"Structured case field — {label}: " + "; ".join(values))
+
     facts.append("Data-status rule: empty or missing structured fields are not reported, not confirmed negative.")
     return facts[:25]
 
@@ -489,6 +588,44 @@ def _collapse_horizontal_whitespace(text: str) -> str:
             in_horizontal_run = False
     return "".join(output)
 
+
+def _anatomical_subsite_staging_context_gap(case: SyntheticCase) -> str | None:
+    """Return a staging-context gap for missing/unresolved subsite without free-text fallback."""
+    state = case.clinical_field_states.get("anatomical_subsite")
+    value = case.anatomical_subsite
+
+    if state == "NOT_APPLICABLE" and value in (None, ""):
+        gap = None
+    elif state in (None, "PRESENT") and value not in (None, ""):
+        gap = None
+    elif state == "NOT_APPLICABLE":
+        gap = "anatomical subsite (NOT_APPLICABLE with a populated value)"
+    elif state is None:
+        gap = "anatomical subsite"
+    else:
+        gap = f"anatomical subsite ({state})"
+
+    # Explicit field-specific unresolved statements remain gaps even when a
+    # structured value is present. Trust this list only while its own state is
+    # PRESENT or legacy-unannotated, matching the post-generation audit.
+    if case.clinical_field_states.get("known_unknowns") in (None, "PRESENT"):
+        field_pattern = re.compile(r"\b(?:anatomical\s+)?subsite\b", re.IGNORECASE)
+        unresolved_pattern = re.compile(
+            r"(?<!not )\bunknown\b|\b(?:pending|unresolved|not\s+(?:reported|confirmed|verified|"
+            r"established|documented|assessed|available|supplied|provided|determined|recorded)|"
+            r"has\s+not\s+been\s+(?:reported|confirmed|verified|established|documented|assessed|determined)|"
+            r"have\s+not\s+been\s+(?:reported|confirmed|verified|established|documented|assessed|determined)|"
+            r"remains?\s+(?:unknown|unresolved|unconfirmed|unverified|pending)|"
+            r"not\s+yet\s+(?:known|confirmed|verified|available|assessed))\b",
+            re.IGNORECASE,
+        )
+        for statement in case.known_unknowns or []:
+            if not isinstance(statement, str):
+                continue
+            for clause in _CLAUSE_BOUNDARY.split(_collapse_horizontal_whitespace(statement)):
+                if field_pattern.search(clause) and unresolved_pattern.search(clause):
+                    return "anatomical subsite (unresolved in known_unknowns)"
+    return gap
 
 
 def _unqualified_matches(
@@ -1003,8 +1140,13 @@ def _unsupported_prerequisite_status_matches(
 def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[str, Any]) -> list[str]:
     """Flag generated assertions that lack a corresponding structured source field."""
     text = " ".join(_flatten_strings(generated_payload))
-    flags: list[str] = _source_laterality_integrity_warnings(case.case_summary)
-    source_text = case.case_summary.casefold()
+    case_summary_text = (
+        case.case_summary
+        if case.clinical_field_states.get("case_summary") in (None, "PRESENT")
+        else ""
+    )
+    flags: list[str] = _source_laterality_integrity_warnings(case_summary_text)
+    source_text = case_summary_text.casefold()
 
     def field_state(field_id: str) -> str | None:
         return case.clinical_field_states.get(field_id)
@@ -1018,13 +1160,304 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             for source in case.clinical_field_provenance.get(field_id, [])
         )
 
+    # Map only explicit, field-specific unresolved statements. This is a
+    # deterministic lexical safeguard, not a clinical interpretation engine.
+    # A qualifier for one field must never suppress evidence for another.
+    known_unknown_field_aliases: dict[str, tuple[str, ...]] = {
+        "clinical_t_stage": (r"clinical\s+T(?:\s+component|\s+stage)?",),
+        "clinical_n_stage": (r"clinical\s+N(?:\s+component|\s+stage)?",),
+        "clinical_m_stage": (r"clinical\s+M(?:\s+component|\s+stage)?",),
+        "pathological_t_stage": (r"pathological\s+T(?:\s+component|\s+stage)?", r"histopathological\s+T(?:\s+component|\s+stage)?"),
+        "pathological_n_stage": (r"pathological\s+N(?:\s+component|\s+stage)?", r"histopathological\s+N(?:\s+component|\s+stage)?"),
+        "pathological_m_stage": (r"pathological\s+M(?:\s+component|\s+stage)?", r"histopathological\s+M(?:\s+component|\s+stage)?"),
+        "stage_group": (r"(?<!clinical )(?<!pathological )stage\s+group", r"overall\s+stage"),
+        "clinical_stage_group": (r"clinical\s+stage\s+group", r"clinical\s+stage"),
+        "pathological_stage_group": (r"pathological\s+stage\s+group", r"pathological\s+stage"),
+        "staging_edition": (r"staging\s+edition", r"AJCC\s+edition", r"UICC\s+edition"),
+        "staging_system": (r"staging\s+system",),
+        "primary_site": (r"primary\s+site", r"site\s+of\s+(?:the\s+)?primary"),
+        "anatomical_subsite": (r"anatomical\s+subsite",),
+        "laterality": (r"laterality", r"primary\s+(?:tumou?r|lesion)\s+side"),
+        "age_years": (r"\b(?:patient\s+)?age(?:\s+in\s+years)?\b",),
+        "sex_at_birth": (r"\bsex\s+at\s+birth\b", r"\bbirth\s+sex\b"),
+        "diagnosis_date": (r"\bdiagnosis\s+date\b", r"\bdate\s+of\s+diagnosis\b"),
+        "histology": (r"\bhistology\b", r"\bhistological\s+diagnosis\b"),
+        "histological_grade": (r"\bhistological\s+grade\b", r"\btumou?r\s+grade\b"),
+        "performance_status": (r"\bperformance\s+status(?!\s+scale)\b",),
+        "performance_status_scale": (r"\bperformance\s+status\s+scale\b", r"\bperformance\s+status\s+scoring\s+scale\b"),
+        "family_history": (r"\bfamily(?:\s+medical)?\s+history\b",),
+        "family_caregiver_context": (
+            r"\bfamily\s*(?:/|and)\s*caregiver\s+(?:context|arrangements?|support)\b",
+            r"\bfamily\s+caregiver\s+(?:context|arrangements?|support)\b",
+            r"\bcaregiver\s+(?:availability|support|arrangements?|context)\b",
+            r"\bfamily\s+support\b",
+        ),
+        "current_medications": (r"\bcurrent\s+medications?\b", r"\bmedication\s+list\b"),
+        "known_allergies": (r"\bknown\s+allerg(?:y|ies)\b", r"\ballergy\s+history\b"),
+        "prior_treatment": (r"\bprior\s+treatment\b", r"\bprevious\s+treatment\b", r"\btreatment\s+history\b"),
+        "relevant_investigations": (
+            r"\brelevant\s+investigations?\b",
+            r"\binvestigation\s+(?:results?|findings?|history)\b",
+        ),
+        "investigation_records": (
+            r"\b(?:typed\s+)?investigation\s+records?\b",
+            r"\binvestigation\s+record\s+(?:entries|details)\b",
+        ),
+        "patient_goals": (
+            r"\bpatient(?:['’]s)?\s+goals?\b",
+            r"\bpatient[- ]stated\s+goals?\b",
+        ),
+        "patient_preferences": (
+            r"\bpatient(?:['’]s)?\s+preferences?\b",
+            r"\bpreferences?\s+expressed\s+by\s+the\s+patient\b",
+        ),
+        "social_context": (
+            r"\bsocial\s+context\b",
+            r"\bsocial\s+history\b",
+            r"\bliving\s+(?:arrangement|situation)\b",
+        ),
+        "resource_context": (
+            r"\bresource\s+context\b",
+            r"\bresource\s+and\s+access\s+context\b",
+        ),
+        "relevant_comorbidities": (r"relevant\s+comorbidit(?:y|ies)\s+history", r"comorbidit(?:y|ies)\s+history", r"medical\s+history"),
+        "patient_willingness": (r"patient\s+willingness", r"patient\s+preference(?:s)?", r"patient\s+decision", r"willingness\s+to\s+(?:undergo|accept|receive)\s+treatment"),
+    }
+    unresolved_statement_pattern = re.compile(
+        r"(?<!not )\bunknown\b|\b(?:pending|unresolved|not\s+(?:reported|confirmed|verified|"
+        r"established|documented|assessed|available|supplied|provided|determined|recorded)|"
+        r"has\s+not\s+been\s+(?:reported|confirmed|verified|established|documented|assessed|determined)|"
+        r"have\s+not\s+been\s+(?:reported|confirmed|verified|established|documented|assessed|determined)|"
+        r"remains?\s+(?:unknown|unresolved|unconfirmed|unverified|pending)|"
+        r"not\s+yet\s+(?:known|confirmed|verified|available|assessed))\b",
+        re.IGNORECASE,
+    )
+
+    def known_unknown_blocks_field(field_id: str) -> bool:
+        # The list is reliable gap evidence only while its own canonical field
+        # state is PRESENT (or unannotated legacy input). Fail closed for
+        # UNKNOWN/CONFLICTING/etc., even if a corrupted in-memory object carries
+        # stale list contents that bypassed SyntheticCase validation.
+        if field_state("known_unknowns") not in (None, "PRESENT"):
+            return False
+        aliases = known_unknown_field_aliases.get(field_id, ())
+        if not aliases:
+            return False
+        field_pattern = re.compile(r"(?:" + "|".join(aliases) + r")", re.IGNORECASE)
+        for statement in case.known_unknowns or []:
+            if not isinstance(statement, str):
+                continue
+            # Evaluate each clause independently. "not unknown" is not an
+            # unresolved marker and cannot trigger this mapping.
+            for clause in _CLAUSE_BOUNDARY.split(_collapse_horizontal_whitespace(statement)):
+                if field_pattern.search(clause) and unresolved_statement_pattern.search(clause):
+                    return True
+        return False
+
     def list_field_source(field_id: str, values: list[str]) -> str:
         state = field_state(field_id)
         if state == "CONFIRMED_ABSENT":
             return field_provenance_text(field_id)
         if state in (None, "PRESENT"):
-            return "\n".join([case.case_summary, *values])
+            # A populated structured list cannot be overridden by a negative
+            # statement in the free-text summary. Only an empty, unclassified
+            # list may use an explicit summary statement as absence evidence.
+            return "\n".join(values) if values else case_summary_text
         return ""
+
+    def positive_list_field_source(
+        field_id: str,
+        values: list[str],
+        templates: tuple[str, ...],
+    ) -> str:
+        """Build positive-claim support without bypassing an explicit field state."""
+        state = field_state(field_id)
+        if state == "CONFIRMED_ABSENT":
+            # Provenance for confirmed absence can support a negative claim,
+            # never a positive patient-history/social/resource assertion.
+            return ""
+        if state not in (None, "PRESENT") or known_unknown_blocks_field(field_id):
+            return ""
+        if not values:
+            return case_summary_text if state is None else ""
+        source_parts = list(values)
+        for raw_value in values:
+            value = raw_value.strip()
+            # Preserve the supplied value; these are analysis-only phrasing
+            # variants so a role can restate the same documented list item.
+            for template in templates:
+                source_parts.append(template.format(value=value))
+        return "\n".join(source_parts)
+
+    def positive_list_field_reason(field_id: str, values: list[str]) -> str:
+        state = field_state(field_id)
+        if known_unknown_blocks_field(field_id):
+            return f"{field_id} is explicitly unresolved in known_unknowns; case-summary fallback cannot support a positive finding."
+        if state == "CONFLICTING":
+            return f"{field_id} has unresolved conflicting source values; no single positive finding may be selected."
+        if state == "CONFIRMED_ABSENT":
+            return f"{field_id} is CONFIRMED_ABSENT and its source provenance does not support a positive finding."
+        if state not in (None, "PRESENT"):
+            return f"{field_id} is marked {state}; that state cannot support a positive assertion or permit summary fallback."
+        if values:
+            return f"the generated assertion does not match the PRESENT structured {field_id} value(s)."
+        return f"{field_id} has no matching structured value or permitted verbatim case-summary assertion."
+
+    laterality_claim_pattern = re.compile(
+        r"\b(?:left|right|bilateral|midline)(?:[- ]sided)?(?:\s+[\w-]+){0,3}\s+"
+        r"(?:primary|tumou?r|lesion|mass|growth|cancer|carcinoma|nodule|neoplasm|site)\b|"
+        r"\b(?:primary|tumou?r|lesion|mass|growth|cancer|carcinoma|nodule|neoplasm|site)\b"
+        r"[^.!?;\n]{0,80}\b(?:left|right|bilateral|midline)(?:[- ]sided)?\b|"
+        r"\b(?:non[- ]lateralized|not lateralized)(?:\s+[\w-]+){0,3}\s+"
+        r"(?:primary|tumou?r|lesion|mass|growth|cancer|carcinoma|nodule|neoplasm|site)\b|"
+        r"\b(?:primary|tumou?r|lesion|mass|growth|cancer|carcinoma|nodule|neoplasm|site)\b"
+        r"[^.!?;\n]{0,80}\b(?:non[- ]lateralized|not lateralized)\b",
+        re.IGNORECASE,
+    )
+
+    def laterality_values(value: str) -> set[str]:
+        values: set[str] = set()
+        for statement in _unqualified_matches(laterality_claim_pattern, value):
+            if re.search(r"\b(?:non[- ]lateralized|not lateralized)\b", statement, re.IGNORECASE):
+                values.add("NOT_LATERALIZED")
+            else:
+                for side in ("left", "right", "bilateral", "midline"):
+                    if re.search(
+                        r"\b" + side + r"(?:[- ]sided)?\b",
+                        statement,
+                        re.IGNORECASE,
+                    ):
+                        values.add(side.upper())
+        return values
+
+    laterality_state = field_state("laterality")
+    laterality_gap = known_unknown_blocks_field("laterality")
+    if laterality_gap:
+        supported_laterality = set()
+    elif case.laterality is not None and field_assertable("laterality"):
+        supported_laterality = {case.laterality}
+    elif laterality_state is None:
+        supported_laterality = laterality_values(case_summary_text)
+    else:
+        supported_laterality = set()
+
+    generated_laterality = laterality_values(text)
+    unsupported_laterality = sorted(generated_laterality - supported_laterality)
+    if unsupported_laterality:
+        claims = ", ".join(unsupported_laterality[:3])
+        if laterality_gap:
+            reason = "laterality is explicitly unresolved in known_unknowns; neither its structured value nor case-summary fallback may support a selected side"
+        elif laterality_state == "CONFLICTING":
+            reason = "laterality has conflicting source values; no single side may be selected"
+        elif laterality_state not in (None, "PRESENT"):
+            reason = f"laterality is marked {laterality_state} and cannot support a selected side"
+        elif case.laterality is not None:
+            reason = f"the generated side conflicts with structured laterality={case.laterality}"
+        else:
+            reason = "laterality is not supplied and the generated side is not explicitly supported by the verbatim case summary"
+        flags.append(
+            f"Generated narrative asserts laterality value(s) {claims}, but {reason}."
+        )
+
+    primary_site_claim_pattern = re.compile(
+        r"\bprimary\s+(?:anatomical\s+)?site\s*(?:is|:|=)\s*[^.!?;,\n]{1,100}",
+        re.IGNORECASE,
+    )
+    primary_site_value_pattern = re.compile(
+        r"\bprimary\s+(?:anatomical\s+)?site\s*(?:is|:|=)\s*(.+)$",
+        re.IGNORECASE,
+    )
+    anatomical_subsite_claim_pattern = re.compile(
+        r"\b(?:anatomical\s+)?subsite\s*(?:is|:|=)\s*[^.!?;,\n]{1,100}",
+        re.IGNORECASE,
+    )
+    anatomical_subsite_value_pattern = re.compile(
+        r"\b(?:anatomical\s+)?subsite\s*(?:is|:|=)\s*(.+)$",
+        re.IGNORECASE,
+    )
+
+    def normalise_site_value(value: str) -> str:
+        normalised = re.sub(r"[^a-z0-9]+", " ", value.casefold()).strip()
+        tokens = normalised.split()
+        while tokens and tokens[0] in {"the", "a", "an"}:
+            tokens.pop(0)
+        if tokens and tokens[0] == "ca":
+            tokens.pop(0)
+        elif tokens and tokens[0] in {"cancer", "carcinoma", "malignancy"}:
+            tokens.pop(0)
+            if tokens and tokens[0] == "of":
+                tokens.pop(0)
+            while tokens and tokens[0] in {"the", "a", "an"}:
+                tokens.pop(0)
+        return " ".join(tokens)
+
+    def asserted_site_values(
+        value: str,
+        claim_pattern: re.Pattern[str],
+        value_pattern: re.Pattern[str],
+    ) -> set[str]:
+        values: set[str] = set()
+        for statement in _unqualified_matches(claim_pattern, value):
+            match = value_pattern.search(statement)
+            if match:
+                normalised = normalise_site_value(match.group(1))
+                if normalised:
+                    values.add(normalised)
+        return values
+
+    for field_id, label, claim_pattern, value_pattern in (
+        (
+            "primary_site",
+            "primary_site",
+            primary_site_claim_pattern,
+            primary_site_value_pattern,
+        ),
+        (
+            "anatomical_subsite",
+            "anatomical_subsite",
+            anatomical_subsite_claim_pattern,
+            anatomical_subsite_value_pattern,
+        ),
+    ):
+        state = field_state(field_id)
+        structured_value = getattr(case, field_id)
+        unresolved_gap = known_unknown_blocks_field(field_id)
+        if unresolved_gap:
+            supported_values = set()
+        elif structured_value not in (None, "") and field_assertable(field_id):
+            supported_values = {normalise_site_value(str(structured_value))}
+        elif state is None:
+            supported_values = asserted_site_values(
+                case_summary_text, claim_pattern, value_pattern
+            )
+        else:
+            supported_values = set()
+
+        generated_values = asserted_site_values(text, claim_pattern, value_pattern)
+        unsupported_values = sorted(generated_values - supported_values)
+        if not unsupported_values:
+            continue
+
+        claims = "; ".join(unsupported_values[:3])
+        if unresolved_gap:
+            reason = (
+                f"{field_id} is explicitly unresolved in known_unknowns; "
+                "neither its structured value nor case-summary fallback may support a selected anatomical value"
+            )
+        elif state == "CONFLICTING":
+            reason = f"{label} has conflicting source values and no single value may be selected"
+        elif state not in (None, "PRESENT"):
+            reason = f"{label} is marked {state} and cannot support a selected anatomical value"
+        elif structured_value not in (None, ""):
+            reason = f"the generated value conflicts with structured {label}={structured_value}"
+        else:
+            reason = (
+                f"{label} is not supplied and the generated value is not explicitly "
+                "supported by the verbatim case summary"
+            )
+        flags.append(
+            f"Generated narrative asserts {label} value(s) {claims}, but {reason}."
+        )
 
     # Compare generated stage components with the exact structured value when
     # present; otherwise compare with the verbatim case summary. A supplied
@@ -1037,7 +1470,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     ):
         structured_value = getattr(case, field)
         explicit_state = case.clinical_field_states.get(field)
-        if explicit_state == "CONFLICTING":
+        if explicit_state == "CONFLICTING" or known_unknown_blocks_field(field):
             supported_values = set()
         elif structured_value not in (None, "") and explicit_state in (None, "PRESENT"):
             try:
@@ -1045,23 +1478,44 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
                 supported_values = _tnm_component_values(canonical_structured, component)
             except ValueError:
                 supported_values = set()
-        elif explicit_state is not None:
+        elif explicit_state is not None or known_unknown_blocks_field(field):
             supported_values = set()
         else:
-            supported_values = _tnm_component_values(case.case_summary, component)
+            supported_values = _tnm_component_values(case_summary_text, component)
         generated_values = _tnm_component_values(text, component)
         unsupported_values = sorted(generated_values - supported_values)
         if unsupported_values:
-            if structured_value not in (None, ""):
+            unsupported_list = ", ".join(unsupported_values[:4])
+            if known_unknown_blocks_field(field):
+                flags.append(
+                    f"Generated narrative contains {component}-stage value(s) {unsupported_list}, "
+                    f"but {label} is explicitly unresolved in known_unknowns; structured and case-summary values cannot support this assertion."
+                )
+            elif explicit_state == "INVALID":
+                flags.append(
+                    f"Generated narrative contains {component}-stage value(s) {unsupported_list}, "
+                    f"but {label} is marked INVALID; its preserved raw value cannot support a clinical staging assertion."
+                )
+            elif explicit_state == "CONFLICTING":
+                flags.append(
+                    f"Generated narrative contains {component}-stage value(s) {unsupported_list}, "
+                    f"but {label} has unresolved conflicting source values; no single value may be selected."
+                )
+            elif explicit_state is not None and explicit_state != "PRESENT":
+                flags.append(
+                    f"Generated narrative contains {component}-stage value(s) {unsupported_list}, "
+                    f"but {label} is marked {explicit_state}; that state cannot support a selected clinical staging assertion or permit case-summary fallback."
+                )
+            elif structured_value not in (None, ""):
                 flags.append(
                     f"Generated narrative contains {component}-stage value(s) "
-                    + ", ".join(unsupported_values[:4])
+                    + unsupported_list
                     + f", which conflict with structured {label}={structured_value!s}."
                 )
             else:
                 flags.append(
                     f"Generated narrative contains {component}-stage value(s) "
-                    + ", ".join(unsupported_values[:4])
+                    + unsupported_list
                     + f", but {label} is not supplied and those values are not explicitly recorded in the verbatim case summary."
                 )
 
@@ -1075,7 +1529,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     ):
         structured_value = getattr(case, field)
         explicit_state = case.clinical_field_states.get(field)
-        if explicit_state == "CONFLICTING":
+        if explicit_state == "CONFLICTING" or known_unknown_blocks_field(field):
             supported_values = set()
         elif structured_value not in (None, "") and explicit_state in (None, "PRESENT"):
             try:
@@ -1085,22 +1539,44 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
                 )
             except ValueError:
                 supported_values = set()
-        elif explicit_state is not None:
+        elif explicit_state is not None or known_unknown_blocks_field(field):
             supported_values = set()
         else:
             supported_values = _tnm_component_values(
-                case.case_summary, component, allowed_prefixes=("P", "YP")
+                case_summary_text, component, allowed_prefixes=("P", "YP")
             )
         generated_values = _tnm_component_values(
             text, component, allowed_prefixes=("P", "YP")
         )
         unsupported_values = sorted(generated_values - supported_values)
         if unsupported_values:
-            flags.append(
-                f"Generated narrative contains unsupported pathological {component}-stage value(s) "
-                + ", ".join(unsupported_values[:4])
-                + f"; {field} is absent or does not support those exact pathological values."
-            )
+            unsupported_list = ", ".join(unsupported_values[:4])
+            if known_unknown_blocks_field(field):
+                flags.append(
+                    f"Generated narrative contains unsupported pathological {component}-stage value(s) "
+                    f"{unsupported_list}; {field} is explicitly unresolved in known_unknowns and cannot support this assertion."
+                )
+            elif explicit_state == "INVALID":
+                flags.append(
+                    f"Generated narrative contains unsupported pathological {component}-stage value(s) "
+                    f"{unsupported_list}; {field} is marked INVALID and its raw value cannot support a pathological staging assertion."
+                )
+            elif explicit_state == "CONFLICTING":
+                flags.append(
+                    f"Generated narrative contains unsupported pathological {component}-stage value(s) "
+                    f"{unsupported_list}; {field} has unresolved conflicting source values and no single value may be selected."
+                )
+            elif explicit_state is not None:
+                flags.append(
+                    f"Generated narrative contains unsupported pathological {component}-stage value(s) "
+                    f"{unsupported_list}; {field} is marked {explicit_state} and that state cannot support a selected pathological staging assertion or permit case-summary fallback."
+                )
+            else:
+                flags.append(
+                    f"Generated narrative contains unsupported pathological {component}-stage value(s) "
+                    + unsupported_list
+                    + f"; {field} is not supplied and those exact pathological values are not explicitly recorded in the verbatim case summary."
+                )
 
     # Explicit age assertions are compared with structured age when present,
     # otherwise with the exact age stated in the verbatim source summary.
@@ -1121,15 +1597,20 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         }
 
     age_state = field_state("age_years")
+    age_gap = known_unknown_blocks_field("age_years")
     supported_ages = (
-        {case.age_years}
+        set()
+        if age_gap
+        else {case.age_years}
         if case.age_years is not None and field_assertable("age_years")
-        else age_numbers(case.case_summary) if age_state is None
+        else age_numbers(case_summary_text) if age_state is None
         else set()
     )
     unsupported_ages = sorted(age_numbers(text) - supported_ages)
     if unsupported_ages:
-        if case.age_years is not None and field_assertable("age_years"):
+        if age_gap:
+            reason = "age_years is explicitly unresolved in known_unknowns; its structured value and case-summary fallback cannot support an age assertion."
+        elif case.age_years is not None and field_assertable("age_years"):
             reason = f"which conflict with structured age_years={case.age_years}."
         elif age_state == "CONFLICTING":
             reason = "but age_years has conflicting source values; no single age may be selected."
@@ -1142,25 +1623,94 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             + reason
         )
 
+    # Diagnosis dates are typed case facts. Audit only explicit ISO-date claims
+    # made about the diagnosis date; unrelated investigation/treatment dates are
+    # outside this field's scope.
+    diagnosis_date_pattern = re.compile(
+        r"\b(?:diagnosis\s+date|date\s+of\s+diagnosis)\s*"
+        r"(?:(?:is|was)\s*)?[:=]?\s*\d{4}-\d{2}-\d{2}\b|"
+        r"\bdiagnosed\s+(?:on|date\s+of)\s+\d{4}-\d{2}-\d{2}\b|"
+        r"\bdiagnosis\s+(?:was\s+)?(?:made|established|confirmed)\s+"
+        r"(?:on|at)\s+\d{4}-\d{2}-\d{2}\b",
+        re.IGNORECASE,
+    )
+
+    def diagnosis_date_values(value: str) -> set[str]:
+        return {
+            date_match.group(0)
+            for snippet in _unqualified_matches(diagnosis_date_pattern, value)
+            if (date_match := re.search(r"\b\d{4}-\d{2}-\d{2}\b", snippet))
+        }
+
+    diagnosis_date_state = field_state("diagnosis_date")
+    diagnosis_date_gap = known_unknown_blocks_field("diagnosis_date")
+    if diagnosis_date_gap:
+        supported_diagnosis_dates = set()
+    elif case.diagnosis_date is not None and field_assertable("diagnosis_date"):
+        supported_diagnosis_dates = {case.diagnosis_date.isoformat()}
+    elif diagnosis_date_state is None:
+        # The verbatim summary is a fallback only when no explicit state exists.
+        supported_diagnosis_dates = diagnosis_date_values(case_summary_text)
+    else:
+        supported_diagnosis_dates = set()
+
+    generated_diagnosis_date_snippets = _unqualified_matches(
+        diagnosis_date_pattern, text
+    )
+    unsupported_diagnosis_date_snippets = [
+        (snippet, date_match.group(0))
+        for snippet in generated_diagnosis_date_snippets
+        if (date_match := re.search(r"\b\d{4}-\d{2}-\d{2}\b", snippet))
+        and date_match.group(0) not in supported_diagnosis_dates
+    ]
+    if unsupported_diagnosis_date_snippets:
+        unsupported_dates = sorted({value for _snippet, value in unsupported_diagnosis_date_snippets})
+        if diagnosis_date_gap:
+            reason = "diagnosis_date is explicitly unresolved in known_unknowns; its structured value and case-summary fallback cannot support a date claim."
+        elif diagnosis_date_state == "CONFLICTING":
+            reason = "diagnosis_date has unresolved conflicting source values; no single date may be selected."
+        elif diagnosis_date_state not in (None, "PRESENT"):
+            reason = (
+                f"diagnosis_date is marked {diagnosis_date_state}; that state cannot support a selected diagnosis date."
+            )
+        elif case.diagnosis_date is not None and field_assertable("diagnosis_date"):
+            reason = f"the generated date conflicts with structured diagnosis_date={case.diagnosis_date.isoformat()}."
+        else:
+            reason = (
+                "diagnosis_date is not supplied as an assertable value or explicitly recorded in the verbatim case summary."
+            )
+        flags.append(
+            "Generated narrative asserts diagnosis_date value(s) ("
+            + ", ".join(unsupported_dates[:4])
+            + "), but "
+            + reason
+        )
+
     # Stage groups are audited by declared type. Pathological staging cannot
     # support a clinical stage-group assertion, or vice versa. An untyped legacy
     # stage_group supports only an untyped generated/source statement.
-    source_group_records = _stage_group_records(case.case_summary)
+    source_group_records = _stage_group_records(case_summary_text)
     generated_group_records = _stage_group_records(text)
     stage_sources = {
         "UNSPECIFIED": (
             case.stage_group
             if case.clinical_field_states.get("stage_group") in (None, "PRESENT")
+            and not known_unknown_blocks_field("stage_group")
+            and not known_unknown_blocks_field("staging_edition")
             else None
         ),
         "CLINICAL": (
             case.clinical_stage_group
             if case.clinical_field_states.get("clinical_stage_group") in (None, "PRESENT")
+            and not known_unknown_blocks_field("clinical_stage_group")
+            and not known_unknown_blocks_field("staging_edition")
             else None
         ),
         "PATHOLOGICAL": (
             case.pathological_stage_group
             if case.clinical_field_states.get("pathological_stage_group") in (None, "PRESENT")
+            and not known_unknown_blocks_field("pathological_stage_group")
+            and not known_unknown_blocks_field("staging_edition")
             else None
         ),
     }
@@ -1176,26 +1726,117 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     summary_group_keys = {
         kind: (
             {key for record_kind, key, _snippet in source_group_records if record_kind == kind}
-            if field_state(stage_group_field_by_kind[kind]) in (None, "PRESENT")
+            if (
+                field_state(stage_group_field_by_kind[kind]) in (None, "PRESENT")
+                and not known_unknown_blocks_field(stage_group_field_by_kind[kind])
+                and not known_unknown_blocks_field("staging_edition")
+            )
             else set()
         )
         for kind in ("UNSPECIFIED", "CLINICAL", "PATHOLOGICAL")
     }
     unsupported_stage_groups: list[str] = []
+    unsupported_stage_group_reasons: list[str] = []
     for generated_kind, generated_key, snippet in generated_group_records:
         supported = (
             structured_group_keys[generated_kind]
             | summary_group_keys[generated_kind]
         )
-        if not any(_stage_group_supported(generated_key, {source_key}) for source_key in supported):
-            unsupported_stage_groups.append(snippet)
+        if any(_stage_group_supported(generated_key, {source_key}) for source_key in supported):
+            continue
+
+        unsupported_stage_groups.append(snippet)
+        field_id = stage_group_field_by_kind[generated_kind]
+        state = field_state(field_id)
+        structured_value = getattr(case, field_id)
+
+        if known_unknown_blocks_field("staging_edition"):
+            reason = "staging_edition is explicitly unresolved in known_unknowns; a populated edition value cannot validate a stage-group claim."
+        elif known_unknown_blocks_field(field_id):
+            reason = f"{field_id} is explicitly unresolved in known_unknowns; its value and case-summary fallback cannot support a stage-group claim."
+        elif state == "INVALID":
+            reason = (
+                f"{field_id} is marked INVALID; its preserved raw value cannot support "
+                f"a {generated_kind.lower()} stage-group assertion."
+            )
+        elif state == "CONFLICTING":
+            reason = (
+                f"{field_id} has unresolved conflicting source values; all candidates "
+                "remain unselected and no single stage group may be asserted."
+            )
+        elif state not in (None, "PRESENT"):
+            reason = (
+                f"{field_id} is marked {state}; that state cannot support a selected "
+                f"{generated_kind.lower()} stage-group assertion or permit case-summary fallback."
+            )
+        elif structured_value not in (None, ""):
+            reason = (
+                f"the generated {generated_kind.lower()} group conflicts with "
+                f"structured {field_id}={structured_value!s}."
+            )
+        else:
+            other_typed_fields = [
+                other_field
+                for other_kind, other_field in stage_group_field_by_kind.items()
+                if other_kind != generated_kind
+                and (
+                    getattr(case, other_field) not in (None, "")
+                    or summary_group_keys[other_kind]
+                )
+            ]
+            other_source_note = (
+                " Other typed source(s) "
+                + ", ".join(other_typed_fields[:3])
+                + " cannot support this assertion."
+                if other_typed_fields
+                else ""
+            )
+            reason = (
+                f"{field_id} has no assertable structured value or matching "
+                f"{generated_kind.lower()} stage-group record in the verbatim case summary."
+                + other_source_note
+            )
+        unsupported_stage_group_reasons.append(reason)
+
     if unsupported_stage_groups:
         flags.append(
             "Generated narrative assigns a stage group ("
             + ", ".join(unsupported_stage_groups[:4])
             + "); this is an unsupported or type-conflicting stage group assertion and may conflict with structured stage_group. "
-            + "Clinical, pathological and untyped stage groups must be explicitly sourced separately."
+            + "Clinical, pathological and untyped stage groups must be explicitly sourced separately. "
+            + "Typed field audit: "
+            + " ".join(unsupported_stage_group_reasons[:4])
         )
+
+    if generated_group_records:
+        staging_context_gaps: list[str] = []
+        for field_id, label in (
+            ("primary_site", "primary site"),
+            ("anatomical_subsite", "anatomical subsite"),
+            ("staging_system", "staging system"),
+            ("staging_edition", "staging edition"),
+        ):
+            if field_id == "anatomical_subsite":
+                subsite_gap = _anatomical_subsite_staging_context_gap(case)
+                if subsite_gap:
+                    staging_context_gaps.append(subsite_gap)
+                continue
+            value = getattr(case, field_id)
+            state = field_state(field_id)
+            if value in (None, "") or not field_assertable(field_id) or known_unknown_blocks_field(field_id):
+                if known_unknown_blocks_field(field_id):
+                    staging_context_gaps.append(f"{label} (unresolved in known_unknowns)")
+                elif state not in (None, "PRESENT"):
+                    staging_context_gaps.append(f"{label} ({state})")
+                else:
+                    staging_context_gaps.append(label)
+        if staging_context_gaps:
+            flags.append(
+                "Generated narrative presents staging classification token(s) without assertable staging context: "
+                + ", ".join(staging_context_gaps)
+                + ". Preserve the recorded group token, but do not present it as a validated staging classification or infer site/system/edition compatibility."
+            )
+
     sex_pattern = re.compile(r"\b(?:male|female|man|woman|boy|girl)\b", re.IGNORECASE)
     generated_sex_terms = _unqualified_matches(sex_pattern, text)
 
@@ -1208,7 +1849,10 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         return None
 
     sex_state = field_state("sex_at_birth")
-    if case.sex_at_birth not in (None, "") and field_assertable("sex_at_birth"):
+    sex_gap = known_unknown_blocks_field("sex_at_birth")
+    if sex_gap:
+        source_sexes = set()
+    elif case.sex_at_birth not in (None, "") and field_assertable("sex_at_birth"):
         expected_sex = sex_category(str(case.sex_at_birth))
         source_sexes = {expected_sex} if expected_sex else set()
     elif sex_state is None:
@@ -1216,7 +1860,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             category
             for category in (
                 sex_category(term)
-                for term in _unqualified_matches(sex_pattern, case.case_summary)
+                for term in _unqualified_matches(sex_pattern, case_summary_text)
             )
             if category
         }
@@ -1227,7 +1871,9 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         if sex_category(term) not in source_sexes
     ]
     if unsupported_sex_terms:
-        if sex_state == "CONFLICTING":
+        if sex_gap:
+            reason = "sex_at_birth is explicitly unresolved in known_unknowns; its structured value and case-summary fallback cannot support a descriptor."
+        elif sex_state == "CONFLICTING":
             reason = "sex_at_birth has conflicting source values and no single descriptor may be selected."
         elif case.sex_at_birth not in (None, "") and field_assertable("sex_at_birth"):
             reason = f"these descriptors conflict with structured sex_at_birth={case.sex_at_birth!s}."
@@ -1238,6 +1884,224 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             + ", ".join(unsupported_sex_terms[:4])
             + "), which "
             + reason
+        )
+
+    # Positive history claims require field-specific evidence as well as the
+    # absence checks below. Explicit non-PRESENT states cannot be bypassed by
+    # repeating a matching phrase from the free-text case summary.
+    comorbidity_values = case.relevant_comorbidities or []
+    comorbidity_terms = {
+        "diabetes mellitus", "diabetes", "hypertension", "high blood pressure",
+        "hypotension", "asthma", "copd", "chronic obstructive pulmonary disease",
+        "chronic kidney disease", "ckd", "chronic renal disease",
+        "coronary artery disease", "cad", "ischemic heart disease",
+        "ischaemic heart disease", "heart failure", "congestive heart failure",
+        "myocardial infarction", "stroke", "cerebrovascular disease", "epilepsy",
+        "seizure disorder", "hiv", "tuberculosis", "hypothyroidism",
+        "hyperthyroidism", "rheumatoid arthritis", "obesity", "dyslipidaemia",
+        "dyslipidemia", "hyperlipidaemia", "hyperlipidemia", "depression",
+        "anxiety disorder", "cirrhosis", "chronic liver disease",
+    }
+    comorbidity_terms.update(value.strip() for value in comorbidity_values if value.strip())
+    comorbidity_alternation = "|".join(
+        re.escape(value)
+        for value in sorted(comorbidity_terms, key=len, reverse=True)
+    )
+    positive_comorbidity_pattern = re.compile(
+        r"\b(?:the\s+)?patient\s+"
+        r"(?:has|have|is known to have|was diagnosed with|has been diagnosed with|"
+        r"is diagnosed with|suffers from)\s+"
+        r"(?!(?:no|not|unknown|possible|suspected)\b)"
+        r"(?:(?:a|an)\s+)?(?:history of\s+)?(?:"
+        + comorbidity_alternation
+        + r")\b",
+        re.IGNORECASE,
+    )
+    comorbidity_positive_source = positive_list_field_source(
+        "relevant_comorbidities",
+        comorbidity_values,
+        (
+            "The patient has {value}.",
+            "The patient has a history of {value}.",
+            "The patient is known to have {value}.",
+            "The patient was diagnosed with {value}.",
+            "The patient suffers from {value}.",
+        ),
+    )
+    unsupported_positive_comorbidities = _unsupported_matches(
+        positive_comorbidity_pattern, text, comorbidity_positive_source
+    )
+    if unsupported_positive_comorbidities:
+        flags.append(
+            "Generated narrative asserts unsupported positive relevant_comorbidities finding(s) ("
+            + "; ".join(unsupported_positive_comorbidities[:3])
+            + "), but "
+            + positive_list_field_reason("relevant_comorbidities", comorbidity_values)
+        )
+
+    prior_treatment_values = case.prior_treatment or []
+    prior_treatment_terms = {
+        "radiotherapy", "radiation therapy", "chemotherapy", "chemoradiotherapy",
+        "chemoradiation", "surgery", "surgical resection", "operation",
+        "immunotherapy", "targeted therapy", "hormone therapy",
+        "hormonal therapy", "endocrine therapy", "ablation",
+        "transplantation", "stem cell transplant", "bone marrow transplant",
+    }
+    prior_treatment_terms.update(
+        re.sub(r"^(?:prior|previous)\s+", "", value.strip(), flags=re.IGNORECASE)
+        for value in prior_treatment_values if value.strip()
+    )
+    prior_treatment_alternation = "|".join(
+        re.escape(value)
+        for value in sorted(prior_treatment_terms, key=len, reverse=True)
+    )
+    positive_prior_treatment_pattern = re.compile(
+        r"\b(?:the\s+)?patient\s+"
+        r"(?:(?:has|had)\s+)?(?:(?:previously|prior to this)\s+)?"
+        r"(?:received|underwent|completed|was treated with|has been treated with|"
+        r"was given|has undergone)\s+(?:"
+        + prior_treatment_alternation
+        + r")\b",
+        re.IGNORECASE,
+    )
+    prior_treatment_positive_values = [
+        re.sub(r"^(?:prior|previous)\s+", "", value.strip(), flags=re.IGNORECASE)
+        for value in prior_treatment_values if value.strip()
+    ]
+    prior_treatment_positive_source = positive_list_field_source(
+        "prior_treatment",
+        prior_treatment_values,
+        tuple(
+            template
+            for _value in prior_treatment_positive_values
+            for template in (
+                "The patient previously received " + _value + ".",
+                "The patient received " + _value + ".",
+                "The patient underwent " + _value + ".",
+                "The patient completed " + _value + ".",
+                "The patient was treated with " + _value + ".",
+            )
+        ),
+    )
+    unsupported_positive_prior_treatment = _unsupported_matches(
+        positive_prior_treatment_pattern, text, prior_treatment_positive_source
+    )
+    if unsupported_positive_prior_treatment:
+        flags.append(
+            "Generated narrative asserts unsupported positive prior_treatment claim(s) ("
+            + "; ".join(unsupported_positive_prior_treatment[:3])
+            + "), but "
+            + positive_list_field_reason("prior_treatment", prior_treatment_values)
+        )
+
+    family_history_values = case.family_history or []
+    family_condition_terms = {
+        "cancer", "carcinoma", "malignancy", "tumour", "tumor", "lymphoma",
+        "leukaemia", "leukemia", "sarcoma", "melanoma", "breast cancer",
+        "ovarian cancer", "colorectal cancer", "prostate cancer", "lung cancer",
+        "diabetes", "heart disease", "stroke", "myocardial infarction",
+    }
+    family_condition_terms.update(value.strip() for value in family_history_values if value.strip())
+    family_condition_alternation = "|".join(
+        re.escape(value)
+        for value in sorted(family_condition_terms, key=len, reverse=True)
+    )
+    positive_family_history_pattern = re.compile(
+        r"\b(?:mother|father|sister|brother|daughter|son|wife|husband|spouse|"
+        r"partner|child|children|maternal aunt|maternal uncle|paternal aunt|"
+        r"paternal uncle|grandmother|grandfather|aunt|uncle|sibling)s?\b"
+        r"\s+(?:had|has|was diagnosed with|is diagnosed with|suffered from|"
+        r"was affected by|is affected by|died of|died from|with|:|-)\s+"
+        r"[^.!?;:\n]{0,60}(?:"
+        + family_condition_alternation
+        + r")\b|"
+        r"\b(?:the\s+)?patient\s+has\s+(?:a\s+)?family history of\s+"
+        r"[^.!?;:\n]{0,60}(?:"
+        + family_condition_alternation
+        + r")\b",
+        re.IGNORECASE,
+    )
+    unsupported_positive_family_history = _unsupported_matches(
+        positive_family_history_pattern,
+        text,
+        positive_list_field_source("family_history", family_history_values, ()),
+    )
+    if unsupported_positive_family_history:
+        flags.append(
+            "Generated narrative asserts unsupported positive family_history claim(s) ("
+            + "; ".join(unsupported_positive_family_history[:3])
+            + "), but "
+            + positive_list_field_reason("family_history", family_history_values)
+        )
+
+    allergy_values = case.known_allergies or []
+    allergy_terms = [
+        re.sub(r"^(?:allergy to|allergic to)\s+", "", value.strip(), flags=re.IGNORECASE)
+        for value in allergy_values if value.strip()
+    ]
+    allergy_terms = [
+        re.sub(r"\s+allerg(?:y|ies)$", "", value, flags=re.IGNORECASE)
+        for value in allergy_terms
+    ]
+    positive_allergy_pattern = re.compile(
+        r"\b(?:the\s+)?patient\s+(?:has|reports|is known to have)\s+"
+        r"(?!(?:no|not|unknown|possible|suspected)\b)"
+        r"(?:(?:a|an)\s+)?[^.!?;:\n]{1,80}\ballerg(?:y|ies)\b|"
+        r"\b(?:the\s+)?patient\s+is allergic to\s+[^.!?;:\n]{1,80}",
+        re.IGNORECASE,
+    )
+    allergy_positive_templates = tuple(
+        template
+        for value in allergy_terms
+        for template in (
+            "The patient has a " + value + " allergy.",
+            "The patient is allergic to " + value + ".",
+            "The patient reports a " + value + " allergy.",
+        )
+    )
+    unsupported_positive_allergies = _unsupported_matches(
+        positive_allergy_pattern,
+        text,
+        positive_list_field_source("known_allergies", allergy_values, allergy_positive_templates),
+    )
+    if unsupported_positive_allergies:
+        flags.append(
+            "Generated narrative asserts unsupported positive known_allergies claim(s) ("
+            + "; ".join(unsupported_positive_allergies[:3])
+            + "), but "
+            + positive_list_field_reason("known_allergies", allergy_values)
+        )
+
+    medication_values = case.current_medications or []
+    positive_medication_pattern = re.compile(
+        r"\b(?:the\s+)?patient\s+"
+        r"(?:(?:is|was)\s+)?(?:currently\s+)?"
+        r"(?:taking|takes|on|using|uses|receiving|has been prescribed|was prescribed)\s+"
+        r"(?!(?:no|not|unknown|possible|suspected)\b)"
+        r"[^.!?;:\n]{1,100}",
+        re.IGNORECASE,
+    )
+    medication_positive_templates = tuple(
+        template
+        for value in medication_values
+        for template in (
+            "The patient is currently taking " + value.strip() + ".",
+            "The patient takes " + value.strip() + ".",
+            "The patient is on " + value.strip() + ".",
+            "The patient has been prescribed " + value.strip() + ".",
+        )
+    )
+    unsupported_positive_medications = _unsupported_matches(
+        positive_medication_pattern,
+        text,
+        positive_list_field_source("current_medications", medication_values, medication_positive_templates),
+    )
+    if unsupported_positive_medications:
+        flags.append(
+            "Generated narrative asserts unsupported positive current_medications claim(s) ("
+            + "; ".join(unsupported_positive_medications[:3])
+            + "), but "
+            + positive_list_field_reason("current_medications", medication_values)
         )
 
     comorbidity_absence_pattern = re.compile(
@@ -1270,6 +2134,164 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             + "), but that absence is not explicitly supported by the supplied case."
         )
 
+    allergy_absence_pattern = re.compile(
+        r"\b(?:no (?:known )?(?:drug )?allergies|denies? (?:any )?(?:known )?(?:drug )?allergies)\b",
+        re.IGNORECASE,
+    )
+    allergy_source = list_field_source("known_allergies", case.known_allergies or [])
+    unsupported_allergy_absence = _unsupported_matches(
+        allergy_absence_pattern, text, allergy_source
+    )
+    if unsupported_allergy_absence:
+        flags.append(
+            "Generated narrative treats known allergies as absent ("
+            + ", ".join(unsupported_allergy_absence[:3])
+            + "), but that absence is not explicitly supported by the supplied case."
+        )
+
+    current_medication_absence_pattern = re.compile(
+        r"\b(?:no (?:current )?medications?|taking no (?:current )?medications?|"
+        r"not taking any (?:current )?medications?)\b",
+        re.IGNORECASE,
+    )
+    medication_source = list_field_source("current_medications", case.current_medications or [])
+    unsupported_medication_absence = _unsupported_matches(
+        current_medication_absence_pattern, text, medication_source
+    )
+    if unsupported_medication_absence:
+        flags.append(
+            "Generated narrative treats current medications as absent ("
+            + ", ".join(unsupported_medication_absence[:3])
+            + "), but that absence is not explicitly supported by the supplied case."
+        )
+
+    family_history_absence_pattern = re.compile(
+        r"\b(?:no (?:known )?family history(?: of [^.!?;\n]{1,100})?|"
+        r"negative family history(?: of [^.!?;\n]{1,100})?)\b",
+        re.IGNORECASE,
+    )
+    family_history_source = list_field_source("family_history", case.family_history or [])
+    unsupported_family_history_absence = _unsupported_matches(
+        family_history_absence_pattern, text, family_history_source
+    )
+    if unsupported_family_history_absence:
+        flags.append(
+            "Generated narrative treats family history as absent ("
+            + ", ".join(unsupported_family_history_absence[:3])
+            + "), but that absence is not explicitly supported by the supplied case."
+        )
+
+    family_caregiver_support_pattern = re.compile(
+        r"\b(?:family|family\s+members?|relatives?|caregivers?|carers?|daughter|son|"
+        r"spouse|partner|wife|husband|siblings?|children)\b"
+        r"[^.!?;:\n]{0,100}\b(?:support|care|assistance|available|unavailable|"
+        r"accompany|accompanied|provides?|providing|helps?|helping|present|involved)\b|"
+        r"\b(?:support|care|assistance)\b[^.!?;:\n]{0,100}\b"
+        r"(?:family|family\s+members?|relatives?|caregivers?|carers?|daughter|son|"
+        r"spouse|partner|wife|husband|siblings?|children)\b",
+        re.IGNORECASE,
+    )
+    family_caregiver_state = field_state("family_caregiver_context")
+    family_caregiver_gap = known_unknown_blocks_field("family_caregiver_context")
+    if family_caregiver_gap:
+        # A field-specific unresolved note takes precedence over a populated
+        # structured list or free-text summary for positive caregiver claims.
+        family_caregiver_source = ""
+    elif family_caregiver_state == "PRESENT" and case.family_caregiver_context:
+        family_caregiver_source = "\n".join(case.family_caregiver_context)
+    elif family_caregiver_state is None:
+        family_caregiver_source = (
+            "\n".join(case.family_caregiver_context)
+            if case.family_caregiver_context
+            else case_summary_text
+        )
+    else:
+        # Explicit non-PRESENT states, and inconsistent PRESENT-without-a-value,
+        # must not be bypassed by free-text summary fallback.
+        family_caregiver_source = ""
+
+    unsupported_family_caregiver_claims = _unsupported_matches(
+        family_caregiver_support_pattern, text, family_caregiver_source
+    )
+    if unsupported_family_caregiver_claims:
+        if family_caregiver_gap:
+            reason = (
+                "family_caregiver_context is explicitly unresolved in known_unknowns; "
+                "no positive family/caregiver assertion may be selected."
+            )
+        elif family_caregiver_state not in (None, "PRESENT"):
+            reason = (
+                f"family_caregiver_context is marked {family_caregiver_state}; "
+                "that state cannot support a selected family/caregiver assertion."
+            )
+        elif case.family_caregiver_context:
+            reason = "the generated assertion does not match the structured family/caregiver context."
+        else:
+            reason = (
+                "the assertion is not explicitly supported by structured family/caregiver context "
+                "or the verbatim case summary."
+            )
+        flags.append(
+            "Generated narrative asserts family_caregiver_context (family/caregiver support or availability) ("
+            + ", ".join(unsupported_family_caregiver_claims[:3])
+            + "), but "
+            + reason
+        )
+
+    social_context_values = case.social_context or []
+    social_context_pattern = re.compile(
+        r"\b(?:the\s+)?patient\s+(?:currently\s+)?"
+        r"(?:lives?|resides?)\s+(?:alone|with\s+[^.!?;\n]{1,80})|"
+        r"\b(?:the\s+)?patient\s+(?:has|receives?|gets?)\s+"
+        r"(?:documented\s+)?(?:family|social|caregiver)\s+(?:support|assistance)\b",
+        re.IGNORECASE,
+    )
+    unsupported_social_context = _unsupported_matches(
+        social_context_pattern,
+        text,
+        positive_list_field_source(
+            "social_context",
+            social_context_values,
+            ("The patient {value}.",),
+        ),
+    )
+    if unsupported_social_context:
+        flags.append(
+            "Generated narrative asserts unsupported social_context fact(s) ("
+            + "; ".join(unsupported_social_context[:3])
+            + "), but "
+            + positive_list_field_reason("social_context", social_context_values)
+        )
+
+    resource_context_values = case.resource_context or []
+    resource_context_pattern = re.compile(
+        r"\b(?:the\s+)?patient\s+"
+        r"(?:has|faces|reports|experiences|encounters)\s+(?!no\b)"
+        r"[^.!?;\n]{0,55}\b(?:financial|economic|transport(?:ation)?|travel|"
+        r"accommodation|housing|insurance|access|resource|logistic(?:al)?)\b"
+        r"[^.!?;\n]{0,55}\b(?:constraint|barrier|limitation|difficulty|"
+        r"hardship|issue|problem|obstacle)s?\b|"
+        r"\b(?:the\s+)?patient\s+(?:cannot|can't|is unable to)\s+"
+        r"afford\s+[^.!?;\n]{1,80}",
+        re.IGNORECASE,
+    )
+    unsupported_resource_context = _unsupported_matches(
+        resource_context_pattern,
+        text,
+        positive_list_field_source(
+            "resource_context",
+            resource_context_values,
+            ("The patient has {value}.",),
+        ),
+    )
+    if unsupported_resource_context:
+        flags.append(
+            "Generated narrative asserts unsupported resource_context constraint(s) ("
+            + "; ".join(unsupported_resource_context[:3])
+            + "), but "
+            + positive_list_field_reason("resource_context", resource_context_values)
+        )
+
     # High-specificity assertion checks. Questions and qualified uncertainty are not
     # treated as findings. Exact matching source snippets remain attributed to the
     # user-provided case summary rather than being relabelled as model inventions.
@@ -1281,6 +2303,8 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     )
     ps_state = field_state("performance_status")
     scale_state = field_state("performance_status_scale")
+    performance_gap = known_unknown_blocks_field("performance_status")
+    performance_scale_gap = known_unknown_blocks_field("performance_status_scale")
     embedded_scale = bool(
         case.performance_status
         and re.search(r"\b(?:ECOG|WHO|KPS|Karnofsky)\b", str(case.performance_status), re.IGNORECASE)
@@ -1289,21 +2313,29 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         (case.performance_status_scale not in (None, "") and scale_state in (None, "PRESENT"))
         or embedded_scale
     )
-    if case.performance_status not in (None, "") and field_assertable("performance_status") and scale_is_assertable:
+    if performance_gap or performance_scale_gap:
+        performance_source = ""
+    elif case.performance_status not in (None, "") and field_assertable("performance_status") and scale_is_assertable:
         performance_source = (
             str(case.performance_status)
             if embedded_scale
             else f"{case.performance_status_scale} {case.performance_status}"
         )
     elif ps_state is None and scale_state is None:
-        performance_source = case.case_summary
+        performance_source = case_summary_text
     else:
         performance_source = ""
     unsupported_performance = _unsupported_matches(
         performance_pattern, text, performance_source
     )
     if unsupported_performance:
-        if ps_state == "CONFLICTING" or scale_state == "CONFLICTING":
+        if performance_gap and performance_scale_gap:
+            reason = "performance_status and performance_status_scale are explicitly unresolved in known_unknowns; structured values and summary fallback cannot support a score."
+        elif performance_gap:
+            reason = "performance_status is explicitly unresolved in known_unknowns; its structured value and summary fallback cannot support a score."
+        elif performance_scale_gap:
+            reason = "performance_status_scale is explicitly unresolved in known_unknowns; the structured score cannot be interpreted without its scale."
+        elif ps_state == "CONFLICTING" or scale_state == "CONFLICTING":
             reason = "the performance-status value or scale has conflicting source values."
         elif case.performance_status not in (None, "") and field_assertable("performance_status") and not scale_is_assertable:
             reason = "the performance-status scale is absent or not assertable."
@@ -1327,7 +2359,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     supported_n_source = (
         str(case.clinical_n_stage)
         if case.clinical_n_stage not in (None, "") and n_state in (None, "PRESENT")
-        else case.case_summary if n_state is None else ""
+        else case_summary_text if n_state is None else ""
     )
     source_n_values = _tnm_component_values(supported_n_source, "N")
     source_explicitly_node_negative = bool(
@@ -1353,7 +2385,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     supported_m_source = (
         str(case.clinical_m_stage)
         if case.clinical_m_stage not in (None, "") and m_state in (None, "PRESENT")
-        else case.case_summary if m_state is None else ""
+        else case_summary_text if m_state is None else ""
     )
     source_m_values = _tnm_component_values(supported_m_source, "M")
     source_explicitly_no_metastases = bool(
@@ -1395,14 +2427,15 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
 
     histology_state = field_state("histology")
     pathology_summary_state = field_state("pathology_summary")
-    if histology_state == "CONFLICTING" or pathology_summary_state == "CONFLICTING":
+    histology_gap = known_unknown_blocks_field("histology")
+    if histology_gap or histology_state == "CONFLICTING" or pathology_summary_state == "CONFLICTING":
         histology_source = ""
     elif case.histology not in (None, "") and field_assertable("histology"):
         histology_source = str(case.histology)
     elif histology_state is None and case.pathology_summary not in (None, "") and field_assertable("pathology_summary"):
         histology_source = str(case.pathology_summary)
     elif histology_state is None and pathology_summary_state is None:
-        histology_source = case.case_summary
+        histology_source = case_summary_text
     else:
         histology_source = ""
     source_histologies = {
@@ -1415,14 +2448,75 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         if histology_key(item) not in source_histologies
     ]
     if unsupported_histologies:
+        if histology_gap:
+            histology_reason = "histology is explicitly unresolved in known_unknowns; structured histology, pathology-summary and case-summary fallback cannot support the diagnosis."
+        else:
+            histology_reason = "the diagnosis is not supported by the available structured histology/pathology field or verbatim case summary."
         flags.append(
             "Generated narrative asserts histological diagnosis(es) ("
             + ", ".join(unsupported_histologies[:3])
-            + "), which are not supported by the available structured histology/pathology field or verbatim case summary."
+            + "), but "
+            + histology_reason
+        )
+
+    histological_grade_pattern = re.compile(
+        r"\b(?:histological\s+)?grade\s*(?:G\s*)?[1-4]\b|\bG\s*[1-4]\b",
+        re.IGNORECASE,
+    )
+
+    def histological_grade_values(value: str) -> set[str]:
+        values: set[str] = set()
+        for statement in _unqualified_matches(histological_grade_pattern, value):
+            match = re.search(
+                r"\b(?:grade\s*(?:G\s*)?|G\s*)([1-4])\b",
+                statement,
+                re.IGNORECASE,
+            )
+            if match:
+                values.add(match.group(1))
+        return values
+
+    histological_grade_state = field_state("histological_grade")
+    pathology_summary_state = field_state("pathology_summary")
+    histological_grade_gap = known_unknown_blocks_field("histological_grade")
+    if histological_grade_gap:
+        supported_histological_grades = set()
+    elif histological_grade_state in (None, "PRESENT") and case.histological_grade not in (None, ""):
+        supported_histological_grades = histological_grade_values(str(case.histological_grade))
+    elif histological_grade_state is None:
+        grade_source_parts = [
+            case.pathology_summary
+            if pathology_summary_state in (None, "PRESENT") else "",
+            case_summary_text if pathology_summary_state is None else "",
+        ]
+        supported_histological_grades = histological_grade_values("\n".join(
+            part for part in grade_source_parts if part
+        ))
+    else:
+        supported_histological_grades = set()
+
+    generated_histological_grades = histological_grade_values(text)
+    unsupported_histological_grades = sorted(
+        generated_histological_grades - supported_histological_grades
+    )
+    if unsupported_histological_grades:
+        claims = ", ".join(f"G{grade}" for grade in unsupported_histological_grades[:3])
+        if histological_grade_gap:
+            reason = "histological_grade is explicitly unresolved in known_unknowns; structured and case-summary/pathology-summary values cannot support a grade."
+        elif histological_grade_state == "CONFLICTING":
+            reason = "histological_grade has conflicting source values and no single grade may be selected"
+        elif histological_grade_state not in (None, "PRESENT"):
+            reason = f"histological_grade is marked {histological_grade_state} and cannot support a selected grade"
+        elif case.histological_grade not in (None, ""):
+            reason = f"the generated grade conflicts with structured histological_grade={case.histological_grade}"
+        else:
+            reason = "the grade is not explicitly supported by the available pathology summary or assertable case summary"
+        flags.append(
+            f"Generated narrative asserts histological grade value(s) {claims}, but {reason}."
         )
 
     pathology_pattern = re.compile(
-        r"\b(?:p16|HPV|HER2|ER|PR|PD-L1|Ki-67)\s*(?:positive|negative|high|low|[+-])\b|\b(?:grade|G)\s*[1-4]\b|\b(?:lymphovascular|perineural) invasion\b|\b(?:positive|negative) margins?\b",
+        r"\b(?:p16|HPV|HER2|ER|PR|PD-L1|Ki-67)\s*(?:positive|negative|high|low|[+-])\b|\b(?:lymphovascular|perineural) invasion\b|\b(?:positive|negative) margins?\b",
         re.IGNORECASE,
     )
     pathology_summary_state = field_state("pathology_summary")
@@ -1430,7 +2524,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         item
         for item in (
             case.pathology_summary if pathology_summary_state in (None, "PRESENT") else "",
-            case.case_summary if pathology_summary_state is None else "",
+            case_summary_text if pathology_summary_state is None else "",
         )
         if item
     )
@@ -1445,18 +2539,27 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         )
 
     investigation_pattern = re.compile(
-        r"\b(?:CT|MRI|PET(?:[- ]CT)?|ultrasound|USG|X[- ]ray|radiograph|bone scan|colonoscopy|endoscopy|bronchoscopy|cystoscopy|biopsy)\s+(?:scan\s+)?(?:shows?|demonstrates?|reveals?|confirms?|identifies?|detected|reported)\s+[^.!?;\n]{1,100}",
+        r"\b(?:CT|MRI|PET(?:[- ]CT)?|ultrasound|USG|X[- ]ray|radiograph|bone scan|colonoscopy|endoscopy|bronchoscopy|cystoscopy|biopsy)\b"
+        r"(?:\s+(?:scan|chest|thorax|abdomen|pelvis|brain|head|neck|cervical|thoracic|lumbar|spine|whole[- ]body|skeletal|bone|liver|of|with|without|contrast)){0,4}"
+        r"\s+(?:shows?|demonstrates?|reveals?|confirms?|identifies?|detected|reported)\s+[^.!?;\n]{1,100}",
         re.IGNORECASE,
     )
     imaging_state = field_state("imaging_summary")
     investigations_state = field_state("relevant_investigations")
     records_state = field_state("investigation_records")
+    relevant_investigations_gap = known_unknown_blocks_field("relevant_investigations")
+    investigation_records_gap = known_unknown_blocks_field("investigation_records")
     investigation_parts: list[str] = []
+    noncompleted_record_statuses = sorted({
+        record.status
+        for record in case.investigation_records
+        if record.status != "COMPLETED"
+    })
     if imaging_state in (None, "PRESENT") and case.imaging_summary:
         investigation_parts.append(case.imaging_summary)
-    if investigations_state in (None, "PRESENT"):
+    if investigations_state in (None, "PRESENT") and not relevant_investigations_gap:
         investigation_parts.extend(case.relevant_investigations)
-    if records_state in (None, "PRESENT"):
+    if records_state in (None, "PRESENT") and not investigation_records_gap:
         investigation_parts.extend(
             " ".join(
                 part for part in (
@@ -1466,9 +2569,17 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
                 ) if part
             )
             for record in case.investigation_records
+            if record.status == "COMPLETED"
         )
-    if all(state in (None, "PRESENT") for state in (imaging_state, investigations_state, records_state)):
-        investigation_parts.append(case.case_summary)
+    if (
+        all(state in (None, "PRESENT") for state in (imaging_state, investigations_state, records_state))
+        and not relevant_investigations_gap
+        and not investigation_records_gap
+    ):
+        # The free-text summary is only a fallback for unclassified source
+        # fields. A matching field-specific unresolved note must not be
+        # bypassed by re-reading the same claim from the generic summary.
+        investigation_parts.append(case_summary_text)
     investigation_source = "\n".join(investigation_parts)
     unsupported_investigations = _unsupported_matches(
         investigation_pattern, text, investigation_source
@@ -1478,7 +2589,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     # This does not validate any additional biomarker, grade, margin, or stage claim;
     # those are checked independently by the pathology and TNM audits below/above.
     source_biopsy_statements = re.findall(
-        r"\bbiopsy\b[^.!?;\n]{1,140}", case.case_summary, re.IGNORECASE
+        r"\bbiopsy\b[^.!?;\n]{1,140}", case_summary_text, re.IGNORECASE
     )
     source_biopsy_histologies = {
         histology_key(item)
@@ -1501,10 +2612,41 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         if not biopsy_result_is_supported(item)
     ]
     if unsupported_investigations:
+        unresolved_investigation_fields = [
+            field_id
+            for field_id, is_unresolved in (
+                ("relevant_investigations", relevant_investigations_gap),
+                ("investigation_records", investigation_records_gap),
+            )
+            if is_unresolved
+        ]
+        investigation_reasons: list[str] = []
+        if unresolved_investigation_fields:
+            investigation_reasons.append(
+                ", ".join(unresolved_investigation_fields)
+                + " is explicitly unresolved in known_unknowns; no positive finding may rely on that source."
+            )
+        if records_state not in (None, "PRESENT"):
+            investigation_reasons.append(
+                f"investigation_records is marked {records_state}; that state cannot support a finding or permit summary fallback."
+            )
+        if noncompleted_record_statuses:
+            investigation_reasons.append(
+                "investigation_records contains non-COMPLETED record status(es) ("
+                + ", ".join(noncompleted_record_statuses)
+                + "); only COMPLETED records may support a finding."
+            )
+        if not investigation_reasons:
+            investigation_reasons.append(
+                "the claim is not supported by an assertable imaging summary, relevant investigation, "
+                "COMPLETED investigation record, or permitted verbatim case-summary source."
+            )
+        investigation_reason = " ".join(investigation_reasons)
         flags.append(
-            "Generated narrative asserts imaging/investigation result(s) ("
+            "Generated narrative asserts imaging/investigation result(s) / investigation_records finding(s) ("
             + "; ".join(unsupported_investigations[:2])
-            + "), which are not explicitly supported by the supplied imaging summary, relevant investigations, or verbatim case summary."
+            + "), but "
+            + investigation_reason
         )
 
     # Missing information alone does not establish that a treatment is unsafe,
@@ -1553,7 +2695,7 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
     treatment_suitability_matches = [
         item
         for item in _unsupported_matches(
-            treatment_suitability_pattern, text, case.case_summary
+            treatment_suitability_pattern, text, case_summary_text
         )
         if not conditional_suitability_marker.search(item)
     ]
@@ -1564,22 +2706,38 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
             + "); suitability cannot be established without explicit supporting case information."
         )
 
+    # Patient goals/preferences and willingness are distinct clinical fields.
+    # A goal or preference must never be used as evidence of willingness,
+    # acceptance or refusal of a specific treatment.
     preference_pattern = re.compile(
-        # Match an actual patient-attributed choice/act. The noun phrase
-        # "obtain patient consent" is a recommendation to elicit consent,
-        # not evidence that the patient has already consented.
-        r"\bpatient(?:'s)?\s+(?:prefers?|wishes?|wants?|chooses?|declines?|refuses?|agrees?|consents\b|has chosen|has consented|does not want|doesn't want)\b[^.!?;\n]{0,100}",
+        r"\bpatient(?:'s)?\s+(?:prefers?|wishes?|wants?|chooses?|has chosen|"
+        r"does not want|doesn't want)\b[^.!?;\n]{0,100}",
         re.IGNORECASE,
     )
     goals_state = field_state("patient_goals")
     preferences_state = field_state("patient_preferences")
+    goals_gap = known_unknown_blocks_field("patient_goals")
+    preferences_gap = known_unknown_blocks_field("patient_preferences")
     preference_sources: list[str] = []
-    if goals_state in (None, "PRESENT"):
+    # Goals and preferences are separate source fields. A matching unresolved
+    # note suppresses only its own structured field; it must not suppress the
+    # other field when that field independently supports the same statement.
+    if goals_state in (None, "PRESENT") and not goals_gap:
         preference_sources.extend(f"patient {goal}" for goal in (case.patient_goals or []))
-    if preferences_state in (None, "PRESENT"):
+    if preferences_state in (None, "PRESENT") and not preferences_gap:
         preference_sources.extend(f"patient {item}" for item in (case.patient_preferences or []))
-    if goals_state in (None, "PRESENT") and preferences_state in (None, "PRESENT"):
-        preference_sources.append(case.case_summary)
+
+    # A generic case-summary statement cannot resolve a matching known-unknown
+    # for either source field because the summary does not identify which field
+    # it is resolving.
+    if (
+        not preference_sources
+        and all(state in (None, "PRESENT") for state in (goals_state, preferences_state))
+        and not goals_gap
+        and not preferences_gap
+    ):
+        preference_sources.append(case_summary_text)
+
     preference_source_text = "\n".join(preference_sources)
     unsupported_preferences = _unsupported_matches(
         preference_pattern,
@@ -1587,10 +2745,191 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         preference_source_text,
     )
     if unsupported_preferences:
+        unresolved_preference_fields = [
+            field_id
+            for field_id, is_unresolved in (
+                ("patient_goals", goals_gap),
+                ("patient_preferences", preferences_gap),
+            )
+            if is_unresolved
+        ]
+        if unresolved_preference_fields:
+            preference_reason = (
+                ", ".join(unresolved_preference_fields)
+                + " is explicitly unresolved in known_unknowns; "
+                "neither that field nor generic case-summary fallback may support a positive goal/preference claim."
+            )
+        else:
+            preference_reason = (
+                "the statement is not explicitly supported by PRESENT structured patient_goals "
+                "or patient_preferences, or an assertable case summary."
+            )
         flags.append(
-            "Generated narrative attributes patient preference/decision statement(s) "
+            "Generated narrative attributes unsupported patient preference/decision or goal statement(s) ("
             + "; ".join(unsupported_preferences[:2])
-            + ", which are not explicitly supported by the verbatim case summary or structured patient_goals."
+            + "), but "
+            + preference_reason
+        )
+
+    # Direct willingness, agreement, acceptance and refusal claims are checked
+    # only against patient_willingness. Goals and preferences are not substitutes.
+    willingness_pattern = re.compile(
+        r"\bpatient(?:'s)?\s+"
+        r"(?:(?:is|is not|isn't|was|was not|wasn't|remains|has been|has not been|not)\s+)?"
+        r"(?:willing|unwilling|reluctant|ready)\s+[^.!?;\n]{1,100}|"
+        r"\bpatient(?:'s)?\s+(?:(?:has|had)\s+)?"
+        r"(?:agrees?|agreed|declines?|declined|refuses?|refused|accepts?|accepted)\s+"
+        r"(?:to\s+)?[^.!?;\n]{1,100}",
+        re.IGNORECASE,
+    )
+    known_unknowns_state = field_state("known_unknowns")
+    known_unknowns_text = (
+        "\n".join(case.known_unknowns)
+        if known_unknowns_state in (None, "PRESENT")
+        else ""
+    )
+    willingness_gap_pattern = re.compile(
+        r"\b(?:patient(?:'s)?\s+)?willingness\b[^.!?;\n]{0,100}"
+        r"\b(?:unknown|unclear|pending|awaiting(?:\s+confirmation)?|"
+        r"not\s+(?:yet\s+)?(?:been\s+)?(?:established|documented|reported|assessed|"
+        r"confirmed|provided|supplied|known))\b|"
+        r"\b(?:unknown|unclear|pending|awaiting(?:\s+confirmation)?|"
+        r"not\s+(?:yet\s+)?(?:been\s+)?(?:established|documented|reported|assessed|"
+        r"confirmed|provided|supplied|known))\b[^.!?;\n]{0,100}"
+        r"\b(?:patient(?:'s)?\s+)?willingness\b",
+        re.IGNORECASE,
+    )
+    willingness_gap_recorded = bool(willingness_gap_pattern.search(known_unknowns_text))
+    willingness_state = field_state("patient_willingness")
+    willingness_source_text = ""
+    if not willingness_gap_recorded and willingness_state in (None, "PRESENT"):
+        if case.patient_willingness:
+            willingness_source_text = f"patient {case.patient_willingness}"
+        elif willingness_state is None:
+            willingness_source_text = case_summary_text
+
+    unsupported_willingness = _unsupported_matches(
+        willingness_pattern,
+        text,
+        willingness_source_text,
+    )
+    if unsupported_willingness:
+        if willingness_gap_recorded:
+            willingness_reason = (
+                "known_unknowns explicitly records patient_willingness as unresolved; "
+                "the matching summary or structured statement conflicts with that gap and must not be selected."
+            )
+        elif willingness_state == "CONFLICTING":
+            willingness_reason = "patient_willingness has unresolved conflicting source values."
+        elif willingness_state not in (None, "PRESENT"):
+            willingness_reason = (
+                f"patient_willingness is marked {willingness_state}; "
+                "that state cannot support a willingness statement or permit summary fallback."
+            )
+        elif case.patient_willingness:
+            willingness_reason = (
+                "the generated willingness statement does not match the PRESENT structured patient_willingness value."
+            )
+        else:
+            willingness_reason = (
+                "patient_willingness has no explicit structured value or permitted verbatim case-summary statement."
+            )
+        flags.append(
+            "Generated narrative asserts unsupported patient preference/decision or patient_willingness statement(s) ("
+            + "; ".join(unsupported_willingness[:2])
+            + "), but "
+            + willingness_reason
+        )
+
+    treatment_consent_pattern = re.compile(
+        r"\bpatient(?:'s)?\s+(?:(?:has|had)\s+)?"
+        r"(?:consents?\s+to|consented\s+to|"
+        r"(?:gave|provided|granted)\s+(?:their\s+)?(?:informed\s+)?consent\s+to)\s+"
+        r"(?!participate\s+in\s+(?:this|the)\s+educational\s+(?:case|scenario|simulation)\b)"
+        r"[^.!?;\n]{1,100}",
+        re.IGNORECASE,
+    )
+    treatment_consent_gap_pattern = re.compile(
+        r"\b(?:treatment[- ]specific\s+informed|informed\s+treatment|treatment)\s+consent\b"
+        r"[^.!?;\n]{0,100}\b(?:unknown|unclear|pending|awaiting(?:\s+confirmation)?|"
+        r"not\s+(?:yet\s+)?(?:been\s+)?(?:established|documented|reported|asked|obtained|"
+        r"assessed|confirmed|provided|supplied|known))\b|"
+        r"\b(?:unknown|unclear|pending|awaiting(?:\s+confirmation)?|"
+        r"not\s+(?:yet\s+)?(?:been\s+)?(?:established|documented|reported|asked|obtained|"
+        r"assessed|confirmed|provided|supplied|known))\b[^.!?;\n]{0,100}"
+        r"\b(?:treatment[- ]specific\s+informed|informed\s+treatment|treatment)\s+consent\b",
+        re.IGNORECASE,
+    )
+    treatment_consent_gap_recorded = bool(
+        treatment_consent_gap_pattern.search(known_unknowns_text)
+    )
+    treatment_consent_source_text = (
+        "" if treatment_consent_gap_recorded else case_summary_text
+    )
+    unsupported_treatment_consent = _unsupported_matches(
+        treatment_consent_pattern,
+        text,
+        treatment_consent_source_text,
+    )
+    if unsupported_treatment_consent:
+        if treatment_consent_gap_recorded:
+            treatment_consent_reason = (
+                "known_unknowns explicitly records treatment-specific consent as unresolved; "
+                "a matching case-summary statement conflicts with that gap and cannot resolve it."
+            )
+        else:
+            treatment_consent_reason = (
+                "educational-scenario consent status and patient willingness are not proxies "
+                "for informed treatment consent."
+            )
+        flags.append(
+            "Generated narrative asserts treatment-specific consent ("
+            + "; ".join(unsupported_treatment_consent[:2])
+            + "), but "
+            + treatment_consent_reason
+        )
+
+    scenario_consent_pattern = re.compile(
+        r"\bpatient(?:'s)?\s+(?:has\s+)?consented\s+to\s+participate\s+in\s+"
+        r"(?:this|the)\s+educational\s+(?:case|scenario|simulation)\b[^.!?;\n]{0,80}|"
+        r"\bpatient(?:'s)?\s+(?:declined|refused|withdrew)\s+consent\s+to\s+participate\s+in\s+"
+        r"(?:this|the)\s+educational\s+(?:case|scenario|simulation)\b[^.!?;\n]{0,80}|"
+        r"\bpatient(?:'s)?\s+consent\s+to\s+participate\s+in\s+"
+        r"(?:this|the)\s+educational\s+(?:case|scenario|simulation)\b[^.!?;\n]{0,100}",
+        re.IGNORECASE,
+    )
+    consent_state = field_state("patient_consent_status")
+    consent_sources: list[str] = []
+    if consent_state in (None, "PRESENT"):
+        consent_status_text = {
+            "NOT_ASKED": "patient consent to participate in this educational scenario has not been asked",
+            "PENDING": "patient consent to participate in this educational scenario is pending",
+            "GIVEN": "patient has consented to participate in this educational scenario",
+            "DECLINED": "patient declined consent to participate in this educational scenario",
+            "WITHDRAWN": "patient withdrew consent to participate in this educational scenario",
+        }
+        if case.patient_consent_status is not None:
+            status_source = consent_status_text[case.patient_consent_status]
+            consent_sources.append(status_source)
+            if case.patient_consent_status in {"NOT_ASKED", "PENDING"}:
+                # Preserve both common possessive and non-possessive renderings
+                # of the same structured educational-consent state.
+                consent_sources.append(
+                    status_source.replace("patient consent", "patient's consent", 1)
+                )
+        else:
+            consent_sources.append(case_summary_text)
+
+    unsupported_scenario_consent = _unsupported_matches(
+        scenario_consent_pattern,
+        text,
+        "\n".join(consent_sources),
+    )
+    if unsupported_scenario_consent:
+        flags.append(
+            "Generated narrative asserts educational-scenario consent status ("
+            + "; ".join(unsupported_scenario_consent[:2])
+            + "), which is not supported by the explicit patient_consent_status or an assertable source."
         )
     prerequisite_status_pattern = re.compile(
         # Explicit "neither prerequisite is met" is a negative-status assertion,
@@ -1640,8 +2979,14 @@ def build_case_validation_warnings(case: SyntheticCase) -> list[str]:
     empty_fields = [field for field in ("current_medications", "known_allergies", "relevant_investigations", "relevant_comorbidities", "prior_treatment", "patient_goals", "social_context", "resource_context", "known_unknowns") if not getattr(case, field)]
     if empty_fields:
         warnings.append("Empty structured lists are not confirmed negatives; these fields are not reported: " + ", ".join(empty_fields) + ". Review the raw case summary before interpreting them.")
-    summary = case.case_summary.casefold()
-    warnings.extend(_source_laterality_integrity_warnings(case.case_summary))
+    summary_state = case.clinical_field_states.get("case_summary")
+    summary = case.case_summary.casefold() if summary_state in (None, "PRESENT") else ""
+    if summary_state in (None, "PRESENT"):
+        warnings.extend(_source_laterality_integrity_warnings(case.case_summary))
+    elif summary_state == "INVALID":
+        warnings.append("case_summary is marked INVALID; its preserved raw text is for audit only and cannot support a clinical assertion.")
+    elif summary_state == "CONFLICTING":
+        warnings.append("case_summary has unresolved conflicting source values; no single summary may be selected or used to support a clinical assertion.")
 
     # Explicit contradictions are warnings for human reconciliation; neither
     # the structured field nor free text is silently preferred.
@@ -1760,6 +3105,9 @@ def build_case_validation_warnings(case: SyntheticCase) -> list[str]:
         missing = [label for label, value in (("primary site", case.primary_site), ("staging system", case.staging_system), ("staging edition", case.staging_edition)) if value in (None, "")]
         if missing:
             warnings.append("Staging token is retained but site/system/edition compatibility is not validated because " + ", ".join(missing) + " is not supplied. Do not infer stage or compatibility.")
+        subsite_gap = _anatomical_subsite_staging_context_gap(case)
+        if subsite_gap:
+            warnings.append("Staging token is retained but anatomical-subsite context is not validated because " + subsite_gap + ". Do not infer site/subsite/staging-system/edition compatibility or stage.")
     if case.performance_status not in (None, "") and case.performance_status_scale in (None, ""):
         warnings.append("Performance-status value is supplied without a named scale; do not infer ECOG/WHO/Karnofsky equivalence.")
     if case.stage_group not in (None, "") and case.clinical_stage_group in (None, "") and case.pathological_stage_group in (None, ""):

@@ -334,3 +334,60 @@ def test_verified_u12_with_exact_descendant_evidence_can_activate_u09_u10():
         lambda _base, _head: True,
         {"U12": ["docs/development_plan.json"]},
     )
+
+
+def _u09_fixture():
+    plan, runs = _fixture()
+    u12 = plan["steps"][1]
+    u12_sha = "b" * 40
+    u12["status"] = "VERIFIED"
+    u12["completion_evidence"] = {
+        "commit_sha": u12_sha,
+        "workflow_runs": [
+            {"id": 2000 + i, "name": name}
+            for i, name in enumerate(STEP_REQUIRED_WORKFLOWS["U12"])
+        ],
+    }
+    for i, name in enumerate(STEP_REQUIRED_WORKFLOWS["U12"]):
+        runs[2000 + i] = {
+            "name": name, "head_sha": u12_sha,
+            "status": "completed", "conclusion": "success",
+        }
+    plan["active_step"] = "U09-U10"
+    plan["steps"][2]["status"] = "IN PROGRESS"
+    plan["steps"][2]["required_workflow_names"] = list(STEP_REQUIRED_WORKFLOWS["U09-U10"])
+    plan["scope_baseline_commit"] = u12_sha
+    return plan, runs
+
+
+def test_u09_u10_exact_amended_paths_are_allowed_but_nearby_paths_are_rejected():
+    assert "backend/app/services/mdt_generation.py" in STEP_ALLOWED_PATHS["U09-U10"]
+    assert "backend/app/services/chair_report_quality.py" in STEP_ALLOWED_PATHS["U09-U10"]
+    assert "backend/scripts/validate_development_plan.py" in STEP_ALLOWED_PATHS["U09-U10"]
+    plan, runs = _u09_fixture()
+    validate_plan(
+        plan,
+        ["backend/app/services/mdt_generation.py", "backend/app/services/chair_report_quality.py",
+         "backend/scripts/validate_development_plan.py"],
+        lambda _sha: True, lambda run_id: runs[run_id],
+        lambda _base, _head: True,
+        {"U12": ["docs/development_plan.json"]},
+    )
+    with pytest.raises(GateError, match="scope violation"):
+        validate_plan(
+            plan, ["backend/app/services/mdt_rounds.py"],
+            lambda _sha: True, lambda run_id: runs[run_id],
+            lambda _base, _head: True,
+            {"U12": ["docs/development_plan.json"]},
+        )
+
+
+def test_u09_u10_allowlist_cannot_be_widened_by_machine_plan_json_alone():
+    plan, runs = _u09_fixture()
+    plan["steps"][2]["allowed_paths"].append("backend/app/*")
+    with pytest.raises(GateError, match="allowed_paths differ"):
+        validate_plan(
+            plan, [], lambda _sha: True, lambda run_id: runs[run_id],
+            lambda _base, _head: True,
+            {"U12": ["docs/development_plan.json"]},
+        )
