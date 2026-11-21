@@ -240,6 +240,27 @@ type RoundAgentResult = {
   duration_seconds: number | null;
 };
 
+type RoundQualityAudit = {
+  run_id: string;
+  round_number: number;
+  total_flags: number;
+  reasoning_depth_flags?: Record<string, string[]>;
+  role_differentiation?: {
+    valid: boolean;
+    flags: string[];
+    pairwise_duplicates?: Array<{ role_1: string; role_2: string; similarity: number }>;
+    delegation_flags?: Array<{ role_id: string; issue: string; text: string }>;
+  };
+  citation_audit?: {
+    valid: boolean;
+    total_citations: number;
+    verified_count: number;
+    unverified_count: number;
+    concordance_rate: number;
+    unverified_citations?: Array<{ role_id: string; source_id: string; claim: string }>;
+  };
+};
+
 type FinalMDTReport = {
   run_id: string;
   round_number: 4;
@@ -514,6 +535,7 @@ function App() {
   const [batchResuming, setBatchResuming] = useState(false);
   const [roundSummaries, setRoundSummaries] = useState<Record<number, RoundSummary | null>>({});
   const [roundResults, setRoundResults] = useState<Record<number, RoundAgentResult[]>>({});
+  const [roundAudits, setRoundAudits] = useState<Record<number, RoundQualityAudit | null>>({});
   const [finalReport, setFinalReport] = useState<FinalMDTReport | null>(null);
   const [roundActionBusy, setRoundActionBusy] = useState<number | null>(null);
   const [roundError, setRoundError] = useState("");
@@ -993,6 +1015,19 @@ function App() {
       const body = (await resultResponse.json()) as { results: RoundAgentResult[] };
       setRoundSummaries((current) => ({ ...current, [roundNumber]: summary }));
       setRoundResults((current) => ({ ...current, [roundNumber]: body.results }));
+
+      // Fetch quality audit asynchronously when round is completed
+      if (summary.status === "completed") {
+        try {
+          const auditResponse = await fetch(API_BASE + "/api/runs/" + runId + "/rounds/" + roundNumber + "/quality-audit");
+          if (auditResponse.ok) {
+            const auditData = (await auditResponse.json()) as { quality_audit: RoundQualityAudit | null };
+            setRoundAudits((current) => ({ ...current, [roundNumber]: auditData.quality_audit }));
+          }
+        } catch {
+          // Quality audit is non-blocking
+        }
+      }
       if (roundNumber === 4 && ["completed", "completed_with_errors"].includes(summary.status)) {
         // R1 marks the parent run complete before the remaining MDT rounds finish.
         // Refresh the parent only at the terminal Chair stage to capture mdt_finished_at
@@ -1880,6 +1915,24 @@ function App() {
                             >
                               {roundActionBusy === roundNumber ? "Resuming…" : "Resume failed/interrupted work"}
                             </button>
+                          )}
+                          {roundAudits[roundNumber] && (
+                            <div className="round-quality-audit-banner" role="status">
+                              <div className="audit-header">
+                                <strong>Safety &amp; reasoning audit · Round {roundNumber}</strong>
+                                <span className={roundAudits[roundNumber]!.total_flags === 0 ? "audit-badge audit-pass" : "audit-badge audit-warn"}>
+                                  {roundAudits[roundNumber]!.total_flags === 0 ? "Verified · 0 flags" : roundAudits[roundNumber]!.total_flags + " review flags"}
+                                </span>
+                              </div>
+                              {roundAudits[roundNumber]!.role_differentiation && !roundAudits[roundNumber]!.role_differentiation!.valid && (
+                                <p className="audit-note">⚠️ Anti-duplication/delegation warning: specialist opinions showed high lexical overlap or ungrounded agreement.</p>
+                              )}
+                              {roundAudits[roundNumber]!.citation_audit && (
+                                <p className="audit-note">
+                                  📚 Guideline citations: {roundAudits[roundNumber]!.citation_audit!.verified_count}/{roundAudits[roundNumber]!.citation_audit!.total_citations} verified against canonical reference catalogue ({Math.round(roundAudits[roundNumber]!.citation_audit!.concordance_rate * 100)}% concordance).
+                                </p>
+                              )}
+                            </div>
                           )}
                           {roundNumber !== 4 && results.length > 0 && (
                             <div className="round-agent-list">
