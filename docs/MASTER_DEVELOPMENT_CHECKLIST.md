@@ -8217,3 +8217,16 @@ Those calls parse and can re-emit raw source excerpts from an INVALID/CONFLICTIN
 5. Include this exact file and tests in the complete three-workflow exact-head verification.
 
 **Current U09-INT-01 status:** BLOCKED before implementation pending owner authorisation for the additional exact path `backend/app/services/chair_report_quality.py`. The approved paths `mdt_generation.py`, `validate_development_plan.py`, machine plan and test scope have not been modified. Active step and scope baseline remain unchanged; U04 and later remain BLOCKED.
+
+### U09-INT-01 scope amendment authorised — 21 November 2026
+
+The owner approved the additional exact production path `backend/app/services/chair_report_quality.py`. The complete narrowly scoped U09–U10 allowlist is now the existing entries plus exactly:
+- `backend/app/services/mdt_generation.py`
+- `backend/app/services/chair_report_quality.py`
+- `backend/scripts/validate_development_plan.py`
+
+Implementation review also identified that both generation and final Chair postprocessing need the same eligibility rule. To avoid a circular import (`mdt_generation` already imports `chair_report_quality`), the one shared helper will live in the already-authorised `backend/app/services/case_integrity.py`; both downstream modules will call it. This is a placement refinement only; it does not widen scope. No raw data, schemas, registry definitions or audit records will be changed.
+
+The latest plan-only commit `df0a3117044c7a6aad50fb05085195ba8882f1a5` has successful exact-head workflows: Sequential Development Gate run 44862946237, Backend Tests run 44862946617, Security and Dependency Audit run 44862946407. These validate that checklist-only checkpoint, not the forthcoming implementation.
+
+**Implementation status:** IN PROGRESS. No code changes made yet under this expanded authorisation.
