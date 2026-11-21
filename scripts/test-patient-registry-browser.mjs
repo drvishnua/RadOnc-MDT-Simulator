@@ -512,11 +512,15 @@ try {
     "[...document.querySelectorAll('button')].some(node => (node.innerText || '').trim().startsWith('Accept intake and save') || (node.innerText || '').trim().startsWith('Accept with gaps and save'))",
     "the explicit intake acceptance action"
   );
-  const acceptButtonText = await page.evaluate(() => {
-    const btn = [...document.querySelectorAll('button')].find(node => (node.innerText || '').trim().startsWith('Accept intake and save') || (node.innerText || '').trim().startsWith('Accept with gaps and save'));
-    return btn ? btn.innerText.trim() : "Accept intake and save";
-  });
-  await clickButton(acceptButtonText);
+  await evaluate(
+    "(() => {" +
+    "const btn = [...document.querySelectorAll('button')].find(node => (node.innerText || '').trim().startsWith('Accept intake and save') || (node.innerText || '').trim().startsWith('Accept with gaps and save'));" +
+    "if (!btn) throw new Error('Could not find accept intake button');" +
+    "if (btn.disabled) throw new Error('Accept intake button is disabled');" +
+    "btn.click();" +
+    "return true;" +
+    "})()"
+  );
 
   const firstOption = await waitUntil(() => readPatientOption(originalName), "the newly registered patient in the registry");
   patientIdentifier = firstOption.identifier;
