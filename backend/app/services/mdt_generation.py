@@ -1608,7 +1608,7 @@ async def generate_debate_contribution(
         "both depend on some missing investigations. Shared uncertainty about prerequisites "
         "is not agreement on treatment sequence, option, resectability, or fitness. Do not "
         "describe different prerequisites as identical unless the source text explicitly says so. "
-        ("CASE SUMMARY WITHHELD: case_summary state is INVALID or CONFLICTING. The original text and "
+        + ("CASE SUMMARY WITHHELD: case_summary state is INVALID or CONFLICTING. The original text and "
          "source excerpts are unavailable. An empty register means attributed opinions are unassessable, "
          "not that none exist. Do not reconstruct, quote, infer, or create CASE source IDs or responses. "
          if eligible_summary is None else "") +
