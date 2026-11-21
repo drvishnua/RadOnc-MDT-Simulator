@@ -49,6 +49,9 @@ STEP_ALLOWED_PATHS = {
         "backend/app/clinical_fields.py",
         "backend/app/schemas.py",
         "backend/app/services/case_integrity.py",
+        "backend/app/services/mdt_generation.py",
+        "backend/app/services/chair_report_quality.py",
+        "backend/scripts/validate_development_plan.py",
         "backend/tests/*",
     ),
     "U04": (
