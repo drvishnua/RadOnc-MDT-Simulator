@@ -4,6 +4,12 @@ from __future__ import annotations
 import re
 from typing import Any
 from app.schemas import SyntheticCase
+
+
+def eligible_case_summary_text(case: SyntheticCase) -> str | None:
+    """Return source text only when case_summary is explicitly/default PRESENT."""
+    state = case.clinical_field_states.get("case_summary", "PRESENT")
+    return case.case_summary if state == "PRESENT" else None
 from app.clinical_fields import (
     CLINICAL_FIELD_REGISTRY,
     CLINICAL_FIELD_REGISTRY_VERSION,
