@@ -334,3 +334,42 @@ def test_verified_u12_with_exact_descendant_evidence_can_activate_u09_u10():
         lambda _base, _head: True,
         {"U12": ["docs/development_plan.json"]},
     )
+
+
+def test_u09_u10_exact_amended_paths_are_allowed_but_nearby_paths_are_rejected():
+    assert "backend/app/services/mdt_generation.py" in STEP_ALLOWED_PATHS["U09-U10"]
+    assert "backend/app/services/chair_report_quality.py" in STEP_ALLOWED_PATHS["U09-U10"]
+    assert "backend/scripts/validate_development_plan.py" in STEP_ALLOWED_PATHS["U09-U10"]
+    _validate(changed=[
+        "backend/app/services/mdt_generation.py",
+        "backend/app/services/chair_report_quality.py",
+        "backend/scripts/validate_development_plan.py",
+    ])
+    with pytest.raises(GateError, match="scope violation"):
+        _validate(changed=["backend/app/services/mdt_rounds.py"])
+
+
+def test_u09_u10_allowlist_cannot_be_widened_by_machine_plan_json_alone():
+    plan, _ = _fixture()
+    plan["active_step"] = "U09-U10"
+    plan["steps"][1]["status"] = "VERIFIED"
+    plan["steps"][1]["completion_evidence"] = {
+        "commit_sha": EVIDENCE_SHA,
+        "workflow_runs": [
+            {"id": 1000 + i, "name": name}
+            for i, name in enumerate(STEP_REQUIRED_WORKFLOWS["U12"])
+        ],
+    }
+    plan["steps"][2]["status"] = "IN PROGRESS"
+    plan["steps"][2]["allowed_paths"].append("backend/app/*")
+    plan["scope_baseline_commit"] = EVIDENCE_SHA
+    with pytest.raises(GateError, match="allowed_paths differ"):
+        validate_plan(
+            plan, [], lambda _sha: True,
+            lambda run_id: {
+                "name": next(item["name"] for item in plan["steps"][1]["completion_evidence"]["workflow_runs"] if item["id"] == run_id),
+                "head_sha": EVIDENCE_SHA, "status": "completed", "conclusion": "success",
+            },
+            lambda _base, _head: True,
+            {"U12": ["docs/development_plan.json"]},
+        )
