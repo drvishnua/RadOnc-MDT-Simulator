@@ -8260,3 +8260,49 @@ On PR head `cf5ddbea63210e3ac78b151741295bed797a0a9`:
 
 
 **Projection coverage clarification before implementation:** the caller review additionally confirms that `case_snapshot` is the full `model_snapshot`, which itself contains nested `clinical_field_conflicts["case_summary"]`. Therefore the same narrow redaction must be applied in both model-facing representations: the nested snapshot object and `canonical_field_values["case_summary"]`. The `case_snapshot_projection_note` must accurately disclose that the case-summary candidates are withheld while other fields' candidate handling remains unchanged. The audit/persisted `SyntheticCase` remains unchanged.
+
+
+---
+
+## DEV-TOOL-01 Ponytail development-agent installation — 21 November 2026
+
+**Owner request:** Install `DietrichGebert/ponytail` for the software development system only. It must not become a dependency, runtime component, installer payload or feature of the RadOnc MDT Simulator.
+
+**Repository and source verification:**
+- Official source: `https://github.com/DietrichGebert/ponytail`; public repository, default branch `main`, MIT license.
+- Reviewed the official `README.md`, `INSTALL.md`, root `AGENTS.md`, `skills/ponytail/SKILL.md`, `.codex-plugin/plugin.json`, package manifest, shared instruction builder and Codex lifecycle-hook configuration/scripts.
+- Current package manifest version: `5.3.3`; release `v5.3.3` is published and GitHub displays its release commit as signed/verified. Install is to be pinned to `v5.3.3`, not floating `main`.
+- Intended use: user-level development-agent guidance for minimal complete changes, reading call sites and data flow before edits, reuse before adding code/dependencies, focused tests for non-trivial logic, and review/audit skills.
+- Ponytail runs local Node lifecycle hooks to inject its ruleset, maintain mode state and create a bounded repository map. Those hooks require explicit host trust. Node must be on PATH for the Codex hook configuration to run.
+- No `.exe` or `.dll` payload was found in the reviewed install instructions; this is not a complete independent security audit of every file in the upstream repository.
+
+### Complete installation plan
+
+1. Confirm the user's actual Windows development-agent host: ChatGPT desktop app with Codex/Work plugin support, Codex CLI, or another supported coding agent. Do not assume the Android ChatGPT application can load this local plugin.
+2. Keep installation at user/global developer-tooling scope, not inside the MDT application. Do not add Ponytail as a Python/Node runtime dependency, package it in the Windows MDT installer, alter application code, or add it to the MDT repository's source/build runtime.
+3. Pin the official source to GitHub release/tag `v5.3.3`. Do not install a fork, mirror, third-party npm package or unpinned main-branch snapshot.
+4. Use the host's supported install path:
+   - Codex CLI: add the official marketplace `DietrichGebert/ponytail`, then install `ponytail@ponytail` using the maintainer's documented commands.
+   - ChatGPT desktop Codex/Work: register a personal marketplace under the user's `~/.agents/plugins/marketplace.json` (Windows: `%USERPROFILE%\.agents\plugins\marketplace.json`), preserving and backing up existing marketplace entries; expose the official repository at tag `v5.3.3`; then install Ponytail from the desktop Plugins Directory.
+   - Other hosts: use only the exact adapter and installation commands in the official `INSTALL.md`; do not improvise an adapter.
+5. Verify Node is installed and discoverable on the non-interactive host PATH. Do not install or change Node versions without user approval if the required runtime is absent.
+6. Before enabling lifecycle hooks, inspect the host's hook list and the exact upstream hook source; explicitly trust only the expected Ponytail hooks. Preserve unrelated local hooks and user settings.
+7. Start a new coding-agent thread/session and verify the Ponytail instructions are loaded, `/ponytail` reports the selected mode, and review/audit skills are discoverable. Confirm that the hook can be turned off and uninstalled without removing unrelated user configuration.
+8. Record the host, installation scope/path, pinned version/source, hook-trust outcome, verification result and any limitation in this checklist. Do not claim installation until the host confirms it.
+
+**Acceptance criteria:**
+- Ponytail is installed at the selected user-level development-agent host and pinned to official release `v5.3.3`.
+- It is not included in RadOnc MDT runtime dependencies, application source, build or installer.
+- Existing user plugins/hooks/settings are preserved; only Ponytail-owned entries are added.
+- Required Node runtime and hook-trust state are verified on the actual Windows host.
+- A fresh session confirms the rules and the documented review/audit skills are active.
+- An off/uninstall path is known and does not remove unrelated configuration.
+
+**Current status:** BLOCKED pending confirmation of the actual coding-agent host and access to that Windows user's profile/CLI. This ChatGPT session can inspect the public source and update the repository checklist, but it cannot write into the user's local Windows profile or launch their local Codex CLI. No installation has been performed or claimed.
+
+### Related RadOnc MDT checkpoint at time of this request
+
+- PR #5 remains OPEN and NOT MERGED; current head `1c82597377cdb19c043fd093303a1d48673e0d22`; target development branch base `df90e4a380bef06a7d37def753b385db4ae86c30`.
+- Active machine-plan step remains `U09-U10`; the narrow U09-INT-01 allowlist amendment is present.
+- Exact-head workflows on `1c82597377cdb19c043fd093303a1d48673e0d22`: Sequential Development Gate run `44865813585` SUCCESS; Security and Dependency Audit run `44865813586` SUCCESS; Backend Tests run `44865813622` FAILED. The backend preflight and compile steps passed; pytest still fails at `tests/test_chair_report_quality.py:1316` because the CONFLICTING fixture lacks the two required distinct source-specific conflict candidates. Do not weaken the schema; correct the fixture.
+- The interrupted later code-edit attempt stopped on a missing source-anchor before any new application-code commit was created.
