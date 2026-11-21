@@ -1592,7 +1592,8 @@ async def generate_debate_contribution(
             own_r1_integrity_flags
         ),
     }
-    source_opinion_register = extract_attributed_note_opinions(case.case_summary)
+    eligible_summary = eligible_case_summary_text(case)
+    source_opinion_register = extract_attributed_note_opinions(eligible_summary or "")
     allowed_sources = {("R1", profile["agent_id"])} | {
         ("R1", peer["agent_id"]) for peer in peer_views
     }
@@ -1607,6 +1608,10 @@ async def generate_debate_contribution(
         "both depend on some missing investigations. Shared uncertainty about prerequisites "
         "is not agreement on treatment sequence, option, resectability, or fitness. Do not "
         "describe different prerequisites as identical unless the source text explicitly says so. "
+        ("CASE SUMMARY WITHHELD: case_summary state is INVALID or CONFLICTING. The original text and "
+         "source excerpts are unavailable. An empty register means attributed opinions are unassessable, "
+         "not that none exist. Do not reconstruct, quote, infer, or create CASE source IDs or responses. "
+         if eligible_summary is None else "") +
         "For EACH server-identified attributed opinion listed in the dedicated register below, return exactly "
         "one item in the required source_opinion_responses array using that exact CASE source ID. "
         "Also set position_on_source_opinion for that exact opinion: supports, opposes, conditional, or "
@@ -2045,8 +2050,15 @@ async def generate_adversarial_contribution(
     ]
     # Source-opinion reviews must cite one of the supplied R2 peers, never this role's own R2 record.
     allowed_peer_source_ids = {f"R2:{peer['agent_id']}" for peer in peer_debate_views[:5]}
-    source_opinion_register = extract_attributed_note_opinions(case.case_summary)
-    if source_opinion_register:
+    eligible_summary = eligible_case_summary_text(case)
+    source_opinion_register = extract_attributed_note_opinions(eligible_summary or "")
+    if eligible_summary is None:
+        attribution_instruction = (
+            "CASE ATTRIBUTION CHECK: case_summary state is INVALID or CONFLICTING. "
+            "Raw text and excerpts are withheld. An empty register means attribution is unassessable, "
+            "not that no attributed opinions exist. Do not reconstruct opinions or CASE IDs."
+        )
+    elif source_opinion_register:
         attribution_instruction = (
             "CASE ATTRIBUTION CHECK: the server has identified explicitly attributed note opinions in the "
             "original case summary. The ordered server register is authoritative for source IDs and exact excerpts. "
