@@ -786,7 +786,7 @@ def reconcile_chair_report_draft(
     # Aggregate dynamically numbered source reviews only when their identifiers map
     # consistently to exact case-summary excerpts. Counts are distinct roles, not votes.
     source_coverage, source_review_integrity = build_source_opinion_review_coverage(
-        round3_views, eligible_summary or ""
+        round3_views, eligible_summary
     )
     unresolved.extend(source_review_integrity)
     unresolved.extend(_unique_strings(recorded_review_findings, limit=12))
