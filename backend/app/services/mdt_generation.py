@@ -1696,7 +1696,7 @@ async def generate_debate_contribution(
         f"ROLE: {profile['name']}\nMANDATE: {profile['mandate']}\n"
         "SUPPLIED CASE:\n"
         + json.dumps(build_case_prompt_context(case), ensure_ascii=False, separators=(",", ":"))
-        + "\nSERVER-IDENTIFIED ATTRIBUTED SOURCE OPINIONS (exact case-summary excerpts; source statements, not verified facts or your endorsement):\n"
+        + "\n" + source_opinion_register_label + "\n"
         + json.dumps(source_opinion_register, ensure_ascii=False, separators=(",", ":"))
         + "\nYOUR ROUND-1 POSITION:\n"
         + json.dumps(own, ensure_ascii=False, separators=(",", ":"))
@@ -1902,6 +1902,7 @@ async def generate_adversarial_contribution(
     peer_debate_views: list[dict],
     max_tokens: int = 1100,
 ) -> RoundContribution:
+    eligible_summary = eligible_case_summary_text(case)
     # R3 receives a deliberately small, source-labelled sample. All 45 saved
     # contributions remain in storage and are supplied to the Chair in R4.
     peers = []
@@ -1952,7 +1953,7 @@ async def generate_adversarial_contribution(
                         item.get("comparison", ""), 120, peer_integrity_flags
                     ),
                 }
-                for item in (result.get("source_opinion_responses") or [])[:4]
+                for item in ((result.get("source_opinion_responses") or []) if eligible_summary is not None else [])[:4]
                 if isinstance(item, dict)
             ],
             "provenance_audit_flags": [
@@ -2042,7 +2043,7 @@ async def generate_adversarial_contribution(
                     item.get("comparison", ""), 120, own_case_integrity_flags
                 ),
             }
-            for item in (own_debate_contribution.get("source_opinion_responses") or [])[:4]
+            for item in ((own_debate_contribution.get("source_opinion_responses") or []) if eligible_summary is not None else [])[:4]
             if isinstance(item, dict)
         ],
         "round2_provenance_audit_flags": [
@@ -2070,7 +2071,6 @@ async def generate_adversarial_contribution(
     ]
     # Source-opinion reviews must cite one of the supplied R2 peers, never this role's own R2 record.
     allowed_peer_source_ids = {f"R2:{peer['agent_id']}" for peer in peer_debate_views[:5]}
-    eligible_summary = eligible_case_summary_text(case)
     source_opinion_register = extract_attributed_note_opinions(eligible_summary or "")
     if eligible_summary is None:
         attribution_instruction = (
@@ -2099,24 +2099,25 @@ async def generate_adversarial_contribution(
             "Return source_opinion_reviews as an empty list. Do not invent opinions, treat R2 peer roles as case sources, "
             "or create CASE source IDs from R2 identifiers. Peer records remain separately attributable as R2 sources."
         )
-    prompt = (
-        "ROUND 3 — ADVERSARIAL REVIEW. Educational simulation only; do not give a treatment "
-        "instruction or invent facts/evidence. ABSENT-IS-NOT-UNMET RULE: a missing or undocumented "
-        "clinical prerequisite is unknown, not unmet, not met, failed, negative, or absent. If MRI, "
-        "local staging, metastatic work-up, resectability review, or fitness/performance assessment "
-        "is not supplied in the case, describe it as 'not supplied', 'not documented', or 'unknown'. "
-        "Never say that a prerequisite or case condition is 'unmet' or 'not met' merely because its "
-        "result or assessment is missing. Use 'unmet'/'not met' only when the case explicitly records "
-        "that this exact prerequisite was assessed and a documented finding establishes non-fulfilment; "
-        "identify that exact finding. Never describe undocumented prerequisites as 'not met' or 'unmet'; "
-        "state that their status is unknown or not supplied. Never conclude that 'neither option is indicated' "
-        "or that 'no option is appropriate' from missing data alone. Never convert 'no definitive pathway can be established from this incomplete record' "
-        "into 'no pathway is indicated': information sufficiency and a clinical indication decision are different propositions. "
-        "Do not conclude that neither option is clinically indicated, that no pathway is indicated, or that no option is appropriate from missing data alone. "
-        "When describing peer contributions, you may state that the supplied peer records do not claim an option is indicated only when accurate and explicitly attributed; "
-        "this reports what those records say and is not a clinical indication conclusion. "
-        "Use this exact safe formulation when indication cannot be determined: 'The supplied information does not establish whether either source option is indicated or appropriate; indication and suitability remain undetermined.' "
-        "Do not infer a negative indication from agreement that data are missing or from a peer saying that no definitive pathway can yet be established. "
+    if eligible_summary is None:
+        r3_source_opinion_register_label = (
+            "CASE-SUMMARY SOURCE-OPINION REGISTER: WITHHELD / UNASSESSABLE; no source text is supplied."
+        )
+        source_opinion_review_instructions = (
+            "CASE SUMMARY WITHHELD: case_summary is INVALID or CONFLICTING. Do not inspect, quote, "
+            "reconstruct, infer, or review attributed opinions from the quarantined case summary. "
+            "Raw text, source excerpts, and source IDs are unavailable. An empty source register means "
+            "unassessable, not that no attributed opinions exist. Do not create CASE:case_summary IDs, "
+            "source-opinion reviews, challenges, or source excerpts. Do not treat R2 source-opinion "
+            "responses as substitutes for the withheld case source. Continue the general adversarial "
+            "review of supplied saved R1/R2 contributions, preserving their source labels and "
+            "uncertainties, without claiming case-summary source-opinion coverage. "
+        )
+    elif source_opinion_register or case_summary_has_attributed_opinions(eligible_summary):
+        r3_source_opinion_register_label = (
+            "SERVER-IDENTIFIED ATTRIBUTED SOURCE OPINIONS (exact case-summary excerpts; not verified facts)."
+        )
+        source_opinion_review_instructions = (
         "Preserve the source option as conditional while status is unknown; "
         "representation is not endorsement. Treat the verbatim case summary as attributed "
         "source text, not verified fact or consensus. Identify each distinct attributed opinion, "
@@ -2260,10 +2261,39 @@ async def generate_adversarial_contribution(
         + f"ALLOWED ROUND SOURCE IDS: {', '.join(allowed_source_ids)}\n"
         + f"ALLOWED SOURCE-OPINION REVIEW PEER IDS (the only permitted R2 evidence_peer_id values and R2 citations inside source_opinion_reviews): {', '.join(sorted(allowed_peer_source_ids))}\n"
         + f"FORBIDDEN FOR SOURCE-OPINION REVIEWS: R2:{profile['agent_id']} is your own R2 record, not a peer; never cite it as review evidence. This narrower peer-only list overrides ALLOWED ROUND SOURCE IDS for source_opinion_reviews.\n"
+        )
+    else:
+        r3_source_opinion_register_label = (
+            "CASE-SUMMARY SOURCE-OPINION REGISTER: no clearly attributed opinions identified in eligible summary."
+        )
+        source_opinion_review_instructions = (
+            "The eligible case summary contains no clearly attributed source opinion. Return an empty "
+            "source_opinion_reviews list. Do not invent case opinions or CASE source IDs from R2 peer roles. "
+            "Continue the general adversarial review of the supplied saved R1/R2 contributions. "
+        )
+    prompt = (
+        "ROUND 3 — ADVERSARIAL REVIEW. Educational simulation only; do not give a treatment "
+        "instruction or invent facts/evidence. ABSENT-IS-NOT-UNMET RULE: a missing or undocumented "
+        "clinical prerequisite is unknown, not unmet, not met, failed, negative, or absent. If MRI, "
+        "local staging, metastatic work-up, resectability review, or fitness/performance assessment "
+        "is not supplied in the case, describe it as 'not supplied', 'not documented', or 'unknown'. "
+        "Never say that a prerequisite or case condition is 'unmet' or 'not met' merely because its "
+        "result or assessment is missing. Use 'unmet'/'not met' only when the case explicitly records "
+        "that this exact prerequisite was assessed and a documented finding establishes non-fulfilment; "
+        "identify that exact finding. Never describe undocumented prerequisites as 'not met' or 'unmet'; "
+        "state that their status is unknown or not supplied. Never conclude that 'neither option is indicated' "
+        "or that 'no option is appropriate' from missing data alone. Never convert 'no definitive pathway can be established from this incomplete record' "
+        "into 'no pathway is indicated': information sufficiency and a clinical indication decision are different propositions. "
+        "Do not conclude that neither option is clinically indicated, that no pathway is indicated, or that no option is appropriate from missing data alone. "
+        "When describing peer contributions, you may state that the supplied peer records do not claim an option is indicated only when accurate and explicitly attributed; "
+        "this reports what those records say and is not a clinical indication conclusion. "
+        "Use this exact safe formulation when indication cannot be determined: 'The supplied information does not establish whether either source option is indicated or appropriate; indication and suitability remain undetermined.' "
+        "Do not infer a negative indication from agreement that data are missing or from a peer saying that no definitive pathway can yet be established. "
+        + source_opinion_review_instructions
         f"ROLE: {profile['name']}\nMANDATE: {profile['mandate']}\n"
         "SUPPLIED CASE:\n"
         + json.dumps(build_case_prompt_context(case), ensure_ascii=False, separators=(",", ":"))
-        + "\n" + source_opinion_register_label + "\n"
+        + "\n" + r3_source_opinion_register_label + "\n"
         + json.dumps(source_opinion_register, ensure_ascii=False, separators=(",", ":"))
         + "\nYOUR R1 AND COMPLETE OWN R2 RECORD (bounded fields):\n"
         + json.dumps(own, ensure_ascii=False, separators=(",", ":"))
