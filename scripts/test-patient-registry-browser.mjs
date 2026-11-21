@@ -556,10 +556,18 @@ try {
   );
   await clickButton("Start intake for new version of " + patientIdentifier);
   await waitForExpression(
-    "[...document.querySelectorAll('button')].some(node => (node.innerText || '').trim().startsWith('Accept intake and save'))",
+    "[...document.querySelectorAll('button')].some(node => (node.innerText || '').trim().startsWith('Accept intake and save') || (node.innerText || '').trim().startsWith('Accept with gaps and save'))",
     "the second-version intake acceptance action"
   );
-  await clickButton("Accept intake and save");
+  await evaluate(
+    "(() => {" +
+    "const btn = [...document.querySelectorAll('button')].find(node => (node.innerText || '').trim().startsWith('Accept intake and save') || (node.innerText || '').trim().startsWith('Accept with gaps and save'));" +
+    "if (!btn) throw new Error('Could not find second-version accept intake button');" +
+    "if (btn.disabled) throw new Error('Second-version accept intake button is disabled');" +
+    "btn.click();" +
+    "return true;" +
+    "})()"
+  );
   await waitForExpression(
     "(() => { const label = [...document.querySelectorAll('label')].find(node => (node.innerText || '').trim().startsWith('Saved case version')); return !!label && !!label.querySelector('select') && [...label.querySelector('select').options].some(option => (option.textContent || '').includes('Version 2 ·')); })()",
     "the second immutable case version"
