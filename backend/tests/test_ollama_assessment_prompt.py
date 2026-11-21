@@ -488,7 +488,7 @@ def test_quarantined_case_summary_is_unassessable_for_r2_and_r3_source_reviews(
     )
     assert case.model_dump_json() == original_case_json
 
-\n\n
+
 def test_r2_and_r3_attributed_source_opinion_register_labels_are_round_scoped(monkeypatch):
     source_excerpt = (
         "The colorectal surgical note favours a surgery-led assessment first, "
