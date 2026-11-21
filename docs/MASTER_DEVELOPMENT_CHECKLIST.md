@@ -8503,3 +8503,23 @@ The tests also assert that case serialization remains unchanged where applicable
 
 **Plan status:** RECORDED before this regression change.  
 **Requirement status:** IN PROGRESS.
+
+
+### U09-INT-01 — R2/R3 source-opinion register label-scope regression verification (21 November 2026)
+
+**Implementation/test commit:** `79a3256301a00820885876cc659e2f51f61d00da` on PR #5 source branch `docs/reconcile-master-checklist-after-pr4-merge`. The only test-file delta is `backend/tests/test_ollama_assessment_prompt.py`; the preceding planned scope and acceptance criteria are recorded above. The intermediate formatting-only correction from `b52c4ce0a8e19a1ce67a0fdfaaba80f79c9abba1` to `79a3256` removed a literal escaped-newline line; it did not alter test logic. The final diff was rechecked and contains normal Python blank-line separation.
+
+**Regression:** `test_r2_and_r3_attributed_source_opinion_register_labels_are_round_scoped` passed. It runs the real R2 and R3 prompt builders using a synthetic eligible summary with one attributed opinion, captures both generated prompts, and asserts the exact R2 register label appears once only in R2 while the exact R3 register label appears once only in R3. It also asserts the exact source excerpt is present in both source-aware prompts. The test uses a fake structured generator; it is a deterministic prompt-assembly regression, not live LLM validation.
+
+**Exact-head required workflows on `79a3256301a00820885876cc659e2f51f61d00da`:**
+- Sequential Development Gate run `44873367143`: SUCCESS; job `136752616047`.
+- Backend Tests run `44873367078`: SUCCESS; job `136752626925`; **873 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive; 1 existing Starlette/httpx TestClient deprecation warning**.
+- The backend log identifies the new regression as passed: `tests.test_ollama_assessment_prompt::test_r2_and_r3_attributed_source_opinion_register_labels_are_round_scoped`.
+- Deterministic no-inference preflight: **7 passed, 0 failed, 0 inconclusive**.
+- Security and Dependency Audit run `44873367095`: SUCCESS. Python CodeQL job `136752624003`, JavaScript/TypeScript CodeQL job `136752624153`, Python/Node dependency audit job `136752624162`, and full-history secret scan job `136752624173` all completed SUCCESS.
+- Pytest/JUnit diagnostics artifact `14695285156`, SHA-256 `d4e889ab7d5037d961b3fafdb9f19a86d3e55d160225ab5154905e21f6ca4349`.
+- Deterministic preflight artifact `14695250241`, SHA-256 `6a93b2af1c911788f9ec8df3c88f822fc86f1410ab72746d62e1d18866435d0a`.
+
+**Scope and sequence:** no production file, machine plan, validator allowlist, schema, case record, clinical field definition, R1–R4 orchestration, model configuration, frontend, installer or runtime dependency changed in this regression increment. The current machine-plan active step remains `U09-U10` IN PROGRESS; U04 and all later steps remain BLOCKED. PR #5 remains OPEN and UNMERGED, with target base `df90e4a380bef06a7d37def753b385db4ae86c30`; the protected development target and `main` were not modified.
+
+**Requirement status:** the R2/R3 register-label scope regression is VERIFIED at the exact code/test SHA above. The parent U09–U10 ordered step remains IN PROGRESS; no live model, four-round saved-run, GPU, evidence retrieval, guideline-compliance or clinical-validation claim is made.
