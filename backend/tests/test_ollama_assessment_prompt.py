@@ -487,3 +487,139 @@ def test_quarantined_case_summary_is_unassessable_for_r2_and_r3_source_reviews(
         for flag in r3_result.source_reference_integrity_flags
     )
     assert case.model_dump_json() == original_case_json
+
+\n\n
+def test_r2_and_r3_attributed_source_opinion_register_labels_are_round_scoped(monkeypatch):
+    source_excerpt = (
+        "The colorectal surgical note favours a surgery-led assessment first, "
+        "conditional on complete local staging and resectability review"
+    )
+    case = SyntheticCase(
+        scenario_title="Synthetic R2/R3 register label-scope regression",
+        case_summary=(
+            source_excerpt
+            + ". The fictional record does not supply the prerequisite investigations "
+            "or establish a final pathway."
+        ),
+    )
+    captured_prompts = []
+
+    async def fake_generate_structured(prompt, schema_type, max_tokens):
+        captured_prompts.append((schema_type.__name__, prompt))
+        payload = {
+            "position": "conditional",
+            "provisional_conclusion": (
+                "The supplied fictional information does not establish a definitive pathway."
+            ),
+            "response_to_other_perspectives": (
+                "The contribution preserves the source option and its stated conditions "
+                "without asserting that any prerequisite is fulfilled."
+            ),
+            "agreements": [],
+            "substantive_challenges": [],
+            "position_changes": [],
+            "remaining_unknowns": ["The stated prerequisites remain unverified in this fictional record."],
+            "risk_flags": [],
+            "confidence": 0.4,
+        }
+        if schema_type is Round2ContributionDraft:
+            payload["source_opinion_responses"] = [{
+                "source_id": "CASE:case_summary#1",
+                "position_on_source_opinion": "conditional",
+                "analysis": (
+                    source_excerpt
+                    + "; this is a source-reported conditional option, not a verified fact."
+                ),
+                "comparison": (
+                    "The option remains conditional; suitability is not established."
+                ),
+            }]
+        elif schema_type is AdversarialContributionDraft:
+            payload["source_opinion_reviews"] = [{
+                "source_id": "CASE:case_summary#1",
+                "source_excerpt": source_excerpt,
+                "option_status": "preserved",
+                "conditions_status": "preserved",
+                "review_basis": (
+                    "The supplied peer R2 source-specific response retains the option and condition."
+                ),
+                "source_reference_ids": ["CASE:case_summary#1", "R2:RO-02"],
+                "evidence_peer_id": "R2:RO-02",
+                "evidence_excerpt": source_excerpt,
+            }]
+        else:
+            raise AssertionError(f"Unexpected schema requested: {schema_type.__name__}")
+        return schema_type.model_validate(payload)
+
+    monkeypatch.setattr(
+        mdt_generation, "_generate_structured", fake_generate_structured
+    )
+
+    profile = {
+        "agent_id": "RO-01",
+        "name": "Synthetic Radiation Oncology Role",
+        "mandate": "Review only supplied synthetic information and preserve uncertainty.",
+    }
+    peer_profile = {
+        "agent_id": "RO-02",
+        "name": "Synthetic Peer Role",
+        "mandate": "Review only supplied synthetic information and preserve uncertainty.",
+    }
+    own_r1 = {
+        "position": "conditional",
+        "provisional_conclusion": (
+            "The supplied information does not establish a definitive educational pathway."
+        ),
+        "preferred_educational_option": (
+            "No unconditional educational option is selected from this incomplete record."
+        ),
+        "case_data_integrity_flags": [],
+    }
+
+    async def run_rounds():
+        own_r2 = await mdt_generation.generate_debate_contribution(
+            profile, case, own_r1, peer_views=[]
+        )
+        peer_r2 = await mdt_generation.generate_debate_contribution(
+            peer_profile, case, own_r1, peer_views=[]
+        )
+        peer = {
+            "agent_id": "RO-02",
+            "agent_name": "Synthetic Peer Role",
+            "result": peer_r2.model_dump(),
+            "round1_case_integrity_flags": [],
+        }
+        r3 = await mdt_generation.generate_adversarial_contribution(
+            profile,
+            case,
+            own_r1,
+            own_r2.model_dump(),
+            peer_debate_views=[peer],
+        )
+        return r3
+
+    asyncio.run(run_rounds())
+    r2_prompt = next(
+        prompt for schema_name, prompt in captured_prompts
+        if schema_name == "Round2ContributionDraft"
+    )
+    r3_prompt = next(
+        prompt for schema_name, prompt in captured_prompts
+        if schema_name == "AdversarialContributionDraft"
+    )
+
+    r2_register_label = (
+        "SERVER-IDENTIFIED ATTRIBUTED SOURCE OPINIONS (exact case-summary excerpts; "
+        "source statements, not verified facts or your endorsement)"
+    )
+    r3_register_label = (
+        "SERVER-IDENTIFIED ATTRIBUTED SOURCE OPINIONS "
+        "(exact case-summary excerpts; not verified facts)."
+    )
+
+    assert r2_prompt.count(r2_register_label) == 1
+    assert r3_register_label not in r2_prompt
+    assert r3_prompt.count(r3_register_label) == 1
+    assert r2_register_label not in r3_prompt
+    assert source_excerpt in r2_prompt
+    assert source_excerpt in r3_prompt
