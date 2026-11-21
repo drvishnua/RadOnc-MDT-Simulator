@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview --host 127.0.0.1"
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "node --test src/caseDraft.test.js src/runRecovery.test.js src/singleAssessmentStorage.test.js src/patientVersionName.test.js src/roundTiming.test.js"
   },
   "dependencies": {
     "react": "19.1.1",
@@ -17,6 +18,9 @@
     "@types/react-dom": "19.1.9",
     "@vitejs/plugin-react": "5.0.2",
     "typescript": "5.9.2",
-    "vite": "7.1.2"
+    "vite": "7.3.8"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
   }
 }

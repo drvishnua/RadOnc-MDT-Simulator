@@ -1,64 +1,19 @@
-name: Sync Local Source Folder
-
+name: "PAUSED — Local source folder synchronisation"
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
 
 permissions:
   contents: read
 
-concurrency:
-  group: sync-local-source
-  cancel-in-progress: true
-
 jobs:
-  sync:
-    name: Sync source into research folder
-    runs-on: [self-hosted, Windows, X64]
-    timeout-minutes: 5
+  notice:
+    name: "Security pause — no target-machine test executed"
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Sync source without touching local models or runner
-        shell: powershell
+      - name: Explain temporary hosted-runner policy
         run: |
-          $ErrorActionPreference = "Stop"
-          $projectRoot = (Resolve-Path (Join-Path $env:GITHUB_WORKSPACE "..\..\..\..")).Path
-          $destination = Join-Path $projectRoot "Source"
-          $marker = Join-Path $destination ".radonc-github-managed"
-
-          if ((Test-Path $destination) -and -not (Test-Path $marker)) {
-            throw "The Source folder already exists and is not marked as GitHub-managed. Refusing to overwrite it."
-          }
-
-          New-Item -ItemType Directory -Force -Path $destination | Out-Null
-          Set-Content -Path $marker -Value "Managed by the RadOnc MDT Simulator GitHub sync workflow." -Encoding UTF8
-
-          Write-Host "Repository checkout: $env:GITHUB_WORKSPACE"
-          Write-Host "Local source destination: $destination"
-
-          & robocopy.exe $env:GITHUB_WORKSPACE $destination /E /XD .git node_modules .venv __pycache__ .local-logs /NFL /NDL /NJH /NJS /NP
-          $copyCode = $LASTEXITCODE
-          if ($copyCode -ge 8) {
-            throw "Robocopy failed with exit code $copyCode."
-          }
-          # Robocopy codes 0-7 indicate success or successful copy differences.
-          $global:LASTEXITCODE = 0
-
-          $requiredFiles = @(
-            "backend\app\main.py",
-            "frontend\package.json",
-            "scripts\start-local.ps1",
-            "docs\PRODUCT_SPEC.md"
-          )
-          foreach ($relativePath in $requiredFiles) {
-            if (-not (Test-Path (Join-Path $destination $relativePath))) {
-              throw "Required source file missing after sync: $relativePath"
-            }
-          }
-
-          Write-Host "LOCAL_SOURCE_SYNC_OK"
-          Write-Host "Files copied. Local runner and AI_Models folders were not included."
+          echo "This workflow is intentionally paused while the repository is public."
+          echo "This workflow previously wrote repository files and restarted processes on the target laptop. Automatic remote writes to the laptop are suspended."
+          echo "No laptop installation, local source sync, Ollama inference, MDT stress run, or GPU measurement was performed."
+          echo "This notice is not a functional test pass. Use the standard hosted CI workflows for code validation."

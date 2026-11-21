@@ -1,0 +1,62 @@
+{
+  "catalogue_version": "v1",
+  "generated_at": "2026-11-21T17:15:00+05:30",
+  "entries": [
+    {
+      "source_id": "ASTRO-LARYNX-2020",
+      "title": "Radiation Therapy for Glottic Squamous Cell Carcinoma: An ASTRO Clinical Practice Guideline",
+      "organization": "American Society for Radiation Oncology",
+      "source_type": "guideline",
+      "edition_or_version": "2020 Guideline",
+      "publication_date": "2020-04-01",
+      "update_date": "2020-04-01",
+      "jurisdiction": "USA/International",
+      "specialties": [
+        "radiation_oncology"
+      ],
+      "topics": [
+        "larynx",
+        "glottic_cancer",
+        "radiotherapy_fractionation"
+      ],
+      "doi_or_url": "https://doi.org/10.1016/j.prro.2020.02.004",
+      "access_status": "available",
+      "supersession": "current",
+      "key_passages": [
+        {
+          "section": "Recommendation 1.1",
+          "text": "For patients with T1N0 glottic cancer, definitive RT is recommended with curative intent."
+        }
+      ]
+    },
+    {
+      "source_id": "RTOG-9111",
+      "title": "Concurrent Chemotherapy and Radiotherapy for Organ Preservation in Advanced Laryngeal Cancer",
+      "organization": "Radiation Therapy Oncology Group",
+      "source_type": "trial",
+      "edition_or_version": "Long-term Follow-up",
+      "publication_date": "2013-03-01",
+      "update_date": "2013-03-01",
+      "jurisdiction": "USA/International",
+      "specialties": [
+        "radiation_oncology",
+        "medical_oncology"
+      ],
+      "topics": [
+        "larynx",
+        "organ_preservation",
+        "chemoradiation"
+      ],
+      "doi_or_url": "https://doi.org/10.1200/JCO.2012.43.6097",
+      "access_status": "available",
+      "supersession": "current",
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "Concurrent cisplatin and radiotherapy provides superior locoregional control and larynx preservation."
+        }
+      ]
+    }
+  ],
+  "hash": "570eec1249d6fc0c6f6531f625711acbf749a55d2e5df1e680b50d66818319b6"
+}

@@ -1,0 +1,274 @@
+{
+  "schema_version": 1,
+  "plan_id": "radonc-mdt-master-sequential-plan",
+  "scope_baseline_commit": "5284483a26e87028f919966e304c472ed537e839",
+  "active_step": "U09-U10",
+  "steps": [
+    {
+      "id": "STEP-A",
+      "title": "Repository, branch, PR, commit, checklist and CI verification",
+      "status": "VERIFIED",
+      "depends_on": [],
+      "allowed_paths": [],
+      "required_workflow_names": [
+        "Windows Installer Build",
+        "GitHub-hosted Windows Packaging Prerequisites",
+        "Backend Tests",
+        "Patient Registry and Four-Round Dashboard Browser E2E",
+        "Frontend Build",
+        "Security and Dependency Audit"
+      ],
+      "completion_evidence": {
+        "commit_sha": "986593ec8aab00b7885f1db5ff39dab2546278fc",
+        "workflow_runs": [
+          {
+            "id": 44625679451,
+            "name": "Windows Installer Build"
+          },
+          {
+            "id": 44625679442,
+            "name": "GitHub-hosted Windows Packaging Prerequisites"
+          },
+          {
+            "id": 44625679759,
+            "name": "Backend Tests"
+          },
+          {
+            "id": 44625679486,
+            "name": "Patient Registry and Four-Round Dashboard Browser E2E"
+          },
+          {
+            "id": 44625679927,
+            "name": "Frontend Build"
+          },
+          {
+            "id": 44625679503,
+            "name": "Security and Dependency Audit"
+          }
+        ]
+      }
+    },
+    {
+      "id": "U12",
+      "title": "Fail-closed sequential development gate",
+      "status": "VERIFIED",
+      "depends_on": [
+        "STEP-A"
+      ],
+      "allowed_paths": [
+        "docs/development_plan.json",
+        "docs/MASTER_DEVELOPMENT_CHECKLIST.md",
+        "backend/scripts/validate_development_plan.py",
+        "backend/tests/test_development_plan.py",
+        ".github/workflows/sequential-development-gate.yml",
+        ".github/workflows/backend-tests.yml",
+        ".github/workflows/security-audit.yml"
+      ],
+      "required_workflow_names": [
+        "Sequential Development Gate",
+        "Backend Tests",
+        "Security and Dependency Audit"
+      ],
+      "completion_evidence": {
+        "commit_sha": "5284483a26e87028f919966e304c472ed537e839",
+        "workflow_runs": [
+          {
+            "id": 44660440836,
+            "name": "Sequential Development Gate"
+          },
+          {
+            "id": 44660440918,
+            "name": "Backend Tests"
+          },
+          {
+            "id": 44660440769,
+            "name": "Security and Dependency Audit"
+          }
+        ]
+      }
+    },
+    {
+      "id": "U09-U10",
+      "title": "Canonical clinical data contract and deterministic hallucination controls",
+      "status": "IN PROGRESS",
+      "depends_on": [
+        "U12"
+      ],
+      "allowed_paths": [
+        "docs/development_plan.json",
+        "docs/MASTER_DEVELOPMENT_CHECKLIST.md",
+        "backend/app/clinical_fields.py",
+        "backend/app/schemas.py",
+        "backend/app/services/case_integrity.py",
+        "backend/tests/*"
+      ],
+      "required_workflow_names": [
+        "Sequential Development Gate",
+        "Backend Tests",
+        "Security and Dependency Audit"
+      ],
+      "completion_evidence": null
+    },
+    {
+      "id": "U04",
+      "title": "Pre-MDT conversational intake and completeness screener",
+      "status": "BLOCKED",
+      "depends_on": [
+        "U09-U10"
+      ],
+      "allowed_paths": [
+        "docs/development_plan.json",
+        "docs/MASTER_DEVELOPMENT_CHECKLIST.md",
+        "backend/app/services/intake*",
+        "backend/app/main.py",
+        "backend/tests/*",
+        "frontend/src/*",
+        "frontend/tests/*"
+      ],
+      "required_workflow_names": [
+        "Sequential Development Gate",
+        "Backend Tests",
+        "Frontend Build",
+        "Patient Registry and Four-Round Dashboard Browser E2E"
+      ],
+      "completion_evidence": null
+    },
+    {
+      "id": "U05-U06",
+      "title": "Specialist role contract, conditional reasoning and round-specific arguments",
+      "status": "BLOCKED",
+      "depends_on": [
+        "U04"
+      ],
+      "allowed_paths": [
+        "docs/development_plan.json",
+        "docs/MASTER_DEVELOPMENT_CHECKLIST.md",
+        "backend/app/agents/*",
+        "backend/app/services/mdt_generation.py",
+        "backend/app/services/mdt_rounds.py",
+        "backend/tests/*"
+      ],
+      "required_workflow_names": [
+        "Sequential Development Gate",
+        "Backend Tests",
+        "Security and Dependency Audit"
+      ],
+      "completion_evidence": null
+    },
+    {
+      "id": "U06-U08",
+      "title": "Round orchestration, Chair reconciliation and copied/generic response controls",
+      "status": "BLOCKED",
+      "depends_on": [
+        "U05-U06"
+      ],
+      "allowed_paths": [
+        "docs/development_plan.json",
+        "docs/MASTER_DEVELOPMENT_CHECKLIST.md",
+        "backend/app/services/mdt_generation.py",
+        "backend/app/services/mdt_rounds.py",
+        "backend/app/services/chair_report_quality.py",
+        "backend/tests/*",
+        "frontend/src/*"
+      ],
+      "required_workflow_names": [
+        "Sequential Development Gate",
+        "Backend Tests",
+        "Frontend Build",
+        "Patient Registry and Four-Round Dashboard Browser E2E"
+      ],
+      "completion_evidence": null
+    },
+    {
+      "id": "U07",
+      "title": "Versioned evidence catalogue and role-specific retrieval",
+      "status": "BLOCKED",
+      "depends_on": [
+        "U06-U08"
+      ],
+      "allowed_paths": [
+        "docs/development_plan.json",
+        "docs/MASTER_DEVELOPMENT_CHECKLIST.md",
+        "backend/app/*",
+        "backend/tests/*",
+        "docs/*"
+      ],
+      "required_workflow_names": [
+        "Sequential Development Gate",
+        "Backend Tests",
+        "Security and Dependency Audit"
+      ],
+      "completion_evidence": null
+    },
+    {
+      "id": "U03",
+      "title": "Ollama discovery, reuse and installer state machine",
+      "status": "BLOCKED",
+      "depends_on": [
+        "U07"
+      ],
+      "allowed_paths": [
+        "docs/development_plan.json",
+        "docs/MASTER_DEVELOPMENT_CHECKLIST.md",
+        ".github/scripts/*",
+        "packaging/windows/*",
+        "scripts/*",
+        "backend/tests/*"
+      ],
+      "required_workflow_names": [
+        "Sequential Development Gate",
+        "Backend Tests",
+        "Windows Installer Build",
+        "GitHub-hosted Windows Packaging Prerequisites"
+      ],
+      "completion_evidence": null
+    },
+    {
+      "id": "U01-U02",
+      "title": "Remove development surfaces and complete standalone desktop UX",
+      "status": "BLOCKED",
+      "depends_on": [
+        "U03"
+      ],
+      "allowed_paths": [
+        "docs/development_plan.json",
+        "docs/MASTER_DEVELOPMENT_CHECKLIST.md",
+        "frontend/src/*",
+        "frontend/tests/*",
+        "packaging/*",
+        ".github/workflows/*"
+      ],
+      "required_workflow_names": [
+        "Sequential Development Gate",
+        "Frontend Build",
+        "Patient Registry and Four-Round Dashboard Browser E2E",
+        "Windows Installer Build"
+      ],
+      "completion_evidence": null
+    },
+    {
+      "id": "RELEASE",
+      "title": "Integrated live-model, GPU, security, packaging and independent clinical validation",
+      "status": "BLOCKED",
+      "depends_on": [
+        "U01-U02"
+      ],
+      "allowed_paths": [
+        "docs/development_plan.json",
+        "docs/MASTER_DEVELOPMENT_CHECKLIST.md",
+        "backend/*",
+        "frontend/*",
+        "packaging/*",
+        ".github/workflows/*"
+      ],
+      "required_workflow_names": [
+        "Sequential Development Gate",
+        "Backend Tests",
+        "Frontend Build",
+        "Security and Dependency Audit",
+        "Windows Installer Build"
+      ],
+      "completion_evidence": null
+    }
+  ]
+}
