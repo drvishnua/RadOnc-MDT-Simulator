@@ -156,22 +156,50 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
     for field_id in set(redacted_conflicting_fields) | set(redacted_invalid_fields):
         model_snapshot[field_id] = None
 
-    # INVALID source excerpts remain in the persisted case/audit snapshot, but
-    # must not be supplied as clinical evidence to model generation. Keep
-    # source identity and the original excerpt hash in this projection.
-    model_provenance = model_snapshot.get("clinical_field_provenance")
-    if isinstance(model_provenance, dict):
-        for field_id in redacted_invalid_fields:
-            entries = model_provenance.get(field_id)
+    # INVALID source excerpts and all nested case-summary source text remain in
+    # the persisted audit snapshot, but are withheld from model generation.
+    # Keep source identity and original excerpt hashes for traceability.
+    def redact_summary_source(source: dict[str, Any]) -> dict[str, Any]:
+        return {
+            **{key: value for key, value in source.items() if key != "source_excerpt"},
+            "source_excerpt_redacted": True,
+        }
+
+    case_summary_state = case.clinical_field_states.get("case_summary")
+    if case_summary_state in {"INVALID", "CONFLICTING"}:
+        model_provenance = model_snapshot.get("clinical_field_provenance")
+        if isinstance(model_provenance, dict):
+            entries = model_provenance.get("case_summary")
             if isinstance(entries, list):
-                model_provenance[field_id] = [
-                    {
-                        **{key: value for key, value in source.items() if key != "source_excerpt"},
-                        "source_excerpt_redacted": True,
-                    }
-                    for source in entries
-                    if isinstance(source, dict)
+                model_provenance["case_summary"] = [
+                    redact_summary_source(source)
+                    for source in entries if isinstance(source, dict)
                 ]
+        model_conflicts = model_snapshot.get("clinical_field_conflicts")
+        if isinstance(model_conflicts, dict):
+            candidates = model_conflicts.get("case_summary")
+            if isinstance(candidates, list):
+                model_conflicts["case_summary"] = [
+                    {
+                        "raw_value": None,
+                        "provenance": redact_summary_source(candidate["provenance"]),
+                    }
+                    for candidate in candidates
+                    if isinstance(candidate, dict) and isinstance(candidate.get("provenance"), dict)
+                ]
+    else:
+        model_provenance = model_snapshot.get("clinical_field_provenance")
+        if isinstance(model_provenance, dict):
+            for field_id in redacted_invalid_fields:
+                entries = model_provenance.get(field_id)
+                if isinstance(entries, list):
+                    model_provenance[field_id] = [
+                        {
+                            **{key: value for key, value in source.items() if key != "source_excerpt"},
+                            "source_excerpt_redacted": True,
+                        }
+                        for source in entries if isinstance(source, dict)
+                    ]
     field_status: dict[str, dict[str, Any]] = {}
     canonical_field_values: dict[str, dict[str, Any]] = {}
     normalization_warnings: list[str] = []
@@ -221,14 +249,8 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
         # field itself. This is not independent verification of the underlying fact.
         if explicit_sources:
             provenance = [source.model_dump(mode="json") for source in explicit_sources]
-            if state == "INVALID":
-                provenance = [
-                    {
-                        **{key: source_value for key, source_value in source.items() if key != "source_excerpt"},
-                        "source_excerpt_redacted": True,
-                    }
-                    for source in provenance
-                ]
+            if state == "INVALID" or (field_id == "case_summary" and state == "CONFLICTING"):
+                provenance = [redact_summary_source(source) for source in provenance]
         elif state == "PRESENT":
             source_type = "CASE_SUMMARY" if field_id == "case_summary" else "STRUCTURED_CASE_INPUT"
             provenance = [{
@@ -256,7 +278,17 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
             "source_requirement": definition.source_requirement,
             "provenance": provenance,
             "conflict_candidates": [
-                candidate.model_dump(mode="json") for candidate in conflict_candidates
+                (
+                    {
+                        "raw_value": None,
+                        "provenance": redact_summary_source(
+                            candidate.provenance.model_dump(mode="json")
+                        ),
+                    }
+                    if field_id == "case_summary" and state in {"INVALID", "CONFLICTING"}
+                    else candidate.model_dump(mode="json")
+                )
+                for candidate in conflict_candidates
             ],
         }
 
