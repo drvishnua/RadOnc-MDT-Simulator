@@ -8389,7 +8389,7 @@ The earlier failed run remains part of the audit history; it is not erased or re
 
 **Status:** T1 JSON input-type interpretation is VERIFIED for the existing v2 schema. The broader U09–U10 step remains IN PROGRESS. This section supersedes the earlier “T1 numeric JSON semantics unresolved” row and the historical “next approved action: resolve T1 input-type interpretation” note; those historical entries are retained for audit.
 
-### U10 TNM staging-context completeness — ordered subtask plan (PLAN RECORDED; no code yet)
+### U10 TNM staging-context completeness — ordered subtask plan (recorded before implementation; see verification checkpoint below)
 
 **Parent step:** `U09-U10 — Canonical clinical data contract and deterministic hallucination controls`. This plan is a bounded continuation of that existing step, not a new workstream. Active machine-plan ID, status, dependencies and fixed allowlist remain unchanged. The machine plan and validator allowlists were rechecked as identical at current code head `893c5d0`.
 
@@ -8414,26 +8414,59 @@ The earlier failed run remains part of the audit history; it is not erased or re
 
 **Risk and rollback:** the principal risk is over-blocking sites for which subsite is not applicable; mitigate only through an explicit `NOT_APPLICABLE` field state, never by guessing. If focused or full tests fail, diagnose and correct the minimal change; do not weaken existing checks. Roll back only the bounded U10 code/test commit if necessary, preserving unrelated PR history. No merge, force-push or target-branch mutation.
 
+### U10 TNM staging-context subsite completeness — implementation and exact-head verification (21 November 2026)
+
+**Implementation/test commit:** `f047dd56b918af06ebb7c4ad3389ead5018f0a99` on PR #5 source branch. Changed only `backend/app/services/case_integrity.py` and `backend/tests/test_case_integrity.py`. No clinical-field registry, schema, field type, normalisation rule, migration, raw case data or frontend file was changed.
+
+**Implemented root-cause correction:** one shared state-aware helper, `_anatomical_subsite_staging_context_gap`, now informs all three deterministic context surfaces:
+1. **Model prompt context:** when TNM/stage data is supplied, missing/unresolved subsite produces a staging warning. It does not use the free-text summary as a substitute for a selected structured subsite.
+2. **Post-generation stage-group audit:** a generated clinical/pathological stage-group assertion is flagged when anatomical subsite is missing or unresolved. Explicit `NOT_APPLICABLE` is accepted only as an explicit state with no contradictory populated value.
+3. **Intake validation warnings:** the same subsite-context rule is applied before the case enters generation. These checks therefore agree on missing/unknown/unresolved subsite.
+4. **Field-specific unknowns:** a structured value does not silently override `known_unknowns` stating that subsite remains unknown. The helper trusts that list only when its own field state is PRESENT or legacy-unannotated, matching the existing post-generation audit.
+
+**Regression coverage:** five tests added; the previous positive stage-context fixture now includes an explicitly structured subsite:
+- `test_prompt_and_intake_warn_when_staging_context_subsite_is_missing`
+- `test_unknown_subsite_blocks_stage_group_context_even_when_summary_mentions_subsite`
+- `test_known_unknown_subsite_blocks_staging_context_even_with_structured_value`
+- `test_explicit_not_applicable_subsite_resolves_staging_context_without_inference`
+- `test_present_structured_subsite_resolves_staging_context`
+
+The tests also assert that case serialization remains unchanged where applicable. `UNKNOWN`, `NOT_REPORTED`, `PENDING`, `DECLINED`, `INVALID`, `CONFLICTING` and missing values are not treated as resolved. An explicit `NOT_APPLICABLE` state is a declaration for this context gate only; it is not an inferred anatomical fact.
+
+**Exact-head CI on `f047dd56b918af06ebb7c4ad3389ead5018f0a99`:**
+- Sequential Development Gate run `44872743941`: SUCCESS.
+- Backend Tests run `44872744030`: **872 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive**.
+- Deterministic no-inference preflight: **7 passed, 0 failed, 0 inconclusive**.
+- Security and Dependency Audit run `44872743987`: SUCCESS; Python CodeQL, JavaScript/TypeScript CodeQL, dependency audit and full-history secret scan all passed.
+- Backend job `136750673246`; gate job `136750673073`; security jobs `136750673098` (dependency audit), `136750673279` (Python CodeQL), `136750673287` (JS/TS CodeQL), `136750673355` (secret scan).
+- Pytest diagnostics artifact `14694642121`, digest `sha256:195972957b313e23bc1724866c66fdd9596a8f3345d1d3db4bbd0af76f60f90c`.
+- Deterministic preflight artifact `14694382689`, digest `sha256:995ee9556c33e25eebdcad81d82fd65e7951f7c6f30feba8c0ebe71b95a8efb0`.
+
+**Scope and clinical limitation:** this verifies presence/state completeness only. It does **not** validate an AJCC/UICC site/subsite/edition compatibility combination, a disease-specific TNM chapter, a derived stage group, N0/M0, fitness or resectability. Site/system/edition labels remain supplied data and unverified for current clinical compatibility. No clinical guideline compliance or independent clinical validation is claimed.
+
+**Status:** the bounded anatomical-subsite context subtask is VERIFIED against the test and CI evidence above. The parent U09–U10 ordered step remains IN PROGRESS; remaining acceptance items must be completed in order. U04 and later workstreams remain BLOCKED.
+
 ### Master Checklist — Current Status (21 November 2026)
 
 | Workstream | Status | Current evidence / remaining boundary |
 |---|---|---|
-| PR #5 / development branch protection | IN PROGRESS | PR #5 OPEN, NOT MERGED; current branch head `d43ebd87ba7c80387226f0dee0907f953a4de7f9` (checklist-only commit); latest application/test commit `893c5d0f0bded243811db90550ecf07e87580d8f`; R2/R3/R4 implementation code head `89159004f9bcb9a93d7b4edb6f2eb53d412d9be0`; target base `df90e4a380bef06a7d37def753b385db4ae86c30`; no direct changes to target branch or `main` |
+| PR #5 / development branch protection | IN PROGRESS | PR #5 OPEN, NOT MERGED; current application/test commit `f047dd56b918af06ebb7c4ad3389ead5018f0a99`; target base `df90e4a380bef06a7d37def753b385db4ae86c30`; current branch and `main` remain unmodified |
 | GOV-01 plan-before-execution discipline | VERIFIED | Ordered U09-INT-01 stages and non-goals recorded; no U04 activation |
-| U12 sequential fail-closed gate | VERIFIED | Exact-head Sequential Development Gate `44871637121` SUCCESS on `893c5d0f0bded243811db90550ecf07e87580d8f` |
+| U12 sequential fail-closed gate | VERIFIED | Exact-head Sequential Development Gate `44872743941` SUCCESS on `f047dd56b918af06ebb7c4ad3389ead5018f0a99` |
 | U09 registry IDs, aliases and declared field types | VERIFIED for tested contract | Prior 40-field / 7-value-type contract and immutable registry tests remain the evidence; full acceptance of U09-U10 is not claimed |
 | U09 field-state vocabulary and field-specific state validation | VERIFIED for tested cases | Canonical state/field tests remain passing; remaining U09-U10 acceptance work is still open |
 | U09 source text, provenance hashes and immutable audit | VERIFIED for tested boundaries | Existing exact-text, hash and immutable-record tests plus unchanged SyntheticCase regression; hashes do not establish source authenticity |
 | U09 legacy v1/unversioned read-only and explicit upgrade | VERIFIED for tested transitions | Prior migration/upgrade regressions remain passing in the full backend suite |
 | U09 T1 canonical mapping/input type | VERIFIED for current v2 contract | JSON string `"1"` remains a string and lexically maps to `T1`; JSON number `1` is rejected by the declared string schema; future integer support would require an additive registry-version/migration plan |
+| U10 anatomical-subsite staging context | VERIFIED for tested boundaries | Exact-head backend regressions on `f047dd56b918af06ebb7c4ad3389ead5018f0a99` cover missing, UNKNOWN despite free-text mention, unresolved `known_unknowns`, explicit `NOT_APPLICABLE`, and explicit structured subsite across prompt/intake/post-generation context checks; parent U09–U10 remains IN PROGRESS |
 | INVALID/CONFLICTING central prompt-context redaction | VERIFIED for tested cases | Selected summary provenance and nested conflict candidates withheld in model-facing projections; original saved case remains unchanged |
 | R2 withheld/unassessable source-opinion input | VERIFIED | Exact-head backend regressions cover both INVALID and CONFLICTING; unregistered CASE responses flagged and unbound |
 | R3 withheld source opinions and preserved general adversarial audits | VERIFIED | Exact-head backend regressions cover withheld source input; general R2 provenance and R3 integrity/assumption/scope checks remain enabled |
 | R4 Chair synthesis and source-opinion coverage | VERIFIED for tested boundaries | R4 null-state handoff and actual Chair reconciliation regression pass for both INVALID and CONFLICTING; live saved-run synthesis remains unverified |
 | Four-round saved data flow and distinct-role accounting | VERIFIED for deterministic tests | Prior R1–R4 data-flow and distinct-role tests pass; not proof of live 45-role execution |
 | Missing/failed-agent and resume handling | VERIFIED for deterministic tests | Existing backend resume/failure tests pass; current live simulation not performed |
-| Backend suite and deterministic preflight | VERIFIED on `893c5d0f0bded243811db90550ecf07e87580d8f` | Run `44871637091`: 867/867; preflight 7/7; artifacts recorded in T1 checkpoint below |
-| Security, dependencies, secret scan and CodeQL | VERIFIED on `893c5d0f0bded243811db90550ecf07e87580d8f` and docs head `d43ebd87ba7c80387226f0dee0907f953a4de7f9` | Code/test run `44871637129` and checklist-only docs run `44871845357`: all four jobs SUCCESS on each respective SHA |
+| Backend suite and deterministic preflight | VERIFIED on `f047dd56b918af06ebb7c4ad3389ead5018f0a99` | Run `44872744030`: 872/872; preflight 7/7; artifacts recorded in U10 subsite checkpoint below |
+| Security, dependencies, secret scan and CodeQL | VERIFIED on `f047dd56b918af06ebb7c4ad3389ead5018f0a99` | Run `44872743987`: Python CodeQL, JS/TS CodeQL, dependency audit and full-history secret scan all SUCCESS |
 | Frontend build/browser E2E | NOT APPLICABLE to this amendment | No frontend files changed; project-wide browser E2E is not established by this backend-only run |
 | Dashboard/API | VERIFIED for prior deterministic coverage | Existing API tests pass in the backend suite; no browser interaction test was run for this amendment |
 | Ollama context allocation and RTX 4060 request-time GPU inference | BLOCKED | No local Ollama inference, request-time `nvidia-smi` telemetry, or GPU-layer offload verification in this task |
@@ -8445,6 +8478,6 @@ The earlier failed run remains part of the audit history; it is not erased or re
 | Packaging, installer and release | BLOCKED | Later ordered work; not part of U09-INT-01 |
 | U04 and all later workstreams | BLOCKED | U09–U10 must finish and be accepted first; no sequence advancement |
 
-**Current milestone:** U09-INT-01 R2/R3/R4 case-summary quarantine boundary is VERIFIED, and the T1 JSON input-type contract is VERIFIED for immutable registry v2. U10 staging context completeness (site/subsite/system/edition) is the next bounded subtask within U09–U10 and is IN PROGRESS at planning stage only; no application code has been changed for it. The broader U09–U10 step remains IN PROGRESS; do not advance U04 or any later workstream. No live inference, GPU validation, guideline compliance, clinical validation or release claim is made.
+**Current milestone:** U09-INT-01 R2/R3/R4 case-summary quarantine boundary is VERIFIED; T1 JSON input-type semantics are VERIFIED for immutable registry v2; the U10 anatomical-subsite context completeness subtask is VERIFIED for the deterministic boundaries and exact-head CI listed below. The parent U09–U10 step remains IN PROGRESS; do not advance U04 or any later workstream. No live inference, GPU validation, site-specific AJCC/UICC compatibility, guideline compliance, clinical validation or release claim is made.
 
 **Checklist supersession note:** This latest status supersedes the earlier status row that listed R2/R3/R4 case-summary direct reads as BLOCKED before the authorised U09-INT-01 scope amendment and its implementation. Historical baseline/failure notes above remain intact.
