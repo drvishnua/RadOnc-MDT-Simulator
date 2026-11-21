@@ -8098,3 +8098,102 @@ All jobs returned for these three runs were completed with SUCCESS. These runs v
 | U04 and later workstreams / integrated release | BLOCKED | U09–U10 must be accepted first; no sequence advancement |
 
 **Next approved action:** resolve the T1 input-type interpretation without mutating the immutable v2 registry, and preserve the R2/R3/R4 direct-read bypass as BLOCKED until an authorised scope path exists. Do not edit the machine plan, begin U04, merge PR #5, modify the protected development branch or main, or widen the validator allowlist by editing JSON alone.
+
+
+---
+
+## U09-INT-01 — INVALID/CONFLICTING case-summary round-generation boundary
+
+**Owner authorisation:** On 21 November 2026, the owner authorised a narrow formal scope amendment to resolve the previously recorded R2/R3/R4 direct-read blocker, including the necessary machine-plan and validator allowlist changes and regression tests. This authorisation does not permit work on any other U09–U10 or later-step feature.
+
+**Original requirement being resolved:** An `INVALID` or `CONFLICTING` `case_summary` is redacted by the canonical model-facing projection, but downstream R2, R3 and R4 source-opinion code directly reads the original `case.case_summary`. Prevent these downstream paths from consuming that quarantined raw text, while preserving the immutable original data and audit provenance.
+
+**Baseline before implementation**
+- PR #5 is OPEN and NOT MERGED; target is `feature/four-round-mdt-and-performance`; source is `docs/reconcile-master-checklist-after-pr4-merge`.
+- PR source head before this plan: `62ed9d62301710887883b4447f9adb0074bb9cef`.
+- Target base SHA: `df90e4a380bef06a7d37def753b385db4ae86c30`.
+- Machine plan baseline remains `5284483a26e87028f919966e304c472ed537e839`; `active_step=U09-U10`; U12 remains VERIFIED; U04 and all later steps remain BLOCKED.
+- Existing U09–U10 allowed paths excluded `backend/app/services/mdt_generation.py` and `backend/scripts/validate_development_plan.py`. The validator independently hard-codes the allowlist in `STEP_ALLOWED_PATHS`.
+- The existing canonical projection already redacts INVALID/CONFLICTING values in the prompt context; no defect was demonstrated in the permitted `case_integrity.py` projection itself.
+- Caller trace on the baseline found direct raw summary consumption at the following functional boundaries in `mdt_generation.py`: Chair/R4 attributed-opinion retention and source-opinion coverage; the source-opinion repair anchor validator; R2 opinion register extraction and prompt instructions; R3 opinion register extraction, attribution detection, source-excerpt validation and traceability. All such uses must be covered by the same state gate; fixing only the prompt builder would leave validation and Chair paths exposed.
+
+### Complete ordered implementation plan
+
+**Stage 1 — Preserve and enforce the formal scope amendment**
+1. Keep the current active machine-plan step at U09–U10 and the existing scope baseline unchanged.
+2. Expand only the U09–U10 fixed allowlist by these two application/governance files:
+   - `backend/app/services/mdt_generation.py` — only the quarantined case-summary source-opinion boundary described below.
+   - `backend/scripts/validate_development_plan.py` — only the corresponding exact fixed-allowlist update and fail-closed regression support.
+3. Retain the existing U09–U10 entries and append these two exact paths in both `docs/development_plan.json` and the validator's `STEP_ALLOWED_PATHS["U09-U10"]`. Keep both lists exactly identical.
+4. Do not permit a broad `backend/app/*`, `backend/app/services/*`, `backend/scripts/*` or other wildcard expansion. Add adversarial tests proving that an unrelated backend path remains rejected and editing JSON alone cannot widen scope.
+
+**Stage 2 — Define one fail-closed source-text eligibility boundary**
+1. Add one small, documented helper in `mdt_generation.py` that returns the raw case-summary text only when its explicit state is `PRESENT`, or when no explicit state exists and the canonical default is therefore PRESENT.
+2. For every other state, return no source text. This is fail-closed even for states that the current SyntheticCase schema already prevents from carrying a non-empty value.
+3. The helper must not alter, normalise, repair, re-hash, overwrite or delete the original case, source excerpts, conflicting candidates, stored snapshots or audit records.
+4. Do not select an excerpt from conflict candidates, concatenate competing sources, or infer what a quarantined summary might have contained.
+
+**Stage 3 — Protect R2 specialist debate**
+1. Build the server-identified attributed-opinion register only from the eligible summary returned by the shared helper.
+2. When the summary is INVALID/CONFLICTING or otherwise unavailable, provide an explicit state-aware prompt notice that the original summary is withheld and that source-opinion attribution cannot be assessed.
+3. Make clear that an empty register in this situation means **withheld/unassessable**, not that the original summary contains no attributed opinions.
+4. Do not ask the model to inspect, quote, reconstruct or paraphrase the quarantined text. Keep the canonical supplied-case projection, explicit field state, R1 data and peer data unchanged.
+5. Ensure any model-authored CASE opinion ID that is not in the server register remains unregistered, is flagged, and receives no server-bound source excerpt or verified source-opinion position.
+
+**Stage 4 — Protect R3 adversarial review and source binding**
+1. Use the same eligible summary for R3 attributed-opinion extraction and attribution detection.
+2. Supply a separate withheld/unassessable attribution instruction for INVALID/CONFLICTING summary state; do not use the ordinary “no attributed opinion is present” instruction in this condition.
+3. Use only the safe eligible summary for exact excerpt matching, source-ID-to-excerpt binding, traceability checks and source-opinion repair-anchor validation.
+4. A model-authored CASE source ID or excerpt must not become traceable when the summary is withheld. Keep its original model-reported content and audit flags as appropriate, but do not bind an unregistered source excerpt or promote an unverified challenge.
+5. Preserve normal PRESENT-summary behaviour, including exact CASE IDs, exact source excerpts, source-specific peer checks and existing repair invariants.
+
+**Stage 5 — Protect R4 Chair synthesis**
+1. Use the same eligible summary for Chair retention of attributed source opinions and for source-opinion review coverage.
+2. If the summary is quarantined, do not append the original free text or build coverage from it. Add an explicit unresolved Chair disclosure that case-summary attributed opinions and exact source-opinion coverage are unassessable because the summary state is INVALID/CONFLICTING and the raw text was withheld.
+3. Do not convert this state into a claim that no attributed opinions exist, no source views were supplied, or the source authors had no position.
+4. Continue synthesising only actual saved R1–R3 contributions. Preserve recorded disagreements, conditions, minority positions and audit findings.
+
+**Stage 6 — Regression tests and adversarial controls**
+1. Add focused tests for PRESENT/default-PRESENT control behaviour and for both INVALID and CONFLICTING states.
+2. Test R2 prompt/register withholding, no raw sentinel/source excerpt leakage, explicit unassessable wording and rejection/unbinding of unregistered CASE responses.
+3. Test R3 prompt/register withholding, absence of false “no opinion exists” wording, no exact source binding from raw quarantined text, failed traceability and no promotion of an unsupported CASE challenge.
+4. Test Chair/R4 disclosure and prove that the original raw summary text and conflict candidates are not copied into the Chair source-opinion section; test that saved R1–R3 contribution records remain the synthesis inputs.
+5. Test the common state helper directly and exercise every discovered production caller. Add a repository-wide regression/search assertion if useful to ensure no direct raw-summary use remains in these source-opinion paths.
+6. Retain positive controls proving PRESENT attributed opinions still receive exact server IDs and exact source excerpts. Retain negative controls for fabricated IDs, duplicate/unregistered IDs and peer references not present in the supplied sample.
+7. Update sequential-gate tests to prove the exact two new paths are permitted for U09–U10, while unrelated paths and JSON-only allowlist widening continue to fail.
+
+**Stage 7 — Verification, audit and close-out**
+1. Run the focused new and affected existing backend tests.
+2. Run the full Backend Tests workflow, including deterministic no-inference preflight and per-test diagnostics.
+3. Run the Sequential Development Gate against the exact new source head, including changed-file/scope validation and adversarial gate tests.
+4. Run the Security and Dependency Audit, including Python and JavaScript/TypeScript CodeQL, dependency audits and full-history secret scan.
+5. Confirm all three required workflows completed SUCCESS on the same exact commit SHA; retain every failed/pending attempt and do not reuse stale CI.
+6. Reinspect the full PR diff and prove every changed file is on the exact amended allowlist. Confirm U09–U10 remains active, the scope baseline is unchanged, U04+ remains blocked, PR #5 remains open/unmerged, and neither protected development nor `main` was directly modified.
+7. Record exact code/test SHA, checklist SHA, run IDs, test counts, artefacts, test failures and validation limitations in this single checklist.
+
+### Explicit non-goals and safety constraints
+- No changes to the clinical decision algorithm, canonical field IDs, registry v2 definitions, SyntheticCase schema, patient source values, data-state vocabulary or source provenance format.
+- No changes to R1 logic, the number or identity of the 45 specialist roles, saved round ordering, round input selection, Chair consensus/counting algorithms, dashboard/frontend, intake, installer, Ollama configuration, GPU settings or evidence catalogue.
+- No migration or rewrite of existing patient cases, immutable versions, saved R1–R3 contributions, source excerpts, conflict candidates, hashes, run IDs or audit history.
+- No source authenticity, guideline compliance, clinical correctness, live Ollama inference or RTX 4060 activity claim.
+- No edit of protected development branch or `main`, no direct push to either, no force-push, no merge of PR #5 and no U04 activation.
+
+### Acceptance criteria
+- The only new non-documentation paths authorised for this U09–U10 amendment are the exact `mdt_generation.py` and `validate_development_plan.py` files named above; tests remain restricted to `backend/tests/*`.
+- Machine-plan and validator fixed U09–U10 allowlists match exactly; broad patterns are not introduced; adversarial scope tests pass.
+- INVALID/CONFLICTING case-summary text and its source excerpts are never supplied or re-consumed by R2/R3/R4 source-opinion extraction, prompts, validation, repair-anchor checks or Chair coverage.
+- Original case and audit data remain unchanged and available only through the existing authorised audit/storage paths.
+- Quarantine is explicitly described as unavailable/unassessable and is never translated into “no opinions exist”.
+- No fabricated/unregistered source opinion receives verified CASE provenance, exact source binding or Chair coverage.
+- PRESENT/default-PRESENT behaviour and exact excerpt traceability remain unchanged under regression tests.
+- All required exact-head CI workflows pass on the same final code SHA, with test diagnostics and artifacts inspected.
+- Active machine-plan sequence and all unrelated project requirements remain unchanged.
+
+### Rollback / stop conditions
+- If any affected test fails, retain the failure, diagnose it and correct only within this approved scope; do not weaken the regression or remove audit history.
+- If a path is not on the exact amended allowlist, stop before editing it and request separate authorisation.
+- If exact-head CI, source provenance, round-input identity or audit preservation cannot be verified, leave U09-INT-01 IN PROGRESS/BLOCKED and do not claim completion.
+- Rollback, if required, must be a new auditable revert/correction commit on this PR source branch; never force-push or rewrite history.
+
+**Plan status before implementation:** RECORDED. No validator, machine-plan or application-code implementation has yet been attempted under this amendment.
+**Requirement status:** IN PROGRESS.
