@@ -24,6 +24,7 @@ from app.round_schemas import (
     FinalReportDraft,
     FinalMDTReport,
 )
+from app.services.case_integrity import validate_specialist_reasoning_depth
 
 
 def _valid_assessment_payload(**overrides: Any) -> dict[str, Any]:
@@ -214,3 +215,40 @@ def test_round_4_chair_synthesis_preserves_minority_dissent_and_forbids_fake_una
     assert len(chair.unresolved_disagreements) >= 1
     assert chair.safety_boundary == "educational_simulation_only"
     assert chair.not_a_treatment_instruction is True
+
+
+def test_validate_specialist_reasoning_depth_flags_generic_disclaimers() -> None:
+    """Validator must flag assessments that consist solely of generic cop-outs."""
+    lazy_assessment = {
+        "provisional_conclusion": "Insufficient information available to make a recommendation.",
+        "perspective_summary": "More data is required.",
+        "discussion_options": [],
+        "conditional_options": [],
+        "preferred_educational_option": "",
+    }
+    flags = validate_specialist_reasoning_depth(lazy_assessment)
+    assert len(flags) >= 2
+    assert any("generic insufficient-information" in flag for flag in flags)
+    assert any("lacks educational options" in flag for flag in flags)
+
+
+def test_validate_specialist_reasoning_depth_flags_malformed_conditional_option() -> None:
+    """Validator flags conditional options missing condition text or prerequisites."""
+    assessment = {
+        "provisional_conclusion": "A detailed clinical rationale exploring pathways.",
+        "perspective_summary": "Role-specific surgical oncology analysis.",
+        "discussion_options": ["Consider diagnostic biopsy"],
+        "conditional_options": [
+            {"condition": "", "prerequisites": []}
+        ],
+    }
+    flags = validate_specialist_reasoning_depth(assessment)
+    assert any("missing an explicit condition or prerequisites" in flag for flag in flags)
+
+
+def test_validate_specialist_reasoning_depth_passes_valid_substantive_assessment() -> None:
+    """A valid, structured assessment with conditional branches passes with zero flags."""
+    assessment = _valid_assessment_payload()
+    flags = validate_specialist_reasoning_depth(assessment)
+    assert flags == []
+
