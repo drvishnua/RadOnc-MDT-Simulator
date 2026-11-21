@@ -1,7 +1,7 @@
 # RadOnc MDT Simulator — Current Task Checklist
 Snapshot: 21 November 2026  
 Branch: feature/four-round-mdt-and-performance  
-Latest application/test SHA: 924859e
+Latest application/test SHA: a51786b
 
 | Task | Status | Evidence / next action |
 |---|---|---|
@@ -15,7 +15,9 @@ Latest application/test SHA: 924859e
 | U09 Claim Citation Audit Integration | VERIFIED — CODE/TEST | Deterministic anti-hallucination citation audit wired into post-round quality gates. |
 | Post-Round Quality Gates Wiring | VERIFIED — CODE/TEST | Non-blocking post-round U05-U09 audit execution and SQLite persistence (`save_round_quality_audit`). |
 | Quality Audit API Endpoint | VERIFIED — CODE/TEST | `GET /api/runs/{run_id}/rounds/{round_number}/quality-audit` returns audit flags and validity. |
+| Quality Audit UI Banner | VERIFIED — CODE/TEST | Live round quality banner displaying citation concordance, duplicate warnings & reasoning audit. |
 | Concurrency Lock | VERIFIED — CODE/TEST | File-based mutex lock with timeout and stale-lock recovery on Windows. |
+| Frontend suite | VERIFIED — LOCAL | 32 passed, 0 failed; production build clean (tsc + vite). |
 | Backend test suite | VERIFIED — LOCAL | 648 passed, 0 failed, 1 skipped. |
 | Deterministic preflight | VERIFIED — LOCAL | 7 passed, 0 failed, 0 inconclusive. |
 | R2 structured source ledger | VERIFIED — CODE/TEST | Server-locked exact saved statements and IDs; full source coverage validator. |
