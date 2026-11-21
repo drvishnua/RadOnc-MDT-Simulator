@@ -394,6 +394,12 @@ def build_source_opinion_review_coverage(
     Statuses are model-reported representation labels only. They are not clinical
     findings, evidence of prerequisite fulfilment, votes, or consensus.
     """
+    if case_summary is None:
+        return [], [
+            "R3 case-summary source-opinion review coverage is unassessable because "
+            "case_summary is INVALID or CONFLICTING and raw text was withheld; "
+            "this does not establish that no attributed opinions exist."
+        ]
     integrity: list[str] = []
     entries = _distinct_role_entries(
         round3_rows, "result", "Round 3", integrity
