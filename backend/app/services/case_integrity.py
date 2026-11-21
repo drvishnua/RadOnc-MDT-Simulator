@@ -1768,3 +1768,56 @@ def build_case_validation_warnings(case: SyntheticCase) -> list[str]:
         if state == "CONFLICTING":
             warnings.append(f"{field_id} has conflicting source values; all candidates are preserved and human/source reconciliation remains outstanding.")
     return warnings
+
+
+_GENERIC_INSUFFICIENT_INFO_PATTERNS = re.compile(
+    r"^\s*(?:"
+    r"(?:insufficient|inadequate|lacking|not\s+enough)\s+(?:information|data|details|evidence)(?:\s+(?:is\s+)?available)?(?:\s+to\s+make\s+(?:a|any)?\s*(?:recommendation|decision|treatment\s+plan))?|"
+    r"more\s+(?:information|data|details|investigations?)\s+(?:is|are)?\s*(?:required|needed)|"
+    r"cannot\s+(?:make|provide|give)\s+(?:a|any)?\s*(?:recommendation|assessment|opinion|guidance|decision)|"
+    r"no\s+(?:recommendation|guidance|decision)\s+can\s+be\s+(?:made|provided|given)|"
+    r"please\s+(?:obtain|provide|perform|order)\s+additional\s+investigations?|"
+    r"clinical\s+decision\s+must\s+be\s+deferred"
+    r")[.\s]*$",
+    re.IGNORECASE,
+)
+
+
+def validate_specialist_reasoning_depth(assessment: dict[str, Any]) -> list[str]:
+    """Audit specialist assessment to ensure it does not hide behind generic non-responses (U05).
+
+    A specialist must provide role-specific analysis, educational options, or conditional
+    branches even when data is incomplete, rather than purely repeating a generic disclaimer.
+    """
+    flags: list[str] = []
+    conclusion = str(assessment.get("provisional_conclusion") or "").strip()
+    perspective = str(assessment.get("perspective_summary") or "").strip()
+
+    if _GENERIC_INSUFFICIENT_INFO_PATTERNS.match(conclusion):
+        flags.append(
+            "Provisional conclusion consists solely of a generic insufficient-information statement without clinical reasoning."
+        )
+    if _GENERIC_INSUFFICIENT_INFO_PATTERNS.match(perspective):
+        flags.append(
+            "Perspective summary consists solely of a generic insufficient-information statement without role-specific analysis."
+        )
+
+    discussion_options = assessment.get("discussion_options") or []
+    conditional_options = assessment.get("conditional_options") or []
+    preferred = str(assessment.get("preferred_educational_option") or "").strip()
+
+    if not discussion_options and not conditional_options and not preferred:
+        flags.append(
+            "Assessment lacks educational options, conditional pathways, or discussion options."
+        )
+
+    for idx, opt in enumerate(conditional_options):
+        if isinstance(opt, dict):
+            cond = str(opt.get("condition") or "").strip()
+            prereqs = opt.get("prerequisites") or []
+            if not cond or not prereqs:
+                flags.append(
+                    f"Conditional option [{idx}] is missing an explicit condition or prerequisites list."
+                )
+
+    return flags
