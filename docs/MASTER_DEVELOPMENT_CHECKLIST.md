@@ -4793,3 +4793,18 @@ The following exact-head backend failures are retained in GitHub Actions and exp
 **Clinical-safety boundary remains unchanged:** synthetic educational use only; unknown remains unknown; no inferred N0/M0, stage group, performance status, resectability, comorbidity negative or patient preference. Conflicts remain unresolved and source-specific. Conditional recommendations, uncertainty and dissent are preserved. R4 Chair synthesis may use only saved R1-R3 contributions. No guideline compliance or evidence verification is claimed.
 
 **Next action:** re-run the sequential gate, backend tests and security workflows on the new checklist-bearing PR #4 head, then request one independent approval. Do not merge PR #4 or mark U09/U10 VERIFIED until exact-head CI, acceptance criteria and independent review are complete.
+
+## New requirement entries (added for gap closure)
+
+| ID | Requirement | Status | Details & Acceptance Evidence |
+|----|-------------|--------|-------------------------------|
+| U01 | Remove Mission Control and Development Monitor | ✅ Done | Completely removed from backend API and frontend navigation; verified via automated tests. |
+| U02 | Standalone Desktop UI/UX (no browser loading) | ⏳ In Progress | Backend executable and installer exist, but startup script still opens default browser (`http://127.0.0.1:8765`). Needs native standalone window wrapper. |
+| U03 | Intelligent Ollama Installer (Model & Service Detection) | ⏳ In Progress | Basic service check exists, but if Ollama service is stopped, it attempts to download a portable copy/model rather than detecting existing installed Ollama and local `qwen3.5:4b` weights in user folders. |
+| U04 | Case Intake & Completeness Screener (Conversational Agent) | ⏳ In Progress | Backend intake session, gap detection, and decline/accept APIs implemented. Conversational WhatsApp-style chat UI (asking for patient, disease, family, willingness details) being integrated into frontend. |
+| U05 | Specialists must not hide behind 'insufficient information' | ⏳ In Progress | Once intake accepts a case with gaps, specialist agents must provide conditional ('if-then') opinions based on possible ECOG/comorbidity scenarios rather than withholding recommendations. Schema supports conditional options; prompt enforcement scheduled in Milestone 4. |
+| U06 | Human-readable, well-structured, evidence-backed arguments in all rounds | ⏳ In Progress | Multi-round schema supports structured evidence citations (e.g. NCCN Guidelines, specific clinical staging). Schema in place; prompt templates being updated in Milestone 4. |
+| U07 | Evidence & Reference-Library Architecture | ⏳ In Progress | Reference catalog structure created (`docs/reference_catalogue_v1.json`). Curated guidelines, standard textbooks, and landmark papers mapped to role perspectives being populated. |
+| U08 | Prevent copied, generic and delegated specialist responses | ⏳ In Progress | Cross-agent deduplication and distinct perspective enforcement scheduled in Milestone 4. |
+| U09 | Immutable clinical constants and canonical tags (e.g. T1 == clinical_t_stage=1) | ✅ Done | Implemented and verified in `backend/app/clinical_fields.py` (`normalize_clinical_tnm_component` correctly resolves lexical variations like "1" or "T1" to canonical "T1"). |
+| U10 | Hallucination prevention through deterministic controls & fact ledger | ⏳ In Progress | Fact ledger schema created and being integrated into immutable case promotion pipeline. |

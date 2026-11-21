@@ -111,7 +111,7 @@ def run_preflight(backend_dir: Path) -> dict:
         try:
             ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         except (OSError, UnicodeError, SyntaxError) as exc:
-            syntax_errors.append(f"{path.relative_to(repository_root)}: {type(exc).__name__}: {exc}")
+            syntax_errors.append(f"{path.relative_to(repository_root).as_posix()}: {type(exc).__name__}: {exc}")
     results.append(_result(
         "PYTHON_AST_001",
         "python_syntax",

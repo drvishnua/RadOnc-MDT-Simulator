@@ -35,23 +35,34 @@ def _migrate_legacy_database_if_needed() -> bool:
     temporary_path = DB_PATH.with_name(
         f".{DB_PATH.name}.{uuid.uuid4().hex}.migration"
     )
+    source = sqlite3.connect(LEGACY_DB_PATH, timeout=30)
     try:
-        with sqlite3.connect(LEGACY_DB_PATH, timeout=30) as source:
-            source_check = source.execute("PRAGMA integrity_check").fetchone()
-            if not source_check or source_check[0] != "ok":
-                raise sqlite3.DatabaseError("Legacy database failed SQLite integrity_check.")
-            with sqlite3.connect(temporary_path, timeout=30) as destination:
-                source.backup(destination)
-                destination_check = destination.execute("PRAGMA integrity_check").fetchone()
-                if not destination_check or destination_check[0] != "ok":
-                    raise sqlite3.DatabaseError("Migrated database failed SQLite integrity_check.")
+        source_check = source.execute("PRAGMA integrity_check").fetchone()
+        if not source_check or source_check[0] != "ok":
+            raise sqlite3.DatabaseError("Legacy database failed SQLite integrity_check.")
+        destination = sqlite3.connect(temporary_path, timeout=30)
+        try:
+            source.backup(destination)
+            destination_check = destination.execute("PRAGMA integrity_check").fetchone()
+            if not destination_check or destination_check[0] != "ok":
+                raise sqlite3.DatabaseError("Migrated database failed SQLite integrity_check.")
+        finally:
+            destination.close()
+    finally:
+        source.close()
 
+    try:
         # Never replace an existing destination. If another process created it
         # during the backup, retain both files and let the existing destination win.
         if DB_PATH.exists():
             return False
-        temporary_path.replace(DB_PATH)
-        return True
+        try:
+            temporary_path.replace(DB_PATH)
+            return True
+        except (PermissionError, FileExistsError):
+            if DB_PATH.exists():
+                return False
+            raise
     finally:
         temporary_path.unlink(missing_ok=True)
 
