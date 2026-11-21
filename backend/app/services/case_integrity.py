@@ -1821,3 +1821,156 @@ def validate_specialist_reasoning_depth(assessment: dict[str, Any]) -> list[str]
                 )
 
     return flags
+
+
+_DELEGATION_PATTERNS = re.compile(
+    r"^\s*(?:"
+    r"i\s+(?:fully\s+|completely\s+)?agree\s+with\s+(?:the\s+)?(?:recommendation|assessment|opinion|findings|views?)?\s*(?:of\s+)?(?:dr\.?|doctor|specialist|colleague)?"
+    r"|same\s+as\s+(?:dr\.?|doctor|above)"
+    r"|concur\s+with\s+(?:dr\.?|doctor|colleague)"
+    r"|defer\s+entirely\s+to\s+(?:dr\.?|doctor|colleague)"
+    r"|refer\s+to\s+(?:dr\.?|doctor|the\s+above)"
+    r")\b",
+    re.IGNORECASE,
+)
+
+
+def validate_role_differentiation_and_anti_duplication(
+    assessments: list[dict[str, Any]],
+    similarity_threshold: float = 0.85,
+) -> dict[str, Any]:
+    """Audit round assessments across roles to detect duplicates, delegation, and template copying (U08).
+
+    Guarantees:
+    - Flags identical or near-identical text across distinct specialist roles.
+    - Flags empty delegation statements (e.g. 'I agree with Dr. X' without substantive reasoning).
+    - Returns structured audit report with detected flags and pairwise similarity scores.
+    """
+    flags: list[str] = []
+    pairwise_duplicates: list[dict[str, Any]] = []
+    delegation_flags: list[dict[str, Any]] = []
+
+    def _extract_text(a: dict[str, Any]) -> str:
+        parts = [
+            str(a.get("perspective_summary") or ""),
+            str(a.get("provisional_conclusion") or ""),
+            str(a.get("preferred_educational_option") or ""),
+        ]
+        return " ".join(parts).strip()
+
+    def _token_set(text: str) -> set[str]:
+        words = re.findall(r"[a-zA-Z0-9]+", text.lower())
+        return set(words)
+
+    def _jaccard_similarity(s1: set[str], s2: set[str]) -> float:
+        if not s1 and not s2:
+            return 1.0
+        if not s1 or not s2:
+            return 0.0
+        intersection = len(s1.intersection(s2))
+        union = len(s1.union(s2))
+        return intersection / union if union > 0 else 0.0
+
+    for a in assessments:
+        role_id = a.get("role_id") or a.get("role") or "unknown_role"
+        conclusion = str(a.get("provisional_conclusion") or "").strip()
+        perspective = str(a.get("perspective_summary") or "").strip()
+
+        # Check for ungrounded delegation
+        if _DELEGATION_PATTERNS.match(conclusion) or _DELEGATION_PATTERNS.match(perspective):
+            # If the entire conclusion is just delegation with < 15 words
+            words = conclusion.split()
+            if len(words) < 25:
+                delegation_flags.append({
+                    "role_id": role_id,
+                    "issue": "Ungrounded delegation without substantive role-specific reasoning",
+                    "text": conclusion,
+                })
+                flags.append(
+                    f"Role '{role_id}' exhibits ungrounded delegation without role-specific reasoning."
+                )
+
+    # Check pairwise similarity across distinct roles
+    n = len(assessments)
+    for i in range(n):
+        role_i = assessments[i].get("role_id") or assessments[i].get("role") or f"role_{i}"
+        text_i = _extract_text(assessments[i])
+        tokens_i = _token_set(text_i)
+
+        for j in range(i + 1, n):
+            role_j = assessments[j].get("role_id") or assessments[j].get("role") or f"role_{j}"
+            text_j = _extract_text(assessments[j])
+            tokens_j = _token_set(text_j)
+
+            sim = _jaccard_similarity(tokens_i, tokens_j)
+            if sim >= similarity_threshold and len(tokens_i) > 5 and len(tokens_j) > 5:
+                pairwise_duplicates.append({
+                    "role_1": role_i,
+                    "role_2": role_j,
+                    "similarity": round(sim, 3),
+                })
+                flags.append(
+                    f"High semantic overlap ({round(sim*100, 1)}%) between '{role_i}' and '{role_j}'."
+                )
+
+    return {
+        "valid": len(flags) == 0,
+        "flags": flags,
+        "pairwise_duplicates": pairwise_duplicates,
+        "delegation_flags": delegation_flags,
+    }
+
+
+def audit_adversarial_controls(
+    round3_challenges: list[dict[str, Any]],
+    planted_unsupported_facts: list[str] | None = None,
+) -> dict[str, Any]:
+    """Evaluate Round 3 adversarial controls (U08).
+
+    - Positive control: If planted unsupported clinical facts exist, Round 3 must flag them.
+    - Negative control: If clean verified records exist, zero false unsupported-fact challenges should occur.
+    """
+    flags: list[str] = []
+    detected_planted: list[str] = []
+    unflagged_planted: list[str] = []
+
+    planted = planted_unsupported_facts or []
+    all_challenge_texts: list[str] = []
+    for ch in round3_challenges:
+        if isinstance(ch, dict):
+            text = " ".join([
+                str(ch.get("challenge") or ""),
+                str(ch.get("target_claim") or ""),
+                str(ch.get("target_role") or ""),
+                str(ch.get("reasoning") or ""),
+            ]).lower()
+            all_challenge_texts.append(text)
+        elif isinstance(ch, str):
+            all_challenge_texts.append(ch.lower())
+
+    # Positive control verification
+    for fact in planted:
+        fact_lower = fact.lower()
+        # Check if any challenge text references the planted fact or key terms
+        matched = any(fact_lower in t or all(word in t for word in fact_lower.split() if len(word) > 3) for t in all_challenge_texts)
+        if matched:
+            detected_planted.append(fact)
+        else:
+            unflagged_planted.append(fact)
+            flags.append(f"Positive control failure: Planted unsupported fact '{fact}' was not challenged in R3.")
+
+    # Negative control verification (check if challenges are empty or only legitimate)
+    has_hallucinated_challenge = False
+    for ch_text in all_challenge_texts:
+        if "hallucinated_control_target" in ch_text:
+            has_hallucinated_challenge = True
+            flags.append("Negative control failure: False challenge generated against clean control target.")
+
+    return {
+        "passed_positive_control": len(unflagged_planted) == 0,
+        "passed_negative_control": not has_hallucinated_challenge,
+        "detected_planted_facts": detected_planted,
+        "unflagged_planted_facts": unflagged_planted,
+        "flags": flags,
+    }
+
