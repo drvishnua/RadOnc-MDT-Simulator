@@ -2765,9 +2765,10 @@ def test_explicit_unknown_staging_system_cannot_validate_clinical_stage_group():
     assert "unknown" in flags
 
 
-def test_clinical_stage_group_with_explicit_site_system_and_edition_has_context():
+def test_clinical_stage_group_with_explicit_site_system_edition_and_subsite_has_context():
     case = _case(
         primary_site="lung",
+        anatomical_subsite="upper lobe",
         clinical_stage_group="IIA",
         staging_system="AJCC",
         staging_edition="8",
@@ -4413,3 +4414,104 @@ def test_patient_goals_remain_distinct_from_unresolved_patient_preferences():
     })
 
     assert not any("patient_goals" in item for item in flags)
+
+
+def _staged_context_case(**overrides):
+    values = {
+        "primary_site": "lung",
+        "staging_system": "AJCC",
+        "staging_edition": "8",
+        "clinical_stage_group": "IIA",
+        "case_summary": "Synthetic staging context record.",
+    }
+    values.update(overrides)
+    return _case(**values)
+
+
+def test_prompt_and_intake_warn_when_staging_context_subsite_is_missing():
+    case = _staged_context_case(anatomical_subsite=None)
+    original = case.model_dump_json()
+
+    context = build_case_prompt_context(case)
+    prompt_warnings = " ".join(context["staging_context_warnings"]).casefold()
+    intake_warnings = " ".join(build_case_validation_warnings(case)).casefold()
+
+    assert "anatomical subsite" in prompt_warnings
+    assert "missing or unresolved" in prompt_warnings
+    assert "anatomical-subsite context is not validated" in intake_warnings
+    assert case.model_dump_json() == original
+
+
+def test_unknown_subsite_blocks_stage_group_context_even_when_summary_mentions_subsite():
+    case = _staged_context_case(
+        anatomical_subsite=None,
+        case_summary="Referral text states the anatomical subsite is upper lobe.",
+        clinical_field_states={"anatomical_subsite": "UNKNOWN"},
+    )
+    original = case.model_dump_json()
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has clinical stage group IIA disease.",
+    })).casefold()
+    prompt_warnings = " ".join(
+        build_case_prompt_context(case)["staging_context_warnings"]
+    ).casefold()
+    intake_warnings = " ".join(build_case_validation_warnings(case)).casefold()
+
+    assert "staging context" in flags
+    assert "anatomical subsite (unknown)" in flags
+    assert "anatomical subsite (unknown)" in prompt_warnings
+    assert "anatomical-subsite context is not validated" in intake_warnings
+    assert "upper lobe" in case.case_summary
+    assert case.model_dump_json() == original
+
+
+def test_known_unknown_subsite_blocks_staging_context_even_with_structured_value():
+    case = _staged_context_case(
+        anatomical_subsite="upper lobe",
+        known_unknowns=["Anatomical subsite remains unknown."],
+    )
+
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has clinical stage group IIA disease.",
+    })).casefold()
+    prompt_warnings = " ".join(
+        build_case_prompt_context(case)["staging_context_warnings"]
+    ).casefold()
+    intake_warnings = " ".join(build_case_validation_warnings(case)).casefold()
+
+    assert "anatomical subsite (unresolved in known_unknowns)" in flags
+    assert "anatomical subsite (unresolved in known_unknowns)" in prompt_warnings
+    assert "anatomical-subsite context is not validated" in intake_warnings
+
+
+def test_explicit_not_applicable_subsite_resolves_staging_context_without_inference():
+    case = _staged_context_case(
+        anatomical_subsite=None,
+        clinical_field_states={"anatomical_subsite": "NOT_APPLICABLE"},
+    )
+    context = build_case_prompt_context(case)
+    warnings = " ".join(build_case_validation_warnings(case)).casefold()
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has clinical stage group IIA disease.",
+    })).casefold()
+
+    assert not any("anatomical subsite" in item.casefold() for item in context["staging_context_warnings"])
+    assert "anatomical-subsite context is not validated" not in warnings
+    assert "staging context" not in flags
+
+
+def test_present_structured_subsite_resolves_staging_context():
+    case = _staged_context_case(
+        anatomical_subsite="upper lobe",
+        clinical_field_states={"anatomical_subsite": "PRESENT"},
+    )
+    context = build_case_prompt_context(case)
+    warnings = " ".join(build_case_validation_warnings(case)).casefold()
+    flags = " ".join(audit_unverified_case_claims(case, {
+        "provisional_conclusion": "The patient has clinical stage group IIA disease.",
+    })).casefold()
+
+    assert not any("anatomical subsite" in item.casefold() for item in context["staging_context_warnings"])
+    assert "anatomical-subsite context is not validated" not in warnings
+    assert "staging context" not in flags

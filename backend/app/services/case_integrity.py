@@ -349,6 +349,15 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
             )
             staging_context_warnings.append(warning)
             normalization_warnings.append(warning)
+        subsite_gap = _anatomical_subsite_staging_context_gap(case)
+        if subsite_gap:
+            warning = (
+                "Staging interpretation is not validated because "
+                + subsite_gap
+                + " is missing or unresolved. Preserve the recorded token; do not infer compatibility or stage."
+            )
+            staging_context_warnings.append(warning)
+            normalization_warnings.append(warning)
     if (
         case.performance_status not in (None, "")
         and case.performance_status_scale in (None, "")
@@ -579,6 +588,44 @@ def _collapse_horizontal_whitespace(text: str) -> str:
             in_horizontal_run = False
     return "".join(output)
 
+
+def _anatomical_subsite_staging_context_gap(case: SyntheticCase) -> str | None:
+    """Return a staging-context gap for missing/unresolved subsite without free-text fallback."""
+    state = case.clinical_field_states.get("anatomical_subsite")
+    value = case.anatomical_subsite
+
+    if state == "NOT_APPLICABLE" and value in (None, ""):
+        gap = None
+    elif state in (None, "PRESENT") and value not in (None, ""):
+        gap = None
+    elif state == "NOT_APPLICABLE":
+        gap = "anatomical subsite (NOT_APPLICABLE with a populated value)"
+    elif state is None:
+        gap = "anatomical subsite"
+    else:
+        gap = f"anatomical subsite ({state})"
+
+    # Explicit field-specific unresolved statements remain gaps even when a
+    # structured value is present. Trust this list only while its own state is
+    # PRESENT or legacy-unannotated, matching the post-generation audit.
+    if case.clinical_field_states.get("known_unknowns") in (None, "PRESENT"):
+        field_pattern = re.compile(r"\b(?:anatomical\s+)?subsite\b", re.IGNORECASE)
+        unresolved_pattern = re.compile(
+            r"(?<!not )\bunknown\b|\b(?:pending|unresolved|not\s+(?:reported|confirmed|verified|"
+            r"established|documented|assessed|available|supplied|provided|determined|recorded)|"
+            r"has\s+not\s+been\s+(?:reported|confirmed|verified|established|documented|assessed|determined)|"
+            r"have\s+not\s+been\s+(?:reported|confirmed|verified|established|documented|assessed|determined)|"
+            r"remains?\s+(?:unknown|unresolved|unconfirmed|unverified|pending)|"
+            r"not\s+yet\s+(?:known|confirmed|verified|available|assessed))\b",
+            re.IGNORECASE,
+        )
+        for statement in case.known_unknowns or []:
+            if not isinstance(statement, str):
+                continue
+            for clause in _CLAUSE_BOUNDARY.split(_collapse_horizontal_whitespace(statement)):
+                if field_pattern.search(clause) and unresolved_pattern.search(clause):
+                    return "anatomical subsite (unresolved in known_unknowns)"
+    return gap
 
 
 def _unqualified_matches(
@@ -1765,9 +1812,15 @@ def audit_unverified_case_claims(case: SyntheticCase, generated_payload: dict[st
         staging_context_gaps: list[str] = []
         for field_id, label in (
             ("primary_site", "primary site"),
+            ("anatomical_subsite", "anatomical subsite"),
             ("staging_system", "staging system"),
             ("staging_edition", "staging edition"),
         ):
+            if field_id == "anatomical_subsite":
+                subsite_gap = _anatomical_subsite_staging_context_gap(case)
+                if subsite_gap:
+                    staging_context_gaps.append(subsite_gap)
+                continue
             value = getattr(case, field_id)
             state = field_state(field_id)
             if value in (None, "") or not field_assertable(field_id) or known_unknown_blocks_field(field_id):
@@ -3052,6 +3105,9 @@ def build_case_validation_warnings(case: SyntheticCase) -> list[str]:
         missing = [label for label, value in (("primary site", case.primary_site), ("staging system", case.staging_system), ("staging edition", case.staging_edition)) if value in (None, "")]
         if missing:
             warnings.append("Staging token is retained but site/system/edition compatibility is not validated because " + ", ".join(missing) + " is not supplied. Do not infer stage or compatibility.")
+        subsite_gap = _anatomical_subsite_staging_context_gap(case)
+        if subsite_gap:
+            warnings.append("Staging token is retained but anatomical-subsite context is not validated because " + subsite_gap + ". Do not infer site/subsite/staging-system/edition compatibility or stage.")
     if case.performance_status not in (None, "") and case.performance_status_scale in (None, ""):
         warnings.append("Performance-status value is supplied without a named scale; do not infer ECOG/WHO/Karnofsky equivalence.")
     if case.stage_group not in (None, "") and case.clinical_stage_group in (None, "") and case.pathological_stage_group in (None, ""):
