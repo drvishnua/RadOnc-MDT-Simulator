@@ -8257,3 +8257,6 @@ On PR head `cf5ddbea63210e3ac78b151741295bed797a0a9`:
 - Earlier intermediate gate run `44865083483` failed on a transient plan/validator allowlist mismatch during sequential commits. It remains historical audit evidence; the later current-head gate passed.
 
 **Current requirement status:** IN PROGRESS. The code now has initial shared-state guard changes, but the canonical prompt projection and prompt wording defects above remain open until corrected and tested. No U09–U10 acceptance or completion claim is made.
+
+
+**Projection coverage clarification before implementation:** the caller review additionally confirms that `case_snapshot` is the full `model_snapshot`, which itself contains nested `clinical_field_conflicts["case_summary"]`. Therefore the same narrow redaction must be applied in both model-facing representations: the nested snapshot object and `canonical_field_values["case_summary"]`. The `case_snapshot_projection_note` must accurately disclose that the case-summary candidates are withheld while other fields' candidate handling remains unchanged. The audit/persisted `SyntheticCase` remains unchanged.
