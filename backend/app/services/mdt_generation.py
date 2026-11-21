@@ -2295,7 +2295,7 @@ async def generate_adversarial_contribution(
         "Do not infer a negative indication from agreement that data are missing or from a peer saying that no definitive pathway can yet be established. "
         + source_opinion_review_instructions
         + r3_shared_integrity_instructions
-        + "source_excerpt is server-bound metadata; the server binds exact original excerpts only for server-identified source IDs. Do not generate, paraphrase, reconstruct, or invent source excerpts. "
+        + "source_excerpt is server-bound metadata; the server binds exact original excerpts only for server-identified source IDs. Do not generate, paraphrase, reconstruct, or invent source excerpts.\n"
         + f"ROLE: {profile['name']}\nMANDATE: {profile['mandate']}\n"
         "SUPPLIED CASE:\n"
         + json.dumps(build_case_prompt_context(case), ensure_ascii=False, separators=(",", ":"))
