@@ -1,6 +1,8 @@
 import asyncio
 import json
 
+import pytest
+
 from app.agents.catalog import AGENT_PROFILES, EXPECTED_AGENT_COUNT
 from app.clinical_fields import CLINICAL_FIELD_REGISTRY_VERSION
 from app.round_schemas import AdversarialContributionDraft, Round2ContributionDraft
@@ -307,3 +309,181 @@ def test_all_45_roles_receive_identical_canonical_context_in_rounds_2_and_3(monk
         for item in captured_prompts
     )
 
+
+
+
+@pytest.mark.parametrize("summary_state", ["INVALID", "CONFLICTING"])
+def test_quarantined_case_summary_is_unassessable_for_r2_and_r3_source_reviews(
+    monkeypatch, summary_state
+):
+    selected_summary = f"WITHHELD_SELECTED_SUMMARY_{summary_state}_SECRET"
+    selected_excerpt = f"WITHHELD_SELECTED_EXCERPT_{summary_state}_SECRET"
+    case_data = {
+        "scenario_title": "Synthetic quarantined summary source-review regression",
+        "case_summary": selected_summary,
+        "clinical_field_states": {"case_summary": summary_state},
+    }
+    if summary_state == "CONFLICTING":
+        case_data["clinical_field_provenance"] = {
+            "case_summary": [{
+                "source_type": "CASE_SUMMARY",
+                "source_reference": "selected-summary-source",
+                "source_excerpt": selected_excerpt,
+            }]
+        }
+        case_data["clinical_field_conflicts"] = {
+            "case_summary": [
+                {
+                    "raw_value": f"WITHHELD_CONFLICT_CANDIDATE_A_{summary_state}_SECRET",
+                    "provenance": {
+                        "source_type": "CLINICIAN_NOTE",
+                        "source_reference": "summary-conflict-a",
+                        "source_excerpt": "WITHHELD_CONFLICT_EXCERPT_A_SECRET",
+                    },
+                },
+                {
+                    "raw_value": f"WITHHELD_CONFLICT_CANDIDATE_B_{summary_state}_SECRET",
+                    "provenance": {
+                        "source_type": "MEDICAL_RECORD",
+                        "source_reference": "summary-conflict-b",
+                        "source_excerpt": "WITHHELD_CONFLICT_EXCERPT_B_SECRET",
+                    },
+                },
+            ]
+        }
+    case = SyntheticCase(**case_data)
+    original_case_json = case.model_dump_json()
+
+    unregistered_source_id = "CASE:case_summary#99"
+    unregistered_r2_analysis = (
+        "A model-only source opinion is conditional on a fabricated prerequisite and "
+        "has no server-identified case-summary source."
+    )
+    unregistered_r2_comparison = (
+        "This fabricated source is not traceable to the case."
+    )
+    unregistered_r3_excerpt = "MODEL_ONLY_UNREGISTERED_CASE_EXCERPT_SECRET"
+    captured_prompts = []
+
+    async def fake_generate_structured(prompt, schema_type, max_tokens):
+        captured_prompts.append((schema_type.__name__, prompt))
+        payload = {
+            "position": "conditional",
+            "provisional_conclusion": (
+                "The supplied synthetic information does not establish a definitive "
+                "educational pathway, and unresolved information remains unknown."
+            ),
+            "response_to_other_perspectives": (
+                "The contribution preserves the saved source limitations and does not "
+                "assert an unsupported clinical fact or patient-specific decision."
+            ),
+            "agreements": [],
+            "substantive_challenges": [],
+            "position_changes": [],
+            "remaining_unknowns": ["Case-summary attribution is unassessable."],
+            "risk_flags": [],
+            "confidence": 0.4,
+        }
+        if schema_type is Round2ContributionDraft:
+            payload["source_opinion_responses"] = [{
+                "source_id": unregistered_source_id,
+                "position_on_source_opinion": "conditional",
+                "analysis": unregistered_r2_analysis,
+                "comparison": unregistered_r2_comparison,
+            }]
+        elif schema_type is AdversarialContributionDraft:
+            payload["source_opinion_reviews"] = [{
+                "source_id": unregistered_source_id,
+                "source_excerpt": unregistered_r3_excerpt,
+                "option_status": "unclear",
+                "conditions_status": "unclear",
+                "review_basis": "This model-reported source cannot be verified against an eligible case summary.",
+                "source_reference_ids": [unregistered_source_id],
+                "evidence_peer_id": "R2:RO-02",
+                "evidence_excerpt": "This contribution preserves the saved source limitations.",
+            }]
+        else:
+            raise AssertionError(f"Unexpected schema requested: {schema_type.__name__}")
+        return schema_type.model_validate(payload)
+
+    monkeypatch.setattr(
+        mdt_generation, "_generate_structured", fake_generate_structured
+    )
+
+    profile = {
+        "agent_id": "RO-01",
+        "name": "Synthetic Radiation Oncology Role",
+        "mandate": "Review only supplied synthetic information and preserve uncertainty.",
+    }
+    own_r1 = {
+        "position": "conditional",
+        "provisional_conclusion": (
+            "The supplied information is incomplete and does not establish a definitive pathway."
+        ),
+        "preferred_educational_option": "No unconditional educational option is selected.",
+        "case_data_integrity_flags": [],
+    }
+
+    async def run_quarantined_rounds():
+        r2_result = await mdt_generation.generate_debate_contribution(
+            profile, case, own_r1, peer_views=[]
+        )
+        peer_result = r2_result.model_dump()
+        peer_result["agent_id"] = "RO-02"
+        peer_result["source_opinion_responses"] = list(
+            peer_result.get("source_opinion_responses") or []
+        )
+        peer = {
+            "agent_id": "RO-02",
+            "agent_name": "Synthetic Peer Role",
+            "result": peer_result,
+            "round1_case_integrity_flags": [],
+        }
+        r3_result = await mdt_generation.generate_adversarial_contribution(
+            profile, case, own_r1, r2_result.model_dump(), peer_debate_views=[peer]
+        )
+        return r2_result, r3_result
+
+    r2_result, r3_result = asyncio.run(run_quarantined_rounds())
+    r2_prompt = next(
+        prompt for schema_name, prompt in captured_prompts
+        if schema_name == "Round2ContributionDraft"
+    )
+    r3_prompt = next(
+        prompt for schema_name, prompt in captured_prompts
+        if schema_name == "AdversarialContributionDraft"
+    )
+
+    assert "CASE SUMMARY WITHHELD" in r2_prompt
+    assert "unassessable, not that no opinions exist" in r2_prompt
+    assert "First inspect the verbatim case summary" not in r2_prompt
+    assert "Inspect the eligible verbatim case summary" not in r2_prompt
+    assert "WITHHELD / UNASSESSABLE" in r2_prompt
+    assert selected_summary not in r2_prompt
+    assert selected_excerpt not in r2_prompt
+    assert unregistered_source_id in " ".join(r2_result.source_reference_integrity_flags)
+    assert r2_result.source_opinion_responses[0].source_excerpt == ""
+
+    assert "CASE SUMMARY WITHHELD" in r3_prompt
+    assert "unassessable, not that no attributed opinions exist" in r3_prompt
+    assert "Do not treat R2 source-opinion responses as substitutes" in r3_prompt
+    assert "Treat the verbatim case summary as attributed" not in r3_prompt
+    assert "Review only distinct attributed opinions" not in r3_prompt
+    assert "round2_source_opinion_responses":[] in r3_prompt
+    assert "source_opinion_responses":[] in r3_prompt
+    assert selected_summary not in r3_prompt
+    assert selected_excerpt not in r3_prompt
+    assert unregistered_r3_excerpt not in r3_prompt
+
+    assert r3_result.source_opinion_reviews == []
+    assert len(r3_result.model_reported_source_opinion_reviews) == 1
+    assert r3_result.model_reported_source_opinion_reviews[0]["source_id"] == unregistered_source_id
+    assert (
+        r3_result.model_reported_source_opinion_reviews[0]["source_excerpt"]
+        == unregistered_r3_excerpt
+    )
+    assert any(
+        "server-owned attributed-opinion register is empty" in flag
+        for flag in r3_result.source_reference_integrity_flags
+    )
+    assert case.model_dump_json() == original_case_json
