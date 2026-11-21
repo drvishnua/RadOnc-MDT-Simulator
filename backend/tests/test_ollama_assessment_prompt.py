@@ -469,8 +469,8 @@ def test_quarantined_case_summary_is_unassessable_for_r2_and_r3_source_reviews(
     assert "Do not treat R2 source-opinion responses as substitutes" in r3_prompt
     assert "Treat the verbatim case summary as attributed" not in r3_prompt
     assert "Review only distinct attributed opinions" not in r3_prompt
-    assert "round2_source_opinion_responses":[] in r3_prompt
-    assert "source_opinion_responses":[] in r3_prompt
+    assert '"round2_source_opinion_responses":[]' in r3_prompt
+    assert '"source_opinion_responses":[]' in r3_prompt
     assert selected_summary not in r3_prompt
     assert selected_excerpt not in r3_prompt
     assert unregistered_r3_excerpt not in r3_prompt
