@@ -8,6 +8,7 @@ import re
 from app.round_schemas import FinalMDTReport
 from app.schemas import SyntheticCase
 from app.services.case_integrity import (
+    eligible_case_summary_text,
     audit_unverified_case_claims,
     build_case_report_title,
     extract_attributed_note_opinions,
@@ -386,7 +387,7 @@ _SOURCE_OPINION_STATUSES = {"preserved", "partly_preserved", "omitted", "unclear
 
 def build_source_opinion_review_coverage(
     round3_rows: list[dict],
-    case_summary: str,
+    case_summary: str | None,
 ) -> tuple[list[str], list[str]]:
     """Rebuild source-opinion review coverage from distinct, completed saved R3 roles.
 
@@ -775,6 +776,8 @@ def build_source_opinion_position_summary(
     Source IDs/excerpts are server-derived. Model-reported position labels are never
     used to set consensus_status or consensus_points.
     """
+    if case_summary is None:
+        return ["R2 case-summary source-opinion positions are unassessable because case_summary is INVALID or CONFLICTING and raw text was withheld; this does not establish that no attributed opinions exist."], []
     source_register = extract_attributed_note_opinions(case_summary)
     if not source_register:
         return [
@@ -1170,7 +1173,7 @@ def ensure_chair_report_completeness(
     # Rebuild R2 stances against each exact server-owned attributed source opinion.
     # These are model-reported role positions, not votes or consensus.
     position_summary, position_integrity = build_source_opinion_position_summary(
-        round2_rows, case.case_summary
+        round2_rows, eligible_case_summary_text(case)
     )
     quarantine_flags.extend(position_integrity)
     data["source_opinion_position_summary"] = _unique(
@@ -1180,7 +1183,7 @@ def ensure_chair_report_completeness(
     # Rebuild source-opinion review coverage from the saved R3 role records at
     # the final Chair boundary. Earlier reconciliation/model prose is not its source.
     source_review_coverage, source_review_integrity = build_source_opinion_review_coverage(
-        round3_rows, case.case_summary
+        round3_rows, eligible_case_summary_text(case)
     )
     quarantine_flags.extend(source_review_integrity)
     data["source_opinion_review_coverage"] = _unique(
@@ -1237,6 +1240,12 @@ def ensure_chair_report_completeness(
         if isinstance(item, str)
         and not any(marker in item.casefold() for marker in stale_derived_markers)
     ]
+    if eligible_case_summary_text(case) is None:
+        draft_disagreements.append(
+            "Case-summary attributed opinions and exact source-opinion coverage are unassessable: "
+            "case_summary is INVALID or CONFLICTING and raw text was withheld. "
+            "This does not mean that no attributed opinions exist."
+        )
 
     # Always rebuild a position-distribution/history note, even when genuine
     # disagreements or the zero-challenge disclosure are also present.
