@@ -8366,26 +8366,49 @@ The earlier failed run remains part of the audit history; it is not erased or re
 
 **Intermediate failed attempts retained in audit history:** Backend run on `87da32965970870ed22d5e0a2f349177075849c2` had four prompt-contract assertion failures (861 passed); the subsequent `2e161517e0a209f117a47fbd07363a4e8d1165d9` run had one R3 role-header separator failure (864 passed). The prompt instructions were corrected without weakening the regression. Commit `14082c9b8a2656687f8819f60db19ed7570dc61b` then passed all three required workflows with 865 backend tests. A later R4 call-chain review found the `None`-to-empty-string handoff defect; commit `89159004f9bcb9a93d7b4edb6f2eb53d412d9be0` fixed it and the new R4 regression passed in the 866-test run. These failures remain visible and are not erased or reclassified as passes.
 
+### U09 T1 JSON input-type interpretation — exact-head verification (21 November 2026)
+
+**Code/test commit:** `893c5d0f0bded243811db90550ecf07e87580d8f` on PR #5 source branch. This is a test-only commit; production registry and schema files were not changed.
+
+**Contract resolved under the immutable v2 registry:**
+- `clinical_t_stage` is declared as `value_type="string"` in the immutable registry and as `str | None` in `SyntheticCase`.
+- A JSON string value `"1"` is accepted, retained as the original raw string and exposed only as lexical comparison value `"T1"`. The normaliser does not perform site-specific staging interpretation.
+- A JSON number `1` is rejected at the Pydantic JSON-to-schema boundary; it is not coerced to a string. This is the existing v2 contract.
+- Clinical site, staging system and edition remain necessary for staging interpretation. No N0/M0, stage-group, resectability, or other clinical conclusion is inferred.
+- If a later owner requirement explicitly requires JSON integer TNM input, it must first have a separately approved additive registry-version/migration plan, including raw-value and historical case preservation. Do not mutate v2.
+
+**Regression:** `test_clinical_t_stage_json_number_is_rejected_but_digit_string_is_preserved` passed. It submits actual JSON text with string `"1"` and number `1`, verifies raw/canonical values for the string form, and expects schema validation failure for the numeric form.
+
+**Exact-head CI on `893c5d0f0bded243811db90550ecf07e87580d8f`:**
+- Sequential Development Gate run `44871637121`: SUCCESS.
+- Backend Tests run `44871637091`: **867 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive**. The new T1 type regression is one of the passing tests.
+- Deterministic no-inference preflight: **7 passed, 0 failed, 0 inconclusive**.
+- Security and Dependency Audit run `44871637129`: SUCCESS; Python CodeQL, JavaScript/TypeScript CodeQL, dependency audit and full-history secret scan all passed.
+- Backend job `136747236696`; gate job `136747236655`; security jobs `136747236740` (JS/TS CodeQL), `136747236943` (dependency audit), `136747236959` (secret scan), `136747237003` (Python CodeQL).
+- Pytest diagnostics artifact `14693937637`, digest `sha256:5f6423f8b03353ef3596bd67ef1e75c3619d85a107843784b9d257266eddfb73`; preflight artifact `14693299004`, digest `sha256:e533f9ab3db0b790f826a5aa9f245fd512199f23cb0b2fd7feed7e9e0e899cad`.
+
+**Status:** T1 JSON input-type interpretation is VERIFIED for the existing v2 schema. The broader U09–U10 step remains IN PROGRESS. This section supersedes the earlier “T1 numeric JSON semantics unresolved” row and the historical “next approved action: resolve T1 input-type interpretation” note; those historical entries are retained for audit.
+
 ### Master Checklist — Current Status (21 November 2026)
 
 | Workstream | Status | Current evidence / remaining boundary |
 |---|---|---|
-| PR #5 / development branch protection | IN PROGRESS | PR #5 OPEN, NOT MERGED; implementation head `89159004f9bcb9a93d7b4edb6f2eb53d412d9be0`; target base `df90e4a380bef06a7d37def753b385db4ae86c30`; no direct changes to target branch or `main` |
+| PR #5 / development branch protection | IN PROGRESS | PR #5 OPEN, NOT MERGED; latest branch head `893c5d0f0bded243811db90550ecf07e87580d8f` (T1 regression-only commit); R2/R3/R4 implementation code head `89159004f9bcb9a93d7b4edb6f2eb53d412d9be0`; target base `df90e4a380bef06a7d37def753b385db4ae86c30`; no direct changes to target branch or `main` |
 | GOV-01 plan-before-execution discipline | VERIFIED | Ordered U09-INT-01 stages and non-goals recorded; no U04 activation |
-| U12 sequential fail-closed gate | VERIFIED | Exact-head Sequential Development Gate `44871164729` SUCCESS |
+| U12 sequential fail-closed gate | VERIFIED | Exact-head Sequential Development Gate `44871637121` SUCCESS on `893c5d0f0bded243811db90550ecf07e87580d8f` |
 | U09 registry IDs, aliases and declared field types | VERIFIED for tested contract | Prior 40-field / 7-value-type contract and immutable registry tests remain the evidence; full acceptance of U09-U10 is not claimed |
 | U09 field-state vocabulary and field-specific state validation | VERIFIED for tested cases | Canonical state/field tests remain passing; remaining U09-U10 acceptance work is still open |
 | U09 source text, provenance hashes and immutable audit | VERIFIED for tested boundaries | Existing exact-text, hash and immutable-record tests plus unchanged SyntheticCase regression; hashes do not establish source authenticity |
 | U09 legacy v1/unversioned read-only and explicit upgrade | VERIFIED for tested transitions | Prior migration/upgrade regressions remain passing in the full backend suite |
-| U09 T1 canonical mapping/type interpretation | IN PROGRESS | Numeric JSON type semantics remain unresolved; next approved task, do not mutate immutable registry definitions |
+| U09 T1 canonical mapping/input type | VERIFIED for current v2 contract | JSON string `"1"` remains a string and lexically maps to `T1`; JSON number `1` is rejected by the declared string schema; future integer support would require an additive registry-version/migration plan |
 | INVALID/CONFLICTING central prompt-context redaction | VERIFIED for tested cases | Selected summary provenance and nested conflict candidates withheld in model-facing projections; original saved case remains unchanged |
 | R2 withheld/unassessable source-opinion input | VERIFIED | Exact-head backend regressions cover both INVALID and CONFLICTING; unregistered CASE responses flagged and unbound |
 | R3 withheld source opinions and preserved general adversarial audits | VERIFIED | Exact-head backend regressions cover withheld source input; general R2 provenance and R3 integrity/assumption/scope checks remain enabled |
 | R4 Chair synthesis and source-opinion coverage | VERIFIED for tested boundaries | R4 null-state handoff and actual Chair reconciliation regression pass for both INVALID and CONFLICTING; live saved-run synthesis remains unverified |
 | Four-round saved data flow and distinct-role accounting | VERIFIED for deterministic tests | Prior R1–R4 data-flow and distinct-role tests pass; not proof of live 45-role execution |
 | Missing/failed-agent and resume handling | VERIFIED for deterministic tests | Existing backend resume/failure tests pass; current live simulation not performed |
-| Backend suite and deterministic preflight | VERIFIED on `89159004f9bcb9a93d7b4edb6f2eb53d412d9be0` | Run `44871164829`: 866/866; preflight 7/7; artifacts recorded above |
-| Security, dependencies, secret scan and CodeQL | VERIFIED on `89159004f9bcb9a93d7b4edb6f2eb53d412d9be0` | Run `44871164858`: all four jobs SUCCESS |
+| Backend suite and deterministic preflight | VERIFIED on `893c5d0f0bded243811db90550ecf07e87580d8f` | Run `44871637091`: 867/867; preflight 7/7; artifacts recorded in T1 checkpoint below |
+| Security, dependencies, secret scan and CodeQL | VERIFIED on `893c5d0f0bded243811db90550ecf07e87580d8f` | Run `44871637129`: all four jobs SUCCESS |
 | Frontend build/browser E2E | NOT APPLICABLE to this amendment | No frontend files changed; project-wide browser E2E is not established by this backend-only run |
 | Dashboard/API | VERIFIED for prior deterministic coverage | Existing API tests pass in the backend suite; no browser interaction test was run for this amendment |
 | Ollama context allocation and RTX 4060 request-time GPU inference | BLOCKED | No local Ollama inference, request-time `nvidia-smi` telemetry, or GPU-layer offload verification in this task |
@@ -8397,6 +8420,6 @@ The earlier failed run remains part of the audit history; it is not erased or re
 | Packaging, installer and release | BLOCKED | Later ordered work; not part of U09-INT-01 |
 | U04 and all later workstreams | BLOCKED | U09–U10 must finish and be accepted first; no sequence advancement |
 
-**Current milestone:** U09-INT-01 R2/R3/R4 case-summary quarantine boundary is VERIFIED for the deterministic test and CI evidence listed above. The broader U09–U10 step remains IN PROGRESS. The next approved item remains resolving T1 input-type interpretation without mutating immutable registry v2 definitions. No live inference, GPU validation, guideline compliance, clinical validation or release claim is made.
+**Current milestone:** U09-INT-01 R2/R3/R4 case-summary quarantine boundary is VERIFIED, and the T1 input-type interpretation is now VERIFIED for the existing immutable v2 string contract. The broader U09–U10 step remains IN PROGRESS; do not advance U04 or any later workstream. The next substep must be taken from the remaining ordered U09–U10 acceptance items after rereading this checklist. No live inference, GPU validation, guideline compliance, clinical validation or release claim is made.
 
 **Checklist supersession note:** This latest status supersedes the earlier status row that listed R2/R3/R4 case-summary direct reads as BLOCKED before the authorised U09-INT-01 scope amendment and its implementation. Historical baseline/failure notes above remain intact.
