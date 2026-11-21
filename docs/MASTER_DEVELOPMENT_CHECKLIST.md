@@ -8389,11 +8389,36 @@ The earlier failed run remains part of the audit history; it is not erased or re
 
 **Status:** T1 JSON input-type interpretation is VERIFIED for the existing v2 schema. The broader U09–U10 step remains IN PROGRESS. This section supersedes the earlier “T1 numeric JSON semantics unresolved” row and the historical “next approved action: resolve T1 input-type interpretation” note; those historical entries are retained for audit.
 
+### U10 TNM staging-context completeness — ordered subtask plan (PLAN RECORDED; no code yet)
+
+**Parent step:** `U09-U10 — Canonical clinical data contract and deterministic hallucination controls`. This plan is a bounded continuation of that existing step, not a new workstream. Active machine-plan ID, status, dependencies and fixed allowlist remain unchanged. The machine plan and validator allowlists were rechecked as identical at current code head `893c5d0`.
+
+**Evidence-based root cause at baseline `d43ebd8`:** `backend/app/services/case_integrity.py` checks only primary site, staging system and staging edition in three related places: (1) `build_case_prompt_context` staging warnings, (2) post-generation `audit_unverified_case_claims` stage-group context audit, and (3) `build_case_validation_warnings`. Anatomical subsite is omitted in all three. Existing `test_clinical_stage_group_with_explicit_site_system_and_edition_has_context` treats those three dimensions as complete while leaving subsite unrecorded. Existing unknown-subsite tests cover direct subsite claims, not the staging-context gate. This leaves an incomplete site/subsite context able to avoid a deterministic “context incomplete” warning.
+
+**Objective:** align the deterministic context-completeness checks with the ordered requirement that TNM/stage-group interpretation must preserve primary site/subsite, staging system and edition. Do not choose, infer or normalize a subsite.
+
+**Exact implementation plan:**
+1. Add an explicit subsite-context rule to the shared staging-context handling in `case_integrity.py`. A structured subsite value in state `PRESENT` is resolved. Explicit `NOT_APPLICABLE` is also accepted as a declared applicability decision for this field only. Missing value, `UNKNOWN`, `NOT_REPORTED`, `PENDING`, `DECLINED`, `INVALID`, `CONFLICTING` or a field-specific unresolved statement must remain a context gap.
+2. Apply the same rule to the model-facing prompt context so roles receive an explicit warning when staged data is supplied but subsite is missing/unresolved. Preserve the raw T/N/M tokens; do not convert context warnings into a negative TNM finding.
+3. Apply the rule to the deterministic post-generation stage-group context audit. A generated staging classification must be flagged when subsite is unresolved; an explicit `NOT_APPLICABLE` state is not itself treated as missing. Keep the existing source-support and clinical/pathological/untyped separation checks.
+4. Apply the same context rule to intake validation warnings so intake, prompt context and post-generation audit cannot disagree.
+5. Add focused tests for (a) staged case with absent subsite, (b) explicit `UNKNOWN` subsite even when free text mentions a subsite, (c) explicit `NOT_APPLICABLE` subsite, (d) explicit structured subsite, and (e) preservation of raw case/TNM values and all current primary-site/system/edition safeguards. Update the current “complete context” positive fixture to explicitly set subsite or its `NOT_APPLICABLE` state.
+6. Run the focused context/audit tests, full backend suite, deterministic no-inference preflight, Sequential Development Gate and Security/Dependency Audit on the exact final code SHA. Inspect the final diff, failure logs, run artefacts and PR/base branch after the runs.
+7. Update this one Master Checklist with exact commit SHA, CI run IDs/results and artifacts only after evidence exists. Keep U09–U10 IN PROGRESS until every ordered acceptance item is verified.
+
+**Fixed scope (within the existing allowlist):** `backend/app/services/case_integrity.py`, relevant `backend/tests/*`, and `docs/MASTER_DEVELOPMENT_CHECKLIST.md` for this plan and later evidence. Do not change `clinical_fields.py`, `schemas.py`, registry aliases/field definitions, registry version/hash, raw case data, case serialization, migration history, model configuration, frontend, installer, or other workstreams.
+
+**Acceptance criteria:** all three deterministic context surfaces agree on subsite completeness; unresolved subsite cannot be silently treated as a complete staging context; explicit `NOT_APPLICABLE` and explicit structured subsite work without warnings about missing subsite; original clinical tokens and raw data remain untouched; the full required exact-SHA checks pass.
+
+**Explicit non-goals and limitations:** this does not create or claim a clinical AJCC/UICC site/subsite/edition compatibility engine, validate a TNM category against a disease-specific chapter, derive a stage group, infer N0/M0, or validate resectability. The supplied site/system/edition labels remain unverified user-supplied data. Such compatibility requires current authoritative evidence and a separately audited, versioned rule source; until then, warnings must continue to state that lexical normalization is not clinical staging validation.
+
+**Risk and rollback:** the principal risk is over-blocking sites for which subsite is not applicable; mitigate only through an explicit `NOT_APPLICABLE` field state, never by guessing. If focused or full tests fail, diagnose and correct the minimal change; do not weaken existing checks. Roll back only the bounded U10 code/test commit if necessary, preserving unrelated PR history. No merge, force-push or target-branch mutation.
+
 ### Master Checklist — Current Status (21 November 2026)
 
 | Workstream | Status | Current evidence / remaining boundary |
 |---|---|---|
-| PR #5 / development branch protection | IN PROGRESS | PR #5 OPEN, NOT MERGED; latest branch head `893c5d0f0bded243811db90550ecf07e87580d8f` (T1 regression-only commit); R2/R3/R4 implementation code head `89159004f9bcb9a93d7b4edb6f2eb53d412d9be0`; target base `df90e4a380bef06a7d37def753b385db4ae86c30`; no direct changes to target branch or `main` |
+| PR #5 / development branch protection | IN PROGRESS | PR #5 OPEN, NOT MERGED; current branch head `d43ebd87ba7c80387226f0dee0907f953a4de7f9` (checklist-only commit); latest application/test commit `893c5d0f0bded243811db90550ecf07e87580d8f`; R2/R3/R4 implementation code head `89159004f9bcb9a93d7b4edb6f2eb53d412d9be0`; target base `df90e4a380bef06a7d37def753b385db4ae86c30`; no direct changes to target branch or `main` |
 | GOV-01 plan-before-execution discipline | VERIFIED | Ordered U09-INT-01 stages and non-goals recorded; no U04 activation |
 | U12 sequential fail-closed gate | VERIFIED | Exact-head Sequential Development Gate `44871637121` SUCCESS on `893c5d0f0bded243811db90550ecf07e87580d8f` |
 | U09 registry IDs, aliases and declared field types | VERIFIED for tested contract | Prior 40-field / 7-value-type contract and immutable registry tests remain the evidence; full acceptance of U09-U10 is not claimed |
@@ -8408,7 +8433,7 @@ The earlier failed run remains part of the audit history; it is not erased or re
 | Four-round saved data flow and distinct-role accounting | VERIFIED for deterministic tests | Prior R1–R4 data-flow and distinct-role tests pass; not proof of live 45-role execution |
 | Missing/failed-agent and resume handling | VERIFIED for deterministic tests | Existing backend resume/failure tests pass; current live simulation not performed |
 | Backend suite and deterministic preflight | VERIFIED on `893c5d0f0bded243811db90550ecf07e87580d8f` | Run `44871637091`: 867/867; preflight 7/7; artifacts recorded in T1 checkpoint below |
-| Security, dependencies, secret scan and CodeQL | VERIFIED on `893c5d0f0bded243811db90550ecf07e87580d8f` | Run `44871637129`: all four jobs SUCCESS |
+| Security, dependencies, secret scan and CodeQL | VERIFIED on `893c5d0f0bded243811db90550ecf07e87580d8f` and docs head `d43ebd87ba7c80387226f0dee0907f953a4de7f9` | Code/test run `44871637129` and checklist-only docs run `44871845357`: all four jobs SUCCESS on each respective SHA |
 | Frontend build/browser E2E | NOT APPLICABLE to this amendment | No frontend files changed; project-wide browser E2E is not established by this backend-only run |
 | Dashboard/API | VERIFIED for prior deterministic coverage | Existing API tests pass in the backend suite; no browser interaction test was run for this amendment |
 | Ollama context allocation and RTX 4060 request-time GPU inference | BLOCKED | No local Ollama inference, request-time `nvidia-smi` telemetry, or GPU-layer offload verification in this task |
@@ -8420,6 +8445,6 @@ The earlier failed run remains part of the audit history; it is not erased or re
 | Packaging, installer and release | BLOCKED | Later ordered work; not part of U09-INT-01 |
 | U04 and all later workstreams | BLOCKED | U09–U10 must finish and be accepted first; no sequence advancement |
 
-**Current milestone:** U09-INT-01 R2/R3/R4 case-summary quarantine boundary is VERIFIED, and the T1 input-type interpretation is now VERIFIED for the existing immutable v2 string contract. The broader U09–U10 step remains IN PROGRESS; do not advance U04 or any later workstream. The next substep must be taken from the remaining ordered U09–U10 acceptance items after rereading this checklist. No live inference, GPU validation, guideline compliance, clinical validation or release claim is made.
+**Current milestone:** U09-INT-01 R2/R3/R4 case-summary quarantine boundary is VERIFIED, and the T1 JSON input-type contract is VERIFIED for immutable registry v2. U10 staging context completeness (site/subsite/system/edition) is the next bounded subtask within U09–U10 and is IN PROGRESS at planning stage only; no application code has been changed for it. The broader U09–U10 step remains IN PROGRESS; do not advance U04 or any later workstream. No live inference, GPU validation, guideline compliance, clinical validation or release claim is made.
 
 **Checklist supersession note:** This latest status supersedes the earlier status row that listed R2/R3/R4 case-summary direct reads as BLOCKED before the authorised U09-INT-01 scope amendment and its implementation. Historical baseline/failure notes above remain intact.
