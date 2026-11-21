@@ -9,6 +9,23 @@ $LogDir = Join-Path $ProductDataRoot "Logs"
 $Port = 8765
 $HealthUri = "http://127.0.0.1:$Port/health"
 
+function Start-RadOncDesktopWindow {
+    param([Parameter(Mandatory = $true)][string]$Url)
+
+    $edgeCandidates = @(
+        (Join-Path $env:ProgramFiles "Microsoft\Edge\Application\msedge.exe"),
+        (Join-Path ${env:ProgramFiles(x86)} "Microsoft\Edge\Application\msedge.exe"),
+        (Join-Path $env:LOCALAPPDATA "Microsoft\Edge\Application\msedge.exe")
+    )
+    $edge = $edgeCandidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
+
+    if ($edge) {
+        Start-Process -FilePath $edge -ArgumentList @("--app=$Url", "--window-size=1280,900")
+    } else {
+        Start-Process $Url
+    }
+}
+
 if (-not (Test-Path $Executable)) {
     throw "RadOncMDT.exe was not found in the installed application folder."
 }
@@ -42,7 +59,7 @@ if ($existing) {
     if ($existing.application -ne "RadOnc MDT Simulator") {
         throw "Port $Port is already serving a different application. Nothing was stopped."
     }
-    Start-Process "http://127.0.0.1:$Port"
+    Start-RadOncDesktopWindow -Url "http://127.0.0.1:$Port"
     exit 0
 }
 
@@ -93,7 +110,7 @@ if (-not $ready) {
     throw "RadOnc MDT did not become ready on port $Port. $details"
 }
 
-Start-Process "http://127.0.0.1:$Port"
+Start-RadOncDesktopWindow -Url "http://127.0.0.1:$Port"
 Write-Host "RadOnc MDT is running at http://127.0.0.1:$Port"
 Write-Host "User data: $DataDir"
 Write-Host "Logs: $LogDir"
