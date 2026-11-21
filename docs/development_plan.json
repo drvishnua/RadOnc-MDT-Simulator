@@ -100,7 +100,10 @@
         "backend/app/clinical_fields.py",
         "backend/app/schemas.py",
         "backend/app/services/case_integrity.py",
-        "backend/tests/*"
+        "backend/tests/*",
+        "backend/app/services/mdt_generation.py",
+        "backend/app/services/chair_report_quality.py",
+        "backend/scripts/validate_development_plan.py"
       ],
       "required_workflow_names": [
         "Sequential Development Gate",
