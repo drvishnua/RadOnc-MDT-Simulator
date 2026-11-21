@@ -1668,7 +1668,7 @@ async def generate_debate_contribution(
         + ("Do not imply that repeating a source opinion means you endorse it. If a peer omits or weakens the option, "
         "explain that separately without inventing evidence. The server binds each exact source_excerpt after generation. "
         if source_opinion_register else "")
-        "Peer provenance is recorded separately by the server in the exact source_peer_ids field; "
+        + "Peer provenance is recorded separately by the server in the exact source_peer_ids field; "
         "do not emit round-qualified source identifiers in generated prose. Refer to an individual "
         "peer only by the exact role name shown in the supplied peer record. Do not abbreviate or "
         "group peer identifiers in prose. If a specific role cannot be attributed from the supplied "
@@ -2290,7 +2290,7 @@ async def generate_adversarial_contribution(
         "Use this exact safe formulation when indication cannot be determined: 'The supplied information does not establish whether either source option is indicated or appropriate; indication and suitability remain undetermined.' "
         "Do not infer a negative indication from agreement that data are missing or from a peer saying that no definitive pathway can yet be established. "
         + source_opinion_review_instructions
-        f"ROLE: {profile['name']}\nMANDATE: {profile['mandate']}\n"
+        + f"ROLE: {profile['name']}\nMANDATE: {profile['mandate']}\n"
         "SUPPLIED CASE:\n"
         + json.dumps(build_case_prompt_context(case), ensure_ascii=False, separators=(",", ":"))
         + "\n" + r3_source_opinion_register_label + "\n"
