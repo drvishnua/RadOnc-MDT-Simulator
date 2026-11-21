@@ -8548,3 +8548,31 @@ Root `AGENTS.md` keeps the existing RadOnc mission, four-round architecture, cli
 
 **Current statuses:** repository-level Ponytail instructions/skills and licence/attribution — VERIFIED; isolated tooling-branch CI/review — BLOCKED / NOT RUN; native ChatGPT mobile hooks — NOT APPLICABLE; Windows user-level host installation — BLOCKED. No MDT application or runtime change was made.
 
+
+
+---
+
+### U09–U10 — reject whitespace-only canonical case summaries: ordered regression plan (21 November 2026)
+
+**Parent machine-plan step:** `U09-U10 — Canonical clinical data contract and deterministic hallucination controls`, still IN PROGRESS. Machine-plan status, dependencies and fixed allowlist were re-read; no plan/validator change is authorised. PR #5 source branch `docs/reconcile-master-checklist-after-pr4-merge`; current pre-plan PR head `55112cb1c7a772d8f68516c907737eb03d284381`; target development branch base `df90e4a380bef06a7d37def753b385db4ae86c30`.
+
+**Evidence-based root cause:** `SyntheticCase.case_summary` is a `PreservedSourceText` with `strip_whitespace=False` and `min_length=10`. That correctly preserves boundary whitespace but also counts an all-whitespace string as long enough. No field validator checks `value.strip()`. The model's metadata validator treats that nonempty string as a supplied value, and when its state is implicit it derives PRESENT and creates fallback provenance. `eligible_case_summary_text` then returns it as source text. `POST /api/cases/validate` parses the same model and returns `valid=True`; `build_case_validation_warnings` has no whitespace-only summary warning. Thus a whitespace-only summary can enter the standard schema and validation path as PRESENT rather than being rejected. This is a reproducible contract defect in the existing model/route, not a clinical interpretation.
+
+**Callers/data-flow inspected:** the shared `SyntheticCase` model is used by `POST /api/cases/validate`, patient registration and case-version request models, saved-case revalidation before assessment, intake promotion, and prompt/context construction. A validator on the shared model is the narrow boundary; no downstream prompt rewrite is required. The existing test `test_free_text_case_and_report_summaries_preserve_exact_whitespace` proves that legitimate nonblank text, including leading/trailing whitespace and line breaks, must remain byte-faithful.
+
+**Smallest complete change:** add one Pydantic field validator for `case_summary` that rejects only values for which `value.strip()` is empty. Return every valid nonblank value unchanged; do not trim, normalize, rewrite, or generate a replacement summary. Preserve the existing min/max length limits and all source/provenance state semantics.
+
+**Regression coverage:**
+1. Add a direct `SyntheticCase` regression in `backend/tests/test_clinical_fields.py` for a string of at least 10 whitespace characters; it must be rejected with the explicit field validation message.
+2. Add an API regression in `backend/tests/test_api.py` proving `POST /api/cases/validate` returns HTTP 422 for the same class of payload rather than `valid=True`.
+3. Retain and run the existing exact-whitespace preservation regression; assert it still preserves nonblank source text exactly.
+4. Run focused schema/API tests, then full backend pytest, deterministic no-inference preflight, Sequential Development Gate and Security/Dependency Audit on the exact final code SHA. Inspect logs and artifacts before updating verification status.
+
+**Fixed scope:** `backend/app/schemas.py`, `backend/tests/test_clinical_fields.py`, `backend/tests/test_api.py`, and this Master Checklist for plan/evidence only. These paths are within the existing U09–U10 allowlist. Do not change `case_integrity.py`, `main.py`, `clinical_fields.py`, `docs/development_plan.json`, the validator allowlist, case serialization, the registry/hash, model prompts, frontend, installer, or runtime. Only widen the scope if focused tests prove the shared model validator is insufficient and record the reason first.
+
+**Safety/non-goals:** this is a nonblank input-contract check, not a claim that a nonblank narrative contains adequate clinical facts. It does not infer or validate stage, TNM, performance status, resectability, investigations or patient preferences, nor does it alter any unknown/negative/conditional semantics. A case with incomplete clinical information remains incomplete and must retain warnings/unknowns.
+
+**Stop conditions:** stop if the change would trim/alter valid source text, mutate existing case versions, require registry migration, or expand beyond the existing plan allowlist. Do not weaken validation or change fixtures to hide failures. Keep PR #5 OPEN/UNMERGED and U04/later steps BLOCKED.
+
+**Plan status:** RECORDED before implementation.  
+**Requirement status:** IN PROGRESS.
