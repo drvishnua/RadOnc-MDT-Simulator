@@ -1597,33 +1597,54 @@ async def generate_debate_contribution(
     allowed_sources = {("R1", profile["agent_id"])} | {
         ("R1", peer["agent_id"]) for peer in peer_views
     }
+    if eligible_summary is None:
+        r2_source_instruction = (
+            "CASE SUMMARY WITHHELD: case_summary is INVALID or CONFLICTING. Do not inspect, quote, "
+            "reconstruct, infer, or attribute any opinion from the quarantined summary. Its source "
+            "register is unavailable; an empty register means unassessable, not that no opinions exist. "
+            "Do not create CASE:case_summary IDs, source-opinion responses, or source excerpts. "
+        )
+        source_opinion_register_label = (
+            "CASE-SUMMARY SOURCE-OPINION REGISTER: WITHHELD / UNASSESSABLE; no source text is supplied."
+        )
+    elif source_opinion_register:
+        r2_source_instruction = (
+            "Inspect the eligible verbatim case summary for each explicitly attributed opinion, "
+            "its proposed option, and every stated prerequisite. Treat each as a source statement "
+            "(CASE:case_summary), not a verified fact. Compare each option separately with your own "
+            "R1 view and the selected peer views. Do not collapse distinct conditional pathways into "
+            "generic uncertainty about missing staging. In particular, a surgery-first/surgical-assessment "
+            "pathway and a preoperative multimodality pathway remain distinct options even when both "
+            "depend on some missing investigations. Shared uncertainty about prerequisites is not agreement "
+            "on treatment sequence, option, resectability, or fitness. Do not describe different prerequisites "
+            "as identical unless the source text explicitly says so. For EACH server-identified attributed "
+            "opinion in the dedicated register, return exactly one source_opinion_response using that exact "
+            "CASE source ID. Set position_on_source_opinion to supports, opposes, conditional, or "
+            "insufficient_information. This is your reported stance on that opinion, not the source author's "
+            "stance, your overall round position, an endorsement, or a vote. Use conditional when your view "
+            "depends on prerequisites; name them in analysis and do not imply they are fulfilled. Use "
+            "insufficient_information when no defensible stance can be stated. Do not transfer a stance "
+            "between different CASE source IDs. In analysis, name the distinct option and every stated "
+            "prerequisite; in comparison, compare it with your own R1 position and selected peer R1 records. "
+            "Do not replace an option with generic uncertainty about missing data. "
+        )
+        source_opinion_register_label = (
+            "SERVER-IDENTIFIED ATTRIBUTED SOURCE OPINIONS (exact case-summary excerpts; source statements, "
+            "not verified facts or your endorsement)"
+        )
+    else:
+        r2_source_instruction = (
+            "The case summary is eligible for review, but the server identified no clearly attributed "
+            "source opinions. Return an empty source_opinion_responses array. Do not create CASE source "
+            "IDs or derive case-summary opinions from R1 peer contributions."
+        )
+        source_opinion_register_label = (
+            "SERVER-IDENTIFIED ATTRIBUTED SOURCE OPINIONS: none were identified in the eligible summary."
+        )
     prompt = (
-        "ROUND 2 — STRUCTURED MDT DEBATE. You are the role below. First inspect the "
-        "verbatim case summary for each explicitly attributed opinion, its proposed option, "
-        "and every stated prerequisite. Treat each as a source statement (CASE:case_summary), "
-        "not a verified fact. Compare each option separately with your own R1 view and the "
-        "selected peer views. Do not collapse distinct conditional pathways into generic "
-        "uncertainty about missing staging. In particular, a surgery-first/surgical-assessment "
-        "pathway and a preoperative multimodality pathway remain distinct options even when "
-        "both depend on some missing investigations. Shared uncertainty about prerequisites "
-        "is not agreement on treatment sequence, option, resectability, or fitness. Do not "
-        "describe different prerequisites as identical unless the source text explicitly says so. "
-        + ("CASE SUMMARY WITHHELD: case_summary state is INVALID or CONFLICTING. The original text and "
-         "source excerpts are unavailable. An empty register means attributed opinions are unassessable, "
-         "not that none exist. Do not reconstruct, quote, infer, or create CASE source IDs or responses. "
-         if eligible_summary is None else "") +
-        "For EACH server-identified attributed opinion listed in the dedicated register below, return exactly "
-        "one item in the required source_opinion_responses array using that exact CASE source ID. "
-        "Also set position_on_source_opinion for that exact opinion: supports, opposes, conditional, or "
-        "insufficient_information. This is your role's reported stance on that one attributed opinion, "
-        "not the source author's stance, your overall round position, an endorsement, or a vote. Use "
-        "conditional when your view depends on prerequisites and name those prerequisites in analysis; "
-        "do not imply they are fulfilled. Use insufficient_information when you cannot state a defensible "
-        "stance. Do not transfer a stance between different CASE source IDs. "
-        "In its analysis, name the distinct option and every stated prerequisite/condition; in comparison, "
-        "compare it with your own R1 position and the selected peer R1 records. Do not replace an "
-        "option with generic uncertainty about missing data. "
-        "ABSENT-IS-NOT-UNMET RULE: distinguish missing documentation from an assessed negative finding for each prerequisite. "
+        "ROUND 2 — STRUCTURED MDT DEBATE. You are the role below. "
+        + r2_source_instruction
+        + "ABSENT-IS-NOT-UNMET RULE: distinguish missing documentation from an assessed negative finding for each prerequisite. "
         "If an MRI result, complete staging, or fitness/performance assessment is not present in the supplied case, describe it as 'not supplied', 'not documented', or 'unknown'. "
         "Do not say that a prerequisite is 'not met', failed, negative, or absent solely because its result or assessment is missing. "
         "For example, no MRI result supplied means MRI staging is unknown; no staging entry means stage is undocumented, not evidence of a negative staging result; "
@@ -1644,10 +1665,9 @@ async def generate_debate_contribution(
         "this reports what those records say and is not a clinical indication conclusion. "
         "Use this exact safe formulation when indication cannot be determined: 'The supplied information does not establish whether either source option is indicated or appropriate; indication and suitability remain undetermined.' "
         "Do not infer a negative indication from agreement that data are missing or from a peer saying that no definitive pathway can yet be established. "
-        "Do not imply "
-        "that repeating a source opinion means you endorse it. If a peer omits or weakens the option, "
-        "explain that separately without inventing evidence. If no attributed opinions are registered, "
-        "return an empty source_opinion_responses array. The server binds each exact source_excerpt after generation. "
+        + ("Do not imply that repeating a source opinion means you endorse it. If a peer omits or weakens the option, "
+        "explain that separately without inventing evidence. The server binds each exact source_excerpt after generation. "
+        if source_opinion_register else "")
         "Peer provenance is recorded separately by the server in the exact source_peer_ids field; "
         "do not emit round-qualified source identifiers in generated prose. Refer to an individual "
         "peer only by the exact role name shown in the supplied peer record. Do not abbreviate or "
@@ -2243,7 +2263,7 @@ async def generate_adversarial_contribution(
         f"ROLE: {profile['name']}\nMANDATE: {profile['mandate']}\n"
         "SUPPLIED CASE:\n"
         + json.dumps(build_case_prompt_context(case), ensure_ascii=False, separators=(",", ":"))
-        + "\nSERVER-IDENTIFIED ATTRIBUTED SOURCE OPINIONS (exact case-summary excerpts; not verified facts):\n"
+        + "\n" + source_opinion_register_label + "\n"
         + json.dumps(source_opinion_register, ensure_ascii=False, separators=(",", ":"))
         + "\nYOUR R1 AND COMPLETE OWN R2 RECORD (bounded fields):\n"
         + json.dumps(own, ensure_ascii=False, separators=(",", ":"))
