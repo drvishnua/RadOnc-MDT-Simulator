@@ -582,6 +582,21 @@ def get_run(run_id: str) -> dict[str, Any]:
     running = counts.get("running", 0)
     total = row["total_agents"]
     finished = completed + failed
+    wall_clock_runtime_seconds: float | None = None
+    if row["mdt_finished_at"] and row["created_at"]:
+        try:
+            finished_str = str(row["mdt_finished_at"]).strip().replace("Z", "+00:00")
+            created_str = str(row["created_at"]).strip().replace("Z", "+00:00")
+            finished_dt = datetime.fromisoformat(finished_str)
+            created_dt = datetime.fromisoformat(created_str)
+            if finished_dt.tzinfo is None:
+                finished_dt = finished_dt.replace(tzinfo=timezone.utc)
+            if created_dt.tzinfo is None:
+                created_dt = created_dt.replace(tzinfo=timezone.utc)
+            wall_clock_runtime_seconds = round(max(0.0, (finished_dt - created_dt).total_seconds()), 3)
+        except (ValueError, TypeError):
+            wall_clock_runtime_seconds = None
+
     return {
         "run_id": row["run_id"],
         "patient_id": row["patient_id"],
@@ -599,6 +614,7 @@ def get_run(run_id: str) -> dict[str, Any]:
         "created_at": row["created_at"],
         "updated_at": row["updated_at"],
         "mdt_finished_at": row["mdt_finished_at"],
+        "wall_clock_runtime_seconds": wall_clock_runtime_seconds,
         "clinical_field_registry_version": row["clinical_field_registry_version"],
         "case_snapshot_sha256": hashlib.sha256(row["case_json"].encode("utf-8")).hexdigest(),
         "all_agents_required": True,

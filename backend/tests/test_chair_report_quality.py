@@ -1303,3 +1303,69 @@ def test_chair_synthesis_traces_examples_to_saved_role_records_in_all_three_roun
     assert "not exhaustive" in synthesis
     assert "verified clinical facts" in synthesis
     assert "not an exhaustive summary" in synthesis
+
+
+def test_minority_history_includes_position_change_rationales_from_debate_and_position_changes():
+    case = SyntheticCase(
+        scenario_title="Position change rationale traceability test",
+        case_summary="Fictional case for validating structured debate position-change rationales.",
+    )
+    round1 = _rows("assessment", ["supports"] * 44 + ["conditional"], unknowns=False)
+    round1[-1]["agent_id"] = "RO-45"
+    round1[-1]["agent_name"] = "Debating Specialist"
+
+    round2 = _rows("result", ["supports"] * 45, unknowns=False)
+    round2[-1]["agent_id"] = "RO-45"
+    round2[-1]["agent_name"] = "Debating Specialist"
+    round2[-1]["result"]["position"] = "supports"
+    round2[-1]["result"]["position_changes"] = [
+        "Round 1 → Round 2: conditional → supports. Rationale: Review of updated simulation scan confirmed disease localization."
+    ]
+
+    round3 = _rows("result", ["supports"] * 45, unknowns=False)
+    round3[-1]["agent_id"] = "RO-45"
+    round3[-1]["agent_name"] = "Debating Specialist"
+    round3[-1]["result"]["position"] = "supports"
+
+    report = ensure_chair_report_completeness(_empty_report(), case, round1, round2, round3)
+    history = " ".join(report.minority_and_dissenting_views)
+
+    assert "RO-45" in history
+    assert "Position evolution: conditional → supports → supports" in history
+    assert "Position-change rationales" in history
+    assert "Review of updated simulation scan confirmed disease localization" in history
+
+
+def test_stable_uncertainty_roles_excluded_from_minority_dissent_and_channeled_to_uncertainty_sections():
+    case = SyntheticCase(
+        scenario_title="Stable uncertainty exclusion and channeling test",
+        case_summary="Fictional case to verify stable insufficient-information roles are channeled to uncertainty.",
+    )
+    # 40 supports, 5 stable insufficient_information
+    positions = ["supports"] * 40 + ["insufficient_information"] * 5
+    round1 = _rows("assessment", positions, unknowns=False)
+    round2 = _rows("result", positions, unknowns=False)
+    round3 = _rows("result", positions, unknowns=False)
+
+    # Give the 5 stable uncertainty roles explicit unknowns in their contributions
+    for i in range(40, 45):
+        role_id = f"RO-{i+1:02d}"
+        for round_rows in (round1, round2, round3):
+            field = "assessment" if round_rows is round1 else "result"
+            round_rows[i][field]["unknowns"] = [f"Critical diagnostic unknown for {role_id}"]
+            round_rows[i][field]["uncertainty_notes"] = [f"Uncertainty note regarding margin status for {role_id}"]
+
+    report = ensure_chair_report_completeness(_empty_report(), case, round1, round2, round3)
+
+    # 1. Minority views must NOT include any of the stable insufficient_information roles (RO-41 to RO-45)
+    minority_views = " ".join(report.minority_and_dissenting_views)
+    for i in range(40, 45):
+        role_id = f"RO-{i+1:02d}"
+        assert role_id not in minority_views, f"{role_id} should be excluded from minority dissent"
+
+    # 2. Uncertainty sections MUST channel the unknowns and uncertainty notes from those stable roles
+    uncertainties = " ".join(report.major_uncertainties)
+    for i in range(40, 45):
+        role_id = f"RO-{i+1:02d}"
+        assert f"Critical diagnostic unknown for {role_id}" in uncertainties
+        assert f"Uncertainty note regarding margin status for {role_id}" in uncertainties

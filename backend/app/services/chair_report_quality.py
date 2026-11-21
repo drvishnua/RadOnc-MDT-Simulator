@@ -667,16 +667,96 @@ def _minority_history(
     Stable insufficient-information roles are uncertainty contributors, not dissenters.
     Original role records remain stored unchanged.
     """
-    by_agent: dict[str, dict[str, object]] = defaultdict(lambda: {"name": "Role", "positions": [], "events": []})
+    by_agent: dict[str, dict[str, Any]] = defaultdict(lambda: {"name": "Role", "positions": [], "events": [], "rationales": []})
     for round_number, rows, field in ((1, round1_rows, "assessment"), (2, round2_rows, "result"), (3, round3_rows, "result")):
         for row, item in _distinct_role_entries(rows, field, f"Round {round_number}", integrity_flags):
             agent_id = str(row.get("agent_id") or "unknown-role")
             record = by_agent[agent_id]
             record["name"] = row.get("agent_name") or record["name"]
-            position = item.get("position")
-            if not position:
+            raw_pos = item.get("position")
+            if not raw_pos:
                 continue
+            position = str(raw_pos).strip().lower().replace("-", "_")
+            prev_position = record["positions"][-1] if record["positions"] else None
             record["positions"].append(position)
+
+            # Trace position change rationale when position changes across rounds
+            if round_number > 1 and prev_position is not None and position != prev_position:
+                raw_changes = item.get("position_changes")
+                found_rationale = False
+                if isinstance(raw_changes, (list, tuple)) and raw_changes:
+                    for change_entry in raw_changes:
+                        if not isinstance(change_entry, str) or not change_entry.strip():
+                            continue
+                        cleaned_change = " ".join(change_entry.split())
+                        withheld_change = False
+                        if _is_positive_consensus_claim(cleaned_change):
+                            withheld_change = True
+                            _note_quarantined_claims(
+                                integrity_flags,
+                                f"R{round_number} {agent_id} position-change rationale",
+                                ["Positive consensus assertion withheld; one role's text cannot establish shared agreement."],
+                            )
+                        elif case is not None:
+                            findings = audit_unverified_case_claims(case, {"rationale": cleaned_change})
+                            if findings:
+                                withheld_change = True
+                                _note_quarantined_claims(
+                                    integrity_flags,
+                                    f"R{round_number} {agent_id} position-change rationale",
+                                    findings,
+                                )
+                        if withheld_change:
+                            record["rationales"].append(
+                                f"Round {round_number - 1} → Round {round_number}: {prev_position} → {position}. "
+                                "Rationale withheld by deterministic case-integrity audit"
+                            )
+                        else:
+                            if len(cleaned_change) > 220:
+                                cleaned_change = cleaned_change[:219].rstrip() + "…"
+                            record["rationales"].append(cleaned_change)
+                        found_rationale = True
+                        break
+
+                if not found_rationale:
+                    # Fallback to debate response or provisional conclusion
+                    debate_resp = item.get("response_to_other_perspectives") or item.get("provisional_conclusion")
+                    if debate_resp and isinstance(debate_resp, str) and debate_resp.strip():
+                        cleaned_resp = " ".join(debate_resp.split())
+                        withheld_resp = False
+                        if _is_positive_consensus_claim(cleaned_resp):
+                            withheld_resp = True
+                            _note_quarantined_claims(
+                                integrity_flags,
+                                f"R{round_number} {agent_id} position-change rationale",
+                                ["Positive consensus assertion withheld; one role's text cannot establish shared agreement."],
+                            )
+                        elif case is not None:
+                            findings = audit_unverified_case_claims(case, {"rationale": cleaned_resp})
+                            if findings:
+                                withheld_resp = True
+                                _note_quarantined_claims(
+                                    integrity_flags,
+                                    f"R{round_number} {agent_id} position-change rationale",
+                                    findings,
+                                )
+                        if withheld_resp:
+                            record["rationales"].append(
+                                f"Round {round_number - 1} → Round {round_number}: {prev_position} → {position}. "
+                                "Rationale: rationale withheld by deterministic case-integrity audit"
+                            )
+                        else:
+                            if len(cleaned_resp) > 220:
+                                cleaned_resp = cleaned_resp[:219].rstrip() + "…"
+                            record["rationales"].append(
+                                f"Round {round_number - 1} → Round {round_number}: {prev_position} → {position}. "
+                                f"Rationale: {cleaned_resp}"
+                            )
+                    else:
+                        record["rationales"].append(
+                            f"Round {round_number - 1} → Round {round_number}: {prev_position} → {position}."
+                        )
+
             conclusion = " ".join(str(item.get("provisional_conclusion") or "").split())
             withheld = False
             if conclusion and _is_positive_consensus_claim(conclusion):
@@ -721,9 +801,12 @@ def _minority_history(
         if not (changed or qualified_minority):
             continue
         transition = "Position evolution: " + " → ".join(positions) + ". " if changed else ""
+        if changed and record.get("rationales"):
+            transition += "Position-change rationales: " + "; ".join(record["rationales"]) + ". "
         priority = 0 if qualified_minority else 1
         output.append((priority, f"{agent_id} — {record['name']}: " + transition + "; ".join(record["events"])))
     return [item for _, item in sorted(output)][:45]
+
 
 def _merge_minority_views(
     history: list[str],
@@ -751,6 +834,10 @@ def _merge_minority_views(
     for entry in existing:
         cleaned = " ".join(str(entry).split())
         if not cleaned:
+            continue
+        lowered = cleaned.casefold()
+        if "insufficient_information" in lowered or "insufficient information" in lowered:
+            # Stable uncertainty roles are uncertainty contributors, never dissenters
             continue
         match = agent_pattern.match(cleaned)
         if match and match.group(1) in seen_agents:
