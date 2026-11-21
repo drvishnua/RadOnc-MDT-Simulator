@@ -95,3 +95,28 @@ Execute work directly when tools allow. Do not fabricate results, local state, c
 
 ## Immediate quality milestone
 Fix: (P0) case-fact provenance and structured input semantics; prevent unsupported TNM/demographic claims. Then (P1) structured debate position-change traceability, Chair minority selection, title generation, and top-level completion timestamps. Then (P2) evidence retrieval/citation verification and richer performance telemetry. Re-run the same synthetic case and compare against the documented baseline. Keep PR #1 draft and `main` untouched.
+
+
+## Ponytail development method — upstream v5.3.3
+
+Source: [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail), tag `v5.3.3`, MIT. The corresponding upstream skills are preserved under `.agents/skills/`; consult their actual contents before each coding task.
+
+For every coding task:
+1. Read `.agents/skills/ponytail/SKILL.md` before planning implementation. Apply its understand-first, smallest-complete-change ladder: determine necessity, inspect existing project helpers/patterns, prefer standard-library/native capabilities, reuse installed dependencies, and avoid speculative abstractions.
+2. Before editing a bug fix, inspect every caller and the full affected data flow. Include tests, fixtures, configuration, exports and downstream consumers in scope.
+3. Read `.agents/skills/ponytail-review/SKILL.md` for change review. Review the touched code and callers, not just the diff. Every finding must have a concrete failure case.
+4. Read `.agents/skills/ponytail-audit/SKILL.md` when an audit is requested or when whole-repository risks must be assessed. Read the debt/help/gain skills when those specific reports are requested.
+5. Keep the smallest complete diff, but never omit validation, error handling, security, accessibility, data-loss protection, hardware calibration, regression tests or anything explicitly required by the owner.
+6. Report what was not checked and the remaining risks. Do not invent per-repository savings or claim a skill/plugin runtime is active when it is not.
+
+### RadOnc project precedence
+
+Ponytail is an engineering method, not an authority to change project scope. These repository requirements remain mandatory and take precedence wherever stricter:
+- GOV-01: record and display the complete plan before implementation; no coding before plan and scope are recorded in the Master Checklist.
+- Follow the approved machine development plan and exact authorised file allowlists. No skipping, reverting, repeating completed steps or introducing unapproved workstreams.
+- Clinical safety, unknown-preservation, provenance, audit integrity, four-round R1–R4 separation, deterministic Chair controls and all acceptance gates remain non-negotiable.
+- Preserve original case data, hashes, run IDs, timestamps, source records and failures. Never weaken schemas or tests to make a change pass.
+- Run the required focused regression, backend, frontend, integration/E2E and exact-head CI checks as applicable. Do not claim unrun checks passed.
+- Update the single authoritative `docs/MASTER_DEVELOPMENT_CHECKLIST.md` for every project requirement and progress change.
+
+Ponytail's “smallest change” rule must never be interpreted as permission to remove a required safety control, skip an approved plan stage, reduce test coverage, weaken evidence standards or bypass review. The user-facing ChatGPT mobile app does not execute Ponytail's local Node lifecycle hooks; these repository instructions and skills are the supported integration here.
