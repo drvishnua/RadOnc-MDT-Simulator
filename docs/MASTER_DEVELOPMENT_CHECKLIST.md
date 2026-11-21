@@ -8309,3 +8309,41 @@ On PR head `cf5ddbea63210e3ac78b151741295bed797a0a9`:
 - U09-INT-01 implementation remains IN PROGRESS. Additional prompt-context leak through nested `case_summary` provenance/conflict candidates and contradictory unconditional R2/R3 source-review instructions have been recorded; they remain unimplemented. No U09–U10 completion claim is made.
 - DEV-TOOL-01 Ponytail installation remains BLOCKED pending the user's coding-agent host confirmation and access to the local Windows user profile/CLI. The approved approach is user-level installation pinned to official release `v5.3.3`, outside the MDT runtime, source/build dependencies and installer. No install has been performed.
 
+
+
+## DEV-TOOL-02 — Ponytail repository integration branch — 21 November 2026
+
+**Owner instruction:** Complete the Ponytail integration first. Thereafter, every coding task must be processed using the actual Ponytail repository contents, not a remembered or paraphrased substitute.
+
+**Upstream source pinned and inspected:** `https://github.com/DietrichGebert/ponytail`, tag `v5.3.3`, MIT. Files inspected at that tag: `README.md`, `INSTALL.md`, `AGENTS.md`, `skills/ponytail/SKILL.md`, `skills/ponytail-review/SKILL.md`, `skills/ponytail-audit/SKILL.md`, `skills/ponytail-debt/SKILL.md`, `skills/ponytail-help/SKILL.md`, `skills/ponytail-gain/SKILL.md`, `.codex-plugin/plugin.json`, `package.json`, and `LICENSE`. Upstream files and instructions remain the authoritative source for the copied Ponytail components.
+
+**Separate branch created:** `tooling/ponytail-integration`, based on PR #5 head `1b9faa828312604c0a6b88b6a2d212a1e5c2aefe`. This is intentionally not the development branch and does not alter PR #5 or the protected development branch.
+
+### Approved implementation plan
+
+1. Preserve the existing RadOnc root `AGENTS.md`; append a clearly attributed Ponytail v5.3.3 development-method section. Do not replace the project's clinical safety or algorithm instructions.
+2. Add the exact upstream Ponytail skill files under `.agents/skills/`: main Ponytail, review, audit, debt, gain and help. Preserve original skill text and metadata where possible; include source URL, pinned tag and upstream copyright/licence.
+3. Add the upstream MIT `LICENSE` text and a third-party notice identifying Dietrich Gebert, repository, tag and copied paths.
+4. Add a RadOnc integration/precedence note: Ponytail's minimal-change and review methods apply to coding work; project-specific GOV-01 plan-first, approved sequence, clinical safety, data/audit integrity, testing and Master Checklist remain mandatory and take precedence where they are stricter.
+5. Do not copy lifecycle hooks, plugin manifests, Node package manifests, runtime dependencies, install scripts, band telemetry or host-specific executable adapters. ChatGPT mobile does not execute these local hooks; do not claim native plugin installation.
+6. Keep all files isolated to developer instructions/skills/licence/notice. No backend, frontend, model, installer, packaging, patient-data or runtime changes.
+7. Verify copied skill contents against the pinned upstream source, check the full diff and path allowlist, confirm no runtime/dependency/installer references were introduced, and check licence/attribution.
+8. Run available static/documentation checks and exact-head GitHub CI. Report failures honestly. Do not merge or open a PR against the development branch while PR #5 is still open; hold this branch for review and integrate only after the PR base is reconciled.
+
+### Acceptance criteria
+- Separate branch exists and is based on the recorded PR #5 head.
+- Root instructions retain all RadOnc-specific controls and clearly include the upstream Ponytail method.
+- All six selected upstream skills are copied without silent semantic edits and remain traceable to v5.3.3.
+- MIT licence and attribution are present.
+- No executable hooks, package/runtime dependency, installer payload or application source change is introduced.
+- Exact diff, file checks and CI are inspected; no merge is performed.
+
+### Stop / rollback
+- Stop if an upstream file differs from the pinned source, a destination already exists unexpectedly, a project instruction would be overwritten, or the change crosses the approved path scope.
+- Correct by a new auditable commit on this tooling branch; never force-push or rewrite history.
+- If any check fails, retain the failure and do not mark the integration VERIFIED.
+
+**Plan status:** RECORDED before implementation.  
+**DEV-TOOL-02 status:** IN PROGRESS.  
+**Branch creation:** VERIFIED.  
+**Application/runtime changes:** NONE.
