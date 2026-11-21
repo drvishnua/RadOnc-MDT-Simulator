@@ -8576,3 +8576,64 @@ Root `AGENTS.md` keeps the existing RadOnc mission, four-round architecture, cli
 
 **Plan status:** RECORDED before implementation.  
 **Requirement status:** IN PROGRESS.
+
+
+---
+
+## U09–U10 — Reject whitespace-only case summaries: implementation and exact-head verification (21 November 2026)
+
+**Plan-first record:** The ordered plan was recorded in commit `1e9392c398277a118e9bfe27ada02282e6debce1` before implementation. Machine-plan step `U09-U10` remains IN PROGRESS, with the existing `backend/app/schemas.py` and `backend/tests/*` allowlist; no machine plan or validator allowlist change was made.
+
+**Implementation/test commit:** `ddd9e39c85430ebbeaefe0de74bf82235b44c695` on PR #5 source branch `docs/reconcile-master-checklist-after-pr4-merge`. Changed exactly three files:
+- `backend/app/schemas.py`: one `case_summary` field validator rejects a value only when `value.strip()` is empty; it returns the original valid string unchanged.
+- `backend/tests/test_clinical_fields.py`: direct schema regression rejects a 12-space summary.
+- `backend/tests/test_api.py`: `POST /api/cases/validate` regression asserts HTTP 422 for a 20-space summary.
+
+**Source-preservation safeguard:** the existing `test_free_text_case_and_report_summaries_preserve_exact_whitespace` passed on the exact implementation SHA. Leading/trailing spaces, tabs and line breaks on nonblank source narrative therefore remain preserved byte-for-byte by this change; there is no trimming or normalization. This check only establishes nonblank input, not clinical adequacy or staging completeness.
+
+**Exact-head required CI on `ddd9e39c85430ebbeaefe0de74bf82235b44c695`:**
+- Backend Tests run `44873965362`: SUCCESS; job `136754436373`; **875 passed, 0 failed, 0 errors, 0 skipped, 0 inconclusive**. Both new regressions and the pre-existing exact-whitespace-preservation test are individually recorded as passed in the pytest diagnostics log.
+- Deterministic no-inference preflight within Backend Tests: **7 passed, 0 failed, 0 inconclusive**.
+- Sequential Development Gate run `44873965407`: SUCCESS; job `136754436637`.
+- Security and Dependency Audit run `44873965395`: SUCCESS. Python dependency audit job `136754436716`, full-history secret scan job `136754436846`, Python CodeQL job `136754436892`, and JavaScript/TypeScript CodeQL job `136754436964` all completed SUCCESS.
+- Pytest/JUnit diagnostics artifact `14695515854`, SHA-256 `9e376c5e3e841a93d9d8b09a7a5d2646ae3f5ec9766387484cdb4aca29d6ae2e`.
+- Deterministic preflight artifact `14694449698`, SHA-256 `9796fd9de09379b7e67c5b626709752c8e5cb4fe553ab9f68b9812ee39c04f23`.
+
+**Review and limits:** The patch changes a shared request-schema trust boundary, so API, patient-case and intake consumers inherit the same rejection. No raw case values are modified; no database migration, registry change, clinical inference, prompt edit, frontend edit, runtime dependency or installer change was made. Passing schema/API tests do not prove live-model or clinical accuracy.
+
+**Repository state at verification:** PR #5 OPEN and UNMERGED; PR source HEAD `ddd9e39c85430ebbeaefe0de74bf82235b44c695`; base/development branch `feature/four-round-mdt-and-performance` remains at `df90e4a380bef06a7d37def753b385db4ae86c30`; `main` untouched. No merge or force-push.
+
+**Subtask status:** whitespace-only canonical summary rejection — VERIFIED for the exact deterministic schema/API/source-preservation tests and exact-head CI above. Parent `U09-U10` remains IN PROGRESS; U04 and later steps remain BLOCKED.
+
+### Master Checklist — Current Status (21 November 2026; exact application/test SHA `ddd9e39c85430ebbeaefe0de74bf82235b44c695`)
+
+| Workstream | Status | Current evidence / remaining boundary |
+|---|---|---|
+| PR #5 / protected development target | IN PROGRESS | PR #5 OPEN, UNMERGED; source HEAD `ddd9e39`; target/base `df90e4a`; feature branch and `main` unchanged |
+| GOV-01 plan-before-execution | VERIFIED | Whitespace-summary plan recorded before implementation; existing machine plan and allowlist unchanged |
+| U09 canonical registry IDs, types and states | VERIFIED for tested contract | Existing registry/schema coverage remains; wider U09–U10 field/state/source/provenance acceptance remains open |
+| U09 data provenance, source hashes, conflicts and immutable history | VERIFIED for tested boundaries | Prior deterministic regressions retained; exact source hashes do not establish source authenticity |
+| U09 INVALID/CONFLICTING case-summary model projection | VERIFIED for tested boundaries | Prior R2/R3/R4 projection/quarantine tests retained; no live-model claim |
+| U09 R2/R3 source-opinion register label separation | VERIFIED | Exact round-specific prompt-label regression passed on `79a3256`; still included in current branch history |
+| U09 whitespace-only case-summary rejection | VERIFIED | New direct-model and API 422 regressions passed; exact nonblank whitespace-preservation test also passed on `ddd9e39` |
+| U10 anatomical-subsite staging-context completeness | VERIFIED for tested boundaries | Prior missing/unknown/NOT_APPLICABLE/present-subsite regressions and exact-head CI remain recorded; no AJCC/UICC compatibility engine claim |
+| Four-round R1–R4 data flow / distinct-role Chair accounting | VERIFIED for deterministic tests | Historical tests remain; current-head live saved 45-role run not performed |
+| Chair consensus, dissent, minority positions and traceability | VERIFIED for tested deterministic boundaries | Live saved R1–R3 to R4 Chair reconciliation remains unverified |
+| Missing/failed-agent and resume handling | VERIFIED for deterministic tests | Live 45-role failure/resume acceptance remains outstanding |
+| Backend suite / deterministic preflight | VERIFIED on `ddd9e39` | Run `44873965362`: 875/875; preflight 7/7; artifacts recorded above |
+| Sequential Development Gate | VERIFIED on `ddd9e39` | Run `44873965407`: SUCCESS |
+| Security, dependency audit, secret scan and CodeQL | VERIFIED on `ddd9e39` | Run `44873965395`: all four jobs SUCCESS |
+| Frontend build / browser E2E | NOT APPLICABLE to this amendment | No frontend files changed; this amendment does not establish current browser E2E |
+| Dashboard/API | VERIFIED for tested backend API boundaries | Validation endpoint regression passed; broader browser acceptance remains separate |
+| Ponytail repository instructions, skills and attribution | VERIFIED | Isolated branch `tooling/ponytail-integration`; six pinned v5.3.3 skills match upstream and MIT attribution recorded |
+| Ponytail tooling-branch CI/review | BLOCKED | No branch PR/workflow run and no dispatch capability through current connection; not claimed green |
+| Native ChatGPT mobile Ponytail hooks | NOT APPLICABLE | Mobile app does not load the local Node lifecycle hooks |
+| Ponytail installation on the user's Windows desktop/CLI host | BLOCKED | No access to user's local profile/CLI; native installation is not claimed |
+| Ollama context allocation / RTX 4060 request-time inference | BLOCKED | No current request-time GPU telemetry or attribution |
+| Live 45-role R1–R4 run and saved artefact audit | NOT STARTED | No current-head live run ID or accepted saved artefacts |
+| Evidence retrieval and claim-to-passage verification | IN PROGRESS | No current evidence retrieval/claim verification in this amendment; guideline compliance not claimed |
+| Independent clinical validation | NOT STARTED | No qualified independent review |
+| Packaging, installer, rollback and release | BLOCKED | Later ordered work; not part of current U09–U10 amendment |
+| U04 and all later workstreams | BLOCKED | Parent U09–U10 remains IN PROGRESS; no sequence advancement |
+
+**Current milestone:** the R2/R3 label-scope test and whitespace-only case-summary input guard are verified at their recorded exact test/code SHAs; the previously verified registry, case-summary projection, T1 semantics and anatomical-subsite subtasks retain their earlier exact-head evidence. The parent U09–U10 contract remains IN PROGRESS. Do not advance U04 or any later step. No live inference, GPU verification, guideline compliance, site-specific AJCC/UICC validation, independent clinical validation or release claim is made.
