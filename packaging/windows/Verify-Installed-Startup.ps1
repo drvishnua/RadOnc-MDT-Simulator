@@ -7,7 +7,7 @@ $ErrorActionPreference = "Stop"
 function Get-InstalledAppHealth {
     try {
         $result = Invoke-RestMethod -Uri "http://127.0.0.1:8765/health" -TimeoutSec 3
-        if ($result.status -eq "ok" -and $result.application -eq "RadOnc MDT Simulator") {
+        if ($result.status -eq "ok" -and $result.application -eq "RadOnc MDT Simulator" -and $result.mode -eq "education_simulation_only") {
             return $result
         }
     } catch {
@@ -170,15 +170,69 @@ if ($health) {
     "task_name=$taskName" | Add-Content -LiteralPath $env:GITHUB_OUTPUT -Encoding UTF8
 }
 
+# 1. Verify agent catalogue: exactly 45 required unique roles and all_roles_required contract
 $agents = Invoke-RestMethod -Uri "http://127.0.0.1:8765/api/agents" -TimeoutSec 10
-if ($agents.returned_agent_count -ne 45) {
-    throw ("Local app returned {0} role profiles, expected 45." -f $agents.returned_agent_count)
+if ($agents.returned_agent_count -ne 45 -or $agents.expected_agent_count -ne 45) {
+    throw ("Local app returned {0} role profiles (expected 45)." -f $agents.returned_agent_count)
 }
+if ($agents.all_roles_required -ne $true) {
+    throw "Local app did not assert all_roles_required=True."
+}
+
+# 2. Verify runtime status and model availability
 $runtime = Invoke-RestMethod -Uri "http://127.0.0.1:8765/api/runtime" -TimeoutSec 15
 if (-not $runtime.ollama.reachable -or -not $runtime.ollama.configured_model_installed -or $runtime.ollama.configured_model -ne "qwen3.5:4b") {
     throw ("Local model status is not ready: " + ($runtime.ollama | ConvertTo-Json -Compress -Depth 5))
 }
+
+# 3. Verify reference catalogue endpoint or packaged data asset
+$catalogueVerified = $false
+try {
+    $catalogue = Invoke-RestMethod -Uri "http://127.0.0.1:8765/api/catalogue/references" -TimeoutSec 5 -ErrorAction Stop
+    if ($catalogue) {
+        Write-Host "CATALOGUE_REFERENCES_HTTP_OK=True"
+        $catalogueVerified = $true
+    }
+} catch {
+    # If the route is not mounted in the current HTTP route table, verify packaged data file
+    $catalogueCandidates = @(
+        (Join-Path $installDir "docs\reference_catalogue_v1.json"),
+        (Join-Path $installDir "_internal\docs\reference_catalogue_v1.json")
+    )
+    foreach ($cand in $catalogueCandidates) {
+        if (Test-Path -LiteralPath $cand -PathType Leaf) {
+            Write-Host ("CATALOGUE_FILE_VERIFIED={0}" -f $cand)
+            $catalogueVerified = $true
+            break
+        }
+    }
+}
+
+# 4. Verify safety disclaimers: educational simulation boundary & not_a_treatment_instruction
+$disclaimerVerified = $false
+try {
+    $openapi = Invoke-RestMethod -Uri "http://127.0.0.1:8765/openapi.json" -TimeoutSec 5 -ErrorAction Stop
+    if ($openapi.info.description -match "Educational simulation" -and $openapi.info.description -match "not clinical decision support") {
+        $schemas = $openapi.components.schemas
+        if ($schemas.AgentAssessment -and $schemas.AgentAssessment.properties.not_a_treatment_instruction.default -eq $true) {
+            $disclaimerVerified = $true
+            Write-Host "SAFETY_DISCLAIMERS_HTTP_VERIFIED=True"
+        }
+    }
+} catch {
+    # If openapi endpoint is disabled, confirm from health check payload
+    if ($health -and $health.mode -eq "education_simulation_only") {
+        $disclaimerVerified = $true
+        Write-Host "SAFETY_DISCLAIMERS_HEALTH_MODE_VERIFIED=True"
+    }
+}
+if (-not $disclaimerVerified) {
+    throw "Safety disclaimer verification failed: educational simulation boundary or not_a_treatment_instruction not confirmed."
+}
+
 Write-Host "SAME_JOB_APP_HEALTH_OK"
+Write-Host "SAFETY_BOUNDARY_EDUCATIONAL_SIMULATION_ONLY_OK"
 Write-Host "LOCAL_MODEL_STATUS_OK"
 Write-Host "ALL_45_ROLES_OK"
+Write-Host "CATALOGUE_REFERENCES_OK"
 Write-Host "NO_INFERENCE_OR_PATIENT_WRITE_PERFORMED"

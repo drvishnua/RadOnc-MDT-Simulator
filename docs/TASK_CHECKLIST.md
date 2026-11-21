@@ -1,7 +1,7 @@
 # RadOnc MDT Simulator — Current Task Checklist
 Snapshot: 21 November 2026  
 Branch: feature/four-round-mdt-and-performance  
-Latest application/test SHA: a51786b
+Latest application/test SHA: 8056b2c
 
 | Task | Status | Evidence / next action |
 |---|---|---|
@@ -19,15 +19,17 @@ Latest application/test SHA: a51786b
 | Concurrency Lock | VERIFIED — CODE/TEST | File-based mutex lock with timeout and stale-lock recovery on Windows. |
 | P2 Rich Performance Telemetry | VERIFIED — CODE/TEST | Track prompt/output tokens, tokens/sec, latency, retries, schema failures, wall-clock time and round position distribution. |
 | Chair Minority Selection Refinement | VERIFIED — CODE/TEST | Material challenges from debate and review rounds captured and structured; stable uncertainty isolated. |
+| Standalone Windows Packaging Integrity | VERIFIED — CODE/TEST | PyInstaller spec hiddenimports audited for all dynamic v2 services/schemas/agents, startup verification updated with disclaimers and catalogue, test_packaging_integrity passes 8/8. |
+| Independent Clinical Review Protocol | PROTOCOL READY | Authored docs/CLINICAL_REVIEW_PROTOCOL.md with 5-phase methodology, 12 stress cases, 9 hard-fail criteria, fact provenance, staging-inversion checks, and scorecards. Human review pending. |
 | Frontend suite | VERIFIED — LOCAL | 32 passed, 0 failed; production build clean (tsc + vite). |
-| Backend test suite | VERIFIED — LOCAL | 658 passed, 0 failed, 1 skipped. |
+| Backend test suite | VERIFIED — LOCAL | 666 passed, 0 failed, 1 skipped (658 baseline + 8 packaging integrity tests). |
 | Deterministic preflight | VERIFIED — LOCAL | 7 passed, 0 failed, 0 inconclusive. |
 | R2 structured source ledger | VERIFIED — CODE/TEST | Server-locked exact saved statements and IDs; full source coverage validator. |
 | R2 original source order | VERIFIED — CODE/TEST | Required source_order array; exact order validator and negative regression. |
 | R2 conditionality/consensus audit | VERIFIED — CODE/TEST | Distinct options, prerequisite retention/status, information sufficiency vs treatment consensus separately tested. |
 | R3 identifier and quote schema | VERIFIED — CODE/TEST | Locked source identity/text; separate quote-present/absent and evidence-status fields; deterministic audit. |
-| RTX 4060 request-time GPU proof | NOT STARTED | Local real Ollama inference with nvidia-smi and Ollama offload/process evidence. |
-| Independent qualified clinical review | NOT STARTED | No signed/attributable review artifact. |
+| RTX 4060 request-time GPU proof | BLOCKED — HOST DRIVER | Telemetry software and parser verified (11/11 tests pass); live GPU inference blocked by local host nvidia-smi driver communication failure (WDDM/sleep mode). |
+| Independent qualified clinical review | PENDING HUMAN REVIEW | Formal protocol and evaluation dossier established in docs/CLINICAL_REVIEW_PROTOCOL.md. Awaiting attributable external human clinical review. |
 | Release acceptance | BLOCKED | Full-run, clinical, evidence, model and GPU gates remain. |
 
 
