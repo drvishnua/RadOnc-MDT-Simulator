@@ -11,6 +11,7 @@ from app.config import RADONC_AGENT_CONCURRENCY
 from app.schemas import SyntheticCase
 from app.services import run_store
 from app.services.execution_lock import MODEL_EXECUTION_LOCK
+from app.services.mdt_rounds import _run_post_round_quality_gates
 from app.services.ollama import AgentGenerationError, generate_agent_assessment
 
 logger = logging.getLogger("radonc.batch")
@@ -90,6 +91,17 @@ async def run_independent_assessments(run_id: str) -> None:
 
             await asyncio.gather(*(process_profile(profile) for profile in AGENT_PROFILES))
             run_store.mark_run_finished(run_id)
+
+            # Run deterministic post-round quality gates (U05-U08) for Round 1.
+            try:
+                r1_rows = run_store.list_results(run_id)
+                audit = _run_post_round_quality_gates(run_id, 1, r1_rows)
+                run_store.save_round_quality_audit(run_id, 1, audit)
+            except Exception:
+                logger.warning(
+                    "Post-round quality gates failed for run %s R1; results are unaffected.",
+                    run_id, exc_info=True,
+                )
         except Exception:
             logger.exception("Batch run orchestration failed for run %s", run_id)
             try:

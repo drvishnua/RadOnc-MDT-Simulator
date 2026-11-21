@@ -1158,6 +1158,69 @@ def get_final_report(run_id: str) -> dict[str, Any] | None:
     result = get_round_result(run_id, 4, "SG-07")
     return result
 
+
+def save_round_quality_audit(
+    run_id: str,
+    round_number: int,
+    audit: dict[str, Any],
+) -> None:
+    """Persist the deterministic post-round quality audit (U05-U08 flags).
+
+    Creates the quality_audits table on first use (additive migration).
+    Audit data is advisory and does not affect round status.
+    """
+    import json as _json
+
+    now = _now()
+    total_flags = audit.get("total_flags", 0)
+    with _connect() as db:
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS quality_audits (
+                run_id TEXT NOT NULL,
+                round_number INTEGER NOT NULL,
+                audit_json TEXT NOT NULL,
+                total_flags INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL,
+                PRIMARY KEY (run_id, round_number)
+            )
+            """
+        )
+        db.execute(
+            """
+            INSERT OR REPLACE INTO quality_audits
+                (run_id, round_number, audit_json, total_flags, created_at)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (run_id, round_number, _json.dumps(audit), total_flags, now),
+        )
+
+
+def get_round_quality_audit(
+    run_id: str,
+    round_number: int,
+) -> dict[str, Any] | None:
+    """Retrieve the saved quality audit for a round, or None if not yet run."""
+    import json as _json
+
+    with _connect() as db:
+        # Table may not exist yet on fresh databases.
+        tables = {
+            row[0]
+            for row in db.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            )
+        }
+        if "quality_audits" not in tables:
+            return None
+        row = db.execute(
+            "SELECT audit_json FROM quality_audits WHERE run_id = ? AND round_number = ?",
+            (run_id, round_number),
+        ).fetchone()
+        if row is None:
+            return None
+        return _json.loads(row[0])
+
 def reset_failed_agents(run_id: str) -> None:
     now = _now()
     with _connect() as db:

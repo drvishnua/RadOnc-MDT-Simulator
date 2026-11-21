@@ -5,12 +5,17 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from typing import Any
 
 from app.agents.catalog import AGENT_PROFILES
 from app.config import RADONC_AGENT_CONCURRENCY
 from app.schemas import SyntheticCase
 from app.services import run_store
 from app.services.execution_lock import MODEL_EXECUTION_LOCK
+from app.services.case_integrity import (
+    validate_role_differentiation_and_anti_duplication,
+    validate_specialist_reasoning_depth,
+)
 from app.services.chair_report_quality import ensure_chair_report_completeness
 from app.services.mdt_generation import (
     generate_adversarial_contribution,
@@ -214,6 +219,70 @@ async def _with_one_schema_retry(callable_, *args, retry_max_tokens: int):
         return await callable_(*args, max_tokens=retry_max_tokens)
 
 
+def _run_post_round_quality_gates(
+    run_id: str,
+    round_number: int,
+    round_rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Execute U05-U08 quality gates after a round completes and return audit report.
+
+    This is deterministic (no model calls) and runs against saved round outputs.
+    Flags are logged and stored; they do not block the pipeline.
+    """
+    audit: dict[str, Any] = {
+        "run_id": run_id,
+        "round_number": round_number,
+        "reasoning_depth_flags": {},
+        "role_differentiation": {},
+    }
+
+    # U05-U06: Per-agent reasoning depth (applicable to R1 and R2)
+    if round_number in (1, 2):
+        payload_field = "assessment" if round_number == 1 else "result"
+        for row in round_rows:
+            if row.get("status") != "completed":
+                continue
+            payload = row.get(payload_field)
+            if not isinstance(payload, dict):
+                continue
+            agent_id = row.get("agent_id", "unknown")
+            depth_flags = validate_specialist_reasoning_depth(payload)
+            if depth_flags:
+                audit["reasoning_depth_flags"][agent_id] = depth_flags
+                logger.warning(
+                    "U05-U06 reasoning depth flags for run %s R%d agent %s: %s",
+                    run_id, round_number, agent_id, depth_flags,
+                )
+
+    # U08: Cross-role duplication and delegation detection (applicable to R1 and R2)
+    if round_number in (1, 2):
+        payload_field = "assessment" if round_number == 1 else "result"
+        completed_payloads = [
+            row.get(payload_field)
+            for row in round_rows
+            if row.get("status") == "completed" and isinstance(row.get(payload_field), dict)
+        ]
+        if len(completed_payloads) >= 2:
+            diff_report = validate_role_differentiation_and_anti_duplication(completed_payloads)
+            audit["role_differentiation"] = diff_report
+            if not diff_report["valid"]:
+                logger.warning(
+                    "U08 role differentiation flags for run %s R%d: %s",
+                    run_id, round_number, diff_report["flags"],
+                )
+
+    total_flags = (
+        sum(len(v) for v in audit["reasoning_depth_flags"].values())
+        + len(audit.get("role_differentiation", {}).get("flags", []))
+    )
+    audit["total_flags"] = total_flags
+    logger.info(
+        "Post-round quality gates for run %s R%d: %d total flags.",
+        run_id, round_number, total_flags,
+    )
+    return audit
+
+
 async def run_mdt_round(run_id: str, round_number: int) -> None:
     """Execute Round 2, 3, or 4, saving every individual result immediately."""
     if round_number not in (2, 3, 4):
@@ -334,6 +403,19 @@ async def run_mdt_round(run_id: str, round_number: int) -> None:
                 await asyncio.gather(*(process_profile(profile) for profile in AGENT_PROFILES))
 
             run_store.mark_round_finished(run_id, round_number)
+
+            # Run deterministic post-round quality gates (U05-U08).
+            # These are non-blocking: flags are logged and stored but do not
+            # prevent the round from being marked complete.
+            try:
+                final_rows = run_store.list_round_results(run_id, round_number) if round_number >= 2 else run_store.list_results(run_id)
+                audit = _run_post_round_quality_gates(run_id, round_number, final_rows)
+                run_store.save_round_quality_audit(run_id, round_number, audit)
+            except Exception:
+                logger.warning(
+                    "Post-round quality gates failed for run %s R%d; round results are unaffected.",
+                    run_id, round_number, exc_info=True,
+                )
         except Exception:
             logger.exception("MDT round %s orchestration failed for run %s", round_number, run_id)
             try:
