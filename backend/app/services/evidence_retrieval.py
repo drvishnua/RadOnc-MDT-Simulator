@@ -343,6 +343,41 @@ class EvidenceRetrievalEngine:
                     if len(passages) >= limit:
                         break
 
+        # Fallback to structured authoritative clinical catalogues when library index is unpopulated
+        if len(passages) < limit:
+            try:
+                from app.services.reference_catalogue import get_active_reference_catalogue
+                entries = get_active_reference_catalogue()
+                site_tokens = set(re.findall(r"\w+", f"{primary_site} {clean_site} {histology}".lower()))
+                for entry in entries:
+                    if any(p.source_id == entry.source_id for p in passages):
+                        continue
+                    topics_str = " ".join(t.lower().replace("_", " ") for t in (entry.topics or []))
+                    entry_text = f"{entry.title} {topics_str}".lower()
+                    # Check match on site keywords or topics
+                    matched = any(token in entry_text for token in site_tokens if len(token) > 2)
+                    if matched or (len(passages) == 0 and "HN" in entry.source_id):
+                        if entry.key_passages and isinstance(entry.key_passages[0], dict):
+                            snippet = entry.key_passages[0].get("text", entry.title)
+                        elif entry.key_passages and isinstance(entry.key_passages[0], str):
+                            snippet = entry.key_passages[0]
+                        else:
+                            snippet = f"{entry.title} - Authoritative evidence reference."
+                        passages.append(
+                            RetrievedPassage(
+                                source_id=entry.source_id,
+                                title=entry.title,
+                                domain=entry.specialties[0] if entry.specialties else "oncology",
+                                snippet=snippet,
+                                relevance_score=0.9,
+                                evidence_type=entry.source_type,
+                            )
+                        )
+                        if len(passages) >= limit:
+                            break
+            except Exception as cat_exc:
+                logger.debug("Catalogue fallback failed: %s", cat_exc)
+
         return passages[:limit]
 
     def format_prompt_injection(self, passages: list[RetrievedPassage]) -> str:
