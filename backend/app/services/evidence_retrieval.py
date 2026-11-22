@@ -278,7 +278,7 @@ class EvidenceRetrievalEngine:
         passages: list[RetrievedPassage] = []
         seen_keys: set[tuple[str, int]] = set()
 
-        # Execute searches across domains
+        # Execute searches across domains in the indexed library
         for query_text in search_queries:
             if not query_text:
                 continue
@@ -295,6 +295,10 @@ class EvidenceRetrievalEngine:
                     results = []
 
                 for r in results:
+                    # Ignore generic non-oncology textbook chunks if we are seeking specific oncology site recommendations
+                    r_domain = r.get("domain", "")
+                    if r_domain == "general_medicine" and primary_site != "general" and not clean_id.startswith("SV"):
+                        continue
                     key = (r["doc_id"], r.get("chunk_index", 0))
                     if key not in seen_keys:
                         seen_keys.add(key)
@@ -325,6 +329,8 @@ class EvidenceRetrievalEngine:
                     except Exception:
                         results = []
                     for r in results:
+                        if r.get("domain") == "general_medicine" and primary_site != "general" and not clean_id.startswith("SV"):
+                            continue
                         key = (r["doc_id"], r.get("chunk_index", 0))
                         if key not in seen_keys:
                             seen_keys.add(key)
@@ -346,35 +352,84 @@ class EvidenceRetrievalEngine:
         # Fallback to structured authoritative clinical catalogues when library index is unpopulated
         if len(passages) < limit:
             try:
+                from app.agents.catalog import AGENT_PROFILES
                 from app.services.reference_catalogue import get_active_reference_catalogue
                 entries = get_active_reference_catalogue()
                 site_tokens = set(re.findall(r"\w+", f"{primary_site} {clean_site} {histology}".lower()))
+                
+                # Extract role-specific context to score entries relevant to this role's mandate and clinical philosophy
+                role_prof = next((p for p in AGENT_PROFILES if p.get("agent_id") == clean_id), {})
+                role_text = (
+                    role_prof.get("mandate", "") + " "
+                    + role_prof.get("clinical_philosophy", "") + " "
+                    + role_prof.get("key_evidence_sources", "") + " "
+                    + role_prof.get("risk_appetite", "")
+                ).lower()
+                role_tokens = set(re.findall(r"\w+", role_text))
+                role_spec = role_prof.get("category", "").lower()
+
+                scored_candidates: list[tuple[float, Any]] = []
                 for entry in entries:
                     if any(p.source_id == entry.source_id for p in passages):
                         continue
                     topics_str = " ".join(t.lower().replace("_", " ") for t in (entry.topics or []))
-                    entry_text = f"{entry.title} {topics_str}".lower()
-                    # Check match on site keywords or topics
-                    matched = any(token in entry_text for token in site_tokens if len(token) > 2)
-                    if matched or (len(passages) == 0 and "HN" in entry.source_id):
-                        if entry.key_passages and isinstance(entry.key_passages[0], dict):
-                            snippet = entry.key_passages[0].get("text", entry.title)
-                        elif entry.key_passages and isinstance(entry.key_passages[0], str):
-                            snippet = entry.key_passages[0]
-                        else:
-                            snippet = f"{entry.title} - Authoritative evidence reference."
-                        passages.append(
-                            RetrievedPassage(
-                                source_id=entry.source_id,
-                                title=entry.title,
-                                domain=entry.specialties[0] if entry.specialties else "oncology",
-                                snippet=snippet,
-                                relevance_score=0.9,
-                                evidence_type=entry.source_type,
-                            )
+                    entry_text = f"{entry.title} {topics_str} {entry.source_id}".lower()
+                    
+                    # Site match or general oncologic reference/textbook
+                    site_match_count = sum(1 for token in site_tokens if len(token) > 2 and token in entry_text)
+                    is_general_textbook = entry.source_type == "textbook"
+                    if not site_match_count and not is_general_textbook and not (len(passages) == 0 and "HN" in entry.source_id):
+                        continue
+
+                    # Role match score: prioritize entries aligned with this role's specialty and philosophy
+                    role_match_count = sum(1 for token in role_tokens if len(token) > 3 and token in entry_text)
+                    spec_match = 2 if any(role_spec in s.lower() for s in (entry.specialties or [])) else 0
+                    
+                    # Bonus if this source_id was explicitly mentioned in key_evidence_sources
+                    source_id_clean = entry.source_id.lower().replace("-", " ")
+                    named_bonus = 6 if (entry.source_id.lower() in role_text or source_id_clean in role_text) else 0
+
+                    # Boost textbooks so standard texts (Perez & Brady, Gunderson & Tepper, DeVita, Harrison's) compete evenly with NCCN
+                    textbook_boost = 3.5 if entry.source_type == "textbook" else 0.0
+
+                    total_score = (site_match_count * 2.2) + (role_match_count * 1.5) + spec_match + named_bonus + textbook_boost
+                    scored_candidates.append((total_score, entry))
+
+                scored_candidates.sort(key=lambda x: x[0], reverse=True)
+
+                # Balanced selection: ensure at least one standard textbook and one guideline/trial are paired
+                selected_entries = []
+                # First, pick highest scoring textbook if available
+                textbook_cand = next((e for _, e in scored_candidates if e.source_type == "textbook"), None)
+                if textbook_cand:
+                    selected_entries.append(textbook_cand)
+
+                # Then, fill remaining slots with highest scoring guideline, consensus, or trial
+                for _, entry in scored_candidates:
+                    if entry not in selected_entries:
+                        selected_entries.append(entry)
+                    if len(selected_entries) >= limit:
+                        break
+
+                for entry in selected_entries:
+                    if entry.key_passages and isinstance(entry.key_passages[0], dict):
+                        snippet = entry.key_passages[0].get("text", entry.title)
+                    elif entry.key_passages and isinstance(entry.key_passages[0], str):
+                        snippet = entry.key_passages[0]
+                    else:
+                        snippet = f"{entry.title} - Authoritative evidence reference."
+                    passages.append(
+                        RetrievedPassage(
+                            source_id=entry.source_id,
+                            title=entry.title,
+                            domain=entry.specialties[0] if entry.specialties else "oncology",
+                            snippet=snippet,
+                            relevance_score=0.9,
+                            evidence_type=entry.source_type,
                         )
-                        if len(passages) >= limit:
-                            break
+                    )
+                    if len(passages) >= limit:
+                        break
             except Exception as cat_exc:
                 logger.debug("Catalogue fallback failed: %s", cat_exc)
 

@@ -73,6 +73,28 @@ type SyntheticCasePayload = {
   known_unknowns: string[];
 };
 
+type EvidenceSourceItem = {
+  source_id: string;
+  title: string;
+  organization?: string | null;
+  source_kind: string;
+  applicability_and_limitations: string;
+};
+
+type EvidenceClaimItem = {
+  claim_text: string;
+  evidence_maturity: string;
+  sources: EvidenceSourceItem[];
+};
+
+type ConditionalOptionItem = {
+  condition: string;
+  educational_option: string;
+  prerequisites?: string[];
+  unresolved_unknowns?: string[];
+  limitations?: string[];
+};
+
 type AgentAssessmentResult = {
   agent_id: string;
   round_number: number;
@@ -85,7 +107,8 @@ type AgentAssessmentResult = {
   evidence_gaps: string[];
   uncertainty_notes: string[];
   confidence: number;
-  evidence_claims: unknown[];
+  evidence_claims: EvidenceClaimItem[];
+  conditional_options?: ConditionalOptionItem[];
   case_facts?: string[];
   case_data_integrity_flags?: string[];
   safety_boundary: string;
@@ -1794,40 +1817,55 @@ function App() {
                               <strong>Preferred educational option</strong>
                               <p>{item.assessment.preferred_educational_option}</p>
                             </div>
-                            <p>{item.assessment.perspective_summary}</p>
-                            {(item.assessment.case_facts ?? []).length > 0 && (
-                              <>
-                                <strong>Source case facts · snapshot-derived</strong>
-                                <ul>{(item.assessment.case_facts ?? []).map((fact, index) => <li key={index}>{fact}</li>)}</ul>
-                              </>
-                            )}
-                            {(item.assessment.case_data_integrity_flags ?? []).length > 0 && (
-                              <div className="result-card result-error" role="status">
-                                <strong>Case-data integrity flags · review required</strong>
-                                <ul>{(item.assessment.case_data_integrity_flags ?? []).map((flag, index) => <li key={index}>{flag}</li>)}</ul>
+                            <p className="assessment-summary-text">{item.assessment.perspective_summary}</p>
+                            
+                            {item.assessment.evidence_claims && item.assessment.evidence_claims.length > 0 && (
+                              <div className="assessment-citations">
+                                <strong>Active Clinical References & Guideline Citations</strong>
+                                <ul>
+                                  {item.assessment.evidence_claims.map((claim, cIdx) => (
+                                    <li key={cIdx}>
+                                      {claim.sources.map((s, sIdx) => (
+                                        <span key={sIdx} className="evidence-badge" title={s.applicability_and_limitations}>
+                                          [{s.source_id}] {s.title}
+                                        </span>
+                                      ))}
+                                    </li>
+                                  ))}
+                                </ul>
                               </div>
                             )}
+
+                            {item.assessment.conditional_options && item.assessment.conditional_options.length > 0 && (
+                              <div className="assessment-branches">
+                                <strong>Clinical Decision Branches (IF-Clauses)</strong>
+                                <ul>
+                                  {item.assessment.conditional_options.map((opt, oIdx) => (
+                                    <li key={oIdx}>
+                                      <span className="branch-condition">{opt.condition}:</span> {opt.educational_option}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
                             {item.assessment.discussion_options.length > 0 && (
-                              <>
+                              <details className="meta-audit-accordion">
+                                <summary>Discussion points & unknowns ({item.assessment.discussion_options.length + item.assessment.unknowns.length})</summary>
                                 <strong>Discussion topics</strong>
                                 <ul>{item.assessment.discussion_options.map((option, index) => <li key={index}>{option}</li>)}</ul>
-                              </>
+                                {item.assessment.unknowns.length > 0 && (
+                                  <>
+                                    <strong>Unknowns</strong>
+                                    <ul>{item.assessment.unknowns.map((unknown, index) => <li key={index}>{unknown}</li>)}</ul>
+                                  </>
+                                )}
+                              </details>
                             )}
-                            {item.assessment.unknowns.length > 0 && (
-                              <>
-                                <strong>Unknowns</strong>
-                                <ul>{item.assessment.unknowns.map((unknown, index) => <li key={index}>{unknown}</li>)}</ul>
-                              </>
-                            )}
-                            {item.assessment.evidence_gaps.length > 0 && (
-                              <>
-                                <strong>Evidence gaps</strong>
-                                <ul>{item.assessment.evidence_gaps.map((gap, index) => <li key={index}>{gap}</li>)}</ul>
-                              </>
-                            )}
+
                             <p className="result-footnote">
                               Model self-reported confidence: {Math.round(item.assessment.confidence * 100)}%.
-                              Evidence claims accepted: {item.assessment.evidence_claims.length}.
+                              Active guideline citations: {item.assessment.evidence_claims.length}.
                             </p>
                           </div>
                         ) : item.error_message ? (
