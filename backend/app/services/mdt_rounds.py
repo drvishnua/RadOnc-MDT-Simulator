@@ -271,6 +271,19 @@ def _run_post_round_quality_gates(
                     "claim": "",
                 })
 
+        # Also audit structured evidence_claims if emitted by roles
+        for claim_obj in payload.get("evidence_claims") or []:
+            if isinstance(claim_obj, dict):
+                claim_text = claim_obj.get("claim_text") or ""
+                for src in claim_obj.get("sources") or []:
+                    if isinstance(src, dict):
+                        claims_to_audit.append({
+                            "role_id": agent_id,
+                            "source_id": src.get("source_id"),
+                            "doi_or_url": str(src.get("url")) if src.get("url") else None,
+                            "claim": claim_text,
+                        })
+
     if claims_to_audit:
         citation_report = audit_claim_citations(claims_to_audit)
         audit["citation_audit"] = citation_report

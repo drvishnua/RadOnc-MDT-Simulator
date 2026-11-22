@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from app.schemas import StrictModel
 
@@ -283,6 +283,21 @@ class FinalMDTReport(StrictModel):
     evidence_limitations: list[str]
     chair_reflection: str
     case_data_integrity_flags: list[str] = Field(default_factory=list, max_length=20)
-    evidence_retrieval_connected: Literal[False] = False
+    evidence_retrieval_connected: bool = True
     safety_boundary: Literal["educational_simulation_only"] = "educational_simulation_only"
     not_a_treatment_instruction: Literal[True] = True
+
+    @model_validator(mode="before")
+    @classmethod
+    def _reconcile_evidence_retrieval_connected(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            limitations = data.get("evidence_limitations") or []
+            if any(
+                "evidence retrieval is not connected" in str(x).lower()
+                or "no evidence retrieval is connected" in str(x).lower()
+                for x in limitations
+            ):
+                if data.get("evidence_retrieval_connected") is None or "evidence_retrieval_connected" not in data:
+                    data = dict(data)
+                    data["evidence_retrieval_connected"] = False
+        return data

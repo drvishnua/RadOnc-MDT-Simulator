@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+import re
 from typing import Any, Literal
 from pydantic import BaseModel, Field
 
@@ -35,6 +36,7 @@ class ReferenceEntry(BaseModel):
     doi_or_url: str = Field(min_length=4, max_length=500)
     access_status: AccessStatus = "available"
     supersession: SupersessionStatus = "current"
+    aliases: list[str] = Field(default_factory=list)
     key_passages: list[dict[str, str]] = Field(default_factory=list)
 
 
@@ -46,9 +48,204 @@ def load_reference_catalogue(path: pathlib.Path | None = None) -> list[Reference
     try:
         data = json.loads(catalogue_path.read_text(encoding="utf-8"))
         raw_entries = data.get("entries") or []
-        return [ReferenceEntry.model_validate(item) for item in raw_entries]
+        entries = [ReferenceEntry.model_validate(item) for item in raw_entries]
+        if path is None:
+            # Merge dynamically indexed library reference entries when loading default catalogue
+            try:
+                from app.services.library_indexer import get_library_indexer
+                indexer = get_library_indexer()
+                seen = {e.source_id.upper() for e in entries}
+                for item in indexer.get_all_reference_entries():
+                    if item.source_id.upper() not in seen:
+                        entries.append(item)
+                        seen.add(item.source_id.upper())
+            except Exception:
+                pass
+        return entries
     except (json.JSONDecodeError, OSError, ValueError):
         return []
+
+
+def _normalize_citation_token(text: str) -> str:
+    """Normalize a citation token by stripping punctuation, hyphens, colons, slashes, and whitespace."""
+    return re.sub(r"[\s\-_\.:/\u2010-\u2015]", "", text).upper()
+
+
+_DOMAIN_TO_SOURCE_TYPE: dict[str, SourceType] = {
+    "guidelines": "guideline",
+    "textbooks_radiobiology": "textbook",
+    "trials_systemic": "trial",
+    "organ_tolerances": "consensus",
+    "staging_anatomy": "guideline",
+    "general_medicine": "review",
+}
+
+_DOMAIN_TO_SPECIALTIES: dict[str, list[str]] = {
+    "guidelines": ["radiation_oncology", "medical_oncology", "surgical_oncology"],
+    "textbooks_radiobiology": ["radiation_oncology", "medical_physics"],
+    "trials_systemic": ["medical_oncology", "radiation_oncology"],
+    "organ_tolerances": ["radiation_oncology", "medical_physics", "dosimetry"],
+    "staging_anatomy": ["radiation_oncology", "surgical_oncology", "radiology"],
+    "general_medicine": ["general_medicine", "medical_oncology"],
+}
+
+_DOMAIN_TO_ORGANIZATION: dict[str, str] = {
+    "guidelines": "Multi-Society Guidelines (NCCN/ASTRO/ESTRO)",
+    "textbooks_radiobiology": "Radiation Oncology Textbook",
+    "trials_systemic": "Landmark Oncology Trials",
+    "organ_tolerances": "QUANTEC / PENTEC Consensus",
+    "staging_anatomy": "AJCC / Contouring Atlas",
+    "general_medicine": "General Medical Literature",
+}
+
+_CANONICAL_ALIASES_MAP: dict[str, list[str]] = {
+    "RTOG-9111": ["RTOG 91-11", "RTOG 9111", "RTOG9111"],
+    "RTOG-0617": ["RTOG 0617", "RTOG 06-17", "RTOG0617"],
+    "RTOG-9501-EORTC-22931": ["RTOG 9501", "EORTC 22931", "RTOG-9501", "EORTC-22931"],
+    "ASTRO-LARYNX-2020": ["ASTRO Larynx Guideline", "ASTRO 2020 Larynx", "ASTRO Larynx"],
+    "NCCN-HN-2026": ["NCCN Head & Neck Guidelines", "NCCN Head and Neck", "NCCN HN 2026", "NCCN-HN"],
+    "NCCN-HN-2024": ["NCCN Head & Neck Guidelines", "NCCN Head and Neck", "NCCN-HN-2024"],
+    "NCCN-NSCL-2026": ["NCCN NSCLC", "NCCN Non-Small Cell Lung", "NCCN Lung"],
+    "NCCN-BREAST-2026": ["NCCN Breast Cancer", "NCCN Breast"],
+    "NCCN-PROSTATE-2026": ["NCCN Prostate Cancer", "NCCN Prostate"],
+    "NCCN-RECTAL-2026": ["NCCN Rectal Cancer", "NCCN Rectal"],
+    "NCCN-CERVICAL-2026": ["NCCN Cervical Cancer", "NCCN Cervical"],
+    "QUANTEC-PAROTID-2010": ["QUANTEC Parotid", "QUANTEC Parotid Gland", "QUANTEC Salivary"],
+    "QUANTEC-CORD-2010": ["QUANTEC Spinal Cord", "QUANTEC Cord"],
+    "QUANTEC-LUNG-2010": ["QUANTEC Lung", "QUANTEC Pneumonitis"],
+    "QUANTEC-BRAINSTEM-2010": ["QUANTEC Brainstem"],
+    "QUANTEC-HEART-2010": ["QUANTEC Heart", "QUANTEC Cardiac"],
+    "PEREZ-BRADY-2026": ["Perez & Brady", "Perez and Brady 2026", "Perez and Brady"],
+    "GUNDERSON-TEPPER-5TH": ["Gunderson & Tepper", "Gunderson and Tepper 5th"],
+    "PACIFIC-TRIAL": ["PACIFIC", "PACIFIC Trial", "Durvalumab PACIFIC"],
+    "HARRISONS-MED-21ST": ["Harrisons", "Harrison's Principles of Internal Medicine"],
+}
+
+
+def get_active_reference_catalogue(
+    static_catalogue_path: pathlib.Path | None = None,
+    indexer: Any | None = None,
+) -> list[ReferenceEntry]:
+    """Return active unified reference catalogue combining static seed entries and indexed library docs."""
+    base_entries = load_reference_catalogue(static_catalogue_path)
+    entries: list[ReferenceEntry] = list(base_entries)
+    seen: set[str] = {e.source_id.upper() for e in entries}
+
+    # Enhance existing entries with canonical aliases
+    for entry in entries:
+        canonical_aliases = _CANONICAL_ALIASES_MAP.get(entry.source_id.upper(), [])
+        for alias in canonical_aliases:
+            if alias not in entry.aliases:
+                entry.aliases.append(alias)
+
+    if indexer is not None:
+        docs_to_convert: list[Any] = []
+        if hasattr(indexer, "get_all_reference_entries"):
+            try:
+                for item in indexer.get_all_reference_entries():
+                    if isinstance(item, ReferenceEntry):
+                        if item.source_id.upper() not in seen:
+                            entries.append(item)
+                            seen.add(item.source_id.upper())
+                        else:
+                            match = next((e for e in entries if e.source_id.upper() == item.source_id.upper()), None)
+                            if match is not None:
+                                for a in item.aliases:
+                                    if a not in match.aliases:
+                                        match.aliases.append(a)
+            except Exception:
+                pass
+
+        if hasattr(indexer, "_load_all_indexed_docs"):
+            try:
+                docs_to_convert.extend(indexer._load_all_indexed_docs())
+            except Exception:
+                pass
+
+        if not docs_to_convert and hasattr(indexer, "scan_catalog"):
+            try:
+                docs_to_convert.extend(indexer.scan_catalog())
+            except Exception:
+                pass
+
+        if isinstance(indexer, (list, tuple)):
+            for item in indexer:
+                if isinstance(item, ReferenceEntry):
+                    if item.source_id.upper() not in seen:
+                        entries.append(item)
+                        seen.add(item.source_id.upper())
+                else:
+                    docs_to_convert.append(item)
+
+        for doc in docs_to_convert:
+            doc_id = getattr(doc, "doc_id", None) or (doc.get("doc_id") if isinstance(doc, dict) else None)
+            if not doc_id:
+                continue
+
+            source_id = str(doc_id).strip()
+            title = str(getattr(doc, "title", None) or (doc.get("title") if isinstance(doc, dict) else "") or source_id).strip()
+            raw_domain = str(getattr(doc, "domain", None) or (doc.get("domain") if isinstance(doc, dict) else "") or "review").strip()
+            file_path = str(getattr(doc, "file_path", None) or (doc.get("file_path") if isinstance(doc, dict) else "") or f"file:///{source_id}").strip()
+            disease_sites = getattr(doc, "disease_sites", None) or (doc.get("disease_sites") if isinstance(doc, dict) else []) or []
+            if isinstance(disease_sites, str):
+                try:
+                    disease_sites = json.loads(disease_sites)
+                except Exception:
+                    disease_sites = [disease_sites]
+
+            source_type: SourceType = _DOMAIN_TO_SOURCE_TYPE.get(
+                raw_domain,
+                raw_domain if raw_domain in ("guideline", "textbook", "trial", "review", "consensus") else "review",  # type: ignore[arg-type]
+            )
+            specialties = _DOMAIN_TO_SPECIALTIES.get(raw_domain, ["radiation_oncology"])
+            organization = _DOMAIN_TO_ORGANIZATION.get(raw_domain, "Medical Library")
+            topics = list(disease_sites) if disease_sites else ["general"]
+            doi_or_url = file_path if file_path.startswith("file://") else f"file:///{file_path.replace('\\', '/')}"
+
+            file_stem = pathlib.Path(file_path).stem
+            file_name = pathlib.Path(file_path).name
+            raw_aliases = [
+                title,
+                file_stem,
+                file_name,
+                file_stem.replace("_", " "),
+                file_stem.replace("-", " "),
+                title.replace("_", " "),
+                title.replace("-", " "),
+            ]
+            aliases: list[str] = []
+            for a in raw_aliases:
+                clean_a = str(a).strip()
+                if clean_a and clean_a != source_id and clean_a not in aliases:
+                    aliases.append(clean_a)
+
+            if source_id.upper() in seen:
+                match = next((e for e in entries if e.source_id.upper() == source_id.upper()), None)
+                if match is not None:
+                    for a in aliases:
+                        if a not in match.aliases:
+                            match.aliases.append(a)
+                continue
+
+            entry = ReferenceEntry(
+                source_id=source_id,
+                title=title[:500],
+                organization=organization[:200],
+                source_type=source_type,
+                edition_or_version="Indexed",
+                publication_date="2024-01-01",
+                specialties=specialties,
+                topics=topics,
+                doi_or_url=doi_or_url[:500],
+                access_status="available",
+                supersession="current",
+                aliases=aliases,
+                key_passages=[],
+            )
+            entries.append(entry)
+            seen.add(source_id.upper())
+
+    return entries
 
 
 def search_reference_catalogue(
@@ -60,7 +257,7 @@ def search_reference_catalogue(
     catalogue: list[ReferenceEntry] | None = None,
 ) -> list[ReferenceEntry]:
     """Filter reference catalogue by disease site, specialty, topic, and source type."""
-    entries = catalogue if catalogue is not None else load_reference_catalogue()
+    entries = catalogue if catalogue is not None else get_active_reference_catalogue()
     results: list[ReferenceEntry] = []
 
     clean_specialty = specialty.strip().lower() if specialty else None
@@ -96,25 +293,64 @@ def verify_citation(
     doi_or_url: str | None = None,
     catalogue: list[ReferenceEntry] | None = None,
 ) -> bool:
-    """Anti-hallucination verification of an alleged guideline or trial reference (U07).
+    """Anti-hallucination verification of an alleged guideline or trial reference (U07, U09).
 
     Returns True only if the reference exists in the verified catalogue and matches
-    the recorded DOI / URL.
+    the recorded DOI / URL. Supports normalized alias matching.
     """
-    entries = catalogue if catalogue is not None else load_reference_catalogue()
-    normalized_id = claim_source_id.strip().upper()
+    if not claim_source_id or not isinstance(claim_source_id, str):
+        return False
 
-    match = next(
-        (e for e in entries if e.source_id.strip().upper() == normalized_id),
-        None,
-    )
+    clean_claim = claim_source_id.strip()
+    if not clean_claim:
+        return False
+
+    norm_claim = _normalize_citation_token(clean_claim)
+    if len(norm_claim) < 3:
+        return False
+
+    entries = catalogue if catalogue is not None else get_active_reference_catalogue()
+    claim_upper = clean_claim.upper()
+
+    match: ReferenceEntry | None = None
+    for e in entries:
+        if claim_upper == e.source_id.strip().upper():
+            match = e
+            break
+        if norm_claim == _normalize_citation_token(e.source_id):
+            match = e
+            break
+        entry_aliases = getattr(e, "aliases", []) or []
+        alias_matched = False
+        for alias in entry_aliases:
+            if not alias or not isinstance(alias, str):
+                continue
+            clean_alias = alias.strip()
+            if claim_upper == clean_alias.upper():
+                match = e
+                alias_matched = True
+                break
+            norm_alias = _normalize_citation_token(clean_alias)
+            if len(norm_alias) >= 3 and norm_claim == norm_alias:
+                match = e
+                alias_matched = True
+                break
+        if alias_matched:
+            break
+
     if not match:
         return False
 
-    if doi_or_url:
-        normalized_target = doi_or_url.strip().lower().rstrip("/")
+    if doi_or_url and str(doi_or_url).strip():
+        normalized_target = str(doi_or_url).strip().lower().rstrip("/")
         recorded_url = match.doi_or_url.strip().lower().rstrip("/")
-        if normalized_target != recorded_url:
+        is_local_or_placeholder = (
+            recorded_url.startswith("file://")
+            or recorded_url.startswith("file:/")
+            or "placeholder" in recorded_url
+            or recorded_url in ("available", "restricted", "local", "n/a", "none")
+        )
+        if not is_local_or_placeholder and normalized_target != recorded_url:
             return False
 
     return True
@@ -131,11 +367,13 @@ def audit_claim_citations(
     - Hallucinated or non-matching citations are flagged as 'unverified_citation'.
     - Returns verified citations, unverified citations, and overall citation concordance rate.
     """
-    entries = catalogue if catalogue is not None else load_reference_catalogue()
+    entries = catalogue if catalogue is not None else get_active_reference_catalogue()
     verified: list[dict[str, Any]] = []
     unverified: list[dict[str, Any]] = []
 
     for claim in claims:
+        if not isinstance(claim, dict):
+            continue
         source_id = str(claim.get("source_id") or claim.get("citation") or "").strip()
         doi = str(claim.get("doi_or_url") or "").strip() or None
         claim_text = str(claim.get("claim") or claim.get("statement") or "").strip()
