@@ -35,6 +35,10 @@ type Agent = {
   category_label: string;
   name: string;
   mandate: string;
+  clinical_philosophy?: string;
+  communication_style?: string;
+  key_evidence_sources?: string[];
+  risk_appetite?: string;
 };
 
 type ValidationResult = {
@@ -1098,7 +1102,7 @@ function App() {
         fetch(API_BASE + "/api/runs/" + runId + "/results")
       ]);
       if (!runResponse.ok || !resultsResponse.ok) {
-        throw new Error("Unable to refresh the 45-agent run.");
+        throw new Error("Unable to refresh the MDT run.");
       }
       const runData = (await runResponse.json()) as BatchRunSummary;
       const resultsData = (await resultsResponse.json()) as { results: BatchAgentResult[] };
@@ -1154,7 +1158,7 @@ function App() {
       });
       const body = await response.json();
       if (!response.ok) {
-        throw new Error(typeof body.detail === "string" ? body.detail : "Unable to start the 45-agent run.");
+        throw new Error(typeof body.detail === "string" ? body.detail : "Unable to start the MDT run.");
       }
       const createdRun = body as BatchRunSummary;
       setBatchRun(createdRun);
@@ -1169,7 +1173,7 @@ function App() {
       await refreshPatients();
       await refreshBatchRun(createdRun.run_id);
     } catch (error) {
-      setBatchError(error instanceof Error ? error.message : "Unable to start the 45-agent run.");
+      setBatchError(error instanceof Error ? error.message : "Unable to start the MDT run.");
     } finally {
       setBatchStarting(false);
     }
@@ -1269,7 +1273,7 @@ function App() {
             </p>
           </div>
           <div className="hero-side">
-            <span className="hero-number">45</span>
+            <span className="hero-number">{agents.length || 49}</span>
             <span className="hero-number-label">configured perspectives</span>
             <div className="hero-divider" />
             <span className="hero-number">04</span>
@@ -1306,9 +1310,9 @@ function App() {
           />
           <StatusCard
             label="Agent catalogue"
-            value={agents.length === 45 ? "45 / 45 loaded" : agents.length + " loaded"}
+            value={agents.length >= 45 ? `${agents.length} / ${agents.length} loaded` : agents.length + " loaded"}
             detail="All configured roles are listed"
-            state={agents.length === 45 ? "good" : "neutral"}
+            state={agents.length >= 45 ? "good" : "neutral"}
           />
 
         </section>
@@ -1610,7 +1614,7 @@ function App() {
                 {validation.warnings.length > 0 && (
                   <ul>{validation.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>
                 )}
-                <p className="result-footnote">Case structure is validated. Once all 45 independent assessments finish, the debate, adversarial review and Chair synthesis stages become available below.</p>
+                <p className="result-footnote">Case structure is validated. Once all {agents.length || 49} independent assessments finish, the debate, adversarial review and Chair synthesis stages become available below.</p>
               </div>
             )}
             {activeSavedCase && (
@@ -1697,9 +1701,9 @@ function App() {
                 <div className="batch-heading">
                   <div>
                     <p className="eyebrow">03 / INDEPENDENT ASSESSMENTS</p>
-                    <h3>Run all 45 MDT perspectives</h3>
+                    <h3>Run all {agents.length || 49} MDT perspectives</h3>
                   </div>
-                  <span className="count-chip">45 REQUIRED</span>
+                  <span className="count-chip">{agents.length || 49} REQUIRED</span>
                 </div>
                 <p className="panel-intro">
                   Each agent receives only the saved training case snapshot and its own role profile. Agents do not see one another's assessments. Results are saved locally as they finish.
@@ -1719,12 +1723,12 @@ function App() {
                       onClick={() => void startAllAgents()}
                       disabled={!activeSavedCase.intake_backed || batchStarting || batchResuming || assessing || !runtime?.reachable || (batchRun !== null && ["queued", "running"].includes(batchRun.status))}
                     >
-                      {batchStarting ? "Starting…" : "Run all 45 agents"}
+                      {batchStarting ? "Starting…" : `Run all ${agents.length || 49} agents`}
                       <span aria-hidden="true">→</span>
                     </button>
                   )}
                   {!activeSavedCase && !batchRun && (
-                    <p className="batch-estimate-note">Complete and accept a pre-MDT intake to create an immutable patient case version before starting a new 45-agent run.</p>
+                    <p className="batch-estimate-note">Complete and accept a pre-MDT intake to create an immutable patient case version before starting a new MDT run.</p>
                   )}
                   {batchRun && batchResults.length > 0 && (
                     <button className="button button-quiet" type="button" onClick={downloadBatchResults}>
@@ -1748,7 +1752,7 @@ function App() {
                       <strong>
                         {batchRun.status === "queued" ? "Queued" :
                           batchRun.status === "running" ? "Running independently" :
-                          batchRun.status === "completed" ? "All 45 assessments completed" :
+                          batchRun.status === "completed" ? `All ${batchRun.total_agents} assessments completed` :
                           "Completed with some errors"}
                       </strong>
                       <span>{batchRun.finished_count} / {batchRun.total_agents} finished</span>
@@ -1845,7 +1849,7 @@ function App() {
                     <p className="eyebrow">04 / MDT DISCUSSION</p>
                     <h3>Four-round MDT workflow</h3>
                   </div>
-                  <span className="count-chip">45 ROLES</span>
+                  <span className="count-chip">{agents.length || 49} ROLES</span>
                 </div>
                 <p className="panel-intro">The debate and review stages ask each role to respond independently to a compact digest of other perspectives. Round 4 produces a chair synthesis that retains dissent and states the evidence limitations.</p>
                 {formatElapsedDuration(batchRun?.created_at, batchRun?.mdt_finished_at) && (
@@ -1862,9 +1866,9 @@ function App() {
                   const isRetryable = summary?.status === "completed_with_errors";
                   const title = roundNumber === 2 ? "MDT debate" : roundNumber === 3 ? "Adversarial review" : "MDT Chair synthesis";
                   const description = roundNumber === 2
-                    ? "All 45 roles respond to selected peer positions, state agreements and challenges, and explain any change in position."
+                    ? `All ${agents.length || 49} roles respond to selected peer positions, state agreements and challenges, and explain any change in position.`
                     : roundNumber === 3
-                    ? "All 45 roles challenge unsupported assumptions, evidence gaps, patient-context issues, feasibility and governance risks."
+                    ? `All ${agents.length || 49} roles challenge unsupported assumptions, evidence gaps, patient-context issues, feasibility and governance risks.`
                     : "The MDT Chair assembles consensus, unresolved disagreements, minority views, uncertainties and missing information.";
                   const results = roundResults[roundNumber] ?? [];
                   return (
@@ -2061,10 +2065,10 @@ function App() {
                 <p className="eyebrow">02 / MDT PERSPECTIVES</p>
                 <h2>Agent directory</h2>
               </div>
-              <span className="count-chip">{agents.length || 45} ROLES</span>
+              <span className="count-chip">{agents.length || 49} ROLES</span>
             </div>
             <p className="panel-intro">
-              Every role is intended to participate in each simulation. These are role profiles, not separate AI models or real clinician opinions.
+              Every role participates across all 4 discussion rounds. Critical & contrarian roles offer rigorous adversarial cross-examination.
             </p>
 
             <label className="filter-label">
@@ -2075,15 +2079,31 @@ function App() {
             </label>
 
             <div className="agent-list">
-              {filteredAgents.map((agent) => (
-                <article className="agent-item" key={agent.agent_id}>
-                  <span className="agent-id">{agent.agent_id}</span>
-                  <div className="agent-copy">
-                    <strong>{agent.name}</strong>
-                    <p>{agent.mandate}</p>
-                  </div>
-                </article>
-              ))}
+              {filteredAgents.map((agent) => {
+                const isContrarian = ["RO-10", "MO-09", "SO-09", "SG-09"].includes(agent.agent_id);
+                return (
+                  <article className={`agent-item ${isContrarian ? "agent-item-contrarian" : ""}`} key={agent.agent_id}>
+                    <div className="agent-header-row">
+                      <span className={`agent-id ${isContrarian ? "agent-id-contrarian" : ""}`}>{agent.agent_id}</span>
+                      {isContrarian && <span className="contrarian-badge">CRITICAL / CONTRARIAN</span>}
+                      {agent.risk_appetite && (
+                        <span className={`risk-badge risk-${agent.risk_appetite.toLowerCase()}`}>
+                          {agent.risk_appetite.toUpperCase()} RISK
+                        </span>
+                      )}
+                    </div>
+                    <div className="agent-copy">
+                      <strong>{agent.name}</strong>
+                      <p>{agent.mandate}</p>
+                      {agent.clinical_philosophy && (
+                        <p className="agent-philosophy">
+                          <em>Philosophy:</em> {agent.clinical_philosophy}
+                        </p>
+                      )}
+                    </div>
+                  </article>
+                );
+              })}
               {agents.length === 0 && (
                 <p className="empty-state">The agent catalogue will appear when the backend API is running.</p>
               )}

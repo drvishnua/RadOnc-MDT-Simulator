@@ -308,3 +308,59 @@ textarea { resize: vertical; min-height: 110px; line-height: 1.55; }
 .report-section ul { margin: 6px 0 0; padding-left: 18px; }
 .report-section li { padding: 2px 0; }
 .report-section p { margin: 6px 0 0; }
+
+/* Enhanced Persona Deepening & Contrarian Badges */
+.agent-header-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+.agent-item-contrarian {
+  border-left: 3px solid #ff7b72;
+  background: rgba(255, 123, 114, 0.05);
+}
+.agent-id-contrarian {
+  color: #ff7b72 !important;
+  font-weight: 700;
+}
+.contrarian-badge {
+  background: rgba(255, 123, 114, 0.16);
+  color: #ff938a;
+  border: 1px solid rgba(255, 123, 114, 0.4);
+  font: 700 8.5px "Cascadia Code", monospace;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+}
+.risk-badge {
+  font: 600 8.5px "Cascadia Code", monospace;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+}
+.risk-low {
+  background: rgba(139, 220, 195, 0.12);
+  color: #8bdcc3;
+  border: 1px solid rgba(139, 220, 195, 0.3);
+}
+.risk-moderate {
+  background: rgba(237, 178, 121, 0.12);
+  color: #edb279;
+  border: 1px solid rgba(237, 178, 121, 0.3);
+}
+.risk-high {
+  background: rgba(248, 81, 73, 0.12);
+  color: #f85149;
+  border: 1px solid rgba(248, 81, 73, 0.3);
+}
+.agent-philosophy {
+  margin-top: 6px;
+  font-size: 9.5px;
+  color: #8fa3b7;
+  font-style: normal;
+  border-left: 2px solid rgba(117, 211, 191, 0.3);
+  padding-left: 8px;
+}
+
