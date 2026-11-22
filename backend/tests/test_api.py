@@ -106,19 +106,19 @@ def test_agent_endpoint_returns_all_45_unique_profiles() -> None:
     assert response.status_code == 200
     body = response.json()
     agents = body["agents"]
-    assert body["expected_agent_count"] == 45
-    assert body["returned_agent_count"] == 45
+    assert body["expected_agent_count"] == 49
+    assert body["returned_agent_count"] == 49
     assert body["all_roles_required"] is True
-    assert len({agent["agent_id"] for agent in agents}) == 45
+    assert len({agent["agent_id"] for agent in agents}) == 49
 
     category_counts = Counter(agent["category"] for agent in agents)
     assert category_counts == {
-        "radiation_oncology": 9,
-        "medical_oncology": 8,
-        "surgical_oncology": 8,
-        "diagnostic_supportive": 3,
+        "radiation_oncology": 10,
+        "medical_oncology": 9,
+        "surgical_oncology": 9,
+        "diagnostic_specialties": 3,
         "patient_perspective": 6,
-        "system_governance": 8,
+        "system_governance": 9,
         "family_social_vulnerability": 3,
     }
 

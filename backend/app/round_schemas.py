@@ -270,7 +270,7 @@ class FinalMDTReport(StrictModel):
     chair_conclusion: str
     overall_educational_synthesis: str
     consensus_points: list[str]
-    recorded_agreements: list[str] = Field(default_factory=list, max_length=90)
+    recorded_agreements: list[str] = Field(default_factory=list, max_length=120)
     source_opinion_review_coverage: list[str] = Field(default_factory=list, max_length=15)
     source_opinion_position_summary: list[str] = Field(default_factory=list, max_length=4)
     unresolved_disagreements: list[str]

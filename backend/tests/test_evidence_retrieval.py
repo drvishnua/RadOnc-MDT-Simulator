@@ -136,7 +136,7 @@ def test_facet_extraction_prevents_substring_collision() -> None:
 def test_45_persona_domain_routing_covers_all_catalog_roles() -> None:
     """Ensure all 45 specialist personas are mapped to clinical domain partitions."""
     engine = EvidenceRetrievalEngine(indexer=MedicalLibraryIndexer(library_dir=".", db_path=":memory:"))
-    assert len(AGENT_PROFILES) == 45
+    assert len(AGENT_PROFILES) == 49
 
     valid_domains = set(DOMAIN_PARTITIONS)
 

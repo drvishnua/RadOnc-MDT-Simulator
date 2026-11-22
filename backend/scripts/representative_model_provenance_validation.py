@@ -602,10 +602,10 @@ def _persist_bounded_round_records(
                 row["agent_id"] for row in saved_round1
                 if row["status"] == "completed" and row.get("assessment")
             }
-            if completed_r1_ids != expected_ids or len(saved_round1) != 45:
+            if completed_r1_ids != expected_ids or len(saved_round1) != len(AGENT_PROFILES):
                 raise RuntimeError(
                     "Temporary R1 fixture persistence did not retain exactly three "
-                    "completed representative roles in the 45-role run structure."
+                    "completed representative roles in the MDT run structure."
                 )
 
             metrics_by_stage = {
@@ -697,7 +697,7 @@ def _persist_bounded_round_records(
                 run_store.create_round_job(run_id, 2)
             except ValueError as exc:
                 production_guard = str(exc)
-                if "45 successful independent assessments" not in production_guard:
+                if "successful independent assessments" not in production_guard:
                     raise
             else:
                 raise RuntimeError(

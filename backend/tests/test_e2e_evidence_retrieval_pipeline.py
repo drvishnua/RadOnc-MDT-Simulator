@@ -658,7 +658,7 @@ def test_all_45_personas_domain_routing_integrity(
     engine = EvidenceRetrievalEngine(indexer=synthetic_library_indexer)
     valid_domains = set(DOMAIN_PARTITIONS)
 
-    assert len(AGENT_PROFILES) == 45
+    assert len(AGENT_PROFILES) == 49
     for agent in AGENT_PROFILES:
         role_id = agent["agent_id"]
         domains = engine.get_role_domains(role_id)

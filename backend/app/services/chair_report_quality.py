@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 import re
 
+from app.agents.catalog import AGENT_PROFILES
 from app.round_schemas import FinalMDTReport
 from app.schemas import SyntheticCase
 from app.services.case_integrity import (
@@ -23,11 +24,11 @@ ROUND_SOURCES = (
 
 SECTION_LIMITS = {
     "consensus_points": 15,
-    "recorded_agreements": 90,
+    "recorded_agreements": 2 * len(AGENT_PROFILES),
     "source_opinion_review_coverage": 15,
     "source_opinion_position_summary": 4,
     "unresolved_disagreements": 15,
-    "minority_and_dissenting_views": 45,
+    "minority_and_dissenting_views": len(AGENT_PROFILES),
     "major_uncertainties": 20,
     "missing_information_before_real_world_review": 20,
     "patient_and_family_considerations": 15,
