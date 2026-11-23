@@ -24,13 +24,18 @@ def derive_or_verify_staging(case: SyntheticCase) -> dict[str, Any]:
     """Correlate provided staging or derive latest AJCC/UICC/society stage from case details."""
     site = (case.primary_site or "").strip().lower()
     summary = (case.case_summary or "").strip().lower()
+    imaging = (case.imaging_summary or "").strip().lower()
     pathology = (case.pathology_summary or "").strip().lower()
-    combined_text = f"{summary} {pathology}"
+    investigations = " ".join(case.relevant_investigations).lower() if case.relevant_investigations else ""
+    combined_text = f"{summary} {imaging} {pathology} {investigations}".strip()
+
+    # Determine laterality of primary tumor
+    primary_laterality = "right" if "right" in site or "right" in summary else ("left" if "left" in site or "left" in summary else "unspecified")
 
     # Extract documented sizes
-    # e.g., "3.2 cm", "35 mm", "ulceroproliferative lesion 3.5 cm"
-    tumor_size_cm = _extract_tumor_size(combined_text)
-    node_details = _extract_node_details(combined_text)
+    # e.g., "2x1 cm", "3.2 cm", "35 mm", "ulceroproliferative lesion 3.5 cm"
+    tumor_size_cm = _extract_tumor_size(f"{summary} {pathology}")
+    node_details = _extract_node_details(f"{imaging} {summary} {investigations}", primary_laterality)
     metastasis_details = _extract_metastasis_details(combined_text)
     hpv_p16_status = _extract_hpv_p16_status(combined_text)
 
@@ -112,16 +117,24 @@ def derive_or_verify_staging(case: SyntheticCase) -> dict[str, Any]:
 
 
 def _extract_tumor_size(text: str) -> float | None:
-    """Extract primary tumor size in cm from clinical description."""
-    # Matches patterns like '3.2 cm', '3.5cm', '25 mm', '2.5 x 3.0 cm'
-    m_cm = re.search(r'(?:lesion|tumor|mass|ulceroproliferative|growth)?\s*(\d+(?:\.\d+)?)\s*(?:cm)\b', text)
+    """Extract primary tumor size in cm from clinical description, handling 2D/3D dimensions."""
+    # Matches 2D or 3D dimension patterns like '2x1 cm', '2 x 1 cm', '2.5 x 3.0 cm', '20 x 15 mm'
+    m_dim = re.search(r'(\d+(?:\.\d+)?)\s*(?:x|\*|\sby\s)\s*(\d+(?:\.\d+)?)(?:\s*(?:x|\*|\sby\s)\s*(\d+(?:\.\d+)?))?\s*(?:cm|mm)\b', text, re.IGNORECASE)
+    if m_dim:
+        dims = [float(x) for x in m_dim.groups() if x is not None]
+        unit = 'mm' if 'mm' in m_dim.group(0).lower() else 'cm'
+        max_dim = max(dims)
+        return round(max_dim / 10.0, 1) if unit == 'mm' else max_dim
+
+    # Matches single dimension patterns like '3.2 cm', '3.5cm', '25 mm', '2 cm'
+    m_cm = re.search(r'(?:lesion|tumor|mass|ulceroproliferative|growth)?\s*(\d+(?:\.\d+)?)\s*(?:cm)\b', text, re.IGNORECASE)
     if m_cm:
         try:
             return float(m_cm.group(1))
         except ValueError:
             pass
 
-    m_mm = re.search(r'(\d+(?:\.\d+)?)\s*(?:mm)\b', text)
+    m_mm = re.search(r'(\d+(?:\.\d+)?)\s*(?:mm)\b', text, re.IGNORECASE)
     if m_mm:
         try:
             return round(float(m_mm.group(1)) / 10.0, 1)
@@ -130,7 +143,7 @@ def _extract_tumor_size(text: str) -> float | None:
     return None
 
 
-def _extract_node_details(text: str) -> dict[str, Any]:
+def _extract_node_details(text: str, primary_laterality: str = "unspecified") -> dict[str, Any]:
     """Parse nodal status, size, laterality, and count from text."""
     node_info: dict[str, Any] = {
         "involved": False,
@@ -138,21 +151,40 @@ def _extract_node_details(text: str) -> dict[str, Any]:
         "laterality": "none",
         "description": "no documented lymphadenopathy"
     }
-    if any(k in text for k in ["node", "lymph", "jugular", "cervical adenopathy", "adenopathy"]):
+    lower_text = text.lower()
+    if any(k in lower_text for k in ["node", "lymph", "jugular", "cervical adenopathy", "adenopathy", "level 1", "level 2", "level 3", "level 4", "level 5"]):
+        # Check if negative/absence phrase
+        if any(neg in lower_text for neg in ["no lymph node", "no node", "no cervical adenopathy", "no pathologically enlarged", "nodes are normal", "no adenopathy"]):
+            return node_info
+
         node_info["involved"] = True
         node_info["description"] = "documented nodal involvement"
 
-        if "ipsilateral" in text:
-            node_info["laterality"] = "ipsilateral"
-        elif "bilateral" in text:
-            node_info["laterality"] = "bilateral"
-        elif "contralateral" in text:
-            node_info["laterality"] = "contralateral"
-
-        size_m = re.search(r'(\d+(?:\.\d+)?)\s*(?:cm|mm)\s*(?:node|lymph|jugular)', text)
+        # Size of lymph node: matches '1x1 cm lymph node' or '1.5 cm node'
+        size_m = re.search(r'(\d+(?:\.\d+)?)\s*(?:x\s*\d+(?:\.\d+)?\s*)?(?:cm|mm)\s*(?:lymph\s*node|node|cervical)', lower_text, re.IGNORECASE)
+        if not size_m:
+            size_m = re.search(r'(?:node|lymph node|adenopathy)[^\.\n,;]*?(\d+(?:\.\d+)?)\s*(?:cm|mm)', lower_text, re.IGNORECASE)
         if size_m:
             val = float(size_m.group(1))
-            node_info["size_cm"] = val if "cm" in size_m.group(0) else round(val / 10.0, 1)
+            node_info["size_cm"] = val if "cm" in size_m.group(0).lower() else round(val / 10.0, 1)
+
+        # Laterality
+        if "bilateral" in lower_text:
+            node_info["laterality"] = "bilateral"
+        elif "contralateral" in lower_text:
+            node_info["laterality"] = "contralateral"
+        elif "ipsilateral" in lower_text:
+            node_info["laterality"] = "ipsilateral"
+        elif "right" in lower_text and primary_laterality == "right":
+            node_info["laterality"] = "ipsilateral"
+        elif "left" in lower_text and primary_laterality == "left":
+            node_info["laterality"] = "ipsilateral"
+        elif "right" in lower_text and primary_laterality == "left":
+            node_info["laterality"] = "contralateral"
+        elif "left" in lower_text and primary_laterality == "right":
+            node_info["laterality"] = "contralateral"
+        else:
+            node_info["laterality"] = "ipsilateral"
     return node_info
 
 

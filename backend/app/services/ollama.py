@@ -140,7 +140,9 @@ async def generate_agent_assessment(
         from app.services.evidence_retrieval import get_evidence_retrieval_engine
         engine = get_evidence_retrieval_engine()
         role_id = profile.get("agent_id", "")
-        passages = engine.retrieve_evidence_for_role(role_id, case, limit=3)
+        # For RO-01, provide 6 society guidelines so ASTRO, ESTRO, JASTRO/FARO, AROI, ABS, and NCCN are all available
+        evidence_limit = 6 if role_id == "RO-01" else 3
+        passages = engine.retrieve_evidence_for_role(role_id, case, limit=evidence_limit)
         evidence_context = engine.format_prompt_injection(passages)
     except Exception as exc:
         logger.debug("Evidence retrieval omitted in generate_agent_assessment: %s", exc)
@@ -178,10 +180,16 @@ async def generate_agent_assessment(
         "3. NEVER WITHHOLD OPINION / MANDATORY IF-CLAUSES: Never retreat into a generic insufficient_information response. Do not use a generic insufficient_information response as a substitute for analysing relevant supplied facts. If variables (ECOG, HPV/p16, renal function, histology grade) are pending or missing, give clear conditional branching recommendations. The condition must not be presented as true or met:\n"
         "   Example: 'If the patient is ECOG 0-1 with confirmed p16-positive status, I recommend definitive concurrent chemoradiation (70 Gy with high-dose cisplatin) based on [source_id: NCCN-HN-2026] and foundational dose-fractionation principles from [source_id: PEREZ-BRADY-2026]; however, if ECOG >= 2 or renal clearance is impaired per [source_id: HARRISONS-MED-21ST], I favor definitive RT alone.'\n"
         "4. CITE BOTH STANDARD TEXTBOOKS & GUIDELINES: Do not rely solely on NCCN guidelines. Ground your foundational principles in standard reference textbooks (e.g. Perez & Brady, Gunderson & Tepper, Harrison's, Hall's Radiobiology) alongside specific clinical guidelines or trials using their exact [source_id: <ID>] tags.\n"
-        "5. ROLE-SPECIFIC MANDATE FOR RO-01 (Guideline-focused Radiation Oncologist):\n"
+        "5. PRIMARY DISEASE SUBSITE FIDELITY & NO LARYNX CONFUSION:\n"
+        "   - The primary site and diagnosis are provided in the case snapshot (e.g. Oropharynx - tonsillar fossa/soft palate). Respect the EXACT primary site!\n"
+        "   - NEVER confuse or substitute oropharynx / tonsil with larynx or glottic cancer. Do NOT discuss 'larynx preservation' or 'glottic guidelines' when the case is an oropharyngeal carcinoma!\n"
+        "6. ACCURATE CLINICAL STAGING & TIMING RULES:\n"
+        "   - Clinical Staging Timing: This is a pre-treatment, unoperated patient. Pathological staging (pT, pN, pM) is determined ONLY AFTER definitive surgical resection and neck dissection. Do NOT request or expect pathological staging for pre-treatment decision-making; clinical TNM (cTNM) governs definitive radiotherapy / chemoradiotherapy!\n"
+        "   - Nodal Status: A 1x1 cm lymph node in cervical level 2 is clinically positive nodal disease (cN1 in AJCC 8th Edition; single ipsilateral node <= 3 cm), NOT N0! Never treat a documented 1x1 cm node as N0.\n"
+        "7. ROLE-SPECIFIC MANDATE FOR RO-01 (Guideline-focused Radiation Oncologist):\n"
         "   - You trust ONLY formal published guidelines from recognized professional radiation oncology societies: American Society for Radiation Oncology (ASTRO), European Society for Radiotherapy and Oncology (ESTRO), Japanese Society for Radiation Oncology (JASTRO), Association of Radiation Oncologists of India (AROI), Federation of Asian Organizations for Radiation Oncology (FARO), American Brachytherapy Society (ABS), and NCCN.\n"
         "   - Even if an option is proposed by individual trials, papers, or textbooks, you REFUSE to endorse it unless an established society guideline explicitly recommends it.\n"
-        "   - Systematically compare and analyze every relevant published society guideline addressing this patient case and stage.\n"
+        "   - Systematically compare and analyze every relevant published society guideline addressing this patient case and stage (ASTRO, ESTRO, JASTRO/FARO, AROI, ABS, NCCN).\n"
         "   - Conclude with your definitive, authoritative final decision synthesizing the consensus across all relevant society guidelines."
     )
 

@@ -369,11 +369,25 @@ class EvidenceRetrievalEngine:
                 role_spec = role_prof.get("category", "").lower()
 
                 scored_candidates: list[tuple[float, Any]] = []
+                # Identify subsite exclusion terms (e.g. if tonsil/oropharynx, exclude glottic/larynx)
+                subsite_exclusions: list[str] = []
+                lower_case_site = f"{primary_site} {clean_site}".lower()
+                if any(k in lower_case_site for k in ["tonsil", "oropharynx", "soft palate", "uvula", "base of tongue"]):
+                    subsite_exclusions = ["larynx", "glottic", "glottis", "vocal cord", "supraglottic", "subglottic", "lung", "nsclc", "anal", "breast", "prostate"]
+                elif any(k in lower_case_site for k in ["larynx", "glottic", "vocal cord"]):
+                    subsite_exclusions = ["tonsil", "oropharynx", "nasopharynx", "lung", "breast"]
+
                 for entry in entries:
                     if any(p.source_id == entry.source_id for p in passages):
                         continue
                     topics_str = " ".join(t.lower().replace("_", " ") for t in (entry.topics or []))
                     entry_text = f"{entry.title} {topics_str} {entry.source_id}".lower()
+
+                    # Exclude passages from mismatched anatomical subsites or disease sites
+                    if any(ex in entry_text or ex in entry.source_id.lower() for ex in subsite_exclusions):
+                        # Allow general textbooks or head and neck broad guidelines only if they don't explicitly focus on excluded site
+                        if entry.source_type != "textbook" and any(ex in entry.title.lower() for ex in subsite_exclusions):
+                            continue
                     
                     # Site match or general oncologic reference/textbook
                     site_match_count = sum(1 for token in site_tokens if len(token) > 2 and token in entry_text)
@@ -390,19 +404,26 @@ class EvidenceRetrievalEngine:
                     named_bonus = 6 if (entry.source_id.lower() in role_text or source_id_clean in role_text) else 0
 
                     # Boost textbooks so standard texts (Perez & Brady, Gunderson & Tepper, DeVita, Harrison's) compete evenly with NCCN
-                    textbook_boost = 3.5 if entry.source_type == "textbook" else 0.0
+                    # BUT for RO-01, guidelines are supreme over textbooks
+                    if clean_id == "RO-01":
+                        guideline_boost = 6.0 if entry.source_type == "guideline" else 0.0
+                        textbook_boost = 1.0 if entry.source_type == "textbook" else 0.0
+                    else:
+                        guideline_boost = 0.0
+                        textbook_boost = 3.5 if entry.source_type == "textbook" else 0.0
 
-                    total_score = (site_match_count * 2.2) + (role_match_count * 1.5) + spec_match + named_bonus + textbook_boost
+                    total_score = (site_match_count * 2.5) + (role_match_count * 1.5) + spec_match + named_bonus + textbook_boost + guideline_boost
                     scored_candidates.append((total_score, entry))
 
                 scored_candidates.sort(key=lambda x: x[0], reverse=True)
 
                 # Balanced selection: ensure at least one standard textbook and one guideline/trial are paired
                 selected_entries = []
-                # First, pick highest scoring textbook if available
-                textbook_cand = next((e for _, e in scored_candidates if e.source_type == "textbook"), None)
-                if textbook_cand:
-                    selected_entries.append(textbook_cand)
+                if clean_id != "RO-01":
+                    # First, pick highest scoring textbook if available for standard roles
+                    textbook_cand = next((e for _, e in scored_candidates if e.source_type == "textbook"), None)
+                    if textbook_cand:
+                        selected_entries.append(textbook_cand)
 
                 # Then, fill remaining slots with highest scoring guideline, consensus, or trial
                 for _, entry in scored_candidates:
@@ -445,7 +466,8 @@ class EvidenceRetrievalEngine:
         if not passages:
             return ""
 
-        selected = passages[:4]
+        # Allow up to 6 passages if multi-society guidelines or comprehensive evidence are provided
+        selected = passages[:6]
         header = [
             "VERIFIED CLINICAL EVIDENCE CONTEXT:",
             "The following evidence passages have been retrieved from verified guidelines and literature matching this case.",

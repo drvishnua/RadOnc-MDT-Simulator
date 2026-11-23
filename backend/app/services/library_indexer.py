@@ -914,6 +914,10 @@ _CANONICAL_REFERENCES: list[ReferenceEntry] = [
         supersession="current",
         key_passages=[
             {
+                "section": "Oropharynx: Locally Advanced / Node-Positive (cT1-T2 N1 or Stage III)",
+                "text": "For locally advanced or node-positive oropharyngeal cancer (tonsillar fossa, base of tongue, soft palate), definitive concurrent chemoradiation (70 Gy standard fractionation with concurrent high-dose cisplatin 100 mg/m2 q3w or weekly cisplatin 40 mg/m2) is a Category 1 recommendation for organ and functional preservation.",
+            },
+            {
                 "section": "Larynx: Early-stage (T1-T2N0)",
                 "text": "Definitive radiation therapy (66-70 Gy standard fractionation or 63-65.25 Gy hypofractionation) or transoral laser microsurgery (TLM) are Category 1 options offering comparable local control and larynx preservation.",
             },
