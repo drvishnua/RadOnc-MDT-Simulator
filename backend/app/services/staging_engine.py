@@ -20,7 +20,7 @@ from typing import Any
 from app.schemas import SyntheticCase
 
 
-def derive_or_verify_staging(case: SyntheticCase) -> dict[str, Any]:
+def derive_or_verify_staging(case: SyntheticCase, role_id: str = "") -> dict[str, Any]:
     """Correlate provided staging or derive latest AJCC/UICC/society stage from case details."""
     site = (case.primary_site or "").strip().lower()
     summary = (case.case_summary or "").strip().lower()
@@ -99,6 +99,15 @@ def derive_or_verify_staging(case: SyntheticCase) -> dict[str, Any]:
                 correlation_notes.append(f"Overall Stage Group ({provided_group}) is verified concordant with AJCC 8th TNM grouping.")
     else:
         correlation_notes.append(f"Staging was not supplied in structured fields; derived {derived_t or 'Tx'}{derived_n or 'Nx'}{derived_m or 'M0'} ({derived_stage_group or 'Stage undetermined'}) according to latest {applicable_system} criteria.")
+        # Flag borderline T1 (exactly 2.0 cm) with soft palate / midline extension as uncertain T1 vs T2
+        if derived_t == "T1" and tumor_size_cm is not None and tumor_size_cm == 2.0:
+            if any(k in combined_text for k in ["soft palate", "uvula", "midline", "crossing"]):
+                discrepancies.append(
+                    "BORDERLINE T1 vs T2: Tumor measures exactly 2.0 cm (T1 by AJCC 8th strict criterion), "
+                    "but clinical extension into soft palate and/or crossing midline is documented. "
+                    "If the radiologically measured greatest dimension exceeds 2.0 cm on cross-sectional imaging "
+                    "(MRI/CT), this would be reclassified as T2. Recommend measurement confirmation on MRI."
+                )
 
     return {
         "applicable_system": applicable_system,
@@ -220,16 +229,42 @@ def _extract_hpv_p16_status(text: str) -> str:
 
 
 def _derive_t_stage(is_head_neck: bool, size_cm: float | None, text: str) -> str | None:
-    """Derive T category based on AJCC criteria."""
-    if any(k in text for k in ["invades larynx", "bone invasion", "pterygoid", "extrinsic tongue"]):
+    """Derive T category based on AJCC 8th Edition criteria for head and neck.
+
+    Oropharynx (AJCC 8th Edition):
+    - T1: Tumour ≤2 cm in greatest dimension
+    - T2: Tumour >2 cm and ≤4 cm in greatest dimension
+    - T3: Tumour >4 cm in greatest dimension OR extension to lingual surface of epiglottis
+    - T4a: Moderate advanced – larynx, extrinsic tongue muscles, medial pterygoid, hard palate, mandible
+    - T4b: Very advanced – lateral pterygoid, pterygoid plates, lateral nasopharynx, skull base, encases carotid
+
+    Important: For oropharynx, soft palate extension and crossing midline alone do NOT
+    upstage from T1 to T2 — only the greatest dimension does, unless medial pterygoid or
+    hard palate are involved. However, extension into the soft palate (palatine mucosa)
+    is WITHIN the oropharynx and size remains the primary T determinant.
+    Extension to the base of tongue (lingual surface) upstages to T3 (epiglottis extension).
+    """
+    # T4 features (regardless of size)
+    if any(k in text for k in [
+        "invades larynx", "bone invasion", "pterygoid muscle", "medial pterygoid",
+        "lateral pterygoid", "pterygoid plate", "hard palate invasion", "mandible",
+        "nasopharynx", "skull base", "carotid", "extrinsic tongue muscle"
+    ]):
         return "T4"
+    # T3 features: >4 cm or lingual surface of epiglottis extension
+    if any(k in text for k in ["lingual surface of epiglottis", "epiglottis"]):
+        return "T3"
     if size_cm is not None:
-        if size_cm <= 2.0:
-            return "T1"
-        elif size_cm <= 4.0:
+        if size_cm > 4.0:
+            return "T3"
+        elif size_cm > 2.0:
             return "T2"
         else:
-            return "T3"
+            # Exactly ≤2 cm: T1 by AJCC 8th strict size criterion
+            # Exception: if crossing midline is documented AND size is borderline 2.0 cm,
+            # the greatest clinical dimension uncertainty warrants recording as T1 with a
+            # discrepancy note — the staging engine marks this borderline condition.
+            return "T1"
     return None
 
 
