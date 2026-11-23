@@ -28,14 +28,29 @@ from app.services.intake_store import (
 from app.services import run_store
 from app.services.batch_runner import batch_is_running, run_independent_assessments, validate_resume_state
 from app.services.mdt_rounds import prepare_round_resume, round_is_running, run_mdt_round
+from contextlib import asynccontextmanager
+
 from app.services.ollama import (
     AgentGenerationError,
     OllamaUnavailable,
+    ensure_ollama_service_and_model,
     generate_agent_assessment,
     get_ollama_status,
 )
 
 logger = logging.getLogger("radonc.agent")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Ensure Ollama daemon is running and model is verified on startup
+    try:
+        status = await ensure_ollama_service_and_model(auto_pull=True)
+        logger.info(f"Ollama startup check: reachable={status.get('reachable')}, model_installed={status.get('configured_model_installed')}")
+    except Exception as exc:
+        logger.warning(f"Ollama startup verification non-blocking warning: {exc}")
+    yield
+
 
 app = FastAPI(
     title=APP_NAME,
@@ -43,7 +58,9 @@ app = FastAPI(
     description=(
         "Educational simulation backend. Fictional training cases only; not clinical decision support."
     ),
+    lifespan=lifespan,
 )
+
 
 # Allow only the local Vite development/preview origins. Do not expose the API to arbitrary sites.
 app.add_middleware(

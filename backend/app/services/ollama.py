@@ -27,10 +27,59 @@ class AgentGenerationError(Exception):
     """Raised when model output cannot be accepted as a safe structured assessment."""
 
 
-async def get_ollama_status() -> dict[str, object]:
-    """Return runtime reachability and installed model names without generating text."""
+async def ensure_ollama_service_and_model(auto_pull: bool = True) -> dict[str, object]:
+    """Ensure Ollama daemon is running locally and the configured model is installed.
+
+    If Ollama is unreachable, attempts to spawn `ollama serve` in the background.
+    If the configured model is not installed and auto_pull is True, triggers background pull.
+    """
+    import asyncio
+    import shutil
+    import subprocess
+
+    status = await _probe_ollama()
+    if not status.get("reachable"):
+        ollama_bin = shutil.which("ollama")
+        if ollama_bin:
+            logger.info("Ollama is unreachable. Attempting to start local Ollama daemon...")
+            try:
+                # Windows background process without popping windows
+                creationflags = 0
+                if sys.platform == "win32":
+                    creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
+                subprocess.Popen(
+                    [ollama_bin, "serve"],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    creationflags=creationflags,
+                )
+                # Allow up to 4 seconds for daemon to begin listening
+                for _ in range(8):
+                    await asyncio.sleep(0.5)
+                    status = await _probe_ollama()
+                    if status.get("reachable"):
+                        logger.info("Ollama daemon started successfully.")
+                        break
+            except Exception as err:
+                logger.warning(f"Failed to auto-spawn Ollama daemon: {err}")
+
+    # If reachable but configured model is missing, trigger pull
+    if status.get("reachable") and not status.get("configured_model_installed") and auto_pull:
+        logger.info(f"Configured model {OLLAMA_MODEL} not found. Triggering pull via Ollama API...")
+        try:
+            async with httpx.AsyncClient(base_url=OLLAMA_BASE_URL, timeout=10.0) as client:
+                await client.post("/api/pull", json={"name": OLLAMA_MODEL, "stream": False})
+                status = await _probe_ollama()
+        except Exception as pull_err:
+            logger.warning(f"Failed to auto-pull configured model {OLLAMA_MODEL}: {pull_err}")
+
+    return status
+
+
+async def _probe_ollama() -> dict[str, object]:
+    """Internal probe of Ollama reachability and available models."""
     try:
-        async with httpx.AsyncClient(base_url=OLLAMA_BASE_URL, timeout=5.0) as client:
+        async with httpx.AsyncClient(base_url=OLLAMA_BASE_URL, timeout=4.0) as client:
             version_response = await client.get("/api/version")
             version_response.raise_for_status()
             version_data = version_response.json()
@@ -42,11 +91,17 @@ async def get_ollama_status() -> dict[str, object]:
             for model in tags_data.get("models", [])
             if model.get("name")
         ]
+        # Match configured model either exact name or with :latest tag / base name
+        model_installed = (
+            OLLAMA_MODEL in models
+            or f"{OLLAMA_MODEL}:latest" in models
+            or any(m.startswith(f"{OLLAMA_MODEL}:") or OLLAMA_MODEL.startswith(m) for m in models)
+        )
         return {
             "reachable": True,
             "version": version_data.get("version"),
             "configured_model": OLLAMA_MODEL,
-            "configured_model_installed": OLLAMA_MODEL in models,
+            "configured_model_installed": model_installed,
             "models": models,
         }
     except (httpx.HTTPError, ValueError) as exc:
@@ -58,6 +113,12 @@ async def get_ollama_status() -> dict[str, object]:
             "models": [],
             "error": type(exc).__name__,
         }
+
+
+async def get_ollama_status() -> dict[str, object]:
+    """Return runtime reachability and installed model names, auto-recovering if down."""
+    return await ensure_ollama_service_and_model(auto_pull=False)
+
 
 
 async def generate_agent_assessment(
