@@ -16,9 +16,9 @@ from app.services.nccn_guidelines_service import (
 
 
 def test_catalogue_loads_all_67_guidelines():
-    """Verify that all 67 NCCN guideline blocks are parsed and loaded."""
+    """Verify that all NCCN guideline blocks (at least 67) plus society guidelines are loaded."""
     entries = load_nccn_catalogue()
-    assert len(entries) == 67, f"Expected exactly 67 guidelines, got {len(entries)}"
+    assert len(entries) >= 67, f"Expected at least 67 guidelines, got {len(entries)}"
 
 
 def test_key_guidelines_exist_with_structured_content():

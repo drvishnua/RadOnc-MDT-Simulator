@@ -53,10 +53,28 @@ def derive_or_verify_staging(case: SyntheticCase, role_id: str = "") -> dict[str
             applicable_system = "AJCC 8th Edition (Conventional / p16-Negative Oropharynx)"
 
     # 2. Derive Stage Components
+    # Only derive N category if nodal status is actually addressed/examined in the text
+    has_node_examination = any(
+        k in combined_text
+        for k in [
+            "node", "lymph", "jugular", "cervical adenopathy", "adenopathy",
+            "level 1", "level 2", "level 3", "level 4", "level 5", "neck"
+        ]
+    )
     derived_t = _derive_t_stage(is_head_neck, tumor_size_cm, combined_text)
-    derived_n = _derive_n_stage(is_head_neck, hpv_p16_status, node_details, combined_text)
-    derived_m = "M1" if metastasis_details.get("has_distant_mets") else "M0"
-    derived_stage_group = _derive_stage_group(applicable_system, derived_t, derived_n, derived_m, hpv_p16_status)
+    derived_n = _derive_n_stage(is_head_neck, hpv_p16_status, node_details, combined_text) if has_node_examination else None
+    
+    # Only derive M category if metastatic workup or explicit negative/positive finding is documented
+    has_mets_examination = any(
+        k in combined_text
+        for k in [
+            "distant metastasis", "distant metastases", "metastatic", "chest xray",
+            "chest x-ray", "ct chest", "pet", "pet/ct", "pet-ct", "bone scan",
+            "m0", "m1", "non-metastatic"
+        ]
+    )
+    derived_m = ("M1" if metastasis_details.get("has_distant_mets") else "M0") if has_mets_examination else None
+    derived_stage_group = _derive_stage_group(applicable_system, derived_t, derived_n, derived_m or "M0", hpv_p16_status) if (derived_t and derived_n) else None
 
     # 3. Verification & Correlation with Provided Structured Fields
     provided_c_t = getattr(case, "clinical_t_stage", None)
@@ -98,7 +116,7 @@ def derive_or_verify_staging(case: SyntheticCase, role_id: str = "") -> dict[str
             else:
                 correlation_notes.append(f"Overall Stage Group ({provided_group}) is verified concordant with AJCC 8th TNM grouping.")
     else:
-        correlation_notes.append(f"Staging was not supplied in structured fields; derived {derived_t or 'Tx'}{derived_n or 'Nx'}{derived_m or 'M0'} ({derived_stage_group or 'Stage undetermined'}) according to latest {applicable_system} criteria.")
+        correlation_notes.append(f"Staging was not supplied in structured fields; derived {derived_t or 'Tx'}{derived_n or 'Nx'}{derived_m or 'Mx'} ({derived_stage_group or 'Stage undetermined'}) according to latest {applicable_system} criteria.")
         # Flag borderline T1 (exactly 2.0 cm) with soft palate / midline extension as uncertain T1 vs T2
         if derived_t == "T1" and tumor_size_cm is not None and tumor_size_cm == 2.0:
             if any(k in combined_text for k in ["soft palate", "uvula", "midline", "crossing"]):
