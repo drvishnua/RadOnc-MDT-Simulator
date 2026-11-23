@@ -52,7 +52,9 @@ a = Analysis(
         "app.services.reference_catalogue",
         "app.services.run_store",
         "app.services.staging_anatomy_service",
+        "app.services.staging_engine",
         "app.services.stress_testing",
+
         "app.services.textbooks_radiobiology_service",
         "app.services.trials_systemic_service",
         # Concurrency and locking utilities

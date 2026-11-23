@@ -1,597 +1,515 @@
-[
-  {
-    "id": "PEREZ-BRADY-8TH",
-    "title": "Perez and Brady's Principles and Practice of Radiation Oncology",
-    "authors": [
-      "Halperin EC",
-      "Wazer DE",
-      "Perez CA",
-      "Brady LW"
-    ],
-    "edition": "8th Edition (2026)",
-    "category": "Radiation Oncology",
-    "tags": [
-      "radiation_oncology",
-      "principles",
-      "head_neck",
-      "technique",
-      "dose_fractionation",
-      "oropharynx",
-      "definitive_radiotherapy"
-    ],
-    "relative_path": "MAIN/2026_Edward_C_Halperin,_David_E_Wazer_Perez,_Brady,_Halperin,_and.pdf",
-    "summary": "Authoritative radiation oncology treatise covering anatomy, staging, target definition, normal tissue tolerances, clinical trials, and multi-agent chemoradiotherapy schedules for head, neck, and pelvic malignancies."
-  },
-  {
-    "id": "GUNDERSON-TEPPER-5TH",
-    "title": "Clinical Radiation Oncology",
-    "authors": [
-      "Gunderson LL",
-      "Tepper JE",
-      "Bogart JA"
-    ],
-    "edition": "5th Edition (2021)",
-    "category": "Radiation Oncology",
-    "tags": [
-      "radiation_oncology",
-      "clinical_management",
-      "organ_preservation",
-      "combined_modality",
-      "oropharynx",
-      "chemoradiation"
-    ],
-    "relative_path": "MAIN/gun-tep-cli-rad-onc-5th.pdf",
-    "summary": "Standard reference for disease site-specific clinical management, multidisciplinary care, organ preservation protocols, concurrent systemic therapy integration, and contouring."
-  },
-  {
-    "id": "ESSENTIALS-CLIN-RADONC-2026",
-    "title": "Essentials of Clinical Radiation Oncology",
-    "authors": [
-      "Dawson LA",
-      "Kavanagh BD",
-      "Marks LB"
-    ],
-    "edition": "2026 Edition",
-    "category": "Radiation Oncology",
-    "tags": [
-      "radiation_oncology",
-      "clinical_practice",
-      "dose_constraints",
-      "fractionation",
-      "rapid_reference"
-    ],
-    "relative_path": "MAIN/2026 Essentials of Clinical Rad Onco.pdf",
-    "summary": "High-yield clinical radiation oncology text detailing treatment algorithms, contouring pearls, organ-at-risk dose constraints, and definitive fractionation regimens."
-  },
-  {
-    "id": "DECISION-MAKING-RADONC",
-    "title": "Decision Making in Radiation Oncology",
-    "authors": [
-      "Lu JJ",
-      "Brady LW"
-    ],
-    "edition": "Comprehensive Edition",
-    "category": "Radiation Oncology",
-    "tags": [
-      "radiation_oncology",
-      "clinical_decisions",
-      "treatment_algorithms",
-      "evidence_based"
-    ],
-    "relative_path": "VCR/Decision Making in Radiation Oncology.pdf",
-    "summary": "Algorithm-driven clinical decision pathways for evaluating surgical versus definitive radiation pathways across stages and performance statuses."
-  },
-  {
-    "id": "HANDBOOK-EVIDENCE-RADONC",
-    "title": "Handbook of Evidence-Based Radiation Oncology",
-    "authors": [
-      "Hansen EK",
-      "Roach M"
-    ],
-    "edition": "4th Edition",
-    "category": "Radiation Oncology",
-    "tags": [
-      "radiation_oncology",
-      "evidence_based",
-      "clinical_trials",
-      "randomized_data"
-    ],
-    "relative_path": "VCR/Handbook of Evidence-Based Radiation Oncology.pdf",
-    "summary": "Evidence syntheses of landmark randomized controlled trials supporting current radiation doses, fractionation regimens, and concurrent systemic combinations."
-  },
-  {
-    "id": "RADONC-QUESTION-BASED-REVIEW",
-    "title": "Radiation Oncology: A Question-Based Review & Study Guide",
-    "authors": [
-      "Chandra RA",
-      "Ord CB",
-      "Rana S",
-      "Hansen EK"
-    ],
-    "edition": "2021 Edition",
-    "category": "Radiation Oncology",
-    "tags": [
-      "radiation_oncology",
-      "board_review",
-      "clinical_vignettes",
-      "toxicity_management"
-    ],
-    "relative_path": "VCR/Radiation Oncology Study Guide (2021, Springer) - libgen.li.pdf",
-    "summary": "Socratic case reviews and consensus protocols for organ sparing, dose specification, and definitive radiotherapy technique."
-  },
-  {
-    "id": "DEVITA-12TH",
-    "title": "DeVita, Hellman, and Rosenberg's Cancer: Principles and Practice of Oncology",
-    "authors": [
-      "DeVita VT Jr",
-      "Lawrence TS",
-      "Rosenberg SA"
-    ],
-    "edition": "12th Edition (2023)",
-    "category": "Medical Oncology",
-    "tags": [
-      "medical_oncology",
-      "cancer_biology",
-      "systemic_therapy",
-      "head_neck",
-      "concurrent_chemoradiation",
-      "cisplatin"
-    ],
-    "relative_path": "Clinical Oncology/DeVita, Hellman and Rosenberg's Cancer_ Principles and Practice of Oncology, 12th Edition (HQ PDF) - Vi.pdf",
-    "summary": "The gold standard oncology reference for biological principles, clinical oncology management, chemotherapy mechanisms, radiosensitization schedules, and immunotherapies."
-  },
-  {
-    "id": "ABELOFF-6TH",
-    "title": "Abeloff's Clinical Oncology",
-    "authors": [
-      "Niederhuber JE",
-      "Armitage JO",
-      "Doroshow JH",
-      "Kastan MB",
-      "Tepper JE"
-    ],
-    "edition": "6th Edition (2020)",
-    "category": "Medical Oncology",
-    "tags": [
-      "clinical_oncology",
-      "multidisciplinary_care",
-      "systemic_therapy",
-      "targeted_therapy",
-      "toxicities"
-    ],
-    "relative_path": "Clinical Oncology/(Egitim Tanrisi) John E. Niederhuber, James O. Armitage, Michael B. Kastan, James H. Doroshow, Joel E. Tepper - Abeloff's Clinical Oncology (2020).pdf",
-    "summary": "Comprehensive textbook synthesizing molecular biology, clinical pharmacology, toxicities, and integrated systemic plus locoregional modalities."
-  },
-  {
-    "id": "TATA-MEMORIAL-ONC-2024",
-    "title": "Tata Memorial Centre Textbook of Oncology",
-    "authors": [
-      "Badwe RA",
-      "Gupta S",
-      "Shrikhande SV",
-      "Laskar S"
-    ],
-    "edition": "2024 Edition",
-    "category": "Oncology",
-    "tags": [
-      "oncology",
-      "evidence_based_management",
-      "resource_stratified",
-      "head_neck_cancer",
-      "multidisciplinary"
-    ],
-    "relative_path": "VCR/Rajendra A. Badwe, Sudeep Gupta, Shailesh V. Shrikhande, Siddhar - Tata Memorial Centre Textbook of Oncology (2024, Springer) - libgen.li.pdf",
-    "summary": "Authoritative oncology textbook with pragmatic, evidence-based management strategies, clinical decision trees, and organ preservation algorithms tailored to varied clinical scenarios."
-  },
-  {
-    "id": "BETHESDA-CLIN-ONC-2018",
-    "title": "The Bethesda Handbook of Clinical Oncology",
-    "authors": [
-      "Abraham J",
-      "Gulley JL"
-    ],
-    "edition": "5th Edition (2018)",
-    "category": "Medical Oncology",
-    "tags": [
-      "chemotherapy",
-      "regimens",
-      "supportive_care",
-      "antiemetics",
-      "hydration_protocols"
-    ],
-    "relative_path": "Chemotherapy/The Bethesda Handbook of Clinical Oncology (2018).pdf",
-    "summary": "Clinical handbook of systemic chemotherapy regimens, supportive care guidelines, dosing adjustments for organ dysfunction, and acute toxicity protocols."
-  },
-  {
-    "id": "DEVITA-CHEMO-MANUAL-2024",
-    "title": "Physicians' Cancer Chemotherapy Drug Manual",
-    "authors": [
-      "Chu E",
-      "DeVita VT Jr"
-    ],
-    "edition": "2024 Edition",
-    "category": "Chemotherapy Pharmacology",
-    "tags": [
-      "chemotherapy",
-      "pharmacology",
-      "cisplatin",
-      "carboplatin",
-      "cetuximab",
-      "dosing",
-      "emetogenicity"
-    ],
-    "relative_path": "Chemotherapy/Physicians Cancer Chemotherapy Drug Manual 2024.pdf",
-    "summary": "Definitive drug manual for antineoplastic agents, including cisplatin dosing (100 mg/m2 q3w vs 40 mg/m2 weekly), creatinine clearance thresholds, and pre/post hydration requirements."
-  },
-  {
-    "id": "SABISTON-SURGERY-21ST",
-    "title": "Sabiston Textbook of Surgery: The Biological Basis of Modern Surgical Practice",
-    "authors": [
-      "Townsend CM",
-      "Beauchamp RD",
-      "Evers BM",
-      "Mattox KL"
-    ],
-    "edition": "21st Edition (2021)",
-    "category": "Surgical Oncology",
-    "tags": [
-      "surgery",
-      "surgical_oncology",
-      "head_neck_surgery",
-      "margins",
-      "neck_dissection",
-      "transoral_robotic_surgery"
-    ],
-    "relative_path": "VCR/Courtney M. Townsend Jr., R. Daniel Beauchamp, B. Mark Evers, Ke - Sabiston Textbook of Surgery_ The Biological Basis of Modern Surgical Practice (2021, Elsevier) - libgen.li.pdf",
-    "summary": "Foremost surgical textbook providing operative standards, surgical margin assessments, neck dissection indications, and surgical candidacy evaluation."
-  },
-  {
-    "id": "DAS-CLINICAL-SURGERY",
-    "title": "A Manual On Clinical Surgery",
-    "authors": [
-      "Das S"
-    ],
-    "edition": "13th Edition (2018)",
-    "category": "Surgical Examination",
-    "tags": [
-      "surgery",
-      "physical_examination",
-      "cervical_lymphadenopathy",
-      "oral_cavity",
-      "head_neck_exam"
-    ],
-    "relative_path": "Examination/S. Das - A Manual On Clinical Surgery (2018, S Das Publication) - libgen.li.pdf",
-    "summary": "Seminal physical examination manual for evaluating primary tumor extension, fixation, trismus, and discrete versus matted cervical lymph node stations."
-  },
-  {
-    "id": "AJCC-STAGING-MANUAL-8TH",
-    "title": "AJCC Cancer Staging Manual",
-    "authors": [
-      "Amin MB",
-      "Edge SB",
-      "Greene FL",
-      "Schilsky RL",
-      "Gress DM"
-    ],
-    "edition": "8th Edition (2018)",
-    "category": "Pathology & Staging",
-    "tags": [
-      "tnm_staging",
-      "ajcc",
-      "uicc",
-      "hpv_p16",
-      "oropharynx",
-      "cervical_nodes",
-      "stage_grouping"
-    ],
-    "relative_path": "AJCC/Frederick L Greene_ Stephen Edge_ Richard L Schilsky_ Lauri E Ga - Ajcc Cancer Staging Manual (2018, Springer) - libgen.li.pdf",
-    "summary": "Official global staging classification standard defining clinical and pathological T, N, M staging categories and separate prognostic staging for HPV/p16-positive vs negative oropharyngeal carcinoma."
-  },
-  {
-    "id": "ROBBINS-PATHOLOGY-10TH",
-    "title": "Robbins & Cotran Pathologic Basis of Disease",
-    "authors": [
-      "Kumar V",
-      "Abbas AK",
-      "Aster JC"
-    ],
-    "edition": "10th Edition (2020)",
-    "category": "Pathology",
-    "tags": [
-      "pathology",
-      "histopathology",
-      "squamous_cell_carcinoma",
-      "p16_ihc",
-      "hpv",
-      "perineural_invasion",
-      "lymphovascular_space_invasion"
-    ],
-    "relative_path": "Pathology/[Robbins Pathology] Vinay Kumar MBBS MD FRCPath, Abul K. Abbas MBBS, Jon C. Aster MD - Robbins & Cotran Pathologic Basis of Disease (Robbins Pathology) (2020, Elsevier) - libgen.li.pdf",
-    "summary": "The definitive reference for molecular and cellular basis of disease, histological grading of squamous cell carcinoma, p16 overexpression as surrogate for HPV infection, and invasive margins."
-  },
-  {
-    "id": "KHAN-PHYSICS-6TH",
-    "title": "Khan's The Physics of Radiation Therapy",
-    "authors": [
-      "Gibbons JP",
-      "Khan FM"
-    ],
-    "edition": "6th Edition (2020)",
-    "category": "Medical Physics",
-    "tags": [
-      "medical_physics",
-      "beam_teletherapy",
-      "imrt",
-      "vmat",
-      "linac",
-      "dosimetry",
-      "beam_quality"
-    ],
-    "relative_path": "Physics/Khan's The Physics of Radiation Therapy.pdf",
-    "summary": "Foundational textbook on radiation physics, photon and electron interactions, linear accelerator beam characteristics, IMRT/VMAT inverse planning, and monitor unit verification."
-  },
-  {
-    "id": "KHAN-TREATMENT-PLANNING",
-    "title": "Khan's Treatment Planning in Radiation Oncology",
-    "authors": [
-      "Khan FM",
-      "Gerbi BJ"
-    ],
-    "edition": "4th Edition",
-    "category": "Treatment Planning",
-    "tags": [
-      "treatment_planning",
-      "dosimetry",
-      "imrt",
-      "vmat",
-      "dose_volume_histogram",
-      "isodose_distributions"
-    ],
-    "relative_path": "Planning/Khan's Treatment Planning in Radiation Oncology.pdf",
-    "summary": "Standard reference for 3D-CRT and IMRT/VMAT treatment planning, beam angles, optimization constraints, dose-volume histograms, and organ-at-risk prioritization."
-  },
-  {
-    "id": "DOBBS-PLANNING-4TH",
-    "title": "Practical Radiotherapy Planning",
-    "authors": [
-      "Dobbs J",
-      "Barrett A",
-      "Ash D"
-    ],
-    "edition": "4th Edition (2009)",
-    "category": "Treatment Planning",
-    "tags": [
-      "radiotherapy_planning",
-      "field_borders",
-      "target_delineation",
-      "simulation_technique",
-      "immobilization"
-    ],
-    "relative_path": "Planning/Dobbs - Practical Radiotherapy Planning, Fourth Edition (2009).pdf",
-    "summary": "Essential guide to patient immobilization, thermoplastic mask fabrication, CT simulation parameters, field shaping, and target volume delineation for clinical radiotherapy."
-  },
-  {
-    "id": "NANCY-LEE-TARGET-VOLUMES-2022",
-    "title": "Target Volume Delineation and Conformal Radiotherapy: Head and Neck",
-    "authors": [
-      "Lee NY",
-      "Lu JJ",
-      "Puckett LL"
-    ],
-    "edition": "2022 Edition",
-    "category": "Contouring & Target Delineation",
-    "tags": [
-      "contouring",
-      "target_delineation",
-      "head_neck",
-      "ctv_high_risk",
-      "ctv_elective",
-      "oropharynx",
-      "nodal_levels"
-    ],
-    "relative_path": "Planning/Nancy Lee 2022 new.pdf",
-    "summary": "Standard atlas and guidelines for defining high-risk and elective clinical target volumes (CTV1, CTV2) and organ-at-risk contouring in head and neck carcinomas."
-  },
-  {
-    "id": "CONTOURING-GUIDELINES-ALL-SITES",
-    "title": "Contouring Guidelines For All Sites: Anatomic Atlas",
-    "authors": [
-      "Radiation Oncology Quality Assurance Committee"
-    ],
-    "edition": "Comprehensive Reference",
-    "category": "Contouring Guidelines",
-    "tags": [
-      "contouring",
-      "anatomic_atlas",
-      "head_neck_levels",
-      "normal_tissue_constraints",
-      "ctv_margins"
-    ],
-    "relative_path": "Contouring guidelines/CONTOURING GUIDELINES FOR ALL SITES BOOK.pdf",
-    "summary": "Visual contouring manual with step-by-step CT axial cuts demonstrating cranial nerve exit foramina, cervical lymph node stations (Levels I-VI), and critical serial/parallel organs."
-  },
-  {
-    "id": "HALL-RADIOBIOLOGY-8TH",
-    "title": "Radiobiology for the Radiologist",
-    "authors": [
-      "Hall EJ",
-      "Giaccia AJ"
-    ],
-    "edition": "8th Edition (2018)",
-    "category": "Radiobiology",
-    "tags": [
-      "radiobiology",
-      "4_rs_of_radiobiology",
-      "linear_quadratic_model",
-      "alpha_beta_ratio",
-      "oxygen_effect",
-      "fractionation"
-    ],
-    "relative_path": "RadioBiology/Radiobiology for the Radiologist.pdf",
-    "summary": "Foundational radiobiology text covering the linear-quadratic formulation, BED calculations, alpha/beta ratios for tumors vs late reacting normal tissues, and repopulation kinetics."
-  },
-  {
-    "id": "KOGEL-CLINICAL-RADIOBIOLOGY-2019",
-    "title": "Basic Clinical Radiobiology",
-    "authors": [
-      "Joiner MC",
-      "van der Kogel AJ"
-    ],
-    "edition": "5th Edition (2019)",
-    "category": "Radiobiology",
-    "tags": [
-      "radiobiology",
-      "bed_eqd2",
-      "altered_fractionation",
-      "hypofractionation",
-      "normal_tissue_response"
-    ],
-    "relative_path": "RadioBiology/Kogel - Basic clinical radiobiology (2019).pdf",
-    "summary": "Clinical radiobiology manual for deriving EQD2 schedules, calculating biologically effective dose during treatment interruptions, and comparing conventional versus accelerated fractionation."
-  },
-  {
-    "id": "QUANTEC-COMPREHENSIVE-2010",
-    "title": "QUANTEC: Quantitative Analyses of Normal Tissue Effects in the Clinic",
-    "authors": [
-      "Marks LB",
-      "Yorke ED",
-      "Jackson A",
-      "Ten Haken RK",
-      "Constine LS",
-      "Eisbruch A"
-    ],
-    "edition": "Red Journal Special Issue / Compendium",
-    "category": "Normal Tissue Tolerances",
-    "tags": [
-      "quantec",
-      "dose_constraints",
-      "parotid_gland",
-      "spinal_cord",
-      "larynx_pharynx",
-      "brainstem",
-      "mandible_orn"
-    ],
-    "relative_path": "QUANTEC/Quantitative-Analyses-of-Normal-Tissue-Effects-in-.pdf",
-    "summary": "The definitive clinical compendium for organ-at-risk dose-volume constraints: mean parotid dose < 26 Gy, spinal cord max < 45-50 Gy, constrictor muscles mean < 50 Gy to minimize severe dysphagia."
-  },
-  {
-    "id": "PENTEC-PEDIATRIC-2022",
-    "title": "PENTEC: Pediatric Normal Tissue Effects in the Clinic",
-    "authors": [
-      "Constine LS",
-      "Ronckers CM",
-      "Hua CH",
-      "Olch A"
-    ],
-    "edition": "Compendium Collection",
-    "category": "Normal Tissue Tolerances",
-    "tags": [
-      "pentec",
-      "pediatric_radiation",
-      "late_effects",
-      "growth_impairment",
-      "neurocognitive",
-      "second_malignancies"
-    ],
-    "relative_path": "PENTEC/A-User's-Guide-and-Summary-of-Pediatric-Normal-Tis.pdf",
-    "summary": "Landmark pediatric radiation oncology consensus detailing age-specific dose thresholds, organ maturation factors, endocrine disruption, and secondary cancer risks."
-  },
-  {
-    "id": "OZYIGIT-TOXICITIES-RADONC-2020",
-    "title": "Prevention and Management of Acute and Late Toxicities in Radiation Oncology",
-    "authors": [
-      "Ozyigit G",
-      "Selek U"
-    ],
-    "edition": "Springer (2020)",
-    "category": "Toxicity & Supportive Care",
-    "tags": [
-      "toxicity",
-      "radiation_dermatitis",
-      "mucositis",
-      "osteoradionecrosis",
-      "xerostomia",
-      "supportive_care"
-    ],
-    "relative_path": "Toxicity/Gokhan Ozyigit, Ugur Selek - Prevention and Management of Acute and Late Toxicities in Radiation Oncology_ Management of Toxicities in Radiation Oncology (2020, Springer) [10.1007_978-3-030-37798-4] - libgen.li.pdf",
-    "summary": "Dedicated clinical manual for diagnosing, preventing, and managing acute and late radiation side effects, including mouthwashes, enteral tube feeding indications, and hyperbaric oxygen."
-  },
-  {
-    "id": "CTCAE-V5-CRITERIA",
-    "title": "Common Terminology Criteria for Adverse Events (CTCAE v5.0)",
-    "authors": [
-      "National Cancer Institute (NCI)"
-    ],
-    "edition": "Version 5.0",
-    "category": "Toxicity Grading",
-    "tags": [
-      "ctcae",
-      "toxicity_grading",
-      "mucositis",
-      "dysphagia",
-      "neutropenia",
-      "adverse_events"
-    ],
-    "relative_path": "Toxicity/CTCAE_v5_Quick_Reference_8.5x11.pdf",
-    "summary": "The universal oncology grading system for classifying acute and chronic treatment toxicities from Grade 1 (mild) to Grade 5 (death)."
-  },
-  {
-    "id": "GRAYS-ANATOMY-41ST",
-    "title": "Gray's Anatomy: The Anatomical Basis of Clinical Practice",
-    "authors": [
-      "Standring S"
-    ],
-    "edition": "41st Edition (2016)",
-    "category": "Human Anatomy",
-    "tags": [
-      "anatomy",
-      "pharynx",
-      "oropharynx",
-      "cranial_nerves",
-      "fascial_spaces",
-      "cervical_lymphatics"
-    ],
-    "relative_path": "Anatomy/Gray's Anatomy_ The Anatomical Basis of Clinical Practice (c2016).pdf",
-    "summary": "The world reference for human surgical and cross-sectional anatomy, describing mucosal spaces, lymphatic drainage pathways, and muscular walls of the oropharynx."
-  },
-  {
-    "id": "HUSBAND-REZNEK-IMAGING-4TH",
-    "title": "Husband & Reznek's Imaging in Oncology",
-    "authors": [
-      "Sahdev A",
-      "Vinnicombe SJ"
-    ],
-    "edition": "4th Edition (2020)",
-    "category": "Diagnostic Imaging",
-    "tags": [
-      "imaging",
-      "ct_mri_pet",
-      "head_neck_imaging",
-      "nodal_extracapsular_spread",
-      "perineural_spread",
-      "recist"
-    ],
-    "relative_path": "Anju Sahdev, Sarah J. Vinnicombe - Husband & Reznek's Imaging in Oncology (2020, CRC Press) - libgen.li.pdf",
-    "summary": "Premier oncologic radiology treatise on multi-modality CT, MRI, and PET/CT staging, differential diagnosis of lymphadenopathy, and treatment response evaluation."
-  },
-  {
-    "id": "LANDMARK-TRIALS-ONC-2019",
-    "title": "Landmark Trials in Oncology",
-    "authors": [
-      "Yajnik S"
-    ],
-    "edition": "Springer (2019)",
-    "category": "Clinical Trials Reference",
-    "tags": [
-      "landmark_trials",
-      "randomized_trials",
-      "head_neck",
-      "rtog_9111",
-      "rtog_0129",
-      "rtog_0522",
-      "mach_nc"
-    ],
-    "relative_path": "TRIALS/Yajnik. - Landmark Trials in Oncology-Springer (2019).pdf",
-    "summary": "Curated collection of pivotal randomized Phase III trials in oncology, analyzing evidence bases for concurrent platinum chemoradiotherapy, altered fractionation, and organ preservation."
-  }
-]
+{
+  "catalogue_id": "RADONC-TEXTBOOKS-RADIOBIOLOGY-V1",
+  "version": "2026.1",
+  "description": "Structured canonical radiation oncology dose fractionation schemes, definitive vs adjuvant target dose prescriptions, and radiobiological principles extracted from authoritative radiation oncology textbooks (Perez & Brady 2026 8th Ed, Gunderson & Tepper 5th Ed, 2026 Essentials of Clinical Radiation Oncology 2nd Ed, Kogel Basic Clinical Radiobiology 2019 5th Ed, Hall & Giaccia Radiobiology for the Radiologist 8th Ed).",
+  "entries": [
+    {
+      "source_id": "TEXTBOOK-KOGEL-2019",
+      "title": "Basic Clinical Radiobiology",
+      "organization": "CRC Press / Taylor & Francis Group",
+      "source_type": "textbook",
+      "edition_or_version": "5th Edition (2019)",
+      "publication_date": "2019-07-01",
+      "doi_or_url": "https://doi.org/10.1201/9780429489501",
+      "disease_site": "General",
+      "specialties": [
+        "radiation_oncology",
+        "medical_physics",
+        "radiobiology"
+      ],
+      "topics": [
+        "linear_quadratic_model",
+        "biologically_effective_dose",
+        "EQD2",
+        "fractionation_radiobiology",
+        "alpha_beta_ratios",
+        "time_factors_proliferation",
+        "repair_kinetics",
+        "the_4_rs_of_radiobiology"
+      ],
+      "radiobiology_principles": {
+        "linear_quadratic_model": {
+          "formula": "S = exp(-alpha * d - beta * d^2)",
+          "description": "Cell survival model describing radiation-induced clonogenic cell death. Alpha represents the linear single-track lethality (lethal unrepairable DNA double-strand breaks), Beta represents the quadratic two-track lethality (interaction between two independent sublethal lesions).",
+          "alpha_beta_ratio_definition": "The dose (d = alpha / beta) in Gray at which the linear (alpha * d) and quadratic (beta * d^2) components contribute equally to cell kill."
+        },
+        "biologically_effective_dose": {
+          "formula": "BED = Total_Dose * (1 + (dose_per_fraction / (alpha_beta))) = n * d * (1 + d / (alpha / beta))",
+          "units": "Gy_alpha_beta (e.g. Gy10 for tumors/acute effects, Gy3 or Gy2 for late-reacting normal tissues)",
+          "incomplete_repair_extension": "BED = n * d * [1 + (d / (alpha / beta)) * (1 + h_m)] where h_m is the Lea-Catcheside incomplete repair factor accounting for sub-complete recovery during multiple fractions per day (<6-8 hours interval) with mono- or bi-exponential half-times (T1/2 ~ 0.5-1.5 hours)."
+        },
+        "equivalent_dose_in_2gy_fractions": {
+          "formula": "EQD2 = Total_Dose * ((dose_per_fraction + alpha_beta) / (2.0 + alpha_beta)) = BED / (1 + 2.0 / (alpha_beta))",
+          "clinical_utility": "Universal metric allowing comparison and summing of doses delivered across different fractionation regimens, hypofractionation, SBRT, and brachytherapy."
+        },
+        "proliferation_and_time_factor": {
+          "formula": "BED_corrected = BED - (ln(2) / (alpha * T_pot)) * (T_overall - T_kickoff) = BED - D_prolif * (T_overall - T_k)",
+          "parameters": {
+            "T_k": "Kick-off onset time of accelerated tumor clonogen repopulation (~21 to 28 days in squamous cell carcinoma of the head and neck and cervix).",
+            "D_prolif": "Equivalent dose required to offset daily repopulation after kick-off, approximately 0.6 Gy/day (range 0.5-0.8 Gy/day) in head and neck SCC.",
+            "clinical_rule": "Unplanned treatment interruptions or prolongation of overall treatment time result in an estimated 1.0% to 1.5% decrease in local tumor control per day of delay."
+          }
+        },
+        "the_classical_and_modern_rs_of_radiobiology": [
+          {
+            "r": "Repair",
+            "mechanism": "Sublethal damage repair (SLDR) in normal tissues versus tumors between fractions. Late-responding normal tissues have large repair capacity (low alpha/beta ~ 2-3 Gy), so smaller fraction sizes selectively spare late complications."
+          },
+          {
+            "r": "Reassortment / Redistribution",
+            "mechanism": "Cells arrest or survive in radioresistant phases (late S phase); with time between fractions, surviving cells redistribute into radiosensitive phases (G2/M), increasing efficacy of subsequent fractions."
+          },
+          {
+            "r": "Repopulation",
+            "mechanism": "Accelerated proliferation of tumor clonogens during protracted courses. Minimizing overall treatment time (OTT) prevents repopulation from compromising tumor control."
+          },
+          {
+            "r": "Reoxygenation",
+            "mechanism": "Hypoxic tumor cells (resistant due to lack of oxygen fixation, OER 2.5-3.0) reoxygenate between fractions as aerated cells die and metabolic demand falls, restoring radiosensitivity."
+          },
+          {
+            "r": "Radiosensitivity (Intrinsic)",
+            "mechanism": "Inherent cellular and genetic susceptibility to ionizing radiation, quantified by the surviving fraction at 2 Gy (SF2)."
+          },
+          {
+            "r": "Reactivation of Anti-Tumor Immunity",
+            "mechanism": "Modern 6th R: Radiation induces immunogenic cell death (calreticulin exposure, HMGB1, ATP release) and cGAS-STING activation, priming CD8+ T-cell responses."
+          }
+        ],
+        "canonical_alpha_beta_table": {
+          "tumors": {
+            "head_and_neck_scc": 10.0,
+            "cervical_scc": 10.0,
+            "non_small_cell_lung_cancer": 10.0,
+            "small_cell_lung_cancer": 10.0,
+            "colorectal_adenocarcinoma": 10.0,
+            "pancreatic_adenocarcinoma": 10.0,
+            "high_grade_glioma_gbm": 10.0,
+            "low_grade_glioma": 4.0,
+            "breast_adenocarcinoma": 4.0,
+            "prostate_adenocarcinoma": 1.5,
+            "melanoma": 2.5,
+            "soft_tissue_sarcoma": 4.0,
+            "lymphoma": 10.0
+          },
+          "normal_tissues_acute": {
+            "mucosa_oral_pharyngeal": 10.0,
+            "skin_epidermis": 10.0,
+            "gastrointestinal_mucosa": 10.0,
+            "bone_marrow": 10.0
+          },
+          "normal_tissues_late": {
+            "spinal_cord_myelopathy": 2.0,
+            "brain_necrosis": 2.5,
+            "brainstem_necrosis": 2.5,
+            "optic_nerve_chiasm": 2.0,
+            "lung_fibrosis_pneumonitis": 3.0,
+            "heart_myocardium_coronary": 2.5,
+            "kidney_nephropathy": 2.5,
+            "rectum_late_telangiectasia_stricture": 3.0,
+            "bladder_late_contracture": 3.5,
+            "liver_radiation_induced_liver_disease": 2.5,
+            "bone_necrosis": 2.5
+          }
+        }
+      },
+      "key_passages": [
+        {
+          "chapter": "Chapter 9: Fractionation: The linear-quadratic approach",
+          "pages": "99-111",
+          "text": "The linear-quadratic (LQ) model describes the survival fraction S = exp(-alpha*d - beta*d^2). The ratio alpha/beta governs the sensitivity of a tissue to changes in dose per fraction. Low alpha/beta values (~2-3 Gy) characterize late-responding normal tissues, whereas high alpha/beta values (~10 Gy) characterize early responses and most tumors."
+        },
+        {
+          "chapter": "Chapter 10: The linear-quadratic approach in clinical practice",
+          "pages": "112-124",
+          "text": "EQD2 is defined as the total dose delivered in 2 Gy fractions that produces the same biological effect as a schedule of D delivered in fractions of d: EQD2 = D * (d + alpha/beta) / (2 + alpha/beta). Biologically effective dose is BED = D * (1 + d / (alpha/beta))."
+        },
+        {
+          "chapter": "Chapter 12: Time factors in normal tissue responses to irradiation",
+          "pages": "136-146",
+          "text": "Proliferation during radiotherapy becomes significant after a delay or kick-off time Tk of approximately 3 to 4 weeks in squamous cell carcinomas. Compensation for missed fractions requires hyperfractionation or dose escalation of approximately 0.6 Gy per day lost."
+        }
+      ]
+    },
+    {
+      "source_id": "TEXTBOOK-HALL-RADIOBIOLOGY",
+      "title": "Radiobiology for the Radiologist",
+      "organization": "Wolters Kluwer",
+      "source_type": "textbook",
+      "edition_or_version": "8th Edition (2018)",
+      "publication_date": "2018-09-01",
+      "doi_or_url": "https://shop.lww.com/Radiobiology-for-the-Radiologist/p/9781496335418",
+      "disease_site": "General",
+      "specialties": [
+        "radiation_oncology",
+        "medical_physics",
+        "radiobiology"
+      ],
+      "topics": [
+        "oxygen_effect_and_hypoxia",
+        "dna_double_strand_break_repair",
+        "cell_cycle_radiosensitivity",
+        "let_and_rbe",
+        "radiation_carcinogenesis"
+      ],
+      "radiobiology_principles": {
+        "oxygen_effect": {
+          "definition": "Oxygen Enhancement Ratio (OER) = Dose in hypoxia / Dose in air for identical biological effect.",
+          "typical_values": "OER is 2.5 to 3.0 for sparsely ionizing radiations (X-rays, gamma rays) at high doses, declining to ~2.0 at doses <2 Gy, and approaches 1.0 for high-LET radiations.",
+          "clinical_significance": "Severe hypoxia (pO2 < 5-10 mmHg) renders tumor core cells 2.5 to 3-fold more radioresistant. Fractionation permits reoxygenation of previously hypoxic tumor cells."
+        },
+        "dna_repair_pathways": {
+          "non_homologous_end_joining": "Dominant pathway in G0/G1 and early S phase. Direct re-ligation without template, rapid (T1/2 ~ 15-30 min), error-prone.",
+          "homologous_recombination": "Dominant in late S and G2 phase. Uses undamaged sister chromatid as template, high fidelity, error-free."
+        },
+        "cell_cycle_dependence": {
+          "most_sensitive": "M phase (mitosis) and late G2 phase.",
+          "most_resistant": "Late S phase (elevated intracellular radical scavengers, e.g. glutathione, and homologous recombination repair mechanisms).",
+          "intermediate": "G1 phase."
+        },
+        "linear_energy_transfer_and_rbe": {
+          "let_definition": "Rate of energy loss along the track of an ionizing particle (keV/micrometer).",
+          "rbe_peak": "RBE reaches a maximum (~100 keV/micrometer) where average distance between ionizations matches diameter of DNA double helix (2 nm), producing clustered non-repairable complex lesions."
+        }
+      },
+      "key_passages": [
+        {
+          "chapter": "Chapter 6: The Oxygen Effect and Reoxygenation",
+          "pages": "84-102",
+          "text": "For oxygen to act as a radiosensitizer, it must be present during radiation exposure or within microseconds thereafter. The oxygen fixation hypothesis posits that radiation produces free radicals in target DNA that are 'fixed' into permanent organic peroxides by molecular oxygen."
+        },
+        {
+          "chapter": "Chapter 8: The Linear-Quadratic Model and Fractionation",
+          "pages": "122-140",
+          "text": "The shoulder of the survival curve is primarily reflected in the beta parameter. Sparing of late responding tissues by hyperfractionation exploits the shallow initial slope and steep curvature (low alpha/beta ratio) of late normal tissues."
+        }
+      ]
+    },
+    {
+      "source_id": "TEXTBOOK-PEREZ-BRADY-2026",
+      "title": "Perez, Brady, Halperin, and Wazer's Principles and Practice of Radiation Oncology",
+      "organization": "Wolters Kluwer",
+      "source_type": "textbook",
+      "edition_or_version": "8th Edition (2026)",
+      "publication_date": "2026-01-15",
+      "doi_or_url": "https://shop.lww.com/Perez--Brady--Halperin--and-Wazer-s-Principles-and-Practice-of-Radiation-Oncology/p/9781975195007",
+      "disease_site": "General",
+      "specialties": [
+        "radiation_oncology",
+        "medical_physics",
+        "multidisciplinary_oncology"
+      ],
+      "topics": [
+        "head_and_neck_cancer",
+        "thoracic_lung_cancer",
+        "breast_cancer",
+        "prostate_cancer",
+        "gastrointestinal_cancer",
+        "gynecological_cancer",
+        "central_nervous_system_tumors",
+        "definitive_radiotherapy",
+        "adjuvant_radiotherapy",
+        "dose_fractionation_prescriptions"
+      ],
+      "site_schemes": {
+        "head_and_neck": {
+          "definitive": {
+            "standard_fractionation": {
+              "primary_gross_disease_ptv_high": "70 Gy in 35 fractions (2.0 Gy/fraction) over 7 weeks",
+              "intermediate_risk_subclinical_ptv_mid": "59.5 to 63 Gy in 35 fractions (1.7-1.8 Gy/fraction)",
+              "elective_nodal_regions_ptv_low": "54 to 56 Gy in 35 fractions (1.55-1.6 Gy/fraction)",
+              "technique": "Simultaneous Integrated Boost (SIB) IMRT/VMAT",
+              "concurrent_systemic": "High-dose cisplatin 100 mg/m2 IV every 3 weeks (days 1, 22, 43) or weekly cisplatin 40 mg/m2 IV"
+            },
+            "altered_fractionation": {
+              "hyperfractionation": "81.6 Gy in 68 fractions (1.2 Gy/fraction twice daily with >=6 hours gap) (RTOG 9003 / MARCH meta-analysis)",
+              "accelerated_concomitant_boost": "72 Gy in 42 fractions over 6 weeks (1.8 Gy/fx large field + 1.5 Gy/fx boost twice daily for last 12 treatment days)",
+              "early_glottic_t1n0": "66 Gy in 33 fractions (2.0 Gy/fx) or hypofractionated 63 Gy in 28 fractions (2.25 Gy/fx) or 58.5-60 Gy in 25 fractions (2.34-2.4 Gy/fx)",
+              "glottic_t2n0": "70 Gy in 35 fractions (2.0 Gy/fx) or 65.25 Gy in 29 fractions (2.25 Gy/fx)"
+            }
+          },
+          "adjuvant_postoperative": {
+            "standard_intermediate_risk": {
+              "dose": "56 to 60 Gy in 28 to 30 fractions (1.8-2.0 Gy/fraction)",
+              "indications": "Perineural invasion, lymphovascular invasion, close margins (<=2 mm), multiple involved lymph nodes without extracapsular extension (ECE)"
+            },
+            "high_risk": {
+              "dose": "66 Gy in 33 fractions (2.0 Gy/fraction) to high-risk bed / ECE sites; 54-56 Gy to elective nodal basins",
+              "indications": "Positive microscopic surgical margin (R1) or extracapsular nodal extension (ECE/ENE)",
+              "concurrent_systemic": "Concurrent cisplatin 100 mg/m2 q3w (based on pooled EORTC 22931 / RTOG 9501 trials demonstrating local-regional and disease-free survival benefit)"
+            }
+          }
+        },
+        "lung": {
+          "early_stage_nsclc_medically_inoperable": {
+            "peripheral_sbrt": [
+              "54 Gy in 3 fractions (18 Gy/fraction, BED10 = 151.2 Gy, EQD2 = 90 Gy)",
+              "48 Gy in 4 fractions (12 Gy/fraction, BED10 = 105.6 Gy, EQD2 = 56 Gy)",
+              "50 Gy in 5 fractions (10 Gy/fraction, BED10 = 100 Gy, EQD2 = 50 Gy)"
+            ],
+            "central_sbrt_no_fly_zone": [
+              "50 to 60 Gy in 5 to 8 fractions (e.g. 50 Gy in 5 fx [10 Gy/fx] or 60 Gy in 8 fx [7.5 Gy/fx]) to avoid proximal bronchial tree and pulmonary artery necrosis (RTOG 0813)",
+              "56 Gy in 7 fractions (8 Gy/fraction) or 60 Gy in 15 fractions (4 Gy/fraction)"
+            ]
+          },
+          "locally_advanced_stage_iii_nsclc": {
+            "definitive_chemoradiation": {
+              "dose": "60 to 66 Gy in 30 to 33 fractions (2.0 Gy/fraction) (RTOG 0617 confirmed 60 Gy is superior in overall survival compared to 74 Gy high-dose escalation due to cardiopulmonary toxicity)",
+              "concurrent_chemotherapy": "Platinum doublet (cisplatin 50 mg/m2 days 1, 8, 29, 36 + etoposide 50 mg/m2 days 1-5, 29-33 OR carboplatin AUC 2 + paclitaxel 45-50 mg/m2 weekly)",
+              "consolidation_immunotherapy": "Durvalumab 10 mg/kg q2w or 1500 mg q4w for up to 12 months in non-progressing patients (PACIFIC trial)"
+            }
+          },
+          "adjuvant_nsclc": {
+            "port_indications": "Generally reserved for unexpected microscopic positive surgical margins (R1: 54-60 Gy in 27-30 fx) or macroscopic residual (R2: 60-66 Gy). Routine PORT for resected pN2 R0 is NOT recommended based on Lung ART trial results unless clinical trial."
+          },
+          "small_cell_lung_cancer": {
+            "limited_stage_definitive": "45 Gy in 30 fractions BID (1.5 Gy twice daily over 3 weeks, gap >=6h) concurrent with cisplatin/etoposide (Turrisi NEJM trial), or 60-66 Gy in 30-33 daily fractions (2.0 Gy/fx)",
+            "prophylactic_cranial_irradiation": "25 Gy in 10 fractions (2.5 Gy/fx) for patients with good response to chemo-RT"
+          }
+        },
+        "breast": {
+          "adjuvant_whole_breast_irradiation": {
+            "moderate_hypofractionation_standard": "40.05 Gy in 15 fractions (2.67 Gy/fraction) over 3 weeks or 42.56 Gy in 16 fractions (2.66 Gy/fx)",
+            "ultra_hypofractionation_fast_forward": "26 Gy in 5 fractions over 1 week (5.2 Gy/fraction daily) (FAST-Forward trial 10-year data showing non-inferiority in local control and normal tissue cosmesis)",
+            "conventional_fractionation": "45 to 50 Gy in 25 fractions (1.8-2.0 Gy/fx) over 5 weeks (historical standard, now reserved for complex anatomy or specific reconstructions)",
+            "tumor_bed_boost": {
+              "dose": "10 to 16 Gy in 4 to 8 fractions (2.0 Gy/fx) sequential or simultaneous integrated boost (SIB)",
+              "indications": "Age <= 50, high grade (Grade 3), close surgical margins (<2 mm), extensive intraductal component (EIC)"
+            }
+          },
+          "post_mastectomy_radiation_therapy": {
+            "indications": ">=4 positive axillary lymph nodes, T3-T4 primary tumor, or 1-3 positive nodes with adverse features (MA.20 / EORTC 22922 / EBCTCG meta-analysis)",
+            "target_volumes": "Chest wall and regional lymph nodes (supraclavicular fossa, internal mammary chain, +/- axillary levels I-III if incompletely dissected)",
+            "dose": "50 Gy in 25 fractions (2.0 Gy/fx) or hypofractionated 40.05 Gy in 15 fractions (2.67 Gy/fx) +/- scar boost (10 Gy in 5 fx)"
+          },
+          "accelerated_partial_breast_irradiation": {
+            "criteria": "ASTRO low-risk consensus: age >= 50, unicentric, ER+, ductal histology, <=2 cm (T1), negative margins >= 2 mm, pN0",
+            "regimens": "30 Gy in 5 fractions every other day (6 Gy/fx) or 26 Gy in 5 fractions daily"
+          }
+        },
+        "prostate": {
+          "intact_prostate_definitive": {
+            "low_risk": [
+              "Moderate hypofractionation: 60 Gy in 20 fractions (3.0 Gy/fx) over 4 weeks (CHHiP, PROFIT) or 70 Gy in 28 fractions (2.5 Gy/fx)",
+              "Ultra-hypofractionated SBRT: 36.25 Gy in 5 fractions (7.25 Gy/fx) or 35 Gy in 5 fractions (7.0 Gy/fx) (PACE-B, HYPO-RT-PC)",
+              "Conventional dose escalation: 75.6 to 79.2 Gy in 39 to 44 fractions (1.8-2.0 Gy/fx)"
+            ],
+            "intermediate_risk": {
+              "favorable": "60 Gy in 20 fx or 36.25 Gy in 5 fx SBRT without ADT",
+              "unfavorable": "60 Gy in 20 fx or 78 Gy in 39 fx + 4 to 6 months short-term Androgen Deprivation Therapy (ADT) +/- pelvic nodal RT (45-50.4 Gy)"
+            },
+            "high_and_very_high_risk": {
+              "radiotherapy": "78 to 80 Gy in 39-40 fractions (or 60 Gy in 20 fx) to prostate + 46-50 Gy to pelvic lymph nodes",
+              "systemic_therapy": "Long-term ADT (24 to 36 months) with LHRH agonist/antagonist +/- abiraterone acetate for very high risk (STAMPEDE trial)"
+            }
+          },
+          "post_prostatectomy": {
+            "salvage_vs_adjuvant": "Early salvage at PSA >0.1-0.2 ng/mL is equivalent in event-free survival to routine adjuvant RT while sparing unnecessary toxicity (RADICALS-RT, RAVES, GETUG-AFU 17 meta-analysis ARTISTIC)",
+            "dose": "64.8 to 66 Gy in 32 to 36 fractions (1.8-2.0 Gy/fx) to prostatic fossa; 70-72 Gy for gross recurrent disease; 45-50.4 Gy to pelvic lymph nodes for high-risk features"
+          }
+        },
+        "gastrointestinal": {
+          "esophagus": {
+            "neoadjuvant_trimodality": "41.4 Gy in 23 fractions (1.8 Gy/fx) with concurrent weekly carboplatin (AUC 2) + paclitaxel (50 mg/m2) (CROSS trial standard)",
+            "definitive_chemoradiation": "50.0 to 50.4 Gy in 25 to 28 fractions (1.8-2.0 Gy/fx) with concurrent cisplatin + 5-FU or FOLFOX (RTOG 85-01 / PRODIGE 5)"
+          },
+          "rectum": {
+            "total_neoadjuvant_therapy": {
+              "short_course_rt": "25 Gy in 5 fractions (5.0 Gy/fx) over 1 week, followed by consolidation chemotherapy (CAPOX/FOLFOX x 4-6 cycles) prior to TME or Watch-and-Wait (RAPIDO / STELLAR trials)",
+              "long_course_chemoradiation": "50.0 to 50.4 Gy in 25 to 28 fractions (1.8-2.0 Gy/fx) with concurrent capecitabine (825 mg/m2 BID) or 5-FU, followed by consolidation chemotherapy (PRODIGE 23 / OPRA trial)"
+            }
+          },
+          "anal_canal": {
+            "definitive_chemoradiation_nigro": {
+              "primary_and_gross_nodes": "50.4 to 54.0 Gy in 28 to 30 fractions (1.8 Gy/fx) for T1-T2; 54.0 to 59.4 Gy in 30 to 33 fractions for T3-T4 / N+",
+              "elective_inguinal_pelvic_nodes": "45.0 Gy in 25 fractions (1.8 Gy/fx)",
+              "concurrent_chemotherapy": "Mitomycin-C (10-12 mg/m2 IV bolus days 1 and 29) + 5-FU (1000 mg/m2/day continuous infusion days 1-4 and 29-32) or capecitabine"
+            }
+          },
+          "pancreas": {
+            "borderline_or_locally_advanced": "50.4 Gy in 28 fractions (1.8 Gy/fx) with capecitabine or gemcitabine, or hypofractionated SBRT 33 to 40 Gy in 5 fractions"
+          }
+        },
+        "gynecological": {
+          "cervix_locally_advanced": {
+            "definitive_ebrt": "45.0 Gy in 25 fractions (1.8 Gy/fx) to whole pelvis +/- para-aortic nodes (45 Gy) with concurrent weekly cisplatin (40 mg/m2 IV x 5-6 cycles)",
+            "brachytherapy_boost": "Image-Guided Adaptive Brachytherapy (IGABT) HDR (e.g. 28 Gy in 4 fractions or 21 Gy in 3 fractions) delivering cumulative High-Risk CTV (HR-CTV) D90 >= 85 to 90 Gy EQD2 (alpha/beta = 10 Gy) (EMBRACE I & II protocols)",
+            "normal_tissue_constraints_eqd2": "Rectum D2cc <= 65-70 Gy EQD2, Bladder D2cc <= 80-85 Gy EQD2, Sigmoid D2cc <= 70-75 Gy EQD2 (alpha/beta = 3 Gy)"
+          },
+          "endometrium_postoperative": {
+            "vaginal_cuff_brachytherapy": "For high-intermediate risk (PORTEC-1/2): HDR 21 Gy in 3 fractions (7 Gy/fx at 0.5 cm depth) or 15 Gy in 3 fractions at cylinder surface",
+            "pelvic_ebrt": "45.0 to 50.4 Gy in 25 to 28 fractions (1.8 Gy/fx) for positive nodes, deep myometrial invasion with high grade/LVSI, cervical stromal invasion (PORTEC-3: Pelvic EBRT + concurrent/adjuvant cisplatin/carboplatin)"
+          }
+        },
+        "central_nervous_system": {
+          "glioblastoma": {
+            "standard_stupp_regimen": "60.0 Gy in 30 fractions (2.0 Gy/fx) with concurrent temozolomide (75 mg/m2 daily) followed by 6 cycles maintenance temozolomide (150-200 mg/m2 days 1-5 q28d) +/- Tumor Treating Fields (TTF)",
+            "elderly_or_poor_performance": "Hypofractionated RT 40.0 Gy in 15 fractions (2.67 Gy/fx) with concurrent and adjuvant temozolomide (Perry et al. NEJM trial) or 34 Gy in 10 fractions (Roa et al.)"
+          },
+          "low_grade_glioma": {
+            "high_risk_lgg": "54.0 Gy in 30 fractions (1.8 Gy/fx) followed by adjuvant PCV chemotherapy (RTOG 9802 showing 5.5 year OS benefit)"
+          },
+          "brain_metastases": {
+            "stereotactic_radiosurgery_srs": [
+              "Single fraction (RTOG 9005): <=20 mm: 24 Gy; 21-30 mm: 18 Gy; 31-40 mm: 15 Gy",
+              "Fractionated stereotactic RT (FSRT): 27-30 Gy in 3 fractions (9-10 Gy/fx) or 30 Gy in 5 fractions (6 Gy/fx) for large metastases (>2-3 cm) or postoperative resection cavity to reduce radionecrosis"
+            ],
+            "whole_brain_rt": "30.0 Gy in 10 fractions (3.0 Gy/fx) or 20 Gy in 5 fractions (4.0 Gy/fx) with hippocampal avoidance (HA-WBRT: NRG CC001) + memantine for preserved neurocognition"
+          }
+        }
+      }
+    },
+    {
+      "source_id": "TEXTBOOK-GUNDERSON-TEPPER-5TH",
+      "title": "Gunderson & Tepper's Clinical Radiation Oncology",
+      "organization": "Elsevier",
+      "source_type": "textbook",
+      "edition_or_version": "5th Edition (2021)",
+      "publication_date": "2021-02-15",
+      "doi_or_url": "https://www.elsevier.com/books/clinical-radiation-oncology/gunderson/978-0-323-67298-6",
+      "disease_site": "General",
+      "specialties": [
+        "radiation_oncology",
+        "multidisciplinary_oncology"
+      ],
+      "topics": [
+        "target_volume_definitions",
+        "chemotherapy_radiation_interactions",
+        "dose_fractionation_principles",
+        "normal_tissue_tolerances",
+        "organ_preservation"
+      ],
+      "target_volume_specifications": {
+        "gtv": "Gross Tumor Volume: Gross demonstrable extent and location of malignant growth (clinical, endoscopic, or radiological).",
+        "ctv": "Clinical Target Volume: Tissue volume that contains a GTV and/or subclinical microscopic malignant disease (margins typically 5-10 mm anatomically constrained).",
+        "itv": "Internal Target Volume: CTV plus internal margin accounting for physiologic motion (respiration, bladder/rectal filling).",
+        "ptv": "Planning Target Volume: Geometric concept accounting for net effect of all setup uncertainties and organ variations (typically 3-5 mm around CTV/ITV depending on IGRT frequency).",
+        "oar": "Organ At Risk: Normal tissue whose radiation sensitivity significantly influences treatment planning and/or prescribed dose.",
+        "prv": "Planning Organ at Risk Volume: Margin added to OAR to account for setup and motion variations."
+      },
+      "drug_radiation_interaction_mechanisms": {
+        "spatial_cooperation": "Chemotherapy treats distant micrometastases outside the radiation portal, while radiation treats primary local-regional disease.",
+        "toxicity_independence": "Different organ toxicity profiles allow full therapeutic doses of both modalities without synergistic normal tissue destruction.",
+        "radiosensitization": [
+          {
+            "agent": "Cisplatin",
+            "mechanism": "Inhibits sublethal DNA damage repair, stabilizes radiation-induced DNA double-strand breaks, synchronizes cells into radiosensitive G2/M phase, active in hypoxic cells."
+          },
+          {
+            "agent": "5-Fluorouracil (5-FU) / Capecitabine",
+            "mechanism": "Thymidylate synthase inhibition depletes dTMP, producing severe DNA repair failure and radiosensitization during S phase."
+          },
+          {
+            "agent": "Temozolomide",
+            "mechanism": "Methylates guanine at O6 position; concurrent radiation produces single and double strand breaks that trigger futile mismatch repair and apoptotic death (enhanced in MGMT promoter methylated tumors)."
+          },
+          {
+            "agent": "Paclitaxel",
+            "mechanism": "Stabilizes microtubules, arresting proliferating tumor cells in the highly radiosensitive G2/M phase of the cell cycle."
+          }
+        ]
+      }
+    },
+    {
+      "source_id": "TEXTBOOK-ESSENTIALS-2026",
+      "title": "Essentials of Clinical Radiation Oncology",
+      "organization": "Demos Medical / Springer Publishing",
+      "source_type": "textbook",
+      "edition_or_version": "2nd/2026 Edition",
+      "publication_date": "2026-01-01",
+      "doi_or_url": "https://www.springerpub.com/essentials-of-clinical-radiation-oncology",
+      "disease_site": "General",
+      "specialties": [
+        "radiation_oncology",
+        "resident_education",
+        "clinical_practice"
+      ],
+      "topics": [
+        "rapid_reference_dose_fractionation",
+        "definitive_vs_adjuvant_prescriptions",
+        "elective_nodal_irradiation_standards",
+        "sbrt_fractionation_matrix"
+      ],
+      "canonical_target_prescriptions_summary": [
+        {
+          "site": "Head & Neck",
+          "clinical_scenario": "Definitive locally advanced HNSCC",
+          "prescribed_dose": "70 Gy / 35 fx (high risk GTV), 59.5-63 Gy / 35 fx (intermediate risk), 54-56 Gy / 35 fx (elective low risk nodes)",
+          "concurrent_agent": "Cisplatin 100 mg/m2 q3w x 3 or weekly 40 mg/m2"
+        },
+        {
+          "site": "Head & Neck",
+          "clinical_scenario": "Postoperative high-risk (ECE+ or margin+)",
+          "prescribed_dose": "66 Gy / 33 fx to high-risk bed, 54-56 Gy / 33 fx to elective neck",
+          "concurrent_agent": "Concurrent cisplatin 100 mg/m2 q3w (RTOG 9501 / EORTC 22931)"
+        },
+        {
+          "site": "Lung",
+          "clinical_scenario": "Definitive peripheral stage I NSCLC",
+          "prescribed_dose": "54 Gy / 3 fx or 50 Gy / 5 fx (SBRT)",
+          "concurrent_agent": "None"
+        },
+        {
+          "site": "Lung",
+          "clinical_scenario": "Definitive stage III inoperable NSCLC",
+          "prescribed_dose": "60-66 Gy in 30-33 fx (2.0 Gy/fx)",
+          "concurrent_agent": "Concurrent platinum doublet + consolidation durvalumab (PACIFIC)"
+        },
+        {
+          "site": "Breast",
+          "clinical_scenario": "Adjuvant whole breast post-BCT",
+          "prescribed_dose": "40.05 Gy / 15 fx or 26 Gy / 5 fx (FAST-Forward) +/- boost 10-16 Gy",
+          "concurrent_agent": "Sequential endocrine therapy or chemotherapy (concurrent RT + chemo avoided)"
+        },
+        {
+          "site": "Breast",
+          "clinical_scenario": "Post-mastectomy radiation therapy (PMRT)",
+          "prescribed_dose": "50 Gy / 25 fx or 40.05 Gy / 15 fx to chest wall and supraclavicular/internal mammary nodes",
+          "concurrent_agent": "None concurrent"
+        },
+        {
+          "site": "Prostate",
+          "clinical_scenario": "Definitive intermediate/high risk intact prostate",
+          "prescribed_dose": "60 Gy / 20 fx or 78 Gy / 39 fx +/- pelvic nodes 46-50 Gy",
+          "concurrent_agent": "Short-term (4-6 mo) or long-term (24-36 mo) ADT"
+        },
+        {
+          "site": "Prostate",
+          "clinical_scenario": "Post-prostatectomy salvage (PSA recurrence >0.1-0.2)",
+          "prescribed_dose": "64.8-66 Gy in 32-36 fx to prostatic fossa",
+          "concurrent_agent": "+/- short-term ADT (6 months) for high-risk features"
+        },
+        {
+          "site": "GI - Rectum",
+          "clinical_scenario": "Locally advanced rectal cancer (cT3-4 or N+)",
+          "prescribed_dose": "Short course (25 Gy / 5 fx) or Long course (50.4 Gy / 28 fx) with TNT consolidation",
+          "concurrent_agent": "Capecitabine (with long course) or systemic consolidation (CAPOX/FOLFOX)"
+        },
+        {
+          "site": "GI - Anal Canal",
+          "clinical_scenario": "Definitive anal canal squamous cell carcinoma",
+          "prescribed_dose": "50.4-54 Gy / 28-30 fx (primary) + 45 Gy / 25 fx (elective nodes)",
+          "concurrent_agent": "Mitomycin-C + 5-FU/capecitabine (Nigro regimen)"
+        },
+        {
+          "site": "GYN - Cervix",
+          "clinical_scenario": "Definitive locally advanced cervical cancer (IB3-IVA)",
+          "prescribed_dose": "45 Gy / 25 fx pelvic EBRT + IGABT HDR boost to HR-CTV total EQD2 >= 85-90 Gy",
+          "concurrent_agent": "Weekly cisplatin 40 mg/m2 IV"
+        },
+        {
+          "site": "CNS - Glioblastoma",
+          "clinical_scenario": "Definitive/adjuvant glioblastoma, IDH-wildtype",
+          "prescribed_dose": "60 Gy / 30 fx (Stupp) or 40 Gy / 15 fx (elderly/poor PS)",
+          "concurrent_agent": "Daily temozolomide 75 mg/m2 during RT"
+        },
+        {
+          "site": "CNS - Brain Metastases",
+          "clinical_scenario": "Oligometastatic brain metastases (1-4 lesions, <=3 cm)",
+          "prescribed_dose": "SRS 18-24 Gy single fraction or FSRT 27-30 Gy / 3 fx or 30 Gy / 5 fx",
+          "concurrent_agent": "None concurrent with RT"
+        }
+      ]
+    }
+  ]
+}

@@ -171,13 +171,20 @@ async def generate_agent_assessment(
         f"CLINICAL PHILOSOPHY: {role_philosophy}\n"
         f"COMMUNICATION STYLE & TONE: {role_style}\n"
         f"RISK APPETITE: {role_risk}\n\n"
+        f"{evidence_instruction}\n"
         "CORE MDT BEHAVIOR RULES:\n"
-        "1. SPEAK IN YOUR UNIQUE ROLE PERSONA: Do NOT give a generic textbook answer. Argue aggressively and specifically from your unique clinical philosophy, specialty focus, and risk appetite.\n"
+        "1. SPEAK IN YOUR UNIQUE ROLE PERSONA: Do not use a generic response. Argue aggressively and specifically from your unique clinical philosophy, specialty focus, and risk appetite.\n"
         "2. NO ESSAYS OR AUDIT CHECKLISTS: Speak concisely like an experienced senior consultant at the microphone in an MDT case conference (2-3 direct sentences for conclusion, 2-3 sentences for summary).\n"
-        "3. NEVER WITHHOLD OPINION / MANDATORY IF-CLAUSES: Never retreat into 'insufficient_information'. If variables (ECOG, HPV/p16, renal function, histology grade) are pending or missing, give clear conditional branching recommendations:\n"
+        "3. NEVER WITHHOLD OPINION / MANDATORY IF-CLAUSES: Never retreat into a generic insufficient_information response. Do not use a generic insufficient_information response as a substitute for analysing relevant supplied facts. If variables (ECOG, HPV/p16, renal function, histology grade) are pending or missing, give clear conditional branching recommendations. The condition must not be presented as true or met:\n"
         "   Example: 'If the patient is ECOG 0-1 with confirmed p16-positive status, I recommend definitive concurrent chemoradiation (70 Gy with high-dose cisplatin) based on [source_id: NCCN-HN-2026] and foundational dose-fractionation principles from [source_id: PEREZ-BRADY-2026]; however, if ECOG >= 2 or renal clearance is impaired per [source_id: HARRISONS-MED-21ST], I favor definitive RT alone.'\n"
-        "4. CITE BOTH STANDARD TEXTBOOKS & GUIDELINES: Do not rely solely on NCCN guidelines. Ground your foundational principles in standard reference textbooks (e.g. Perez & Brady, Gunderson & Tepper, Harrison's, Hall's Radiobiology) alongside specific clinical guidelines or trials using their exact [source_id: <ID>] tags."
+        "4. CITE BOTH STANDARD TEXTBOOKS & GUIDELINES: Do not rely solely on NCCN guidelines. Ground your foundational principles in standard reference textbooks (e.g. Perez & Brady, Gunderson & Tepper, Harrison's, Hall's Radiobiology) alongside specific clinical guidelines or trials using their exact [source_id: <ID>] tags.\n"
+        "5. ROLE-SPECIFIC MANDATE FOR RO-01 (Guideline-focused Radiation Oncologist):\n"
+        "   - You trust ONLY formal published guidelines from recognized professional radiation oncology societies: American Society for Radiation Oncology (ASTRO), European Society for Radiotherapy and Oncology (ESTRO), Japanese Society for Radiation Oncology (JASTRO), Association of Radiation Oncologists of India (AROI), Federation of Asian Organizations for Radiation Oncology (FARO), American Brachytherapy Society (ABS), and NCCN.\n"
+        "   - Even if an option is proposed by individual trials, papers, or textbooks, you REFUSE to endorse it unless an established society guideline explicitly recommends it.\n"
+        "   - Systematically compare and analyze every relevant published society guideline addressing this patient case and stage.\n"
+        "   - Conclude with your definitive, authoritative final decision synthesizing the consensus across all relevant society guidelines."
     )
+
 
     prompt = (
         f"MDT Role: {role_name} ({profile.get('agent_id', '')})\n"
