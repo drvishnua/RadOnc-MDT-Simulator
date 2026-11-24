@@ -193,9 +193,19 @@ def _extract_node_details(text: str, primary_laterality: str = "unspecified") ->
             "nodes are normal", "node is normal", "nodes normal", "normal nodes",
             "no regional lymph node", "no nodal", "no node", "without lymphadenopathy",
             "without nodal", "free of nodal", "no node notes", "not reported",
-            "not assessed", "no node data"
+            "not assessed", "no node data", "node negative on pet", "pet-negative",
+            "pet negative", "pet/ct negative", "pet negative lymph nodes"
         ]
         if any(neg in lower_text for neg in negative_node_patterns):
+            return node_info
+
+        # Flexible proximity negation regex (e.g. "no fdg uptake in mediastinal, hilar lymph nodes", "without pelvic or para-aortic nodes")
+        neg_prox_match = re.search(
+            r"\b(?:no|without|negative\s+for|free\s+of|no\s+evidence\s+of|no\s+fdg\s+uptake\s+in)\s+[^.;\n]{1,80}?\b(?:lymph\s*nodes?|nodes?|adenopathy|lymphadenopathy)\b",
+            lower_text,
+            re.IGNORECASE,
+        )
+        if neg_prox_match:
             return node_info
 
         node_info["involved"] = True
@@ -230,7 +240,8 @@ def _extract_node_details(text: str, primary_laterality: str = "unspecified") ->
 
 
 def _extract_metastasis_details(text: str) -> dict[str, Any]:
-    """Check for distant metastatic disease, respecting explicit negative phrases."""
+    """Check for distant metastatic disease, respecting explicit negative phrases and split proximity negations."""
+    lower_text = text.lower()
     # Check negative/absence phrases first
     negative_patterns = [
         "no distant metastas",
@@ -241,12 +252,30 @@ def _extract_metastasis_details(text: str) -> dict[str, Any]:
         "negative for distant",
         "without distant",
         "no evidence of distant",
+        "without distant metastases",
+        "without distant metastasis",
+        "free of metastases",
+        "free of distant",
+        "no distant disease",
     ]
     for neg in negative_patterns:
-        if neg in text:
+        if neg in lower_text:
             return {"has_distant_mets": False}
 
-    has_mets = any(k in text for k in ["distant metastasis", "distant metastases", "metastatic disease", "pulmonary metastases", "hepatic metastases", "bone metastases"])
+    # Proximity negation regex (e.g. "without para-aortic or distant metastases", "no evidence of visceral or distant metastases")
+    neg_prox_match = re.search(
+        r"\b(?:without|no|negative\s+for|free\s+of|no\s+evidence\s+of)\s+[^.;\n]{1,80}?\b(?:distant\s+metastas|metastas)",
+        lower_text,
+        re.IGNORECASE,
+    )
+    if neg_prox_match:
+        return {"has_distant_mets": False}
+
+    has_mets = any(k in lower_text for k in [
+        "distant metastasis", "distant metastases", "metastatic disease",
+        "pulmonary metastases", "hepatic metastases", "bone metastases",
+        "brain metastases", "peritoneal carcinomatosis"
+    ])
     return {"has_distant_mets": has_mets}
 
 

@@ -377,15 +377,45 @@ class EvidenceRetrievalEngine:
                 elif any(k in lower_case_site for k in ["larynx", "glottic", "vocal cord"]):
                     subsite_exclusions = ["tonsil", "oropharynx", "nasopharynx", "lung", "breast"]
 
+                # Primary disease site keywords to enforce site specificity
+                primary_site_clean = clean_site or primary_site
+                is_head_neck_case = any(k in primary_site_clean for k in ["tonsil", "oropharynx", "larynx", "pharynx", "oral", "hypopharynx", "tongue", "nasopharynx", "head"])
+                is_cervix_case = any(k in primary_site_clean for k in ["cervix", "cervical"])
+                is_lung_case = any(k in primary_site_clean for k in ["lung", "nsclc", "sclc", "bronch"])
+                is_rectum_case = any(k in primary_site_clean for k in ["rectum", "rectal", "colon", "colorectal"])
+                is_prostate_case = any(k in primary_site_clean for k in ["prostate"])
+                is_breast_case = any(k in primary_site_clean for k in ["breast"])
+
                 for entry in entries:
                     if any(p.source_id == entry.source_id for p in passages):
                         continue
                     topics_str = " ".join(t.lower().replace("_", " ") for t in (entry.topics or []))
                     entry_text = f"{entry.title} {topics_str} {entry.source_id}".lower()
 
+                    # Strictly prevent cross-disease-site guideline bleeding (e.g. HN guidelines in Cervix or Lung case)
+                    if entry.source_type != "textbook":
+                        is_hn_entry = any(k in entry_text or k in entry.source_id.lower() for k in ["-hn-", "head and neck", "oropharyngeal", "glottic", "larynx", "nasopharynx"])
+                        is_cervix_entry = any(k in entry_text or k in entry.source_id.lower() for k in ["cervix", "cervical", "gog-", "outback", "figo-"])
+                        is_lung_entry = any(k in entry_text or k in entry.source_id.lower() for k in ["-nscl", "nsclc", "lung", "sclc", "meso"])
+                        is_rectum_entry = any(k in entry_text or k in entry.source_id.lower() for k in ["rectal", "rectum", "colorectal", "colon"])
+                        is_prostate_entry = any(k in entry_text or k in entry.source_id.lower() for k in ["prostate"])
+                        is_breast_entry = any(k in entry_text or k in entry.source_id.lower() for k in ["breast"])
+
+                        if is_cervix_case and not is_cervix_entry and not any(k in entry_text for k in ["cervix", "cervical", "gynecologic"]):
+                            if is_hn_entry or is_lung_entry or is_rectum_entry or is_prostate_entry or is_breast_entry:
+                                continue
+                        elif is_lung_case and not is_lung_entry and not any(k in entry_text for k in ["lung", "thoracic", "pulmonary"]):
+                            if is_hn_entry or is_cervix_entry or is_rectum_entry or is_prostate_entry or is_breast_entry:
+                                continue
+                        elif is_rectum_case and not is_rectum_entry and not any(k in entry_text for k in ["rectal", "rectum", "colorectal"]):
+                            if is_hn_entry or is_cervix_entry or is_lung_entry or is_prostate_entry or is_breast_entry:
+                                continue
+                        elif is_head_neck_case and not is_hn_entry and not any(k in entry_text for k in ["head and neck", "oropharynx", "larynx", "pharynx", "oral", "tongue"]):
+                            if is_cervix_entry or is_lung_entry or is_rectum_entry or is_prostate_entry or is_breast_entry:
+                                continue
+
                     # Exclude passages from mismatched anatomical subsites or disease sites
                     if any(ex in entry_text or ex in entry.source_id.lower() for ex in subsite_exclusions):
-                        # Allow general textbooks or head and neck broad guidelines only if they don't explicitly focus on excluded site
                         if entry.source_type != "textbook" and any(ex in entry.title.lower() for ex in subsite_exclusions):
                             continue
                     
