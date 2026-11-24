@@ -53,13 +53,18 @@ def derive_or_verify_staging(case: SyntheticCase, role_id: str = "") -> dict[str
             applicable_system = "AJCC 8th Edition (Conventional / p16-Negative Oropharynx)"
 
     # 2. Derive Stage Components
-    # Only derive N category if nodal status is actually addressed/examined in the text
-    has_node_examination = any(
-        k in combined_text
-        for k in [
-            "node", "lymph", "jugular", "cervical adenopathy", "adenopathy",
-            "level 1", "level 2", "level 3", "level 4", "level 5", "neck"
-        ]
+    # Only derive N category if nodal status is actually examined/reported (and not merely stating missing/unreported notes)
+    unreported_node_tokens = ["no node notes", "node notes available", "not reported", "not assessed", "no node data", "node status unknown"]
+    has_unreported_node_statement = any(u in combined_text for u in unreported_node_tokens)
+    has_node_examination = (
+        any(
+            k in combined_text
+            for k in [
+                "node", "lymph", "jugular", "cervical adenopathy", "adenopathy",
+                "level 1", "level 2", "level 3", "level 4", "level 5", "neck"
+            ]
+        )
+        and not (has_unreported_node_statement and not node_details["involved"])
     )
     derived_t = _derive_t_stage(is_head_neck, tumor_size_cm, combined_text)
     derived_n = _derive_n_stage(is_head_neck, hpv_p16_status, node_details, combined_text) if has_node_examination else None
@@ -180,8 +185,17 @@ def _extract_node_details(text: str, primary_laterality: str = "unspecified") ->
     }
     lower_text = text.lower()
     if any(k in lower_text for k in ["node", "lymph", "jugular", "cervical adenopathy", "adenopathy", "level 1", "level 2", "level 3", "level 4", "level 5"]):
-        # Check if negative/absence phrase
-        if any(neg in lower_text for neg in ["no lymph node", "no node", "no cervical adenopathy", "no pathologically enlarged", "nodes are normal", "no adenopathy"]):
+        negative_node_patterns = [
+            "no lymph node", "no suspicious lymph node", "no suspicious node",
+            "no enlarged node", "no pathologically enlarged", "no cervical adenopathy",
+            "no cervical lymphadenopathy", "no lymphadenopathy", "no adenopathy",
+            "nodes clinically negative", "node negative", "nodes negative",
+            "nodes are normal", "node is normal", "nodes normal", "normal nodes",
+            "no regional lymph node", "no nodal", "no node", "without lymphadenopathy",
+            "without nodal", "free of nodal", "no node notes", "not reported",
+            "not assessed", "no node data"
+        ]
+        if any(neg in lower_text for neg in negative_node_patterns):
             return node_info
 
         node_info["involved"] = True
