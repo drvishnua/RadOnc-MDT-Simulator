@@ -40,12 +40,18 @@ def derive_or_verify_staging(case: SyntheticCase, role_id: str = "") -> dict[str
     hpv_p16_status = _extract_hpv_p16_status(combined_text)
 
     # 1. Determine Appropriate Staging System
-    is_head_neck = any(k in site for k in ["tonsil", "oropharynx", "tongue", "larynx", "pharynx", "oral", "hypopharynx"])
+    is_head_neck = any(k in site for k in ["tonsil", "oropharynx", "tongue", "larynx", "pharynx", "oral", "hypopharynx", "nasopharynx"])
     is_cervix = "cervix" in site or "cervical" in site
+    is_lung = any(k in site for k in ["lung", "nsclc", "sclc", "bronch"])
+    is_rectum = any(k in site for k in ["rectum", "rectal", "colon", "colorectal"])
 
     applicable_system = "AJCC 8th Edition / UICC 8th Edition"
     if is_cervix:
         applicable_system = "FIGO 2018 / AJCC 9th Edition"
+    elif is_lung:
+        applicable_system = "AJCC 8th Edition (Lung / Thoracic)"
+    elif is_rectum:
+        applicable_system = "AJCC 8th Edition (Colorectal)"
     elif is_head_neck and ("oropharynx" in site or "tonsil" in site):
         if hpv_p16_status == "positive":
             applicable_system = "AJCC 8th Edition (HPV/p16-Positive Oropharynx)"
@@ -61,13 +67,15 @@ def derive_or_verify_staging(case: SyntheticCase, role_id: str = "") -> dict[str
             k in combined_text
             for k in [
                 "node", "lymph", "jugular", "cervical adenopathy", "adenopathy",
-                "level 1", "level 2", "level 3", "level 4", "level 5", "neck"
+                "level 1", "level 2", "level 3", "level 4", "level 5", "neck",
+                "mediastin", "hilar", "pelvic", "mesorectal", "inguinal", "para-aortic",
+                "perirectal", "retroperitoneal", "pet-negative", "pet negative"
             ]
         )
         and not (has_unreported_node_statement and not node_details["involved"])
     )
-    derived_t = _derive_t_stage(is_head_neck, tumor_size_cm, combined_text)
-    derived_n = _derive_n_stage(is_head_neck, hpv_p16_status, node_details, combined_text) if has_node_examination else None
+    derived_t = _derive_t_stage(is_head_neck, tumor_size_cm, combined_text, is_cervix=is_cervix, is_lung=is_lung, is_rectum=is_rectum)
+    derived_n = _derive_n_stage(is_head_neck, hpv_p16_status, node_details, combined_text, is_cervix=is_cervix, is_lung=is_lung, is_rectum=is_rectum) if has_node_examination else None
     
     # Only derive M category if metastatic workup or explicit negative/positive finding is documented
     has_mets_examination = any(
@@ -75,11 +83,11 @@ def derive_or_verify_staging(case: SyntheticCase, role_id: str = "") -> dict[str
         for k in [
             "distant metastasis", "distant metastases", "metastatic", "chest xray",
             "chest x-ray", "ct chest", "pet", "pet/ct", "pet-ct", "bone scan",
-            "m0", "m1", "non-metastatic"
+            "m0", "m1", "non-metastatic", "without distant"
         ]
     )
     derived_m = ("M1" if metastasis_details.get("has_distant_mets") else "M0") if has_mets_examination else None
-    derived_stage_group = _derive_stage_group(applicable_system, derived_t, derived_n, derived_m or "M0", hpv_p16_status) if (derived_t and derived_n) else None
+    derived_stage_group = _derive_stage_group(applicable_system, derived_t, derived_n, derived_m or "M0", hpv_p16_status, is_cervix=is_cervix, is_lung=is_lung, is_rectum=is_rectum) if (derived_t and derived_n) else None
 
     # 3. Verification & Correlation with Provided Structured Fields
     provided_c_t = getattr(case, "clinical_t_stage", None)
@@ -289,31 +297,87 @@ def _extract_hpv_p16_status(text: str) -> str:
     return "unknown"
 
 
-def _derive_t_stage(is_head_neck: bool, size_cm: float | None, text: str) -> str | None:
-    """Derive T category based on AJCC 8th Edition criteria for head and neck.
+def _derive_t_stage(
+    is_head_neck: bool,
+    size_cm: float | None,
+    text: str,
+    is_cervix: bool = False,
+    is_lung: bool = False,
+    is_rectum: bool = False,
+) -> str | None:
+    """Derive T category based on AJCC 8th/9th and FIGO 2018 criteria across sites."""
+    lower_text = text.lower()
 
-    Oropharynx (AJCC 8th Edition):
-    - T1: Tumour ≤2 cm in greatest dimension
-    - T2: Tumour >2 cm and ≤4 cm in greatest dimension
-    - T3: Tumour >4 cm in greatest dimension OR extension to lingual surface of epiglottis
-    - T4a: Moderate advanced – larynx, extrinsic tongue muscles, medial pterygoid, hard palate, mandible
-    - T4b: Very advanced – lateral pterygoid, pterygoid plates, lateral nasopharynx, skull base, encases carotid
+    # --- LUNG (AJCC 8th) ---
+    if is_lung:
+        if any(k in lower_text for k in ["invades mediastinum", "heart", "great vessels", "trachea", "recurrent laryngeal nerve", "esophagus", "vertebral body", "carina"]):
+            return "T4"
+        if any(k in lower_text for k in ["chest wall", "parietal pleura", "phrenic nerve", "parietal pericardium"]):
+            return "T3"
+        if size_cm is not None:
+            if size_cm > 7.0:
+                return "T4"
+            elif size_cm > 5.0:
+                return "T3"
+            elif size_cm > 4.0:
+                return "T2b"
+            elif size_cm > 3.0:
+                return "T2a"
+            elif size_cm > 2.0:
+                return "T1c"
+            elif size_cm > 1.0:
+                return "T1b"
+            else:
+                return "T1a"
+        if any(k in lower_text for k in ["visceral pleura", "main bronchus"]):
+            return "T2a"
+        return "T1"
 
-    Important: For oropharynx, soft palate extension and crossing midline alone do NOT
-    upstage from T1 to T2 — only the greatest dimension does, unless medial pterygoid or
-    hard palate are involved. However, extension into the soft palate (palatine mucosa)
-    is WITHIN the oropharynx and size remains the primary T determinant.
-    Extension to the base of tongue (lingual surface) upstages to T3 (epiglottis extension).
-    """
-    # T4 features (regardless of size)
-    if any(k in text for k in [
+    # --- CERVIX (FIGO 2018 / AJCC 9th) ---
+    if is_cervix:
+        if any(k in lower_text for k in ["bladder mucosa", "rectal mucosa", "bullous edema of bladder"]):
+            return "T4"
+        if any(k in lower_text for k in ["pelvic sidewall", "pelvic wall", "hydronephrosis", "non-functioning kidney", "sidewall extension"]):
+            return "T3b"
+        if any(k in lower_text for k in ["lower third of vagina", "lower 1/3 vagina", "lower third vagina"]):
+            return "T3a"
+        if any(k in lower_text for k in ["parametrial invasion", "parametrial extension", "parametrial involvement", "parametria"]):
+            return "T2b"
+        if any(k in lower_text for k in ["upper two thirds of vagina", "upper 2/3 vagina", "vaginal involvement"]):
+            return "T2a"
+        if size_cm is not None:
+            if size_cm > 4.0:
+                return "T1b3"
+            elif size_cm > 2.0:
+                return "T1b2"
+            else:
+                return "T1b1"
+        return "T1b"
+
+    # --- RECTUM (AJCC 8th) ---
+    if is_rectum:
+        if any(k in lower_text for k in ["invades adjacent organs", "prostate", "bladder", "vagina", "uterus", "sacrum"]):
+            return "T4b"
+        if any(k in lower_text for k in ["perforates visceral peritoneum", "peritoneal reflection"]):
+            return "T4a"
+        if any(k in lower_text for k in ["mesorectal fat", "mesorectum", "perirectal fat", "pericolic fat", "t3c", "t3b", "t3a", "t3d", "t3"]):
+            return "T3"
+        if any(k in lower_text for k in ["muscularis propria", "t2"]):
+            return "T2"
+        if any(k in lower_text for k in ["submucosa", "t1"]):
+            return "T1"
+        if size_cm is not None:
+            return "T3" if size_cm > 3.0 else "T2"
+        return "T3"
+
+    # --- HEAD & NECK / OROPHARYNX (AJCC 8th) ---
+    if any(k in lower_text for k in [
         "invades larynx", "bone invasion", "pterygoid muscle", "medial pterygoid",
         "lateral pterygoid", "pterygoid plate", "hard palate invasion", "mandible",
         "nasopharynx", "skull base", "carotid", "extrinsic tongue muscle"
     ]):
         return "T4"
-    # T3 features: >4 cm or lingual surface of epiglottis extension
-    if any(k in text for k in ["lingual surface of epiglottis", "epiglottis"]):
+    if any(k in lower_text for k in ["lingual surface of epiglottis", "epiglottis"]):
         return "T3"
     if size_cm is not None:
         if size_cm > 4.0:
@@ -321,27 +385,57 @@ def _derive_t_stage(is_head_neck: bool, size_cm: float | None, text: str) -> str
         elif size_cm > 2.0:
             return "T2"
         else:
-            # Exactly ≤2 cm: T1 by AJCC 8th strict size criterion
-            # Exception: if crossing midline is documented AND size is borderline 2.0 cm,
-            # the greatest clinical dimension uncertainty warrants recording as T1 with a
-            # discrepancy note — the staging engine marks this borderline condition.
             return "T1"
     return None
 
 
-def _derive_n_stage(is_head_neck: bool, hpv_p16: str, node_details: dict[str, Any], text: str) -> str | None:
-    """Derive clinical N category according to AJCC 8th Edition rules."""
+def _derive_n_stage(
+    is_head_neck: bool,
+    hpv_p16: str,
+    node_details: dict[str, Any],
+    text: str,
+    is_cervix: bool = False,
+    is_lung: bool = False,
+    is_rectum: bool = False,
+) -> str | None:
+    """Derive clinical N category according to site-specific staging rules."""
     if not node_details["involved"]:
         return "N0"
 
+    lower_text = text.lower()
     size = node_details.get("size_cm") or 2.5
     lat = node_details.get("laterality", "ipsilateral")
 
+    # --- LUNG (AJCC 8th) ---
+    if is_lung:
+        if any(k in lower_text for k in ["contralateral mediastin", "supraclavicular", "scalene"]):
+            return "N3"
+        if any(k in lower_text for k in ["ipsilateral mediastin", "subcarinal", "carinal"]):
+            return "N2"
+        if any(k in lower_text for k in ["hilar", "peribronchial", "intrapulmonary"]):
+            return "N1"
+        return "N1"
+
+    # --- CERVIX (FIGO 2018 / AJCC 9th) ---
+    if is_cervix:
+        if any(k in lower_text for k in ["para-aortic", "paraaortic", "aortic"]):
+            return "N2"  # FIGO IIIC2
+        return "N1"  # Pelvic lymph nodes -> FIGO IIIC1
+
+    # --- RECTUM (AJCC 8th) ---
+    if is_rectum:
+        node_count = node_details.get("count") or 1
+        if any(k in lower_text for k in ["4 nodes", "5 nodes", "6 nodes", "multiple nodes", "n2"]):
+            return "N2"
+        if node_count >= 4:
+            return "N2"
+        elif node_count >= 2 or "3 mesorectal nodes" in lower_text or "2-3 nodes" in lower_text:
+            return "N1b"
+        else:
+            return "N1a"
+
+    # --- HEAD & NECK (AJCC 8th) ---
     if hpv_p16 == "positive":
-        # AJCC 8th HPV+ cN definitions:
-        # cN1: One or more ipsilateral nodes <= 6 cm
-        # cN2: Contralateral or bilateral nodes <= 6 cm
-        # cN3: Node(s) > 6 cm
         if size > 6.0:
             return "N3"
         elif lat in ["contralateral", "bilateral"]:
@@ -349,13 +443,7 @@ def _derive_n_stage(is_head_neck: bool, hpv_p16: str, node_details: dict[str, An
         else:
             return "N1"
     else:
-        # Conventional / HPV- cN definitions:
-        # cN1: Single ipsilateral node <= 3 cm, ENE(-)
-        # cN2a: Single ipsilateral node > 3 cm and <= 6 cm
-        # cN2b: Multiple ipsilateral nodes <= 6 cm
-        # cN2c: Bilateral or contralateral nodes <= 6 cm
-        # cN3: Node > 6 cm or clinical ENE(+)
-        if size > 6.0 or "extranodal" in text or "ene" in text:
+        if size > 6.0 or "extranodal" in lower_text or "ene" in lower_text:
             return "N3"
         elif lat in ["contralateral", "bilateral"]:
             return "N2c"
@@ -365,18 +453,93 @@ def _derive_n_stage(is_head_neck: bool, hpv_p16: str, node_details: dict[str, An
             return "N1"
 
 
-def _derive_stage_group(system: str, t: str | None, n: str | None, m: str, hpv_p16: str) -> str | None:
-    """Compute overall stage grouping."""
+def _derive_stage_group(
+    system: str,
+    t: str | None,
+    n: str | None,
+    m: str,
+    hpv_p16: str,
+    is_cervix: bool = False,
+    is_lung: bool = False,
+    is_rectum: bool = False,
+) -> str | None:
+    """Compute overall stage grouping across major anatomical sites."""
     if m == "M1":
         return "Stage IV"
     if not t or not n:
         return None
 
+    # --- LUNG (AJCC 8th) ---
+    if is_lung:
+        if n == "N0":
+            if t in ["T1a", "T1b", "T1c", "T1"]:
+                return "Stage IA"
+            elif t == "T2a":
+                return "Stage IB"
+            elif t == "T2b":
+                return "Stage IIA"
+            elif t == "T3":
+                return "Stage IIB"
+            elif t == "T4":
+                return "Stage IIIA"
+        elif n == "N1":
+            if t in ["T1a", "T1b", "T1c", "T1", "T2a", "T2b", "T2"]:
+                return "Stage IIB"
+            elif t in ["T3", "T4"]:
+                return "Stage IIIA"
+        elif n == "N2":
+            if t in ["T1a", "T1b", "T1c", "T1", "T2a", "T2b", "T2"]:
+                return "Stage IIIA"
+            elif t in ["T3", "T4"]:
+                return "Stage IIIB"
+        elif n == "N3":
+            return "Stage IIIC" if t in ["T3", "T4"] else "Stage IIIB"
+
+    # --- CERVIX (FIGO 2018 / AJCC 9th) ---
+    if is_cervix:
+        if n == "N2":
+            return "Stage IIIC2"
+        elif n in ["N1", "N1a", "N1b"]:
+            return "Stage IIIC1"
+        # N0 Cervix
+        if t == "T4":
+            return "Stage IVA"
+        elif t in ["T3b", "T3"]:
+            return "Stage IIIB"
+        elif t == "T3a":
+            return "Stage IIIA"
+        elif t == "T2b":
+            return "Stage IIB"
+        elif t == "T2a":
+            return "Stage IIA"
+        elif t == "T1b3":
+            return "Stage IB3"
+        elif t == "T1b2":
+            return "Stage IB2"
+        elif t in ["T1b1", "T1b", "T1"]:
+            return "Stage IB1"
+
+    # --- RECTUM (AJCC 8th) ---
+    if is_rectum:
+        if n in ["N1", "N1a", "N1b", "N1c", "N2", "N2a", "N2b"]:
+            if t in ["T3", "T4a"]:
+                return "Stage IIIB"
+            elif t == "T4b":
+                return "Stage IIIC"
+            else:
+                return "Stage IIIA"
+        # N0 Rectum
+        if t in ["T1", "T2"]:
+            return "Stage I"
+        elif t == "T3":
+            return "Stage IIA"
+        elif t == "T4a":
+            return "Stage IIB"
+        elif t == "T4b":
+            return "Stage IIC"
+
+    # --- HEAD & NECK / OROPHARYNX ---
     if "HPV/p16-Positive" in system or hpv_p16 == "positive":
-        # AJCC 8th HPV+ Oropharynx:
-        # Stage I: T0-T2, N0-N1, M0
-        # Stage II: T0-T2, N2, M0 OR T3, N0-N2, M0
-        # Stage III: T4, Any N, M0 OR Any T, N3, M0
         if t in ["T0", "T1", "T2"] and n in ["N0", "N1"]:
             return "Stage I"
         elif (t in ["T0", "T1", "T2"] and n == "N2") or (t == "T3" and n in ["N0", "N1", "N2"]):
@@ -384,12 +547,6 @@ def _derive_stage_group(system: str, t: str | None, n: str | None, m: str, hpv_p
         elif t == "T4" or n == "N3":
             return "Stage III"
     else:
-        # Conventional AJCC 8th (p16- or non-oropharynx):
-        # Stage I: T1 N0 M0
-        # Stage II: T2 N0 M0
-        # Stage III: T3 N0 M0 OR T1-T3 N1 M0
-        # Stage IVA: T4a N0-N1 M0 OR T1-T4a N2 M0
-        # Stage IVB: T4b Any N M0 OR Any T N3 M0
         if t == "T1" and n == "N0":
             return "Stage I"
         elif t == "T2" and n == "N0":
