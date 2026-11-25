@@ -95,12 +95,17 @@
         "U12"
       ],
       "allowed_paths": [
-        "docs/development_plan.json",
-        "docs/MASTER_DEVELOPMENT_CHECKLIST.md",
-        "backend/app/clinical_fields.py",
-        "backend/app/schemas.py",
-        "backend/app/services/case_integrity.py",
-        "backend/tests/*"
+        ".gitignore",
+        ".gitleaksignore",
+        "TEST_READY.md",
+        "VIBE_AUDIT_REPORT.md",
+        "add_society_guidelines.py",
+        "update_textbooks.py",
+        "docs/*",
+        "backend/*",
+        "frontend/*",
+        "packaging/*",
+        "scripts/*"
       ],
       "required_workflow_names": [
         "Sequential Development Gate",
