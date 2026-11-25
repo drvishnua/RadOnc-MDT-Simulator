@@ -100,7 +100,7 @@ function App() {
   const roundRefreshSeqRef = useRef<Record<number, number>>({});
   activeRunIdRef.current = batchRun?.run_id ?? null;
   const [agentFilter, setAgentFilter] = useState("All perspectives");
-  const [activeTab, setActiveTab] = useState<"case" | "simulation" | "chair" | "specialists" | "system">("case");
+  const [activeTab, setActiveTab] = useState<"case" | "simulation" | "chair" | "specialists" | "system">(() => (batchRun ? "simulation" : "case"));
   const [selectedPresetId, setSelectedPresetId] = useState<string>("");
   const [activePerturbationId, setActivePerturbationId] = useState<string | null>(null);
   const [focusedPanelKey, setFocusedPanelKey] = useState<string>("all");
