@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "plan_id": "radonc-mdt-master-sequential-plan",
-  "scope_baseline_commit": "171adc8cdbe3fc1593c49387a03c2d223a533e64",
-  "active_step": "U01-U02",
+  "scope_baseline_commit": "88629b9dc1513ffdc5cf4acdc0e78b51c23fc8a5",
+  "active_step": "RELEASE",
   "steps": [
     {
       "id": "STEP-A",
@@ -340,7 +340,7 @@
     {
       "id": "U01-U02",
       "title": "Remove development surfaces and complete standalone desktop UX",
-      "status": "IN PROGRESS",
+      "status": "VERIFIED",
       "depends_on": [
         "U03"
       ],
@@ -359,12 +359,32 @@
         "Patient Registry and Four-Round Dashboard Browser E2E",
         "Windows Installer Build"
       ],
-      "completion_evidence": null
+      "completion_evidence": {
+        "commit_sha": "88629b9dc1513ffdc5cf4acdc0e78b51c23fc8a5",
+        "workflow_runs": [
+          {
+            "id": 45655097207,
+            "name": "Sequential Development Gate"
+          },
+          {
+            "id": 45655097060,
+            "name": "Frontend Build"
+          },
+          {
+            "id": 45655097237,
+            "name": "Patient Registry and Four-Round Dashboard Browser E2E"
+          },
+          {
+            "id": 45655097310,
+            "name": "Windows Installer Build"
+          }
+        ]
+      }
     },
     {
       "id": "RELEASE",
       "title": "Integrated live-model, GPU, security, packaging and independent clinical validation",
-      "status": "BLOCKED",
+      "status": "IN PROGRESS",
       "depends_on": [
         "U01-U02"
       ],
