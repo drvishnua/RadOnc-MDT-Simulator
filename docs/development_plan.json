@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "plan_id": "radonc-mdt-master-sequential-plan",
-  "scope_baseline_commit": "e3ae6f3299e62d77a02e63ca055204865b18cd17",
-  "active_step": "U07",
+  "scope_baseline_commit": "a1b83eab9740366c4e12e7517c73f47a53ffc3ce",
+  "active_step": "U03",
   "steps": [
     {
       "id": "STEP-A",
@@ -260,7 +260,7 @@
     {
       "id": "U07",
       "title": "Versioned evidence catalogue and role-specific retrieval",
-      "status": "IN PROGRESS",
+      "status": "VERIFIED",
       "depends_on": [
         "U06-U08"
       ],
@@ -276,12 +276,28 @@
         "Backend Tests",
         "Security and Dependency Audit"
       ],
-      "completion_evidence": null
+      "completion_evidence": {
+        "commit_sha": "a1b83eab9740366c4e12e7517c73f47a53ffc3ce",
+        "workflow_runs": [
+          {
+            "id": 45640513262,
+            "name": "Sequential Development Gate"
+          },
+          {
+            "id": 45640513359,
+            "name": "Backend Tests"
+          },
+          {
+            "id": 45640513350,
+            "name": "Security and Dependency Audit"
+          }
+        ]
+      }
     },
     {
       "id": "U03",
       "title": "Ollama discovery, reuse and installer state machine",
-      "status": "BLOCKED",
+      "status": "IN PROGRESS",
       "depends_on": [
         "U07"
       ],
