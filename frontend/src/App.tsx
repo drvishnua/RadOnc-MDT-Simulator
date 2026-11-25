@@ -7,7 +7,7 @@ import { patientVersionDisplayName } from "./patientVersionName.js";
 import { formatElapsedDuration } from "./roundTiming.js";
 import { PRESET_CASES } from "./presetCases.js";
 import type { LandmarkTrial } from "./clinicalEvidence.js";
-import { CLINICAL_PERTURBATIONS, applyPerturbation } from "./clinicalPerturbations.js";
+import { applyPerturbation } from "./clinicalPerturbations.js";
 import type {
   ActiveSavedCase,
   Agent,
@@ -48,6 +48,7 @@ import {
 import { SystemHealthTab } from "./components/SystemHealthTab.js";
 import { ChairReportTab } from "./components/ChairReportTab.js";
 import { SpecialistsTab } from "./components/SpecialistsTab.js";
+import { CasePresetPerturbationPanel } from "./components/CasePresetPerturbationPanel.js";
 import { EvidenceDrawerModal } from "./components/EvidenceDrawerModal.js";
 
 function App() {
@@ -1247,91 +1248,14 @@ function App() {
         <div className="workspace-grid">
           {activeTab === "case" && (
             <section className="panel case-panel tab-view-container" style={{ width: "100%", maxWidth: "100%" }}>
-              <div className="preset-card">
-                <div className="preset-header">
-                  <span className="preset-icon">💡</span>
-                  <div>
-                    <strong>Quick Start: Load an Educational Case Preset</strong>
-                    <p>Select from 8 realistic multi-site training cases (Pediatric, AYA, Cervix, Breast, Oropharynx, Rectum, Bladder, Lung SBRT) to test the MDT immediately with one click.</p>
-                  </div>
-                </div>
-                <div className="preset-controls">
-                  <select
-                    value={selectedPresetId}
-                    onChange={(e) => {
-                      setSelectedPresetId(e.target.value);
-                      if (e.target.value) loadPresetCase(e.target.value);
-                    }}
-                    className="preset-select"
-                  >
-                    <option value="">-- Choose a Pre-Configured Clinical Case --</option>
-                    {PRESET_CASES.map((preset) => (
-                      <option key={preset.id} value={preset.id}>
-                        {preset.badge}: {preset.name}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    className="button button-primary"
-                    disabled={!selectedPresetId}
-                    onClick={() => loadPresetCase(selectedPresetId)}
-                  >
-                    Load Case into Form
-                  </button>
-                </div>
-                {selectedPresetId && (
-                  <p className="preset-desc">
-                    {PRESET_CASES.find((p) => p.id === selectedPresetId)?.description}
-                  </p>
-                )}
-              </div>
-
-              <div className="perturbation-card">
-                <div className="perturbation-header">
-                  <div className="perturbation-title">
-                    <span>🧪</span>
-                    <strong>What-If? Clinical Perturbation Lab</strong>
-                    <span style={{ fontSize: "11px", color: "#94a3b8", fontWeight: "normal" }}>
-                      (Simulate how critical clinical shifts swing the MDT consensus)
-                    </span>
-                  </div>
-                  {activePerturbationId && (
-                    <button
-                      type="button"
-                      className="button"
-                      style={{ fontSize: "11px", padding: "3px 8px" }}
-                      onClick={handleResetPerturbations}
-                    >
-                      ↺ Reset to Baseline Case
-                    </button>
-                  )}
-                </div>
-                <div className="perturbation-grid">
-                  {CLINICAL_PERTURBATIONS.map((p) => {
-                    const isActive = activePerturbationId === p.id;
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        className={`perturbation-btn ${isActive ? "active" : ""}`}
-                        onClick={() => handleApplyPerturbation(p.id)}
-                        title={p.description}
-                      >
-                        <span>{p.icon} <strong>{p.label}</strong></span>
-                        <span style={{ fontSize: "11px", opacity: 0.85 }}>{p.description}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                {activePerturbationId && (
-                  <div className="perturbation-active-banner">
-                    <span>
-                      ⚠️ <strong>Perturbation Active:</strong> Case data modified. Re-run <strong>"Validate case draft"</strong> below to screen and initiate simulation!
-                    </span>
-                  </div>
-                )}
-              </div>
+              <CasePresetPerturbationPanel
+                selectedPresetId={selectedPresetId}
+                onSelectPreset={setSelectedPresetId}
+                onLoadPreset={loadPresetCase}
+                activePerturbationId={activePerturbationId}
+                onApplyPerturbation={handleApplyPerturbation}
+                onResetPerturbations={handleResetPerturbations}
+              />
 
               <div className="panel-heading">
                 <div>
