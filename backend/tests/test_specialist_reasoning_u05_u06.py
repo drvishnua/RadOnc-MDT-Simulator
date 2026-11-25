@@ -252,3 +252,49 @@ def test_validate_specialist_reasoning_depth_passes_valid_substantive_assessment
     flags = validate_specialist_reasoning_depth(assessment)
     assert flags == []
 
+
+def test_round_2_post_round_quality_gate_does_not_false_flag_valid_contribution() -> None:
+    """Valid Round-2 RoundContribution rows must not be flagged for missing R1 fields."""
+    from app.services.mdt_rounds import _run_post_round_quality_gates
+
+    rows = [
+        {
+            "agent_id": "RO-01",
+            "status": "completed",
+            "result": {
+                "agent_id": "RO-01",
+                "round_number": 2,
+                "position": "conditional",
+                "provisional_conclusion": "Position maintained pending nodal imaging.",
+                "response_to_other_perspectives": "Concurs with MO-01 on renal baseline; challenges SO-01 on upfront surgery.",
+                "agreements": ["MO-01: Renal clearance required before cisplatin."],
+                "substantive_challenges": ["SO-01: Nodal staging needed before resection."],
+            },
+        }
+    ]
+    audit = _run_post_round_quality_gates("run-r2-valid", 2, rows)
+    assert audit["reasoning_depth_flags"] == {}
+
+
+def test_round_2_post_round_quality_gate_flags_shallow_contribution() -> None:
+    """Round-2 rows lacking peer response and agreements/challenges must be flagged."""
+    from app.services.mdt_rounds import _run_post_round_quality_gates
+
+    rows = [
+        {
+            "agent_id": "RO-01",
+            "status": "completed",
+            "result": {
+                "agent_id": "RO-01",
+                "round_number": 2,
+                "position": "conditional",
+                "provisional_conclusion": "Position maintained.",
+                "response_to_other_perspectives": "",
+                "agreements": [],
+                "substantive_challenges": [],
+            },
+        }
+    ]
+    audit = _run_post_round_quality_gates("run-r2-shallow", 2, rows)
+    assert len(audit["reasoning_depth_flags"].get("RO-01", [])) == 2
+

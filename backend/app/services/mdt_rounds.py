@@ -320,7 +320,7 @@ def _run_post_round_quality_gates(
                 run_id, round_number, citation_report["unverified_count"],
             )
 
-    # U05-U06: Per-agent reasoning depth (applicable to R1 and R2)
+    # U05-U06: Per-agent reasoning depth (R1 checks AgentAssessment depth; R2 checks RoundContribution depth)
     if round_number in (1, 2):
         payload_field = "assessment" if round_number == 1 else "result"
         for row in round_rows:
@@ -330,7 +330,14 @@ def _run_post_round_quality_gates(
             if not isinstance(payload, dict):
                 continue
             agent_id = row.get("agent_id", "unknown")
-            depth_flags = validate_specialist_reasoning_depth(payload)
+            if round_number == 1:
+                depth_flags = validate_specialist_reasoning_depth(payload)
+            else:
+                depth_flags = []
+                if not str(payload.get("response_to_other_perspectives") or "").strip():
+                    depth_flags.append("Round 2 contribution lacks response_to_other_perspectives.")
+                if not (payload.get("agreements") or payload.get("substantive_challenges")):
+                    depth_flags.append("Round 2 contribution lacks peer agreements or substantive_challenges.")
             if depth_flags:
                 audit["reasoning_depth_flags"][agent_id] = depth_flags
                 logger.warning(
