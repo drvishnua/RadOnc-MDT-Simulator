@@ -301,3 +301,7 @@ def test_ensure_ollama_service_and_model_spawns_on_win32(monkeypatch):
     assert len(popen_calls) == 1
     assert popen_calls[0]["cmd"] == ["ollama", "serve"]
     assert popen_calls[0]["kwargs"]["creationflags"] != 0
+
+
+def test_agent_profiles_catalog_count():
+    assert len(AGENT_PROFILES) == 49
