@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "plan_id": "radonc-mdt-master-sequential-plan",
-  "scope_baseline_commit": "a1b83eab9740366c4e12e7517c73f47a53ffc3ce",
-  "active_step": "U03",
+  "scope_baseline_commit": "171adc8cdbe3fc1593c49387a03c2d223a533e64",
+  "active_step": "U01-U02",
   "steps": [
     {
       "id": "STEP-A",
@@ -297,7 +297,7 @@
     {
       "id": "U03",
       "title": "Ollama discovery, reuse and installer state machine",
-      "status": "IN PROGRESS",
+      "status": "VERIFIED",
       "depends_on": [
         "U07"
       ],
@@ -315,12 +315,32 @@
         "Windows Installer Build",
         "GitHub-hosted Windows Packaging Prerequisites"
       ],
-      "completion_evidence": null
+      "completion_evidence": {
+        "commit_sha": "171adc8cdbe3fc1593c49387a03c2d223a533e64",
+        "workflow_runs": [
+          {
+            "id": 45641520248,
+            "name": "Sequential Development Gate"
+          },
+          {
+            "id": 45641520032,
+            "name": "Backend Tests"
+          },
+          {
+            "id": 45641519978,
+            "name": "Windows Installer Build"
+          },
+          {
+            "id": 45641520274,
+            "name": "Windows Packaging Prerequisites"
+          }
+        ]
+      }
     },
     {
       "id": "U01-U02",
       "title": "Remove development surfaces and complete standalone desktop UX",
-      "status": "BLOCKED",
+      "status": "IN PROGRESS",
       "depends_on": [
         "U03"
       ],
