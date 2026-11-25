@@ -50,6 +50,7 @@ import { SpecialistsTab } from "./components/SpecialistsTab.js";
 import { CasePresetPerturbationPanel } from "./components/CasePresetPerturbationPanel.js";
 import { PreMdtIntakeReviewCard } from "./components/PreMdtIntakeReviewCard.js";
 import { SimulationMasterBar } from "./components/SimulationMasterBar.js";
+import { LiveHiveMonitor } from "./components/LiveHiveMonitor.js";
 import { EvidenceDrawerModal } from "./components/EvidenceDrawerModal.js";
 
 function App() {
@@ -1643,6 +1644,14 @@ function App() {
                     <p className="result-footnote">Run ID: {batchRun.run_id} · Patient: {loadedPatient?.patient_identifier ?? (batchRun.patient_id ? "linked patient" : "legacy unlinked run")} · Case version: {batchRun.case_version_number ?? "not linked"} · SHA-256: {batchRun.case_snapshot_sha256}</p>
                   </div>
                 )}
+                <LiveHiveMonitor
+                  agents={agents}
+                  batchRun={batchRun}
+                  batchResults={batchResults}
+                  roundSummaries={roundSummaries}
+                  roundResults={roundResults}
+                  finalReport={finalReport}
+                />
                 <SimulationMasterBar
                   activeSavedCase={activeSavedCase}
                   batchRun={batchRun}
