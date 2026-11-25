@@ -203,7 +203,8 @@ def get_active_reference_catalogue(
             specialties = _DOMAIN_TO_SPECIALTIES.get(raw_domain, ["radiation_oncology"])
             organization = _DOMAIN_TO_ORGANIZATION.get(raw_domain, "Medical Library")
             topics = list(disease_sites) if disease_sites else ["general"]
-            doi_or_url = file_path if file_path.startswith("file://") else f"file:///{file_path.replace('\\', '/')}"
+            posix_path = file_path.replace("\\", "/")
+            doi_or_url = file_path if file_path.startswith("file://") else f"file:///{posix_path}"
 
             file_stem = pathlib.Path(file_path).stem
             file_name = pathlib.Path(file_path).name
