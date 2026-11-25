@@ -156,7 +156,7 @@ export type PatientCaseVersion = {
   case: SyntheticCasePayload;
 };
 
-export type IntakeQuestion = { domain: string; question: string };
+export type IntakeQuestion = { domain: string; question: string; field_id?: string; priority?: string };
 export type IntakeGap = { domain: string; field_id: string; status: string };
 export type IntakeScreening = {
   questions: IntakeQuestion[];

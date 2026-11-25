@@ -127,6 +127,24 @@ def test_screener_is_not_an_mdt_specialist_and_does_not_prescribe() -> None:
     result = screen_case_intake(case)
 
     assert "consensus_points" not in result
+
     assert "treatment_recommendation" not in result
     assert "disclaimer" in result
     assert "not clinical validation" in result["disclaimer"].lower()
+
+
+def test_clinical_conflicts_domain_cannot_be_declined() -> None:
+    """Conflicting fields must remain surfaced and cannot be dismissed via declined_domains."""
+    import pytest
+
+    case = _make_case(
+        clinical_field_states={"age_years": "CONFLICTING"},
+        clinical_field_conflicts={
+            "age_years": [
+                _conflict_entry(68, "src-1"),
+                _conflict_entry(71, "src-2"),
+            ]
+        },
+    )
+    with pytest.raises(ValueError, match="clinical_conflicts"):
+        screen_case_intake(case, declined_domains=["clinical_conflicts"])

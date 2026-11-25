@@ -49,6 +49,7 @@ import { SystemHealthTab } from "./components/SystemHealthTab.js";
 import { ChairReportTab } from "./components/ChairReportTab.js";
 import { SpecialistsTab } from "./components/SpecialistsTab.js";
 import { CasePresetPerturbationPanel } from "./components/CasePresetPerturbationPanel.js";
+import { PreMdtIntakeReviewCard } from "./components/PreMdtIntakeReviewCard.js";
 import { EvidenceDrawerModal } from "./components/EvidenceDrawerModal.js";
 
 function App() {
@@ -1512,37 +1513,13 @@ function App() {
 
 
             {pendingIntake && (
-              <div className="result-card intake-review-card" aria-label="Pre-MDT intake review">
-                <strong>Pre-MDT intake review</strong>
-                <p>Review the missing information below. You can return to the case form, add documented details, validate again and start a revised intake. Accepting with gaps preserves them as unknown; it does not make the case clinically complete.</p>
-                {pendingIntake.screening ? (
-                  <>
-                    {pendingIntake.screening.questions.length > 0 ? (
-                      <div className="intake-question-list">
-                        {pendingIntake.screening.questions.map((question) => (
-                          <div className="intake-question" key={question.domain}>
-                            <strong>{question.question}</strong>
-                            <p>Missing fields: {pendingIntake.screening!.gaps.filter((gap) => gap.domain === question.domain).map((gap) => gap.field_id).join(", ") || "Review required"}</p>
-                            <button className="button button-quiet" type="button" onClick={() => void declineIntakeQuestion(question.domain)} disabled={patientBusy}>I cannot provide this information</button>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p>No outstanding screening questions remain in the listed domains.</p>
-                    )}
-                    {pendingIntake.screening.gaps.length > 0 && (
-                      <p className="result-footnote">Outstanding gaps: {pendingIntake.screening.gaps.map((gap) => gap.field_id + (gap.status === "DECLINED" ? " (declined)" : "")).join(", ")}.</p>
-                    )}
-                    <p className="result-footnote">{pendingIntake.screening.disclaimer}</p>
-                  </>
-                ) : <p>Restoring the saved intake review…</p>}
-                <div className="batch-actions">
-                  <button className="button button-secondary" type="button" onClick={() => setPendingIntake(null)} disabled={patientBusy}>Return to case form</button>
-                  <button className="button button-primary" type="button" onClick={() => void acceptAndPromoteIntake()} disabled={patientBusy || !pendingIntake.screening}>
-                    {patientBusy ? "Saving…" : pendingIntake.screening?.gaps.length ? "Accept with gaps and save" : "Accept intake and save"}
-                  </button>
-                </div>
-              </div>
+              <PreMdtIntakeReviewCard
+                pendingIntake={pendingIntake}
+                patientBusy={patientBusy}
+                onDeclineQuestion={(domain) => void declineIntakeQuestion(domain)}
+                onReturnToForm={() => setPendingIntake(null)}
+                onAcceptAndPromote={() => void acceptAndPromoteIntake()}
+              />
             )}
 
             {validation && (
