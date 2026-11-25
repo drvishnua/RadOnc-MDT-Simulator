@@ -100,7 +100,8 @@ STEP_ALLOWED_PATHS = {
     ),
     "U01-U02": (
         "docs/development_plan.json",
-        "docs/MASTER_DEVELOPMENT_CHECKLIST.md",
+        "backend/scripts/validate_development_plan.py",
+        "backend/tests/*",
         "frontend/src/*",
         "frontend/tests/*",
         "packaging/*",

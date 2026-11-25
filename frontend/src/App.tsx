@@ -7,7 +7,6 @@ import { patientVersionDisplayName } from "./patientVersionName.js";
 import { formatElapsedDuration } from "./roundTiming.js";
 import { PRESET_CASES } from "./presetCases.js";
 import type { LandmarkTrial } from "./clinicalEvidence.js";
-import { applyPerturbation } from "./clinicalPerturbations.js";
 import type {
   ActiveSavedCase,
   Agent,
@@ -105,7 +104,6 @@ function App() {
   const [agentFilter, setAgentFilter] = useState("All perspectives");
   const [activeTab, setActiveTab] = useState<"case" | "simulation" | "chair" | "specialists" | "system">(() => (batchRun ? "simulation" : "case"));
   const [selectedPresetId, setSelectedPresetId] = useState<string>("");
-  const [activePerturbationId, setActivePerturbationId] = useState<string | null>(null);
   const [focusedPanelKey, setFocusedPanelKey] = useState<string>("all");
   const [inspectingTrial, setInspectingTrial] = useState<LandmarkTrial | null>(null);
   const [isEvidenceDrawerOpen, setIsEvidenceDrawerOpen] = useState(false);
@@ -123,35 +121,11 @@ function App() {
     const newForm = { ...preset.form };
     setForm(newForm);
     writeDraft(safeCaseDraftStorage(), CASE_DRAFT_KEY, LEGACY_CASE_KEY, newForm);
-    setActivePerturbationId(null);
     setValidation(null);
     setValidatedCase(null);
     setValidationError("");
     setPatientError("");
     setAssessmentError("");
-  }
-
-  function handleApplyPerturbation(perturbationId: string) {
-    if (activePerturbationId === perturbationId) {
-      if (selectedPresetId) {
-        loadPresetCase(selectedPresetId);
-      }
-      setActivePerturbationId(null);
-      return;
-    }
-    const updatedForm = applyPerturbation(form, perturbationId);
-    setForm(updatedForm);
-    setActivePerturbationId(perturbationId);
-    writeDraft(safeCaseDraftStorage(), CASE_DRAFT_KEY, LEGACY_CASE_KEY, updatedForm);
-    setValidation(null);
-    setValidatedCase(null);
-  }
-
-  function handleResetPerturbations() {
-    if (selectedPresetId) {
-      loadPresetCase(selectedPresetId);
-    }
-    setActivePerturbationId(null);
   }
 
 
@@ -1254,9 +1228,6 @@ function App() {
                 selectedPresetId={selectedPresetId}
                 onSelectPreset={setSelectedPresetId}
                 onLoadPreset={loadPresetCase}
-                activePerturbationId={activePerturbationId}
-                onApplyPerturbation={handleApplyPerturbation}
-                onResetPerturbations={handleResetPerturbations}
               />
 
               <div className="panel-heading">
