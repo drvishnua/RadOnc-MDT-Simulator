@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "plan_id": "radonc-mdt-master-sequential-plan",
-  "scope_baseline_commit": "a9ab326bb628ea32b4dcf7ea397e83f1502d45a9",
-  "active_step": "U05-U06",
+  "scope_baseline_commit": "912d18cab33542afc452db148e6266db3883a4ec",
+  "active_step": "U06-U08",
   "steps": [
     {
       "id": "STEP-A",
@@ -178,7 +178,7 @@
     {
       "id": "U05-U06",
       "title": "Specialist role contract, conditional reasoning and round-specific arguments",
-      "status": "IN PROGRESS",
+      "status": "VERIFIED",
       "depends_on": [
         "U04"
       ],
@@ -195,12 +195,28 @@
         "Backend Tests",
         "Security and Dependency Audit"
       ],
-      "completion_evidence": null
+      "completion_evidence": {
+        "commit_sha": "912d18cab33542afc452db148e6266db3883a4ec",
+        "workflow_runs": [
+          {
+            "id": 45626924105,
+            "name": "Sequential Development Gate"
+          },
+          {
+            "id": 45626924210,
+            "name": "Backend Tests"
+          },
+          {
+            "id": 45626924124,
+            "name": "Security and Dependency Audit"
+          }
+        ]
+      }
     },
     {
       "id": "U06-U08",
       "title": "Round orchestration, Chair reconciliation and copied/generic response controls",
-      "status": "BLOCKED",
+      "status": "IN PROGRESS",
       "depends_on": [
         "U05-U06"
       ],
