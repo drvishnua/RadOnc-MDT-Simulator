@@ -402,8 +402,8 @@ async function verifyFourRoundDashboard() {
   );
   await waitForExpression(
     "document.querySelectorAll('.round-stage').length === 3 && " +
-      "document.querySelectorAll('.round-agent-list details').length === 90",
-    "all three saved round panels and all 90 R2/R3 role records"
+      "document.querySelectorAll('.round-agent-list details').length === 98",
+    "all three saved round panels and all 98 R2/R3 role records"
   );
   await waitForExpression(
     "!!document.querySelector('.final-mdt-report') && " +
