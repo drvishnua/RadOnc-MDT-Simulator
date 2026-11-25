@@ -192,14 +192,15 @@ def test_committed_machine_plan_matches_the_validator_contract():
     repository_root = Path(__file__).resolve().parents[2]
     plan = json.loads((repository_root / "docs" / "development_plan.json").read_text(encoding="utf-8"))
     assert plan["plan_id"] == "radonc-mdt-master-sequential-plan"
-    assert plan["active_step"] == "U04"
+    assert plan["active_step"] == "U05-U06"
     assert plan["steps"][0]["status"] == "VERIFIED"
     assert plan["steps"][1]["status"] == "VERIFIED"
     assert plan["steps"][2]["status"] == "VERIFIED"
-    assert plan["steps"][2]["completion_evidence"]["commit_sha"] == plan["scope_baseline_commit"]
-    assert plan["steps"][3]["status"] == "IN PROGRESS"
-    assert plan["steps"][3]["allowed_paths"] == list(STEP_ALLOWED_PATHS["U04"])
-    assert plan["steps"][3]["required_workflow_names"] == list(STEP_REQUIRED_WORKFLOWS["U04"])
+    assert plan["steps"][3]["status"] == "VERIFIED"
+    assert plan["steps"][3]["completion_evidence"]["commit_sha"] == plan["scope_baseline_commit"]
+    assert plan["steps"][4]["status"] == "IN PROGRESS"
+    assert plan["steps"][4]["allowed_paths"] == list(STEP_ALLOWED_PATHS["U05-U06"])
+    assert plan["steps"][4]["required_workflow_names"] == list(STEP_REQUIRED_WORKFLOWS["U05-U06"])
     assert [step["id"] for step in plan["steps"]] == list(STEP_ORDER)
 
 

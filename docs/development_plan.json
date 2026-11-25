@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "plan_id": "radonc-mdt-master-sequential-plan",
-  "scope_baseline_commit": "6566feb4b13b78f2698f1c24f605bb2085c25882",
-  "active_step": "U04",
+  "scope_baseline_commit": "a9ab326bb628ea32b4dcf7ea397e83f1502d45a9",
+  "active_step": "U05-U06",
   "steps": [
     {
       "id": "STEP-A",
@@ -134,7 +134,7 @@
     {
       "id": "U04",
       "title": "Pre-MDT conversational intake and completeness screener",
-      "status": "IN PROGRESS",
+      "status": "VERIFIED",
       "depends_on": [
         "U09-U10"
       ],
@@ -153,12 +153,32 @@
         "Frontend Build",
         "Patient Registry and Four-Round Dashboard Browser E2E"
       ],
-      "completion_evidence": null
+      "completion_evidence": {
+        "commit_sha": "a9ab326bb628ea32b4dcf7ea397e83f1502d45a9",
+        "workflow_runs": [
+          {
+            "id": 45621847855,
+            "name": "Sequential Development Gate"
+          },
+          {
+            "id": 45621849150,
+            "name": "Backend Tests"
+          },
+          {
+            "id": 45621847948,
+            "name": "Frontend Build"
+          },
+          {
+            "id": 45621847973,
+            "name": "Patient Registry and Four-Round Dashboard Browser E2E"
+          }
+        ]
+      }
     },
     {
       "id": "U05-U06",
       "title": "Specialist role contract, conditional reasoning and round-specific arguments",
-      "status": "BLOCKED",
+      "status": "IN PROGRESS",
       "depends_on": [
         "U04"
       ],
