@@ -169,7 +169,7 @@ jobs:
             }
 
             $agents = Invoke-RestMethod -Uri "http://127.0.0.1:18765/api/agents" -TimeoutSec 10
-            if ($agents.returned_agent_count -ne 45) { throw "Installed API did not return all 45 role profiles." }
+            if ($agents.returned_agent_count -ne 49) { throw "Installed API did not return all 49 role profiles." }
             $casePayload = @{
               scenario_title = "Installer acceptance training case"
               case_summary = "Fictional training record used only to verify local database persistence."
@@ -428,8 +428,8 @@ jobs:
               throw ("Installed app cannot verify its bootstrapped model: " + ($runtime.ollama | ConvertTo-Json -Compress -Depth 6))
             }
             $agents = Invoke-RestMethod -Uri "http://127.0.0.1:18765/api/agents" -TimeoutSec 15
-            if ($agents.returned_agent_count -ne 45) {
-              throw "Installed app did not expose all 45 configured specialist roles after bootstrap."
+            if ($agents.returned_agent_count -ne 49) {
+              throw "Installed app did not expose all 49 configured specialist roles after bootstrap."
             }
             Write-Host "HOSTED_INSTALLED_APP_HEALTH_OK"
             Write-Host "HOSTED_INSTALLED_APP_MODEL_RUNTIME_OK"

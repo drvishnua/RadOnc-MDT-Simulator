@@ -50,6 +50,7 @@ STEP_ALLOWED_PATHS = {
         "VIBE_AUDIT_REPORT.md",
         "add_society_guidelines.py",
         "update_textbooks.py",
+        ".github/*",
         "docs/*",
         "backend/*",
         "frontend/*",

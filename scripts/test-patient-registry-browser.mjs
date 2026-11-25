@@ -369,11 +369,11 @@ async function verifyFourRoundDashboard() {
   }
   const savedSummary = await summaryResponse.json();
   if (
-    savedSummary.completed_count !== 45 ||
+    savedSummary.completed_count !== 49 ||
     savedSummary.failed_count !== 0 ||
     savedSummary.status !== "completed"
   ) {
-    throw new Error("The seeded R1 summary does not contain 45 completed contributions.");
+    throw new Error("The seeded R1 summary does not contain 49 completed contributions.");
   }
 
   await evaluate(
