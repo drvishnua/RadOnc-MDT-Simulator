@@ -121,15 +121,15 @@ export function LiveHiveMonitor({
     });
   }, [agents, batchResults, roundResults, activeRound, batchRun, roundSummaries]);
 
-  const restingNodes = nodes.filter((n) => n.status === "resting");
+  const queuedNodes = nodes.filter((n) => n.status === "resting");
   const activeNodes = nodes.filter((n) => n.status === "active");
-  const doneNodes = nodes.filter((n) => n.status === "done" || n.status === "failed");
+  const completedNodes = nodes.filter((n) => n.status === "done" || n.status === "failed");
   const isLive =
     batchRun?.status === "running" ||
     Object.values(roundSummaries).some((s) => s?.status === "running");
 
   const inspectedNode =
-    nodes.find((n) => n.agentId === selectedId) ?? activeNodes[0] ?? doneNodes[doneNodes.length - 1] ?? null;
+    nodes.find((n) => n.agentId === selectedId) ?? activeNodes[0] ?? completedNodes[completedNodes.length - 1] ?? null;
 
   if (!batchRun) return null;
 
@@ -139,7 +139,7 @@ export function LiveHiveMonitor({
         <div>
           <strong>Live Specialist Hive · Round {activeRound}</strong>
           <span className="hive-meta">
-            {doneNodes.length} of {nodes.length} responded
+            {completedNodes.length} of {nodes.length} responded
             {finalReport ? " · Chair Synthesis Ready" : ""}
           </span>
         </div>
@@ -150,11 +150,11 @@ export function LiveHiveMonitor({
       </div>
 
       <div className="hive-hex-grid">
-        <div className="hive-hex hive-hex-resting">
-          <div className="hive-hex-title">Resting</div>
-          <div className="hive-hex-count">{restingNodes.length}</div>
+        <div className="hive-hex hive-hex-queued">
+          <div className="hive-hex-title">Queued</div>
+          <div className="hive-hex-count">{queuedNodes.length}</div>
           <div className="hive-bee-cluster">
-            {restingNodes.slice(0, 6).map((n) => (
+            {queuedNodes.slice(0, 6).map((n) => (
               <button
                 key={n.agentId}
                 type="button"
@@ -166,16 +166,16 @@ export function LiveHiveMonitor({
                 <span>{n.agentId}</span>
               </button>
             ))}
-            {restingNodes.length > 6 && (
-              <span className="hive-overflow-badge">+{restingNodes.length - 6}</span>
+            {queuedNodes.length > 6 && (
+              <span className="hive-overflow-badge">+{queuedNodes.length - 6}</span>
             )}
           </div>
         </div>
 
-        <div className={`hive-hex hive-hex-coordinator ${isLive ? "is-pulsing" : ""}`}>
-          <div className="hive-hex-title">Coordinator</div>
+        <div className={`hive-hex hive-hex-active ${isLive ? "is-pulsing" : ""}`}>
+          <div className="hive-hex-title">Active</div>
           <div className="hive-hex-count">
-            {doneNodes.length} of {nodes.length} done
+            {completedNodes.length} of {nodes.length} done
           </div>
           <div className="hive-bee-cluster">
             {activeNodes.length > 0 ? (
@@ -197,11 +197,11 @@ export function LiveHiveMonitor({
           </div>
         </div>
 
-        <div className="hive-hex hive-hex-done">
-          <div className="hive-hex-title">Done</div>
-          <div className="hive-hex-count">{doneNodes.length}</div>
+        <div className="hive-hex hive-hex-completed">
+          <div className="hive-hex-title">Completed</div>
+          <div className="hive-hex-count">{completedNodes.length}</div>
           <div className="hive-bee-cluster">
-            {doneNodes.slice(0, 8).map((n) => (
+            {completedNodes.slice(0, 8).map((n) => (
               <button
                 key={n.agentId}
                 type="button"
@@ -213,8 +213,8 @@ export function LiveHiveMonitor({
                 <span>{n.agentId}</span>
               </button>
             ))}
-            {doneNodes.length > 8 && (
-              <span className="hive-overflow-badge">+{doneNodes.length - 8}</span>
+            {completedNodes.length > 8 && (
+              <span className="hive-overflow-badge">+{completedNodes.length - 8}</span>
             )}
           </div>
         </div>
@@ -231,11 +231,11 @@ export function LiveHiveMonitor({
       )}
 
       <div className="hive-legend">
-        <span><i style={{ background: "#4ade80" }} /> Supports / Done</span>
+        <span><i style={{ background: "#4ade80" }} /> Supports / Completed</span>
         <span><i style={{ background: "#38bdf8" }} /> Active / Responding</span>
         <span><i style={{ background: "#fbbf24" }} /> Conditional</span>
         <span><i style={{ background: "#fb7185" }} /> Opposes / Failed</span>
-        <span><i style={{ background: "#64748b" }} /> Resting / Insufficient</span>
+        <span><i style={{ background: "#64748b" }} /> Queued / Insufficient</span>
       </div>
     </section>
   );

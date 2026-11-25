@@ -1226,16 +1226,16 @@ textarea { resize: vertical; min-height: 110px; line-height: 1.55; }
   text-align: center;
 }
 
-.hive-hex-coordinator {
+.hive-hex-active {
   border-color: rgba(74, 222, 128, 0.55);
   transform: translateY(8px);
 }
 
-.hive-hex-coordinator.is-pulsing {
+.hive-hex-active.is-pulsing {
   animation: hive-pulse 2s infinite;
 }
 
-.hive-hex-done {
+.hive-hex-completed {
   border-color: rgba(74, 222, 128, 0.4);
 }
 
