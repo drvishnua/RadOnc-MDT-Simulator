@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "plan_id": "radonc-mdt-master-sequential-plan",
-  "scope_baseline_commit": "912d18cab33542afc452db148e6266db3883a4ec",
-  "active_step": "U06-U08",
+  "scope_baseline_commit": "e3ae6f3299e62d77a02e63ca055204865b18cd17",
+  "active_step": "U07",
   "steps": [
     {
       "id": "STEP-A",
@@ -216,7 +216,7 @@
     {
       "id": "U06-U08",
       "title": "Round orchestration, Chair reconciliation and copied/generic response controls",
-      "status": "IN PROGRESS",
+      "status": "VERIFIED",
       "depends_on": [
         "U05-U06"
       ],
@@ -235,12 +235,32 @@
         "Frontend Build",
         "Patient Registry and Four-Round Dashboard Browser E2E"
       ],
-      "completion_evidence": null
+      "completion_evidence": {
+        "commit_sha": "e3ae6f3299e62d77a02e63ca055204865b18cd17",
+        "workflow_runs": [
+          {
+            "id": 45638993191,
+            "name": "Sequential Development Gate"
+          },
+          {
+            "id": 45638993183,
+            "name": "Backend Tests"
+          },
+          {
+            "id": 45638993107,
+            "name": "Frontend Build"
+          },
+          {
+            "id": 45638993407,
+            "name": "Patient Registry and Four-Round Dashboard Browser E2E"
+          }
+        ]
+      }
     },
     {
       "id": "U07",
       "title": "Versioned evidence catalogue and role-specific retrieval",
-      "status": "BLOCKED",
+      "status": "IN PROGRESS",
       "depends_on": [
         "U06-U08"
       ],
