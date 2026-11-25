@@ -12,11 +12,11 @@ from fastapi.staticfiles import StaticFiles
 
 from app.agent_schemas import AgentAssessment
 from app.agents.catalog import AGENT_PROFILES, EXPECTED_AGENT_COUNT
-from app.config import APP_NAME, APP_VERSION
+from app.config import APP_NAME, APP_VERSION, CORS_ORIGINS
 from app.clinical_fields import require_supported_registry_version
 from app.schemas import (
     AgentAssessmentRequest, BatchRunRequest, CaseValidationResult,
-    PatientCaseUpdateRequest, PatientRegistrationRequest, PatientRunRequest, SyntheticCase, CaseIntakeScreenRequest,
+    PatientCaseUpdateRequest, PatientRegistrationRequest, PatientRunRequest, SelectedAgentsRequest, SyntheticCase, CaseIntakeScreenRequest,
     IntakeSessionCreateRequest, IntakeEventRequest, IntakeAcceptRequest, IntakePromoteRequest,
 )
 from app.services.case_integrity import build_case_validation_warnings
@@ -28,14 +28,34 @@ from app.services.intake_store import (
 from app.services import run_store
 from app.services.batch_runner import batch_is_running, run_independent_assessments, validate_resume_state
 from app.services.mdt_rounds import prepare_round_resume, round_is_running, run_mdt_round
+from app.services.simulation_controller import get_simulation_controller
+from contextlib import asynccontextmanager
+
 from app.services.ollama import (
     AgentGenerationError,
     OllamaUnavailable,
+    ensure_ollama_service_and_model,
     generate_agent_assessment,
     get_ollama_status,
 )
 
 logger = logging.getLogger("radonc.agent")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Ensure Ollama daemon is running and model is verified on startup
+    try:
+        status = await ensure_ollama_service_and_model(auto_pull=True)
+        logger.info(
+            "Ollama startup check: reachable=%s, model_installed=%s",
+            status.get("reachable"),
+            status.get("configured_model_installed"),
+        )
+    except Exception as exc:
+        logger.warning("Ollama startup verification non-blocking warning: %s", exc)
+    yield
+
 
 app = FastAPI(
     title=APP_NAME,
@@ -43,17 +63,14 @@ app = FastAPI(
     description=(
         "Educational simulation backend. Fictional training cases only; not clinical decision support."
     ),
+    lifespan=lifespan,
 )
 
-# Allow only the local Vite development/preview origins. Do not expose the API to arbitrary sites.
+
+# Allow only configured local/explicit origins. Do not expose the API to arbitrary sites.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://127.0.0.1:5173",
-        "http://localhost:5173",
-        "http://127.0.0.1:4173",
-        "http://localhost:4173",
-    ],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=False,
     allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["Content-Type"],
@@ -169,7 +186,13 @@ async def create_patient_simulation(
         raise HTTPException(status_code=404, detail="Patient or saved case version not found.") from exc
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    background_tasks.add_task(run_independent_assessments, record["run_id"])
+    if request.full_simulation:
+        controller = get_simulation_controller()
+        background_tasks.add_task(controller.run_full_simulation, record["run_id"])
+    elif request.selected_agent_ids:
+        background_tasks.add_task(run_independent_assessments, record["run_id"], request.selected_agent_ids)
+    else:
+        background_tasks.add_task(run_independent_assessments, record["run_id"])
     return record
 
 
@@ -301,6 +324,231 @@ async def resume_independent_batch(
     updated = validate_resume_state(run_id)
     background_tasks.add_task(run_independent_assessments, run_id)
     return updated
+
+
+@app.post("/api/runs/{run_id}/run-full")
+async def trigger_full_simulation(
+    run_id: str,
+    background_tasks: BackgroundTasks,
+) -> dict[str, object]:
+    """Execute all 4 simulation rounds (R1, R2, R3, R4) sequentially on single click."""
+    if batch_is_running() or round_is_running():
+        raise HTTPException(status_code=409, detail="Another local model run is already active.")
+    try:
+        run_store.require_run_registry_version(run_id)
+        run_store.require_run_intake_provenance(run_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Simulation run not found.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    controller = get_simulation_controller()
+    background_tasks.add_task(controller.run_full_simulation, run_id)
+    return {"status": "queued", "run_id": run_id, "mode": "full_simulation_all_4_rounds"}
+
+
+@app.post("/api/runs/{run_id}/pause")
+async def pause_simulation_run(run_id: str) -> dict[str, object]:
+    """Pause the active simulation run across all rounds."""
+    try:
+        run_store.get_run(run_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Simulation run not found.") from exc
+    controller = get_simulation_controller()
+    controller.pause_simulation(run_id)
+    return {"status": "paused", "run_id": run_id}
+
+
+@app.post("/api/runs/{run_id}/unpause")
+async def unpause_simulation_run(run_id: str) -> dict[str, object]:
+    """Resume a paused simulation run."""
+    try:
+        run_store.get_run(run_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Simulation run not found.") from exc
+    controller = get_simulation_controller()
+    controller.resume_simulation(run_id)
+    return {"status": "resumed", "run_id": run_id}
+
+
+@app.post("/api/runs/{run_id}/stop")
+async def stop_simulation_run(run_id: str) -> dict[str, object]:
+    """Stop the entire simulation run, cancelling queued and running agents."""
+    try:
+        run_store.get_run(run_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Simulation run not found.") from exc
+    controller = get_simulation_controller()
+    controller.stop_simulation(run_id)
+    return {"status": "stopped", "run_id": run_id}
+
+
+def _validate_round_number(round_number: int) -> None:
+    if round_number not in (1, 2, 3, 4):
+        raise HTTPException(status_code=422, detail="round_number must be between 1 and 4.")
+
+
+def _require_run_exists(run_id: str) -> dict[str, object]:
+    try:
+        return run_store.get_run(run_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Simulation run not found.") from exc
+
+
+@app.post("/api/runs/{run_id}/restart")
+async def restart_simulation_run(
+    run_id: str,
+    background_tasks: BackgroundTasks,
+) -> dict[str, object]:
+    """Reset all 4 rounds and restart the entire simulation fresh."""
+    _require_run_exists(run_id)
+    if batch_is_running() or round_is_running():
+        raise HTTPException(
+            status_code=409,
+            detail="Another local model run is currently active. Stop it and wait for the current step to finish before restarting.",
+        )
+    controller = get_simulation_controller()
+    controller.clear_stopped_simulation(run_id)
+    run_store.restart_simulation(run_id)
+    # Restart R1
+    background_tasks.add_task(run_independent_assessments, run_id)
+    return {"status": "queued", "run_id": run_id, "message": "Simulation restarted from Round 1."}
+
+
+@app.post("/api/runs/{run_id}/rounds/{round_number}/pause")
+async def pause_specific_round(run_id: str, round_number: int) -> dict[str, object]:
+    """Pause execution of a specific round."""
+    _validate_round_number(round_number)
+    _require_run_exists(run_id)
+    controller = get_simulation_controller()
+    controller.pause_round(run_id, round_number)
+    return {"status": "paused", "run_id": run_id, "round_number": round_number}
+
+
+@app.post("/api/runs/{run_id}/rounds/{round_number}/unpause")
+async def unpause_specific_round(run_id: str, round_number: int) -> dict[str, object]:
+    """Resume execution of a paused round."""
+    _validate_round_number(round_number)
+    _require_run_exists(run_id)
+    controller = get_simulation_controller()
+    controller.resume_round(run_id, round_number)
+    return {"status": "resumed", "run_id": run_id, "round_number": round_number}
+
+
+@app.post("/api/runs/{run_id}/rounds/{round_number}/stop")
+async def stop_specific_round(run_id: str, round_number: int) -> dict[str, object]:
+    """Stop execution of a specific round."""
+    _validate_round_number(round_number)
+    _require_run_exists(run_id)
+    controller = get_simulation_controller()
+    controller.stop_round(run_id, round_number)
+    return {"status": "stopped", "run_id": run_id, "round_number": round_number}
+
+
+@app.post("/api/runs/{run_id}/rounds/{round_number}/restart")
+async def restart_specific_round(
+    run_id: str,
+    round_number: int,
+    background_tasks: BackgroundTasks,
+) -> dict[str, object]:
+    """Reset and re-run all agents in a specific round."""
+    _validate_round_number(round_number)
+    _require_run_exists(run_id)
+    if batch_is_running() or round_is_running():
+        raise HTTPException(
+            status_code=409,
+            detail="Another local model run is currently active. Stop it and wait for the current step to finish before restarting.",
+        )
+    controller = get_simulation_controller()
+    controller.clear_stopped_round(run_id, round_number)
+    run_store.restart_round(run_id, round_number)
+    if round_number == 1:
+        background_tasks.add_task(run_independent_assessments, run_id)
+    else:
+        background_tasks.add_task(run_mdt_round, run_id, round_number)
+    return {"status": "queued", "run_id": run_id, "round_number": round_number}
+
+
+@app.post("/api/runs/{run_id}/rounds/{round_number}/run-selected")
+async def run_selected_agents(
+    run_id: str,
+    round_number: int,
+    request: SelectedAgentsRequest,
+    background_tasks: BackgroundTasks,
+) -> dict[str, object]:
+    """Run only a specified subset of agents in a given round."""
+    _validate_round_number(round_number)
+    _require_run_exists(run_id)
+    if not request.agent_ids:
+        raise HTTPException(status_code=400, detail="No agent IDs provided.")
+    if batch_is_running() or round_is_running():
+        raise HTTPException(
+            status_code=409,
+            detail="Another local model run is already active.",
+        )
+    controller = get_simulation_controller()
+    for aid in request.agent_ids:
+        controller.clear_stopped_agent(run_id, round_number, aid)
+        run_store.restart_agent(run_id, round_number, aid)
+    if round_number == 1:
+        background_tasks.add_task(run_independent_assessments, run_id, request.agent_ids)
+    else:
+        background_tasks.add_task(run_mdt_round, run_id, round_number, request.agent_ids)
+    return {
+        "status": "queued",
+        "run_id": run_id,
+        "round_number": round_number,
+        "selected_agents": request.agent_ids,
+    }
+
+
+@app.post("/api/runs/{run_id}/rounds/{round_number}/agents/{agent_id}/run")
+async def run_individual_agent(
+    run_id: str,
+    round_number: int,
+    agent_id: str,
+    background_tasks: BackgroundTasks,
+) -> dict[str, object]:
+    """Run or re-run a single agent in a specific round."""
+    _validate_round_number(round_number)
+    _require_run_exists(run_id)
+    if batch_is_running() or round_is_running():
+        raise HTTPException(
+            status_code=409,
+            detail="Another local model run is already active.",
+        )
+    controller = get_simulation_controller()
+    controller.clear_stopped_agent(run_id, round_number, agent_id)
+    run_store.restart_agent(run_id, round_number, agent_id)
+    if round_number == 1:
+        background_tasks.add_task(run_independent_assessments, run_id, [agent_id])
+    else:
+        background_tasks.add_task(run_mdt_round, run_id, round_number, [agent_id])
+    return {
+        "status": "queued",
+        "run_id": run_id,
+        "round_number": round_number,
+        "agent_id": agent_id,
+    }
+
+
+@app.post("/api/runs/{run_id}/rounds/{round_number}/agents/{agent_id}/stop")
+async def stop_individual_agent(
+    run_id: str,
+    round_number: int,
+    agent_id: str,
+) -> dict[str, object]:
+    """Stop/cancel a single agent in a specific round."""
+    _validate_round_number(round_number)
+    _require_run_exists(run_id)
+    controller = get_simulation_controller()
+    controller.stop_agent(run_id, round_number, agent_id)
+    return {
+        "status": "stopped",
+        "run_id": run_id,
+        "round_number": round_number,
+        "agent_id": agent_id,
+    }
 
 
 @app.post("/api/runs/{run_id}/rounds/{round_number}")

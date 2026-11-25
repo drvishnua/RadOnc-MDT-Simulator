@@ -79,7 +79,10 @@ def test_r1_prompt_requires_fact_use_and_explicit_hypothetical_branches(monkeypa
     assert profile["mandate"] in request["prompt"]
     assert "Do not use a generic" in request["system"]
     assert "condition must not be presented as true or met" in request["system"]
-    assert "evidence retrieval is not connected" in request["system"]
+    assert (
+        "evidence retrieval is not connected" in request["system"]
+        or "Verified evidence retrieval is active" in request["system"]
+    )
     assert assessment.conditional_options[0].condition == branch["condition"]
     assert assessment.conditional_options[0].unresolved_unknowns == branch["unresolved_unknowns"]
     assert assessment.case_facts

@@ -79,12 +79,12 @@ def test_batch_run_executes_all_45_agents_independently(monkeypatch, tmp_path) -
     run_id = run["run_id"]
     run = client.get(f"/api/runs/{run_id}").json()
     assert run["status"] == "completed"
-    assert run["total_agents"] == 45
-    assert run["completed_count"] == 45
+    assert run["total_agents"] == len(AGENT_PROFILES)
+    assert run["completed_count"] == len(AGENT_PROFILES)
     assert run["failed_count"] == 0
     assert run["progress_percent"] == 100.0
-    assert len(calls) == 45
-    assert len({call[0] for call in calls}) == 45
+    assert len(calls) == len(AGENT_PROFILES)
+    assert len({call[0] for call in calls}) == len(AGENT_PROFILES)
     assert len({call[1] for call in calls}) == 1
     assert {call[2] for call in calls} == {1}
     assert {call[3] for call in calls} == {1100}
@@ -99,7 +99,7 @@ def test_batch_run_executes_all_45_agents_independently(monkeypatch, tmp_path) -
     results_response = client.get(f"/api/runs/{run_id}/results")
     assert results_response.status_code == 200
     results = results_response.json()["results"]
-    assert len(results) == 45
+    assert len(results) == len(AGENT_PROFILES)
     assert all(item["status"] == "completed" for item in results)
     assert all(item["assessment"]["not_a_treatment_instruction"] is True for item in results)
     assert all(item["assessment"]["provisional_conclusion"] for item in results)
@@ -123,7 +123,7 @@ def test_batch_continues_after_failure_and_resume_runs_only_failed_agent(monkeyp
     run_id = run["run_id"]
     run = client.get(f"/api/runs/{run_id}").json()
     assert run["status"] == "completed_with_errors"
-    assert run["completed_count"] == 44
+    assert run["completed_count"] == len(AGENT_PROFILES) - 1
     assert run["failed_count"] == 1
     assert calls["RO-01"] == 1
     assert all(calls[p["agent_id"]] == 1 for p in AGENT_PROFILES if p["agent_id"] != "RO-01")
@@ -132,7 +132,7 @@ def test_batch_continues_after_failure_and_resume_runs_only_failed_agent(monkeyp
     assert resume_response.status_code == 200
     resumed = client.get(f"/api/runs/{run_id}").json()
     assert resumed["status"] == "completed"
-    assert resumed["completed_count"] == 45
+    assert resumed["completed_count"] == len(AGENT_PROFILES)
     assert resumed["failed_count"] == 0
     assert calls["RO-01"] == 2
     assert all(calls[p["agent_id"]] == 1 for p in AGENT_PROFILES if p["agent_id"] != "RO-01")

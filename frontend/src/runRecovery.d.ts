@@ -19,7 +19,7 @@ export function shouldShowBatchPanel(
 
 export function shouldOfferIndependentBatchResume(
   batchRun: {
-    status: "queued" | "running" | "completed" | "completed_with_errors";
+    status: "queued" | "running" | "completed" | "completed_with_errors" | "paused" | "stopped";
     failed_count?: number;
     updated_at?: string;
   } | null | undefined,

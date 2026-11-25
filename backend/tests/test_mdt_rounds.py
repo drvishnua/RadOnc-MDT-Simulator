@@ -4,6 +4,7 @@ import json
 from fastapi.testclient import TestClient
 
 from app.agent_schemas import AgentAssessment
+from app.agents.catalog import AGENT_PROFILES
 from app.main import app
 from app.round_schemas import FinalMDTReport, FinalReportDraft, RoundContribution
 from app.schemas import SyntheticCase
@@ -107,16 +108,16 @@ def _create_complete_round1(monkeypatch, tmp_path):
     )
     assert response.status_code == 200
     run_id = response.json()["run_id"]
-    assert client.get(f"/api/runs/{run_id}").json()["completed_count"] == 45
+    assert client.get(f"/api/runs/{run_id}").json()["completed_count"] == len(AGENT_PROFILES)
 
     # A fresh dashboard mount must be able to retrieve saved R1 progress and contributions.
     r1_summary = client.get(f"/api/runs/{run_id}").json()
     r1_results_response = client.get(f"/api/runs/{run_id}/results")
-    assert r1_summary["completed_count"] == 45
+    assert r1_summary["completed_count"] == len(AGENT_PROFILES)
     assert r1_summary["progress_percent"] == 100.0
     assert r1_results_response.status_code == 200
     r1_results = r1_results_response.json()["results"]
-    assert len(r1_results) == 45
+    assert len(r1_results) == len(AGENT_PROFILES)
     assert all(item["status"] == "completed" and item["assessment"] is not None for item in r1_results)
     return run_id
 
@@ -141,7 +142,7 @@ def test_round_input_gate_requires_exactly_one_structured_record_per_expected_sp
         rows, "assessment", "Round 1"
     )
     assert set(payloads) == {profile["agent_id"] for profile in AGENT_PROFILES}
-    assert len(payloads) == 45
+    assert len(payloads) == len(AGENT_PROFILES)
 
     with pytest.raises(RuntimeError, match="duplicates=.*RO-01"):
         mdt_rounds._require_exact_completed_role_payloads(
@@ -218,7 +219,7 @@ def test_four_rounds_require_full_previous_round_and_preserve_all_roles(monkeypa
 
     async def fake_chair(run_id_arg, case, round1, round2, round3):
         assert run_id_arg == run_id
-        assert len(round1) == len(round2) == len(round3) == 45
+        assert len(round1) == len(round2) == len(round3) == len(AGENT_PROFILES)
         return _final_report(run_id_arg, case, round1, round2, round3)
 
     monkeypatch.setattr(mdt_rounds, "generate_debate_contribution", fake_debate)
@@ -229,23 +230,23 @@ def test_four_rounds_require_full_previous_round_and_preserve_all_roles(monkeypa
     assert r2.status_code == 200
     r2_summary = client.get(f"/api/runs/{run_id}/rounds/2").json()
     assert r2_summary["status"] == "completed"
-    assert r2_summary["completed_count"] == 45
+    assert r2_summary["completed_count"] == len(AGENT_PROFILES)
     # Re-fetch after the round has finished, as the frontend does after a refresh.
     r2_results_response = client.get(f"/api/runs/{run_id}/rounds/2/results")
     assert r2_results_response.status_code == 200
     r2_results = r2_results_response.json()["results"]
-    assert len(r2_results) == 45
+    assert len(r2_results) == len(AGENT_PROFILES)
     assert all(item["status"] == "completed" and item["result"]["position"] == "conditional" for item in r2_results)
 
     r3 = client.post(f"/api/runs/{run_id}/rounds/3")
     assert r3.status_code == 200
     r3_summary = client.get(f"/api/runs/{run_id}/rounds/3").json()
     assert r3_summary["status"] == "completed"
-    assert r3_summary["completed_count"] == 45
+    assert r3_summary["completed_count"] == len(AGENT_PROFILES)
     r3_results_response = client.get(f"/api/runs/{run_id}/rounds/3/results")
     assert r3_results_response.status_code == 200
     r3_results = r3_results_response.json()["results"]
-    assert len(r3_results) == 45
+    assert len(r3_results) == len(AGENT_PROFILES)
     assert all(item["status"] == "completed" and item["result"]["position"] == "conditional" for item in r3_results)
 
     r4 = client.post(f"/api/runs/{run_id}/rounds/4")
@@ -276,9 +277,9 @@ def test_four_rounds_require_full_previous_round_and_preserve_all_roles(monkeypa
     # not reuse the fake/model-authored report's consensus point or omit discussion.
     saved_report = report.json()
     agreements = saved_report["recorded_agreements"]
-    assert len(agreements) == 90
-    assert sum(item.startswith("Round 2 —") for item in agreements) == 45
-    assert sum(item.startswith("Round 3 —") for item in agreements) == 45
+    assert len(agreements) == 2 * len(AGENT_PROFILES)
+    assert sum(item.startswith("Round 2 —") for item in agreements) == len(AGENT_PROFILES)
+    assert sum(item.startswith("Round 3 —") for item in agreements) == len(AGENT_PROFILES)
     assert all("not independently validated as a shared proposition" in item for item in agreements)
     assert saved_report["consensus_points"] == []
     assert saved_report["consensus_status"] == "insufficient_information"
@@ -402,9 +403,20 @@ def test_chair_retry_uses_higher_output_budget():
 
 
 def _chair_rows(field, positions):
+    from app.agents.catalog import AGENT_PROFILES
     rows = []
-    for index, position in enumerate(positions, start=1):
-        agent_id = "PP-05" if position == "conditional" else f"RO-{index:02d}"
+    pp05_profile = next((p for p in AGENT_PROFILES if p["agent_id"] == "PP-05"), None)
+    for index, position in enumerate(positions):
+        profile = AGENT_PROFILES[index] if index < len(AGENT_PROFILES) else {"agent_id": f"RO-{index:02d}", "name": f"Role {index}"}
+        if profile["agent_id"] == "PP-05" and position != "conditional" and "conditional" in positions:
+            agent_id = "PP-99"
+            name = profile["name"]
+        elif position == "conditional":
+            agent_id = "PP-05"
+            name = "Treatment-averse Perspective"
+        else:
+            agent_id = profile["agent_id"]
+            name = profile["name"]
         payload = {
             "position": position,
             "provisional_conclusion": (
@@ -420,7 +432,7 @@ def _chair_rows(field, positions):
         }
         rows.append({
             "agent_id": agent_id,
-            "agent_name": "Treatment-averse Perspective" if position == "conditional" else f"Role {index}",
+            "agent_name": name,
             "status": "completed",
             field: payload,
         })
@@ -838,9 +850,9 @@ def test_chair_reconciliation_preserves_saved_round_challenges_as_unresolved():
         scenario_title="Synthetic source challenge test",
         case_summary="Fictional case for source-linked challenge preservation.",
     )
-    round1 = _chair_rows("assessment", ["insufficient_information"] * 45)
-    round2 = _chair_rows("result", ["insufficient_information"] * 45)
-    round3 = _chair_rows("result", ["insufficient_information"] * 45)
+    round1 = _chair_rows("assessment", ["insufficient_information"] * len(AGENT_PROFILES))
+    round2 = _chair_rows("result", ["insufficient_information"] * len(AGENT_PROFILES))
+    round3 = _chair_rows("result", ["insufficient_information"] * len(AGENT_PROFILES))
     round2[0]["result"]["substantive_challenges"] = [
         "R1:SO-01 — the proposed sequence remains conditional on local staging."
     ]
@@ -867,9 +879,9 @@ def test_chair_source_opinion_coverage_is_dynamic_and_counts_distinct_roles():
         scenario_title="Synthetic dynamic source opinion coverage",
         case_summary=case_summary,
     )
-    round1 = _chair_rows("assessment", ["insufficient_information"] * 45)
-    round2 = _chair_rows("result", ["insufficient_information"] * 45)
-    round3 = _chair_rows("result", ["insufficient_information"] * 45)
+    round1 = _chair_rows("assessment", ["insufficient_information"] * len(AGENT_PROFILES))
+    round2 = _chair_rows("result", ["insufficient_information"] * len(AGENT_PROFILES))
+    round3 = _chair_rows("result", ["insufficient_information"] * len(AGENT_PROFILES))
 
     neurology_excerpt = "Neurology service note proposes specialist assessment, conditional on MRI."
     cardiology_excerpt = "Cardiology service note proposes a separate review, conditional on documented fitness."
@@ -935,7 +947,7 @@ def test_chair_preserves_round_two_and_round_three_agreements_and_unknowns_witho
         scenario_title="Chair preserves discussion records",
         case_summary="Fictional case used only to test attributed MDT discussion records.",
     )
-    positions = ["insufficient_information"] * 45
+    positions = ["insufficient_information"] * len(AGENT_PROFILES)
     round1 = _chair_rows("assessment", positions)
     round2 = _chair_rows("result", positions)
     round3 = _chair_rows("result", positions)
@@ -988,11 +1000,11 @@ def test_chair_prompt_samples_each_position_when_round_three_counts_are_tied(mon
         scenario_title="Chair tied position prompt sample",
         case_summary="Fictional case used only to test balanced source sampling.",
     )
-    round1 = _chair_rows("assessment", ["insufficient_information"] * 45)
-    round2 = _chair_rows("result", ["insufficient_information"] * 45)
+    round1 = _chair_rows("assessment", ["insufficient_information"] * len(AGENT_PROFILES))
+    round2 = _chair_rows("result", ["insufficient_information"] * len(AGENT_PROFILES))
     round3 = _chair_rows(
         "result",
-        ["supports"] * 22 + ["opposes"] * 22 + ["insufficient_information"],
+        ["supports"] * 24 + ["opposes"] * 24 + ["insufficient_information"],
     )
 
     asyncio.run(
@@ -1012,7 +1024,7 @@ def test_chair_prompt_samples_each_position_when_round_three_counts_are_tied(mon
     sampled = digest["non_modal_views"]
     sampled_agents = {item["agent"] for item in sampled}
     sampled_positions = {item["position"] for item in sampled}
-    assert {"RO-01", "RO-23", "RO-45"}.issubset(sampled_agents)
+    assert {"RO-01", "RO-02", "SO-06", "SO-07", "SV-03"}.issubset(sampled_agents)
     assert {"supports", "opposes", "insufficient_information"}.issubset(sampled_positions)
 
 
@@ -1024,7 +1036,7 @@ def test_chair_reconciliation_preserves_position_counts_and_minor_view():
         social_context=["Family support difficulties are recorded."],
         resource_context=[],
     )
-    positions = ["insufficient_information"] * 44 + ["conditional"]
+    positions = ["insufficient_information"] * (len(AGENT_PROFILES) - 1) + ["conditional"]
     report = reconcile_chair_report_draft(
         "synthetic-run",
         case,
@@ -1035,8 +1047,8 @@ def test_chair_reconciliation_preserves_position_counts_and_minor_view():
     )
 
     assert report.consensus_status == "insufficient_information"
-    assert "44/45 insufficient-information" in report.overall_educational_synthesis
-    assert "1/45 conditional" in report.overall_educational_synthesis
+    assert f"{len(AGENT_PROFILES) - 1}/{len(AGENT_PROFILES)} insufficient-information" in report.overall_educational_synthesis
+    assert f"1/{len(AGENT_PROFILES)} conditional" in report.overall_educational_synthesis
     assert "unanimously" not in report.overall_educational_synthesis.casefold()
     assert report.minority_and_dissenting_views
     assert report.consensus_points == []
@@ -1244,9 +1256,9 @@ def test_chair_preserves_competing_source_opinions_verbatim_with_conditions():
             "conditional on MRI staging, metastatic work-up and fitness assessment."
         ),
     )
-    round1 = _chair_rows("assessment", ["insufficient_information"] * 45)
-    round2 = _chair_rows("result", ["insufficient_information"] * 45)
-    round3 = _chair_rows("result", ["insufficient_information"] * 45)
+    round1 = _chair_rows("assessment", ["insufficient_information"] * len(AGENT_PROFILES))
+    round2 = _chair_rows("result", ["insufficient_information"] * len(AGENT_PROFILES))
+    round3 = _chair_rows("result", ["insufficient_information"] * len(AGENT_PROFILES))
     report = reconcile_chair_report_draft(
         "synthetic-competing-source-opinions", case, round1, round2, round3, _chair_draft()
     )
@@ -1533,9 +1545,9 @@ def test_chair_report_surfaces_round_source_reference_integrity_flags():
         scenario_title="Synthetic provenance audit",
         case_summary="Fictional case for validating source-reference audit reporting.",
     )
-    round1 = _chair_rows("assessment", ["insufficient_information"] * 45)
-    round2 = _chair_rows("result", ["insufficient_information"] * 45)
-    round3 = _chair_rows("result", ["insufficient_information"] * 45)
+    round1 = _chair_rows("assessment", ["insufficient_information"] * len(AGENT_PROFILES))
+    round2 = _chair_rows("result", ["insufficient_information"] * len(AGENT_PROFILES))
+    round3 = _chair_rows("result", ["insufficient_information"] * len(AGENT_PROFILES))
     round2[0]["result"]["source_reference_integrity_flags"] = [
         "Unsupported peer-agreement claim: the R2 narrative asserts consensus without a shared source-linked proposition."
     ]
@@ -2675,9 +2687,9 @@ def test_chair_report_uses_neutral_case_wording_and_retains_education_boundary()
         scenario_title="Neutral wording regression test",
         case_summary="Fictional training case used to test report wording only.",
     )
-    rows1 = _chair_rows("assessment", ["insufficient_information"] * 45)
-    rows2 = _chair_rows("result", ["insufficient_information"] * 45)
-    rows3 = _chair_rows("result", ["insufficient_information"] * 45)
+    rows1 = _chair_rows("assessment", ["insufficient_information"] * len(AGENT_PROFILES))
+    rows2 = _chair_rows("result", ["insufficient_information"] * len(AGENT_PROFILES))
+    rows3 = _chair_rows("result", ["insufficient_information"] * len(AGENT_PROFILES))
     report = reconcile_chair_report_draft(
         "neutral-wording-regression", case, rows1, rows2, rows3, _chair_draft()
     )
@@ -2716,7 +2728,7 @@ def test_failed_round_agent_resumes_without_replacing_completed_peer_records(mon
     assert started.status_code == 200
     failed_summary = client.get(f"/api/runs/{run_id}/rounds/2").json()
     assert failed_summary["status"] == "completed_with_errors"
-    assert failed_summary["completed_count"] == 44
+    assert failed_summary["completed_count"] == len(AGENT_PROFILES) - 1
     assert failed_summary["failed_count"] == 1
 
     before_resume = client.get(f"/api/runs/{run_id}/rounds/2/results").json()["results"]
@@ -2734,7 +2746,7 @@ def test_failed_round_agent_resumes_without_replacing_completed_peer_records(mon
     assert resumed.status_code == 200
     final_summary = client.get(f"/api/runs/{run_id}/rounds/2").json()
     assert final_summary["status"] == "completed"
-    assert final_summary["completed_count"] == 45
+    assert final_summary["completed_count"] == len(AGENT_PROFILES)
     assert final_summary["failed_count"] == 0
     assert attempts["RO-01"] == 3
 
@@ -2770,12 +2782,12 @@ def test_failed_round_three_agent_resumes_without_replacing_completed_peer_recor
     assert client.post(f"/api/runs/{run_id}/rounds/2").status_code == 200
     r2_summary = client.get(f"/api/runs/{run_id}/rounds/2").json()
     assert r2_summary["status"] == "completed"
-    assert r2_summary["completed_count"] == 45
+    assert r2_summary["completed_count"] == len(AGENT_PROFILES)
 
     assert client.post(f"/api/runs/{run_id}/rounds/3").status_code == 200
     failed_summary = client.get(f"/api/runs/{run_id}/rounds/3").json()
     assert failed_summary["status"] == "completed_with_errors"
-    assert failed_summary["completed_count"] == 44
+    assert failed_summary["completed_count"] == len(AGENT_PROFILES) - 1
     assert failed_summary["failed_count"] == 1
 
     before_resume = client.get(f"/api/runs/{run_id}/rounds/3/results").json()["results"]
@@ -2793,7 +2805,7 @@ def test_failed_round_three_agent_resumes_without_replacing_completed_peer_recor
     assert resumed.status_code == 200
     final_summary = client.get(f"/api/runs/{run_id}/rounds/3").json()
     assert final_summary["status"] == "completed"
-    assert final_summary["completed_count"] == 45
+    assert final_summary["completed_count"] == len(AGENT_PROFILES)
     assert final_summary["failed_count"] == 0
     assert attempts["RO-01"] == 3
 
@@ -2822,7 +2834,7 @@ def test_chair_failure_retry_and_saved_four_round_records_survive_database_reini
         nonlocal chair_attempts
         chair_attempts += 1
         assert run_id_arg == run_id
-        assert len(round1) == len(round2) == len(round3) == 45
+        assert len(round1) == len(round2) == len(round3) == len(AGENT_PROFILES)
         if chair_attempts <= 2:
             raise AgentGenerationError("intentional Chair structured-output failure")
         return _final_report(run_id_arg, case, round1, round2, round3)
@@ -2922,8 +2934,8 @@ print(json.dumps({
     assert restarted_state == {
         "run_id": run_id,
         "case_snapshot_sha256": run_before_restart["case_snapshot_sha256"],
-        "r1_completed": 45,
-        "round_completed": [45, 45, 1],
+        "r1_completed": len(AGENT_PROFILES),
+        "round_completed": [len(AGENT_PROFILES), len(AGENT_PROFILES), 1],
         "chair_report_available": True,
         "chair_consensus_status": "insufficient_information",
     }
@@ -3872,9 +3884,9 @@ def test_chair_excludes_none_identified_r3_placeholder_and_discloses_zero_challe
         scenario_title="Synthetic empty R3 challenge test",
         case_summary="Fictional case for deterministic Chair challenge accounting.",
     )
-    round1 = _chair_rows("assessment", ["insufficient_information"] * 45)
-    round2 = _chair_rows("result", ["insufficient_information"] * 45)
-    round3 = _chair_rows("result", ["insufficient_information"] * 45)
+    round1 = _chair_rows("assessment", ["insufficient_information"] * len(AGENT_PROFILES))
+    round2 = _chair_rows("result", ["insufficient_information"] * len(AGENT_PROFILES))
+    round3 = _chair_rows("result", ["insufficient_information"] * len(AGENT_PROFILES))
     round3[0]["result"]["substantive_challenges"] = [
         "[Sources: CASE:case_summary#1; R2:MO-01] none_identified"
     ]
@@ -3901,9 +3913,9 @@ def test_chair_keeps_genuine_r3_challenge_without_zero_challenge_disclosure():
         scenario_title="Synthetic genuine R3 challenge test",
         case_summary="Fictional case for deterministic Chair challenge accounting.",
     )
-    round1 = _chair_rows("assessment", ["insufficient_information"] * 45)
-    round2 = _chair_rows("result", ["insufficient_information"] * 45)
-    round3 = _chair_rows("result", ["insufficient_information"] * 45)
+    round1 = _chair_rows("assessment", ["insufficient_information"] * len(AGENT_PROFILES))
+    round2 = _chair_rows("result", ["insufficient_information"] * len(AGENT_PROFILES))
+    round3 = _chair_rows("result", ["insufficient_information"] * len(AGENT_PROFILES))
     round3[0]["result"]["substantive_challenges"] = [
         "R2:MO-01 identifies a distinct unresolved question that requires comparison with the saved source text."
     ]
@@ -4031,9 +4043,9 @@ def test_chair_prompt_retains_full_saved_r2_source_opinion_and_condition(monkeyp
         scenario_title="R2 source opinion Chair digest regression",
         case_summary="Fictional incomplete case; prerequisites remain unknown.",
     )
-    round1 = _chair_rows("assessment", ["insufficient_information"] * 45)
-    round2 = _chair_rows("result", ["insufficient_information"] * 45)
-    round3 = _chair_rows("result", ["insufficient_information"] * 45)
+    round1 = _chair_rows("assessment", ["insufficient_information"] * len(AGENT_PROFILES))
+    round2 = _chair_rows("result", ["insufficient_information"] * len(AGENT_PROFILES))
+    round3 = _chair_rows("result", ["insufficient_information"] * len(AGENT_PROFILES))
     source_excerpt = (
         "medical oncology note favours a preoperative multimodality sequence "
         "conditional on MRI staging, metastatic work-up, and documented fitness assessment"

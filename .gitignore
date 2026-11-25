@@ -32,6 +32,9 @@ build/
 *.log
 .tmp/
 temp/
+.local-logs/
+validation_artifacts/
+backend/validation_artifacts/
 
 # Editor / operating system
 .vscode/

@@ -1,500 +1,54 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { readDraft, writeDraft, listToMultilineText, multilineTextToList, createBlankDraft } from "./caseDraft.js";
+import { readDraft, writeDraft, createBlankDraft } from "./caseDraft.js";
 import { readSavedSingleAssessment, writeSavedSingleAssessment } from "./singleAssessmentStorage.js";
 import { hasCompletedIndependentAssessments, shouldOfferIndependentBatchResume, shouldShowBatchPanel } from "./runRecovery.js";
 import { patientVersionDisplayName } from "./patientVersionName.js";
 import { formatElapsedDuration } from "./roundTiming.js";
-
-const CASE_DRAFT_KEY = "radonc-mdt-case-draft-v1";
-const LEGACY_CASE_KEY = "radonc-mdt-last-case";
-const SINGLE_ASSESSMENT_KEY = "radonc-mdt-ro01-assessment-v1";
-const PENDING_INTAKE_KEY = "radonc-mdt-pending-intake-v1";
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
-
-type Health = {
-  status: string;
-  application: string;
-  version: string;
-  mode: string;
-};
-
-type Runtime = {
-  reachable: boolean;
-  version?: string | null;
-  configured_model: string;
-  configured_model_installed: boolean;
-  models: string[];
-  error?: string;
-};
-
-type Agent = {
-  agent_id: string;
-  category: string;
-  category_label: string;
-  name: string;
-  mandate: string;
-};
-
-type ValidationResult = {
-  valid: boolean;
-  mode: string;
-  warnings: string[];
-  note: string;
-};
-
-type SyntheticCasePayload = {
-  scenario_title: string;
-  case_summary: string;
-  age_years: number | null;
-  sex_at_birth: string | null;
-  primary_site: string | null;
-  histology: string | null;
-  clinical_t_stage: string | null;
-  clinical_n_stage: string | null;
-  clinical_m_stage: string | null;
-  stage_group: string | null;
-  performance_status: string | null;
-  pathology_summary: string | null;
-  imaging_summary: string | null;
-  current_medications?: string[];
-  known_allergies?: string[];
-  relevant_investigations?: string[];
-  relevant_comorbidities: string[];
-  prior_treatment: string[];
-  patient_goals: string[];
-  social_context: string[];
-  resource_context: string[];
-  known_unknowns: string[];
-};
-
-type AgentAssessmentResult = {
-  agent_id: string;
-  round_number: number;
-  position: "supports" | "opposes" | "conditional" | "insufficient_information";
-  provisional_conclusion: string;
-  preferred_educational_option: string;
-  perspective_summary: string;
-  discussion_options: string[];
-  unknowns: string[];
-  evidence_gaps: string[];
-  uncertainty_notes: string[];
-  confidence: number;
-  evidence_claims: unknown[];
-  case_facts?: string[];
-  case_data_integrity_flags?: string[];
-  safety_boundary: string;
-  not_a_treatment_instruction: boolean;
-};
-
-type SavedSingleAssessment = {
-  version: 1;
-  saved_at: string;
-  case_snapshot: SyntheticCasePayload;
-  assessment: AgentAssessmentResult;
-  patient_id?: string;
-  case_version_id?: string;
-};
-
-type BatchRunSummary = {
-  run_id: string;
-  status: "queued" | "running" | "completed" | "completed_with_errors";
-  total_agents: number;
-  completed_count: number;
-  failed_count: number;
-  queued_count: number;
-  running_count: number;
-  finished_count: number;
-  progress_percent: number;
-  current_agent_id: string | null;
-  created_at: string;
-  updated_at: string;
-  mdt_finished_at: string | null;
-  case_snapshot_sha256: string;
-  patient_id?: string | null;
-  case_version_id?: string | null;
-  case_version_number?: number | null;
-};
-
-
-type PatientRecordSummary = {
-  patient_id: string;
-  patient_identifier: string;
-  patient_name: string | null;
-  age_years: number | null;
-  stage_group: string | null;
-  created_at: string;
-  updated_at: string;
-  version_count: number;
-  simulation_count: number;
-  latest_case_version_id: string | null;
-  latest_version_number: number | null;
-  scenario_title: string;
-};
-
-type PatientCaseVersion = {
-  case_version_id: string;
-  patient_id: string;
-  patient_name: string | null;
-  version_number: number;
-  case_snapshot_sha256: string;
-  created_at: string;
-  intake_backed: boolean;
-  intake_session_id: string | null;
-  case: SyntheticCasePayload;
-};
-
-type IntakeQuestion = { domain: string; question: string };
-type IntakeGap = { domain: string; field_id: string; status: string };
-type IntakeScreening = { questions: IntakeQuestion[]; gaps: IntakeGap[]; domains: { domain: string; status: string; missing_fields: string[] }[]; case_snapshot: SyntheticCasePayload; disclaimer: string };
-type PendingIntake = { session_id: string; createNewPatient: boolean; patientName: string; patientId?: string; screening: IntakeScreening | null };
-
-type PatientDetail = {
-  patient_id: string;
-  patient_identifier: string;
-  patient_name: string | null;
-  created_at: string;
-  updated_at: string;
-  versions: PatientCaseVersion[];
-  runs: BatchRunSummary[];
-};
-
-type ActiveSavedCase = PatientCaseVersion & { patient_id: string; patient_identifier: string };
-
-type PatientAssessmentRecord = {
-  assessment_id: string;
-  patient_id: string;
-  case_version_id: string;
-  agent_id: string;
-  round_number: number;
-  created_at: string;
-  assessment: AgentAssessmentResult;
-};
-
-type BatchAgentResult = {
-  agent_id: string;
-  agent_name: string;
-  category_label: string;
-  status: "queued" | "running" | "completed" | "failed";
-  assessment: AgentAssessmentResult | null;
-  error_message: string | null;
-  duration_seconds: number | null;
-};
-
-type RoundSummary = {
-  run_id: string;
-  round_number: number;
-  status: "queued" | "running" | "completed" | "completed_with_errors";
-  total_agents: number;
-  completed_count: number;
-  failed_count: number;
-  queued_count: number;
-  running_count: number;
-  finished_count: number;
-  progress_percent: number;
-  current_agent_id: string | null;
-  updated_at: string;
-  started_at: string | null;
-  finished_at: string | null;
-};
-
-type RoundAgentResult = {
-  agent_id: string;
-  agent_name: string;
-  category_label: string;
-  status: "queued" | "running" | "completed" | "failed";
-  result: {
-    position: string;
-    provisional_conclusion: string;
-    response_to_other_perspectives: string;
-    agreements: string[];
-    substantive_challenges: string[];
-    position_changes: string[];
-    remaining_unknowns: string[];
-    risk_flags: string[];
-    case_data_integrity_flags?: string[];
-    source_reference_integrity_flags?: string[];
-    source_opinion_responses?: {
-      source_id: string;
-      source_excerpt: string;
-      position_on_source_opinion?: string | null;
-      analysis: string;
-      comparison: string;
-    }[];
-    source_opinion_reviews?: {
-      source_id: string;
-      opinion_label?: string;
-      source_excerpt?: string;
-      option_status: string;
-      conditions_status: string;
-      review_basis?: string;
-      evidence_peer_id?: string;
-      evidence_excerpt?: string;
-      evidence_validation_status?: string;
-      challenge?: string;
-    }[];
-    confidence: number;
-  } | null;
-  error_message: string | null;
-  duration_seconds: number | null;
-};
-
-type RoundQualityAudit = {
-  run_id: string;
-  round_number: number;
-  total_flags: number;
-  reasoning_depth_flags?: Record<string, string[]>;
-  role_differentiation?: {
-    valid: boolean;
-    flags: string[];
-    pairwise_duplicates?: Array<{ role_1: string; role_2: string; similarity: number }>;
-    delegation_flags?: Array<{ role_id: string; issue: string; text: string }>;
-  };
-  citation_audit?: {
-    valid: boolean;
-    total_citations: number;
-    verified_count: number;
-    unverified_count: number;
-    concordance_rate: number;
-    unverified_citations?: Array<{ role_id: string; source_id: string; claim: string }>;
-  };
-};
-
-type FinalMDTReport = {
-  run_id: string;
-  round_number: 4;
-  report_title: string;
-  consensus_status: string;
-  chair_conclusion: string;
-  overall_educational_synthesis: string;
-  consensus_points: string[];
-  recorded_agreements?: string[];
-  source_opinion_review_coverage?: string[];
-  source_opinion_position_summary?: string[];
-  unresolved_disagreements: string[];
-  minority_and_dissenting_views: string[];
-  major_uncertainties: string[];
-  missing_information_before_real_world_review: string[];
-  patient_and_family_considerations: string[];
-  feasibility_and_resource_considerations: string[];
-  governance_and_safeguarding_considerations: string[];
-  evidence_limitations: string[];
-  chair_reflection: string;
-  case_data_integrity_flags?: string[];
-  evidence_retrieval_connected: false;
-  not_a_treatment_instruction: true;
-};
-
-const emptyForm = {
-  patient_name: "",
-  scenario_title: "Head-and-neck oncology case",
-  case_summary: "",
-  age_years: "",
-  sex_at_birth: "",
-  primary_site: "",
-  histology: "",
-  clinical_t_stage: "",
-  clinical_n_stage: "",
-  clinical_m_stage: "",
-  stage_group: "",
-  performance_status: "",
-  pathology_summary: "",
-  imaging_summary: "",
-  current_medications: "",
-  known_allergies: "",
-  relevant_investigations: "",
-  relevant_comorbidities: "",
-  prior_treatment: "",
-  patient_goals: "",
-  social_context: "",
-  resource_context: "",
-  known_unknowns: ""
-};
-
-function caseSnapshotToForm(snapshot: SyntheticCasePayload): typeof emptyForm {
-  return {
-    patient_name: "",
-    scenario_title: snapshot.scenario_title ?? emptyForm.scenario_title,
-    case_summary: snapshot.case_summary ?? "",
-    age_years: snapshot.age_years === null || snapshot.age_years === undefined ? "" : String(snapshot.age_years),
-    sex_at_birth: snapshot.sex_at_birth ?? "",
-    primary_site: snapshot.primary_site ?? "",
-    histology: snapshot.histology ?? "",
-    clinical_t_stage: snapshot.clinical_t_stage ?? "",
-    clinical_n_stage: snapshot.clinical_n_stage ?? "",
-    clinical_m_stage: snapshot.clinical_m_stage ?? "",
-    stage_group: snapshot.stage_group ?? "",
-    performance_status: snapshot.performance_status ?? "",
-    pathology_summary: snapshot.pathology_summary ?? "",
-    imaging_summary: snapshot.imaging_summary ?? "",
-    current_medications: listToMultilineText(snapshot.current_medications ?? []),
-    known_allergies: listToMultilineText(snapshot.known_allergies ?? []),
-    relevant_investigations: listToMultilineText(snapshot.relevant_investigations ?? []),
-    relevant_comorbidities: listToMultilineText(snapshot.relevant_comorbidities ?? []),
-    prior_treatment: listToMultilineText(snapshot.prior_treatment ?? []),
-    patient_goals: listToMultilineText(snapshot.patient_goals ?? []),
-    social_context: listToMultilineText(snapshot.social_context ?? []),
-    resource_context: listToMultilineText(snapshot.resource_context ?? []),
-    known_unknowns: listToMultilineText(snapshot.known_unknowns ?? [])
-  };
-}
-
-function optionalText(value: string): string | null {
-  const cleaned = value.trim();
-  return cleaned ? cleaned : null;
-}
-
-function linesToList(value: string): string[] {
-  return multilineTextToList(value);
-}
-
-function savedOptionalText(value: unknown): string | null {
-  return typeof value === "string" && value.trim() ? value : null;
-}
-
-function savedStringList(value: unknown): string[] {
-  return Array.isArray(value)
-    ? value.filter((item): item is string => typeof item === "string")
-    : [];
-}
-
-function readSavedCase(): SyntheticCasePayload | null {
-  const key = "radonc-mdt-last-case";
-  try {
-    const saved = window.localStorage.getItem(key);
-    if (!saved) return null;
-
-    const parsed: unknown = JSON.parse(saved);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      window.localStorage.removeItem(key);
-      return null;
-    }
-
-    const value = parsed as Record<string, unknown>;
-    const valid =
-      typeof value.scenario_title === "string" &&
-      typeof value.case_summary === "string" &&
-      (value.age_years === null ||
-        (typeof value.age_years === "number" && Number.isFinite(value.age_years))) &&
-      (value.primary_site === null || typeof value.primary_site === "string") &&
-      (value.histology === null || typeof value.histology === "string");
-
-    if (!valid) {
-      console.warn("[RadOnc] Discarding an incompatible saved training case.");
-      window.localStorage.removeItem(key);
-      return null;
-    }
-
-    return {
-      scenario_title: value.scenario_title as string,
-      case_summary: value.case_summary as string,
-      age_years: value.age_years as number | null,
-      sex_at_birth: savedOptionalText(value.sex_at_birth),
-      primary_site: value.primary_site as string | null,
-      histology: value.histology as string | null,
-      clinical_t_stage: savedOptionalText(value.clinical_t_stage),
-      clinical_n_stage: savedOptionalText(value.clinical_n_stage),
-      clinical_m_stage: savedOptionalText(value.clinical_m_stage),
-      stage_group: savedOptionalText(value.stage_group),
-      performance_status: savedOptionalText(value.performance_status),
-      pathology_summary: savedOptionalText(value.pathology_summary),
-      imaging_summary: savedOptionalText(value.imaging_summary),
-      current_medications: savedStringList(value.current_medications),
-      known_allergies: savedStringList(value.known_allergies),
-      relevant_investigations: savedStringList(value.relevant_investigations),
-      relevant_comorbidities: savedStringList(value.relevant_comorbidities),
-      prior_treatment: savedStringList(value.prior_treatment),
-      patient_goals: savedStringList(value.patient_goals),
-      social_context: savedStringList(value.social_context),
-      resource_context: savedStringList(value.resource_context),
-      known_unknowns: savedStringList(value.known_unknowns)
-    };
-  } catch (error) {
-    console.warn("[RadOnc] Could not restore the saved training case; starting clean.", error);
-    try { window.localStorage.removeItem(key); } catch { /* Storage may be unavailable. */ }
-    return null;
-  }
-}
-
-function legacySavedCaseToDraft(_value: unknown): typeof emptyForm | null {
-  const saved = readSavedCase();
-  return saved ? caseSnapshotToForm(saved) : null;
-}
-
-function readSavedBatch(): BatchRunSummary | null {
-  const key = "radonc-mdt-active-batch";
-  try {
-    const saved = window.localStorage.getItem(key);
-    if (!saved) return null;
-
-    const parsed: unknown = JSON.parse(saved);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      window.localStorage.removeItem(key);
-      return null;
-    }
-
-    const value = parsed as Record<string, unknown>;
-    const validStatuses = ["queued", "running", "completed", "completed_with_errors"];
-    const valid =
-      typeof value.run_id === "string" &&
-      value.run_id.length > 0 &&
-      typeof value.status === "string" &&
-      validStatuses.includes(value.status) &&
-      ["total_agents", "completed_count", "failed_count", "queued_count",
-        "running_count", "finished_count", "progress_percent"].every(
-          (field) => typeof value[field] === "number" && Number.isFinite(value[field])
-        ) &&
-      typeof value.updated_at === "string";
-
-    if (!valid) {
-      console.warn("[RadOnc] Discarding an incompatible saved run pointer; backend records are untouched.");
-      window.localStorage.removeItem(key);
-      return null;
-    }
-    return parsed as BatchRunSummary;
-  } catch (error) {
-    console.warn("[RadOnc] Could not restore the saved run pointer; starting without browser session state.", error);
-    try { window.localStorage.removeItem(key); } catch { /* Storage may be unavailable. */ }
-    return null;
-  }
-}
-
-function safeCaseDraftStorage(): Storage {
-  try {
-    return window.localStorage;
-  } catch {
-    // Accessing the localStorage property itself can throw in restricted browser contexts.
-    return {
-      length: 0,
-      clear() {},
-      getItem() { return null; },
-      key() { return null; },
-      removeItem() {},
-      setItem() { throw new Error("Browser storage is unavailable."); }
-    };
-  }
-}
-
-
-function readPendingIntakePointer(): PendingIntake | null {
-  try {
-    const raw = safeCaseDraftStorage().getItem(PENDING_INTAKE_KEY);
-    if (!raw) return null;
-    const value = JSON.parse(raw) as Record<string, unknown>;
-    if (typeof value.session_id !== "string" || typeof value.createNewPatient !== "boolean" ||
-        typeof value.patientName !== "string") return null;
-    return {
-      session_id: value.session_id,
-      createNewPatient: value.createNewPatient,
-      patientName: value.patientName,
-      patientId: typeof value.patientId === "string" ? value.patientId : undefined,
-      screening: null
-    };
-  } catch {
-    return null;
-  }
-}
+import { PRESET_CASES } from "./presetCases.js";
+import type { LandmarkTrial } from "./clinicalEvidence.js";
+import { CLINICAL_PERTURBATIONS, applyPerturbation } from "./clinicalPerturbations.js";
+import type {
+  ActiveSavedCase,
+  Agent,
+  AgentAssessmentResult,
+  BatchAgentResult,
+  BatchRunSummary,
+  FinalMDTReport,
+  Health,
+  IntakeScreening,
+  PatientAssessmentRecord,
+  PatientDetail,
+  PatientRecordSummary,
+  PendingIntake,
+  RoundAgentResult,
+  RoundQualityAudit,
+  RoundSummary,
+  Runtime,
+  SavedSingleAssessment,
+  SyntheticCasePayload,
+  ValidationResult,
+} from "./types.js";
+import {
+  API_BASE,
+  CASE_DRAFT_KEY,
+  FOCUSED_PANELS,
+  LEGACY_CASE_KEY,
+  PENDING_INTAKE_KEY,
+  SINGLE_ASSESSMENT_KEY,
+  caseSnapshotToForm,
+  emptyForm,
+  legacySavedCaseToDraft,
+  linesToList,
+  optionalText,
+  readPendingIntakePointer,
+  readSavedBatch,
+  safeCaseDraftStorage,
+} from "./caseFormHelpers.js";
+import { SystemHealthTab } from "./components/SystemHealthTab.js";
+import { ChairReportTab } from "./components/ChairReportTab.js";
+import { SpecialistsTab } from "./components/SpecialistsTab.js";
+import { EvidenceDrawerModal } from "./components/EvidenceDrawerModal.js";
 
 function App() {
   const [health, setHealth] = useState<Health | null>(null);
@@ -538,8 +92,64 @@ function App() {
   const [roundAudits, setRoundAudits] = useState<Record<number, RoundQualityAudit | null>>({});
   const [finalReport, setFinalReport] = useState<FinalMDTReport | null>(null);
   const [roundActionBusy, setRoundActionBusy] = useState<number | null>(null);
+  const [controlBusyKey, setControlBusyKey] = useState<string | null>(null);
   const [roundError, setRoundError] = useState("");
+  const isMountedRef = useRef(true);
+  const activeRunIdRef = useRef<string | null>(batchRun?.run_id ?? null);
+  const batchRefreshSeqRef = useRef(0);
+  const roundRefreshSeqRef = useRef<Record<number, number>>({});
+  activeRunIdRef.current = batchRun?.run_id ?? null;
   const [agentFilter, setAgentFilter] = useState("All perspectives");
+  const [activeTab, setActiveTab] = useState<"case" | "simulation" | "chair" | "specialists" | "system">("case");
+  const [selectedPresetId, setSelectedPresetId] = useState<string>("");
+  const [activePerturbationId, setActivePerturbationId] = useState<string | null>(null);
+  const [focusedPanelKey, setFocusedPanelKey] = useState<string>("all");
+  const [inspectingTrial, setInspectingTrial] = useState<LandmarkTrial | null>(null);
+  const [isEvidenceDrawerOpen, setIsEvidenceDrawerOpen] = useState(false);
+  const [selectedAgentIds, setSelectedAgentIds] = useState<Record<number, string[]>>({
+    1: [],
+    2: [],
+    3: [],
+    4: []
+  });
+  const [singleAgentToRun, setSingleAgentToRun] = useState<string>("RO-01");
+
+  function loadPresetCase(presetId: string) {
+    const preset = PRESET_CASES.find((p) => p.id === presetId);
+    if (!preset) return;
+    const newForm = { ...preset.form };
+    setForm(newForm);
+    writeDraft(safeCaseDraftStorage(), CASE_DRAFT_KEY, LEGACY_CASE_KEY, newForm);
+    setActivePerturbationId(null);
+    setValidation(null);
+    setValidatedCase(null);
+    setValidationError("");
+    setPatientError("");
+    setAssessmentError("");
+  }
+
+  function handleApplyPerturbation(perturbationId: string) {
+    if (activePerturbationId === perturbationId) {
+      if (selectedPresetId) {
+        loadPresetCase(selectedPresetId);
+      }
+      setActivePerturbationId(null);
+      return;
+    }
+    const updatedForm = applyPerturbation(form, perturbationId);
+    setForm(updatedForm);
+    setActivePerturbationId(perturbationId);
+    writeDraft(safeCaseDraftStorage(), CASE_DRAFT_KEY, LEGACY_CASE_KEY, updatedForm);
+    setValidation(null);
+    setValidatedCase(null);
+  }
+
+  function handleResetPerturbations() {
+    if (selectedPresetId) {
+      loadPresetCase(selectedPresetId);
+    }
+    setActivePerturbationId(null);
+  }
 
 
 
@@ -558,11 +168,13 @@ function App() {
       const healthData = (await healthResponse.json()) as Health;
       const runtimeData = (await runtimeResponse.json()) as { ollama: Runtime };
       const agentData = (await agentsResponse.json()) as { agents: Agent[] };
+      if (!isMountedRef.current) return;
       setHealth(healthData);
       setRuntime(runtimeData.ollama);
       setAgents(agentData.agents);
       setConnectionState("connected");
     } catch {
+      if (!isMountedRef.current) return;
       setHealth(null);
       setRuntime(null);
       setAgents([]);
@@ -579,8 +191,10 @@ function App() {
       const response = await fetch(API_BASE + "/api/patients");
       if (!response.ok) throw new Error("Unable to load the patient registry.");
       const body = await response.json() as { patients: PatientRecordSummary[] };
+      if (!isMountedRef.current) return;
       setPatientRecords(body.patients);
     } catch (error) {
+      if (!isMountedRef.current) return;
       setPatientError(error instanceof Error ? error.message : "Unable to load patient records.");
     }
   }
@@ -621,8 +235,10 @@ function App() {
     const latestRun = matchingRuns[0];
     setSelectedPatientRunId(latestRun?.run_id ?? "");
     if (latestRun) {
+      activeRunIdRef.current = latestRun.run_id;
       await refreshBatchRun(latestRun.run_id);
     } else {
+      activeRunIdRef.current = null;
       setBatchRun(null);
       setBatchResults([]);
       setRoundSummaries({});
@@ -639,8 +255,7 @@ function App() {
     setPatientError("");
     try {
       const response = await fetch(API_BASE + "/api/patients/" + selectedPatientId);
-      const body = await response.json() as PatientDetail & { detail?: string };
-      if (!response.ok) throw new Error(body.detail ?? "Unable to load the selected patient.");
+      const body = await readJsonResponse<PatientDetail>(response, "Unable to load the selected patient.");
       const latest = body.versions[0];
       if (!latest) throw new Error("This patient has no saved case versions.");
       await loadPatientVersion(body, latest.case_version_id);
@@ -677,8 +292,10 @@ function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ case: validatedCase })
       });
-      const body = await response.json() as { session_id: string; screening: IntakeScreening; detail?: string };
-      if (!response.ok) throw new Error(body.detail ?? "The pre-MDT intake could not be started.");
+      const body = await readJsonResponse<{ session_id: string; screening: IntakeScreening }>(
+        response,
+        "The pre-MDT intake could not be started."
+      );
       const pending: PendingIntake = {
         session_id: body.session_id,
         createNewPatient,
@@ -693,12 +310,13 @@ function App() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ event_type: "QUESTION_ASKED", domain: question.domain })
         });
-        const questionBody = await questionResponse.json() as { detail?: string };
-        if (!questionResponse.ok) throw new Error(questionBody.detail ?? "An intake question could not be recorded.");
+        await readJsonResponse<unknown>(questionResponse, "An intake question could not be recorded.");
       }
       const refreshed = await fetch(API_BASE + "/api/intakes/" + body.session_id);
-      const refreshedBody = await refreshed.json() as { screening: IntakeScreening; detail?: string };
-      if (!refreshed.ok) throw new Error(refreshedBody.detail ?? "The intake review could not be loaded.");
+      const refreshedBody = await readJsonResponse<{ screening: IntakeScreening }>(
+        refreshed,
+        "The intake review could not be loaded."
+      );
       setPendingIntake({ ...pending, screening: refreshedBody.screening });
     } catch (error) {
       setPatientError(error instanceof Error ? error.message : "Unable to start pre-MDT intake screening.");
@@ -717,8 +335,10 @@ function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ event_type: "DECLINE_DOMAIN", domain, source_text: "User explicitly declined this intake question." })
       });
-      const body = await response.json() as { screening: IntakeScreening; detail?: string };
-      if (!response.ok) throw new Error(body.detail ?? "The declined question could not be recorded.");
+      const body = await readJsonResponse<{ screening: IntakeScreening }>(
+        response,
+        "The declined question could not be recorded."
+      );
       setPendingIntake({ ...pendingIntake, screening: body.screening });
     } catch (error) {
       setPatientError(error instanceof Error ? error.message : "Unable to record the declined question.");
@@ -733,14 +353,15 @@ function App() {
     setPatientError("");
     try {
       const sessionResponse = await fetch(API_BASE + "/api/intakes/" + pendingIntake.session_id);
-      const sessionBody = await sessionResponse.json() as {
-        state?: string; patient_id?: string | null; case_version_id?: string | null; detail?: string
-      };
-      if (!sessionResponse.ok) throw new Error(sessionBody.detail ?? "The saved intake could not be restored.");
+      const sessionBody = await readJsonResponse<{
+        state?: string; patient_id?: string | null; case_version_id?: string | null
+      }>(sessionResponse, "The saved intake could not be restored.");
       if (sessionBody.patient_id && sessionBody.case_version_id) {
         const patientResponse = await fetch(API_BASE + "/api/patients/" + sessionBody.patient_id);
-        const patient = await patientResponse.json() as PatientDetail & { detail?: string };
-        if (!patientResponse.ok) throw new Error(patient.detail ?? "The promoted patient record could not be restored.");
+        const patient = await readJsonResponse<PatientDetail>(
+          patientResponse,
+          "The promoted patient record could not be restored."
+        );
         setPendingIntake(null);
         await refreshPatients();
         await loadPatientVersion(patient, sessionBody.case_version_id);
@@ -752,8 +373,7 @@ function App() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ confirmed: true })
         });
-        const acceptedBody = await acceptedResponse.json() as { detail?: string };
-        if (!acceptedResponse.ok) throw new Error(acceptedBody.detail ?? "The intake could not be accepted.");
+        await readJsonResponse<unknown>(acceptedResponse, "The intake could not be accepted.");
       }
       const promotionResponse = await fetch(API_BASE + "/api/intakes/" + pendingIntake.session_id + "/promote", {
         method: "POST",
@@ -763,8 +383,10 @@ function App() {
           ...(pendingIntake.patientId ? { patient_id: pendingIntake.patientId } : {})
         })
       });
-      const patient = await promotionResponse.json() as PatientDetail & { detail?: string };
-      if (!promotionResponse.ok) throw new Error(patient.detail ?? "The accepted intake could not be saved as a patient case version.");
+      const patient = await readJsonResponse<PatientDetail>(
+        promotionResponse,
+        "The accepted intake could not be saved as a patient case version."
+      );
       const latest = patient.versions[0];
       if (!latest) throw new Error("The accepted intake did not return a saved case version.");
       setPendingIntake(null);
@@ -793,6 +415,7 @@ function App() {
     setAssessmentPersistenceWarning("");
     if (clearLinkedResults) {
       setSavedSingleAssessment(null);
+      activeRunIdRef.current = null;
       setBatchRun(null);
       setBatchResults([]);
       setRoundSummaries({});
@@ -833,7 +456,9 @@ function App() {
     setPatientBusy(true);
     setPatientError("");
     try {
+      activeRunIdRef.current = selectedPatientRunId;
       await refreshBatchRun(selectedPatientRunId);
+      setActiveTab("simulation");
     } catch (error) {
       setPatientError(error instanceof Error ? error.message : "Unable to load the selected simulation.");
     } finally {
@@ -873,8 +498,12 @@ function App() {
   }, [pendingIntake?.session_id, pendingIntake?.screening]);
 
   useEffect(() => {
+    isMountedRef.current = true;
     void refreshStatus();
     void refreshPatients();
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
 
   const categories = useMemo(
@@ -926,11 +555,18 @@ function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
-      const body = await response.json();
+      let body: { detail?: Array<{ msg?: string }> | string } | ValidationResult | null = null;
+      try {
+        body = await response.json();
+      } catch {
+        if (!response.ok) throw new Error("The case could not be validated.");
+        throw new Error("Server returned an unexpected non-JSON validation response.");
+      }
       if (!response.ok) {
-        const details = Array.isArray(body.detail)
-          ? body.detail.map((item: { msg?: string }) => item.msg ?? "Invalid input").join("; ")
-          : "The case could not be validated.";
+        const detail = body && typeof body === "object" && "detail" in body ? body.detail : null;
+        const details = Array.isArray(detail)
+          ? detail.map((item: { msg?: string }) => item.msg ?? "Invalid input").join("; ")
+          : typeof detail === "string" ? detail : "The case could not be validated.";
         throw new Error(details);
       }
       setValidation(body as ValidationResult);
@@ -957,11 +593,10 @@ function App() {
         API_BASE + "/api/patients/" + activeSavedCase.patient_id + "/versions/" + activeSavedCase.case_version_id + "/assess/RO-01",
         { method: "POST" }
       );
-      const body = await response.json();
-      if (!response.ok) {
-        throw new Error(typeof body.detail === "string" ? body.detail : "The local model could not produce a valid assessment.");
-      }
-      const savedResponse = body as { assessment: AgentAssessmentResult; created_at: string };
+      const savedResponse = await readJsonResponse<{ assessment: AgentAssessmentResult; created_at: string }>(
+        response,
+        "The local model could not produce a valid assessment."
+      );
       const assessment = savedResponse.assessment;
       const savedAt = savedResponse.created_at;
       const savedRecord: SavedSingleAssessment = {
@@ -998,11 +633,16 @@ function App() {
 
   async function refreshMdtRound(roundNumber: number, runId = batchRun?.run_id) {
     if (!runId) return;
+    const seq = (roundRefreshSeqRef.current[roundNumber] ?? 0) + 1;
+    roundRefreshSeqRef.current[roundNumber] = seq;
     try {
       const [summaryResponse, resultResponse] = await Promise.all([
         fetch(API_BASE + "/api/runs/" + runId + "/rounds/" + roundNumber),
         fetch(API_BASE + "/api/runs/" + runId + "/rounds/" + roundNumber + "/results")
       ]);
+      if (seq !== roundRefreshSeqRef.current[roundNumber] || (activeRunIdRef.current && activeRunIdRef.current !== runId)) {
+        return;
+      }
       if (summaryResponse.status === 404) {
         setRoundSummaries((current) => ({ ...current, [roundNumber]: null }));
         setRoundResults((current) => ({ ...current, [roundNumber]: [] }));
@@ -1013,6 +653,9 @@ function App() {
       }
       const summary = (await summaryResponse.json()) as RoundSummary;
       const body = (await resultResponse.json()) as { results: RoundAgentResult[] };
+      if (seq !== roundRefreshSeqRef.current[roundNumber] || (activeRunIdRef.current && activeRunIdRef.current !== runId)) {
+        return;
+      }
       setRoundSummaries((current) => ({ ...current, [roundNumber]: summary }));
       setRoundResults((current) => ({ ...current, [roundNumber]: body.results }));
 
@@ -1053,11 +696,8 @@ function App() {
         API_BASE + "/api/runs/" + batchRun.run_id + "/rounds/" + roundNumber + suffix,
         { method: "POST" }
       );
-      const body = await response.json();
-      if (!response.ok) {
-        throw new Error(typeof body.detail === "string" ? body.detail : "Unable to start Round " + roundNumber + ".");
-      }
-      setRoundSummaries((current) => ({ ...current, [roundNumber]: body as RoundSummary }));
+      const body = await readJsonResponse<RoundSummary>(response, "Unable to start Round " + roundNumber + ".");
+      setRoundSummaries((current) => ({ ...current, [roundNumber]: body }));
       await refreshMdtRound(roundNumber, batchRun.run_id);
     } catch (error) {
       setRoundError(error instanceof Error ? error.message : "Unable to start MDT round.");
@@ -1077,13 +717,13 @@ function App() {
   useEffect(() => {
     if (!batchRun) return;
     const active = Object.values(roundSummaries).some(
-      (summary) => summary?.status === "queued" || summary?.status === "running"
+      (summary) => summary?.status === "queued" || summary?.status === "running" || summary?.status === "paused"
     );
     if (!active) return;
     const timer = window.setInterval(() => {
       for (const roundNumber of [2, 3, 4]) {
         const summary = roundSummaries[roundNumber];
-        if (summary?.status === "queued" || summary?.status === "running") {
+        if (summary?.status === "queued" || summary?.status === "running" || summary?.status === "paused") {
           void refreshMdtRound(roundNumber, batchRun.run_id);
         }
       }
@@ -1092,20 +732,29 @@ function App() {
   }, [batchRun?.run_id, roundSummaries]);
 
   async function refreshBatchRun(runId: string) {
+    const seq = ++batchRefreshSeqRef.current;
     try {
       const [runResponse, resultsResponse] = await Promise.all([
         fetch(API_BASE + "/api/runs/" + runId),
         fetch(API_BASE + "/api/runs/" + runId + "/results")
       ]);
+      if (seq !== batchRefreshSeqRef.current || (activeRunIdRef.current && activeRunIdRef.current !== runId)) {
+        return;
+      }
       if (!runResponse.ok || !resultsResponse.ok) {
-        throw new Error("Unable to refresh the 45-agent run.");
+        throw new Error("Unable to refresh the MDT run.");
       }
       const runData = (await runResponse.json()) as BatchRunSummary;
       const resultsData = (await resultsResponse.json()) as { results: BatchAgentResult[] };
+      if (seq !== batchRefreshSeqRef.current || (activeRunIdRef.current && activeRunIdRef.current !== runId)) {
+        return;
+      }
       setBatchRun(runData);
       setBatchResults(resultsData.results);
     } catch (error) {
-      setBatchError(error instanceof Error ? error.message : "Unable to refresh batch progress.");
+      if (seq === batchRefreshSeqRef.current) {
+        setBatchError(error instanceof Error ? error.message : "Unable to refresh batch progress.");
+      }
     }
   }
 
@@ -1128,7 +777,15 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!batchRun || batchRun.status === "completed" || batchRun.status === "completed_with_errors") {
+    if (!batchRun) return;
+    const isAnyRoundActive = Object.values(roundSummaries).some(
+      (s) => s?.status === "queued" || s?.status === "running" || s?.status === "paused"
+    );
+    const isTerminalBatch =
+      batchRun.status === "completed" ||
+      batchRun.status === "completed_with_errors" ||
+      batchRun.status === "stopped";
+    if (isTerminalBatch && !isAnyRoundActive) {
       return;
     }
     const runId = batchRun.run_id;
@@ -1136,7 +793,52 @@ function App() {
       void refreshBatchRun(runId);
     }, 2500);
     return () => window.clearInterval(timer);
-  }, [batchRun?.run_id, batchRun?.status]);
+  }, [batchRun?.run_id, batchRun?.status, roundSummaries]);
+
+  async function startSingleAgentRun(agentId: string) {
+    if (!activeSavedCase) return;
+    if (!activeSavedCase.intake_backed) {
+      setBatchError("This saved version has no accepted pre-MDT intake. Start and accept an intake before running.");
+      return;
+    }
+    setBatchStarting(true);
+    setBatchError("");
+    try {
+      if (!batchRun || batchRun.case_version_id !== activeSavedCase.case_version_id) {
+        const response = await fetch(API_BASE + "/api/patients/" + activeSavedCase.patient_id + "/runs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            case_version_id: activeSavedCase.case_version_id,
+            selected_agent_ids: [agentId]
+          })
+        });
+        const body = await response.json();
+        if (!response.ok) {
+          throw new Error(typeof body.detail === "string" ? body.detail : "Unable to start simulation for agent.");
+        }
+        const createdRun = body as BatchRunSummary;
+        activeRunIdRef.current = createdRun.run_id;
+        setBatchRun(createdRun);
+        setBatchResults([]);
+        setRoundSummaries({});
+        setRoundResults({});
+        setFinalReport(null);
+        setSelectedPatientRunId(createdRun.run_id);
+        const patientResponse = await fetch(API_BASE + "/api/patients/" + activeSavedCase.patient_id);
+        if (patientResponse.ok) setLoadedPatient(await patientResponse.json() as PatientDetail);
+        await refreshPatients();
+        await refreshBatchRun(createdRun.run_id);
+      } else {
+        await runIndividualAgent(1, agentId);
+      }
+      setActiveTab("simulation");
+    } catch (error) {
+      setBatchError(error instanceof Error ? error.message : `Failed to run agent ${agentId}.`);
+    } finally {
+      setBatchStarting(false);
+    }
+  }
 
   async function startAllAgents() {
     if (!activeSavedCase) return;
@@ -1152,11 +854,8 @@ function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ case_version_id: activeSavedCase.case_version_id })
       });
-      const body = await response.json();
-      if (!response.ok) {
-        throw new Error(typeof body.detail === "string" ? body.detail : "Unable to start the 45-agent run.");
-      }
-      const createdRun = body as BatchRunSummary;
+      const createdRun = await readJsonResponse<BatchRunSummary>(response, "Unable to start the MDT run.");
+      activeRunIdRef.current = createdRun.run_id;
       setBatchRun(createdRun);
       setBatchResults([]);
       setRoundSummaries({});
@@ -1168,8 +867,9 @@ function App() {
       if (patientResponse.ok) setLoadedPatient(await patientResponse.json() as PatientDetail);
       await refreshPatients();
       await refreshBatchRun(createdRun.run_id);
+      setActiveTab("simulation");
     } catch (error) {
-      setBatchError(error instanceof Error ? error.message : "Unable to start the 45-agent run.");
+      setBatchError(error instanceof Error ? error.message : "Unable to start the MDT run.");
     } finally {
       setBatchStarting(false);
     }
@@ -1183,16 +883,238 @@ function App() {
       const response = await fetch(API_BASE + "/api/runs/" + batchRun.run_id + "/resume", {
         method: "POST"
       });
-      const body = await response.json();
-      if (!response.ok) {
-        throw new Error(typeof body.detail === "string" ? body.detail : "Unable to resume the run.");
-      }
-      setBatchRun(body as BatchRunSummary);
+      const body = await readJsonResponse<BatchRunSummary>(response, "Unable to resume the run.");
+      setBatchRun(body);
       await refreshBatchRun(batchRun.run_id);
     } catch (error) {
       setBatchError(error instanceof Error ? error.message : "Unable to resume the run.");
     } finally {
       setBatchResuming(false);
+    }
+  }
+
+  function toggleAgentSelection(roundNumber: number, agentId: string) {
+    setSelectedAgentIds((prev) => {
+      const current = prev[roundNumber] || [];
+      const updated = current.includes(agentId)
+        ? current.filter((id) => id !== agentId)
+        : [...current, agentId];
+      return { ...prev, [roundNumber]: updated };
+    });
+  }
+
+  function selectAllAgentsForRound(roundNumber: number, agentIds: string[]) {
+    setSelectedAgentIds((prev) => ({ ...prev, [roundNumber]: [...agentIds] }));
+  }
+
+  function clearSelectedAgentsForRound(roundNumber: number) {
+    setSelectedAgentIds((prev) => ({ ...prev, [roundNumber]: [] }));
+  }
+
+  async function startFullSimulation() {
+    if (!activeSavedCase) return;
+    if (!activeSavedCase.intake_backed) {
+      setBatchError("This saved version has no accepted pre-MDT intake. Start and accept an intake before running.");
+      return;
+    }
+    setBatchStarting(true);
+    setBatchError("");
+    try {
+      const response = await fetch(API_BASE + "/api/patients/" + activeSavedCase.patient_id + "/runs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ case_version_id: activeSavedCase.case_version_id, full_simulation: true })
+      });
+      const createdRun = await readJsonResponse<BatchRunSummary>(response, "Unable to start the full MDT simulation.");
+      activeRunIdRef.current = createdRun.run_id;
+      setBatchRun(createdRun);
+      setBatchResults([]);
+      setRoundSummaries({});
+      setRoundResults({});
+      setFinalReport(null);
+      setRoundError("");
+      setSelectedPatientRunId(createdRun.run_id);
+      await refreshPatients();
+      await refreshBatchRun(createdRun.run_id);
+      setActiveTab("simulation");
+    } catch (error) {
+      setBatchError(error instanceof Error ? error.message : "Unable to start the full MDT simulation.");
+    } finally {
+      setBatchStarting(false);
+    }
+  }
+
+  async function readJsonResponse<T>(response: Response, fallbackMessage: string): Promise<T> {
+    let body: unknown = null;
+    try {
+      body = await response.json();
+    } catch {
+      if (!response.ok) throw new Error(fallbackMessage);
+      throw new Error("Server returned an unexpected non-JSON response.");
+    }
+    if (!response.ok) {
+      const detail = (body && typeof body === "object" && "detail" in body && typeof (body as { detail?: unknown }).detail === "string")
+        ? (body as { detail: string }).detail
+        : fallbackMessage;
+      throw new Error(detail);
+    }
+    return body as T;
+  }
+
+  async function postControlAction(path: string, fallbackMessage: string, payload?: unknown, busyKey?: string) {
+    if (busyKey) setControlBusyKey(busyKey);
+    try {
+      const response = await fetch(API_BASE + path, {
+        method: "POST",
+        ...(payload !== undefined
+          ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }
+          : {})
+      });
+      if (!response.ok) {
+        let detail = fallbackMessage;
+        try {
+          const body = await response.json() as { detail?: string };
+          if (body.detail) detail = body.detail;
+        } catch {
+          // Ignore non-JSON error bodies and use fallbackMessage.
+        }
+        throw new Error(detail);
+      }
+    } finally {
+      if (busyKey && isMountedRef.current) setControlBusyKey(null);
+    }
+  }
+
+  async function pauseSimulation() {
+    if (!batchRun || controlBusyKey !== null) return;
+    try {
+      await postControlAction("/api/runs/" + batchRun.run_id + "/pause", "Failed to pause simulation.", undefined, "sim-pause");
+      await refreshBatchRun(batchRun.run_id);
+    } catch (error) {
+      setBatchError(error instanceof Error ? error.message : "Failed to pause simulation.");
+    }
+  }
+
+  async function resumeSimulation() {
+    if (!batchRun || controlBusyKey !== null) return;
+    try {
+      await postControlAction("/api/runs/" + batchRun.run_id + "/unpause", "Failed to resume simulation.", undefined, "sim-resume");
+      await refreshBatchRun(batchRun.run_id);
+    } catch (error) {
+      setBatchError(error instanceof Error ? error.message : "Failed to resume simulation.");
+    }
+  }
+
+  async function stopSimulation() {
+    if (!batchRun || controlBusyKey !== null) return;
+    try {
+      await postControlAction("/api/runs/" + batchRun.run_id + "/stop", "Failed to stop simulation.", undefined, "sim-stop");
+      await refreshBatchRun(batchRun.run_id);
+    } catch (error) {
+      setBatchError(error instanceof Error ? error.message : "Failed to stop simulation.");
+    }
+  }
+
+  async function restartSimulation() {
+    if (!batchRun || controlBusyKey !== null) return;
+    setBatchStarting(true);
+    try {
+      await postControlAction("/api/runs/" + batchRun.run_id + "/restart", "Failed to restart simulation.", undefined, "sim-restart");
+      await refreshBatchRun(batchRun.run_id);
+      setRoundSummaries({});
+      setRoundResults({});
+      setFinalReport(null);
+    } catch (error) {
+      setBatchError(error instanceof Error ? error.message : "Failed to restart simulation.");
+    } finally {
+      setBatchStarting(false);
+    }
+  }
+
+  async function pauseRound(roundNumber: number) {
+    if (!batchRun || controlBusyKey !== null) return;
+    try {
+      await postControlAction("/api/runs/" + batchRun.run_id + "/rounds/" + roundNumber + "/pause", `Failed to pause Round ${roundNumber}.`, undefined, `round-pause-${roundNumber}`);
+      if (roundNumber === 1) await refreshBatchRun(batchRun.run_id);
+      else await refreshMdtRound(roundNumber, batchRun.run_id);
+    } catch (error) {
+      setRoundError(error instanceof Error ? error.message : `Failed to pause Round ${roundNumber}.`);
+    }
+  }
+
+  async function resumeRound(roundNumber: number) {
+    if (!batchRun || controlBusyKey !== null) return;
+    try {
+      await postControlAction("/api/runs/" + batchRun.run_id + "/rounds/" + roundNumber + "/unpause", `Failed to resume Round ${roundNumber}.`, undefined, `round-resume-${roundNumber}`);
+      if (roundNumber === 1) await refreshBatchRun(batchRun.run_id);
+      else await refreshMdtRound(roundNumber, batchRun.run_id);
+    } catch (error) {
+      setRoundError(error instanceof Error ? error.message : `Failed to resume Round ${roundNumber}.`);
+    }
+  }
+
+  async function stopRound(roundNumber: number) {
+    if (!batchRun || controlBusyKey !== null) return;
+    try {
+      await postControlAction("/api/runs/" + batchRun.run_id + "/rounds/" + roundNumber + "/stop", `Failed to stop Round ${roundNumber}.`, undefined, `round-stop-${roundNumber}`);
+      if (roundNumber === 1) await refreshBatchRun(batchRun.run_id);
+      else await refreshMdtRound(roundNumber, batchRun.run_id);
+    } catch (error) {
+      setRoundError(error instanceof Error ? error.message : `Failed to stop Round ${roundNumber}.`);
+    }
+  }
+
+  async function restartRound(roundNumber: number) {
+    if (!batchRun || controlBusyKey !== null) return;
+    setRoundActionBusy(roundNumber);
+    try {
+      await postControlAction("/api/runs/" + batchRun.run_id + "/rounds/" + roundNumber + "/restart", `Failed to restart Round ${roundNumber}.`, undefined, `round-restart-${roundNumber}`);
+      if (roundNumber === 1) await refreshBatchRun(batchRun.run_id);
+      else await refreshMdtRound(roundNumber, batchRun.run_id);
+    } catch (error) {
+      setRoundError(error instanceof Error ? error.message : `Failed to restart Round ${roundNumber}.`);
+    } finally {
+      setRoundActionBusy(null);
+    }
+  }
+
+  async function runIndividualAgent(roundNumber: number, agentId: string) {
+    if (!batchRun || controlBusyKey !== null) return;
+    try {
+      await postControlAction("/api/runs/" + batchRun.run_id + "/rounds/" + roundNumber + "/agents/" + agentId + "/run", `Failed to run agent ${agentId}.`, undefined, `agent-run-${roundNumber}-${agentId}`);
+      if (roundNumber === 1) await refreshBatchRun(batchRun.run_id);
+      else await refreshMdtRound(roundNumber, batchRun.run_id);
+    } catch (error) {
+      setRoundError(error instanceof Error ? error.message : `Failed to run agent ${agentId}.`);
+    }
+  }
+
+  async function stopIndividualAgent(roundNumber: number, agentId: string) {
+    if (!batchRun || controlBusyKey !== null) return;
+    try {
+      await postControlAction("/api/runs/" + batchRun.run_id + "/rounds/" + roundNumber + "/agents/" + agentId + "/stop", `Failed to stop agent ${agentId}.`, undefined, `agent-stop-${roundNumber}-${agentId}`);
+      if (roundNumber === 1) await refreshBatchRun(batchRun.run_id);
+      else await refreshMdtRound(roundNumber, batchRun.run_id);
+    } catch (error) {
+      setRoundError(error instanceof Error ? error.message : `Failed to stop agent ${agentId}.`);
+    }
+  }
+
+  async function runSelectedAgents(roundNumber: number) {
+    if (!batchRun || controlBusyKey !== null) return;
+    const selected = selectedAgentIds[roundNumber] || [];
+    if (selected.length === 0) return;
+    try {
+      await postControlAction(
+        "/api/runs/" + batchRun.run_id + "/rounds/" + roundNumber + "/run-selected",
+        `Failed to run selected agents in Round ${roundNumber}.`,
+        { agent_ids: selected },
+        `round-selected-${roundNumber}`
+      );
+      if (roundNumber === 1) await refreshBatchRun(batchRun.run_id);
+      else await refreshMdtRound(roundNumber, batchRun.run_id);
+    } catch (error) {
+      setRoundError(error instanceof Error ? error.message : `Failed to run selected agents in Round ${roundNumber}.`);
     }
   }
 
@@ -1258,25 +1180,53 @@ function App() {
         </div>
       </header>
 
-      <main className="main-content">
-        <section className="hero">
-          <div className="hero-copy">
-            <p className="eyebrow">ONCOLOGY EDUCATION · TRAINING RECORDS · LOCAL AI</p>
-            <h1>Explore the case from<br /><em>every MDT perspective.</em></h1>
-            <p className="hero-description">
-              A structured learning workspace for multidisciplinary oncology discussion,
-              evidence appraisal, patient context, and clinical uncertainty.
-            </p>
-          </div>
-          <div className="hero-side">
-            <span className="hero-number">45</span>
-            <span className="hero-number-label">configured perspectives</span>
-            <div className="hero-divider" />
-            <span className="hero-number">04</span>
-            <span className="hero-number-label">discussion rounds planned</span>
-          </div>
-        </section>
+      <nav className="guided-stepper" aria-label="Workflow Navigation">
+        <button
+          className={`step-item ${activeTab === "case" ? "active" : ""}`}
+          onClick={() => setActiveTab("case")}
+          type="button"
+        >
+          <span className="step-num">1</span>
+          <span className="step-label">Case Workspace</span>
+        </button>
+        <span className="step-arrow">→</span>
+        <button
+          className={`step-item ${activeTab === "simulation" ? "active" : ""}`}
+          onClick={() => setActiveTab("simulation")}
+          type="button"
+        >
+          <span className="step-num">2</span>
+          <span className="step-label">MDT Simulation</span>
+          {batchRun && <span className="step-badge">{batchRun.status.replaceAll("_", " ")}</span>}
+        </button>
+        <span className="step-arrow">→</span>
+        <button
+          className={`step-item ${activeTab === "chair" ? "active" : ""}`}
+          onClick={() => setActiveTab("chair")}
+          type="button"
+        >
+          <span className="step-num">3</span>
+          <span className="step-label">Chair Report</span>
+          {finalReport && <span className="step-badge ready">Ready</span>}
+        </button>
+        <div className="step-separator" />
+        <button
+          className={`step-item ${activeTab === "specialists" ? "active" : ""}`}
+          onClick={() => setActiveTab("specialists")}
+          type="button"
+        >
+          <span>👥 49 Specialists</span>
+        </button>
+        <button
+          className={`step-item ${activeTab === "system" ? "active" : ""}`}
+          onClick={() => setActiveTab("system")}
+          type="button"
+        >
+          <span>⚙️ System Health</span>
+        </button>
+      </nav>
 
+      <main className="main-content">
         <section className="safety-banner" role="note">
           <span className="safety-icon">!</span>
           <div>
@@ -1285,44 +1235,112 @@ function App() {
           </div>
         </section>
 
-        <section className="status-grid" aria-label="Local system status">
-          <StatusCard
-            label="Backend API"
-            value={connectionState === "connected" ? "Connected" : connectionState === "loading" ? "Checking" : "Unavailable"}
-            detail={health ? health.application + " · v" + health.version : "Start the local FastAPI service"}
-            state={connectionState === "connected" ? "good" : connectionState === "loading" ? "neutral" : "bad"}
+        {activeTab === "system" && (
+          <SystemHealthTab
+            agents={agents}
+            connectionState={connectionState}
+            health={health}
+            runtime={runtime}
           />
-          <StatusCard
-            label="Ollama runtime"
-            value={runtime?.reachable ? "Reachable" : runtime ? "Unavailable" : "Not checked"}
-            detail={runtime?.reachable ? "Ollama " + runtime.version : "Expected at 127.0.0.1:11434"}
-            state={runtime?.reachable ? "good" : "neutral"}
-          />
-          <StatusCard
-            label="Local model"
-            value={runtime?.configured_model_installed ? "Installed" : "Not verified"}
-            detail={runtime?.configured_model ?? "qwen3.5:4b"}
-            state={runtime?.configured_model_installed ? "good" : "neutral"}
-          />
-          <StatusCard
-            label="Agent catalogue"
-            value={agents.length === 45 ? "45 / 45 loaded" : agents.length + " loaded"}
-            detail="All configured roles are listed"
-            state={agents.length === 45 ? "good" : "neutral"}
-          />
-
-        </section>
+        )}
 
         <div className="workspace-grid">
-          <section className="panel case-panel">
-            <div className="panel-heading">
-              <div>
-                <p className="eyebrow">01 / CASE WORKSPACE</p>
-                <h2>Patient registration and case entry</h2>
+          {activeTab === "case" && (
+            <section className="panel case-panel tab-view-container" style={{ width: "100%", maxWidth: "100%" }}>
+              <div className="preset-card">
+                <div className="preset-header">
+                  <span className="preset-icon">💡</span>
+                  <div>
+                    <strong>Quick Start: Load an Educational Case Preset</strong>
+                    <p>Select from 8 realistic multi-site training cases (Pediatric, AYA, Cervix, Breast, Oropharynx, Rectum, Bladder, Lung SBRT) to test the MDT immediately with one click.</p>
+                  </div>
+                </div>
+                <div className="preset-controls">
+                  <select
+                    value={selectedPresetId}
+                    onChange={(e) => {
+                      setSelectedPresetId(e.target.value);
+                      if (e.target.value) loadPresetCase(e.target.value);
+                    }}
+                    className="preset-select"
+                  >
+                    <option value="">-- Choose a Pre-Configured Clinical Case --</option>
+                    {PRESET_CASES.map((preset) => (
+                      <option key={preset.id} value={preset.id}>
+                        {preset.badge}: {preset.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    className="button button-primary"
+                    disabled={!selectedPresetId}
+                    onClick={() => loadPresetCase(selectedPresetId)}
+                  >
+                    Load Case into Form
+                  </button>
+                </div>
+                {selectedPresetId && (
+                  <p className="preset-desc">
+                    {PRESET_CASES.find((p) => p.id === selectedPresetId)?.description}
+                  </p>
+                )}
               </div>
-              <span className="panel-index">CASE INPUT</span>
-            </div>
-            <p className="panel-intro">
+
+              <div className="perturbation-card">
+                <div className="perturbation-header">
+                  <div className="perturbation-title">
+                    <span>🧪</span>
+                    <strong>What-If? Clinical Perturbation Lab</strong>
+                    <span style={{ fontSize: "11px", color: "#94a3b8", fontWeight: "normal" }}>
+                      (Simulate how critical clinical shifts swing the MDT consensus)
+                    </span>
+                  </div>
+                  {activePerturbationId && (
+                    <button
+                      type="button"
+                      className="button"
+                      style={{ fontSize: "11px", padding: "3px 8px" }}
+                      onClick={handleResetPerturbations}
+                    >
+                      ↺ Reset to Baseline Case
+                    </button>
+                  )}
+                </div>
+                <div className="perturbation-grid">
+                  {CLINICAL_PERTURBATIONS.map((p) => {
+                    const isActive = activePerturbationId === p.id;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        className={`perturbation-btn ${isActive ? "active" : ""}`}
+                        onClick={() => handleApplyPerturbation(p.id)}
+                        title={p.description}
+                      >
+                        <span>{p.icon} <strong>{p.label}</strong></span>
+                        <span style={{ fontSize: "11px", opacity: 0.85 }}>{p.description}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {activePerturbationId && (
+                  <div className="perturbation-active-banner">
+                    <span>
+                      ⚠️ <strong>Perturbation Active:</strong> Case data modified. Re-run <strong>"Validate case draft"</strong> below to screen and initiate simulation!
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="panel-heading">
+                <div>
+                  <p className="eyebrow">01 / CASE WORKSPACE</p>
+                  <h2>Patient registration and case entry</h2>
+                </div>
+                <span className="panel-index">CASE INPUT</span>
+              </div>
+              <p className="panel-intro">
               Enter fictional training details. Validation checks the data structure only; it does not assess diagnosis or treatment.
             </p>
 
@@ -1610,7 +1628,7 @@ function App() {
                 {validation.warnings.length > 0 && (
                   <ul>{validation.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>
                 )}
-                <p className="result-footnote">Case structure is validated. Once all 45 independent assessments finish, the debate, adversarial review and Chair synthesis stages become available below.</p>
+                <p className="result-footnote">Case structure is validated. Once all {agents.length || 49} independent assessments finish, the debate, adversarial review and Chair synthesis stages become available below.</p>
               </div>
             )}
             {activeSavedCase && (
@@ -1666,7 +1684,7 @@ function App() {
                   <strong>Preferred educational option</strong>
                   <p>{agentAssessment.preferred_educational_option}</p>
                 </div>
-                <p>{agentAssessment.perspective_summary}</p>
+                <p className="assessment-summary-text">{agentAssessment.perspective_summary}</p>
                 {agentAssessment.discussion_options.length > 0 && (
                   <>
                     <strong>Topics for MDT discussion</strong>
@@ -1692,14 +1710,55 @@ function App() {
                 </p>
               </div>
             )}
+            {activeSavedCase && (
+              <div className="batch-actions" style={{ marginTop: "24px", padding: "16px", background: "rgba(56, 189, 248, 0.08)", borderRadius: "8px", border: "1px solid rgba(56, 189, 248, 0.25)" }}>
+                <div>
+                  <strong style={{ color: "#38bdf8" }}>✓ Case Saved & Validated</strong>
+                  <p style={{ margin: "4px 0 12px 0", fontSize: "13px", color: "#94a3b8" }}>
+                    Version {activeSavedCase.version_number} is ready. Proceed to the MDT Deliberation workspace to run the 4-round simulation.
+                  </p>
+                </div>
+                <button
+                  className="button button-primary"
+                  type="button"
+                  onClick={() => setActiveTab("simulation")}
+                >
+                  Proceed to MDT Simulation (Step 2) →
+                </button>
+              </div>
+            )}
+            {validationError && (
+              <div className="result-card result-error" role="alert" style={{ marginTop: "16px" }}>
+                <strong>Validation failed</strong>
+                <p>{validationError}</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {activeTab === "simulation" && (
+          <section className="panel tab-view-container" style={{ width: "100%", maxWidth: "100%" }}>
+            <div className="focused-panel-bar">
+              <span className="focused-panel-label">🎯 Filter Deliberation by Perspective:</span>
+              {Object.entries(FOCUSED_PANELS).map(([key, p]) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`focused-panel-chip ${focusedPanelKey === key ? "active" : ""}`}
+                  onClick={() => setFocusedPanelKey(key)}
+                >
+                  {p.icon} {p.label}
+                </button>
+              ))}
+            </div>
             {(shouldShowBatchPanel(batchRun, validation, validatedCase) || activeSavedCase !== null) && (
               <section className="batch-run-panel">
                 <div className="batch-heading">
                   <div>
                     <p className="eyebrow">03 / INDEPENDENT ASSESSMENTS</p>
-                    <h3>Run all 45 MDT perspectives</h3>
+                    <h3>Run all {agents.length || 49} MDT perspectives</h3>
                   </div>
-                  <span className="count-chip">45 REQUIRED</span>
+                  <span className="count-chip">{agents.length || 49} REQUIRED</span>
                 </div>
                 <p className="panel-intro">
                   Each agent receives only the saved training case snapshot and its own role profile. Agents do not see one another's assessments. Results are saved locally as they finish.
@@ -1711,20 +1770,58 @@ function App() {
                     <p className="result-footnote">Run ID: {batchRun.run_id} · Patient: {loadedPatient?.patient_identifier ?? (batchRun.patient_id ? "linked patient" : "legacy unlinked run")} · Case version: {batchRun.case_version_number ?? "not linked"} · SHA-256: {batchRun.case_snapshot_sha256}</p>
                   </div>
                 )}
-                <div className="batch-actions">
+                <div className="simulation-master-bar">
                   {activeSavedCase && (
-                    <button
-                      className="button button-primary"
-                      type="button"
-                      onClick={() => void startAllAgents()}
-                      disabled={!activeSavedCase.intake_backed || batchStarting || batchResuming || assessing || !runtime?.reachable || (batchRun !== null && ["queued", "running"].includes(batchRun.status))}
-                    >
-                      {batchStarting ? "Starting…" : "Run all 45 agents"}
-                      <span aria-hidden="true">→</span>
-                    </button>
+                    <>
+                      <button
+                        className="button button-full-simulation"
+                        type="button"
+                        onClick={() => void startFullSimulation()}
+                        disabled={!activeSavedCase.intake_backed || batchStarting || batchResuming || assessing || !runtime?.reachable || (batchRun !== null && ["queued", "running"].includes(batchRun.status))}
+                        title="Execute all 4 MDT rounds (Independent Assessments, Debate, Adversarial Review, and Chair Synthesis) on a single click"
+                      >
+                        {batchStarting ? "Starting Full Simulation…" : "▶ Run Entire Simulation (All 4 Rounds)"}
+                      </button>
+
+                      <button
+                        className="button button-secondary"
+                        type="button"
+                        onClick={() => void startAllAgents()}
+                        disabled={!activeSavedCase.intake_backed || batchStarting || batchResuming || assessing || !runtime?.reachable || (batchRun !== null && ["queued", "running"].includes(batchRun.status))}
+                        title="Run only Round 1 (independent assessments)"
+                      >
+                        Run Round 1 Only
+                      </button>
+
+                      <div className="single-agent-launcher" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                        <select
+                          className="agent-select-dropdown"
+                          value={singleAgentToRun}
+                          onChange={(e) => setSingleAgentToRun(e.target.value)}
+                          disabled={batchStarting || (batchRun !== null && ["queued", "running"].includes(batchRun.status))}
+                          style={{ padding: "6px 8px", borderRadius: "6px", background: "rgba(18, 34, 52, 0.95)", color: "#e2e8f0", border: "1px solid rgba(82, 186, 213, 0.4)", fontSize: "12px", height: "34px" }}
+                        >
+                          {agents.map((a) => (
+                            <option key={a.agent_id} value={a.agent_id}>
+                              {a.agent_id} · {a.name}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          className="button button-secondary"
+                          type="button"
+                          onClick={() => void startSingleAgentRun(singleAgentToRun)}
+                          disabled={!activeSavedCase.intake_backed || batchStarting || batchResuming || assessing || !runtime?.reachable || (batchRun !== null && ["queued", "running"].includes(batchRun.status))}
+                          title={`Run ONLY ${singleAgentToRun} in Round 1`}
+                          style={{ borderColor: "#38bdf8", color: "#38bdf8", height: "34px", padding: "0 12px", fontSize: "12px" }}
+                        >
+                          ⚡ Run {singleAgentToRun} Only
+                        </button>
+                      </div>
+                    </>
                   )}
                   {!activeSavedCase && !batchRun && (
-                    <p className="batch-estimate-note">Complete and accept a pre-MDT intake to create an immutable patient case version before starting a new 45-agent run.</p>
+                    <p className="batch-estimate-note">Complete and accept a pre-MDT intake to create an immutable patient case version before starting a new MDT run.</p>
                   )}
                   {batchRun && batchResults.length > 0 && (
                     <button className="button button-quiet" type="button" onClick={downloadBatchResults}>
@@ -1741,6 +1838,38 @@ function App() {
                       {batchResuming ? "Resuming…" : batchRun?.status === "completed_with_errors" ? "Retry failed agents" : "Recover interrupted run"}
                     </button>
                   )}
+                  {batchRun && (
+                    <div className="simulation-lifecycle-controls">
+                      {(batchRun.status === "running" || Object.values(roundSummaries).some(s => s?.status === "running")) && (
+                        <button className="button button-warning button-xs" type="button" disabled={controlBusyKey !== null} onClick={() => void pauseSimulation()} title="Pause all simulation activity">
+                          ⏸ Pause Simulation
+                        </button>
+                      )}
+                      {(batchRun.status === "paused" || Object.values(roundSummaries).some(s => s?.status === "paused")) && (
+                        <button className="button button-primary button-xs" type="button" disabled={controlBusyKey !== null} onClick={() => void resumeSimulation()} title="Resume paused simulation">
+                          ▶ Resume Simulation
+                        </button>
+                      )}
+                      {(["running", "paused", "queued"].includes(batchRun.status) || Object.values(roundSummaries).some(s => ["running", "paused", "queued"].includes(s?.status || ""))) && (
+                        <button className="button button-danger button-xs" type="button" disabled={controlBusyKey !== null} onClick={() => void stopSimulation()} title="Stop and cancel simulation">
+                          ⏹ Stop Simulation
+                        </button>
+                      )}
+                      <button
+                        className="button button-quiet button-xs"
+                        type="button"
+                        disabled={controlBusyKey !== null || batchStarting}
+                        onClick={() => {
+                          if (window.confirm("Restart entire simulation from Round 1? All current round results will be reset.")) {
+                            void restartSimulation();
+                          }
+                        }}
+                        title="Reset and re-run all 4 rounds from scratch"
+                      >
+                        🔄 Restart Whole Simulation
+                      </button>
+                    </div>
+                  )}
                 </div>
                 {batchRun && (
                   <div className="batch-status" aria-live="polite">
@@ -1748,7 +1877,7 @@ function App() {
                       <strong>
                         {batchRun.status === "queued" ? "Queued" :
                           batchRun.status === "running" ? "Running independently" :
-                          batchRun.status === "completed" ? "All 45 assessments completed" :
+                          batchRun.status === "completed" ? `All ${batchRun.total_agents} assessments completed` :
                           "Completed with some errors"}
                       </strong>
                       <span>{batchRun.finished_count} / {batchRun.total_agents} finished</span>
@@ -1771,16 +1900,72 @@ function App() {
                 {batchResults.length > 0 && (
                   <div className="batch-results">
                     <div className="batch-results-title">
-                      <strong>Agent results</strong>
+                      <strong>Agent results · Round 1</strong>
                       <span>{batchResults.length} records saved locally</span>
+                      <div className="selective-controls">
+                        <button
+                          className="button button-xs button-secondary"
+                          type="button"
+                          onClick={() => selectAllAgentsForRound(1, batchResults.map((b) => b.agent_id))}
+                        >
+                          Select All
+                        </button>
+                        <button
+                          className="button button-xs button-quiet"
+                          type="button"
+                          onClick={() => clearSelectedAgentsForRound(1)}
+                        >
+                          Clear
+                        </button>
+                        {(selectedAgentIds[1]?.length || 0) > 0 && (
+                          <button
+                            className="button button-xs button-primary"
+                            type="button"
+                            disabled={controlBusyKey !== null}
+                            onClick={() => void runSelectedAgents(1)}
+                          >
+                            ⚡ Run Selected ({selectedAgentIds[1]?.length})
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    {batchResults.map((item) => (
+                    {(focusedPanelKey === "all" ? batchResults : batchResults.filter((item) => FOCUSED_PANELS[focusedPanelKey]?.agentIds.includes(item.agent_id))).map((item) => (
                       <details className={"batch-agent-result status-" + item.status} key={item.agent_id}>
                         <summary>
+                          <input
+                            type="checkbox"
+                            className="agent-checkbox"
+                            checked={selectedAgentIds[1]?.includes(item.agent_id) || false}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={() => toggleAgentSelection(1, item.agent_id)}
+                            title={`Select ${item.agent_id} for Round 1 run`}
+                          />
                           <span className="agent-id">{item.agent_id}</span>
                           <strong>{item.agent_name}</strong>
                           <span className={"agent-status status-text-" + item.status}>{item.status}</span>
                           {item.duration_seconds !== null && <span className="agent-duration">{item.duration_seconds.toFixed(1)}s</span>}
+                          <div className="agent-item-quick-actions" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              className="button-link-action"
+                              type="button"
+                              disabled={controlBusyKey !== null}
+                              onClick={() => void runIndividualAgent(1, item.agent_id)}
+                              title={`Run/Re-run ${item.agent_id} in Round 1`}
+                            >
+                              🔄 Run
+                            </button>
+                            {(item.status === "running" || item.status === "queued") && (
+                              <button
+                                className="button-link-action text-danger"
+                                type="button"
+                                disabled={controlBusyKey !== null}
+                                onClick={() => void stopIndividualAgent(1, item.agent_id)}
+                                title={`Stop ${item.agent_id}`}
+                              >
+                                ⏹ Stop
+                              </button>
+                            )}
+                          </div>
                         </summary>
                         {item.assessment ? (
                           <div className="batch-agent-body">
@@ -1790,40 +1975,55 @@ function App() {
                               <strong>Preferred educational option</strong>
                               <p>{item.assessment.preferred_educational_option}</p>
                             </div>
-                            <p>{item.assessment.perspective_summary}</p>
-                            {(item.assessment.case_facts ?? []).length > 0 && (
-                              <>
-                                <strong>Source case facts · snapshot-derived</strong>
-                                <ul>{(item.assessment.case_facts ?? []).map((fact, index) => <li key={index}>{fact}</li>)}</ul>
-                              </>
-                            )}
-                            {(item.assessment.case_data_integrity_flags ?? []).length > 0 && (
-                              <div className="result-card result-error" role="status">
-                                <strong>Case-data integrity flags · review required</strong>
-                                <ul>{(item.assessment.case_data_integrity_flags ?? []).map((flag, index) => <li key={index}>{flag}</li>)}</ul>
+                            <p className="assessment-summary-text">{item.assessment.perspective_summary}</p>
+                            
+                            {item.assessment.evidence_claims && item.assessment.evidence_claims.length > 0 && (
+                              <div className="assessment-citations">
+                                <strong>Active Clinical References & Guideline Citations</strong>
+                                <ul>
+                                  {item.assessment.evidence_claims.map((claim, cIdx) => (
+                                    <li key={cIdx}>
+                                      {claim.sources.map((s, sIdx) => (
+                                        <span key={sIdx} className="evidence-badge" title={s.applicability_and_limitations}>
+                                          [{s.source_id}] {s.title}
+                                        </span>
+                                      ))}
+                                    </li>
+                                  ))}
+                                </ul>
                               </div>
                             )}
+
+                            {item.assessment.conditional_options && item.assessment.conditional_options.length > 0 && (
+                              <div className="assessment-branches">
+                                <strong>Clinical Decision Branches (IF-Clauses)</strong>
+                                <ul>
+                                  {item.assessment.conditional_options.map((opt, oIdx) => (
+                                    <li key={oIdx}>
+                                      <span className="branch-condition">{opt.condition}:</span> {opt.educational_option}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
                             {item.assessment.discussion_options.length > 0 && (
-                              <>
+                              <details className="meta-audit-accordion">
+                                <summary>Discussion points & unknowns ({item.assessment.discussion_options.length + item.assessment.unknowns.length})</summary>
                                 <strong>Discussion topics</strong>
                                 <ul>{item.assessment.discussion_options.map((option, index) => <li key={index}>{option}</li>)}</ul>
-                              </>
+                                {item.assessment.unknowns.length > 0 && (
+                                  <>
+                                    <strong>Unknowns</strong>
+                                    <ul>{item.assessment.unknowns.map((unknown, index) => <li key={index}>{unknown}</li>)}</ul>
+                                  </>
+                                )}
+                              </details>
                             )}
-                            {item.assessment.unknowns.length > 0 && (
-                              <>
-                                <strong>Unknowns</strong>
-                                <ul>{item.assessment.unknowns.map((unknown, index) => <li key={index}>{unknown}</li>)}</ul>
-                              </>
-                            )}
-                            {item.assessment.evidence_gaps.length > 0 && (
-                              <>
-                                <strong>Evidence gaps</strong>
-                                <ul>{item.assessment.evidence_gaps.map((gap, index) => <li key={index}>{gap}</li>)}</ul>
-                              </>
-                            )}
+
                             <p className="result-footnote">
                               Model self-reported confidence: {Math.round(item.assessment.confidence * 100)}%.
-                              Evidence claims accepted: {item.assessment.evidence_claims.length}.
+                              Active guideline citations: {item.assessment.evidence_claims.length}.
                             </p>
                           </div>
                         ) : item.error_message ? (
@@ -1845,7 +2045,7 @@ function App() {
                     <p className="eyebrow">04 / MDT DISCUSSION</p>
                     <h3>Four-round MDT workflow</h3>
                   </div>
-                  <span className="count-chip">45 ROLES</span>
+                  <span className="count-chip">{agents.length || 49} ROLES</span>
                 </div>
                 <p className="panel-intro">The debate and review stages ask each role to respond independently to a compact digest of other perspectives. Round 4 produces a chair synthesis that retains dissent and states the evidence limitations.</p>
                 {formatElapsedDuration(batchRun?.created_at, batchRun?.mdt_finished_at) && (
@@ -1862,9 +2062,9 @@ function App() {
                   const isRetryable = summary?.status === "completed_with_errors";
                   const title = roundNumber === 2 ? "MDT debate" : roundNumber === 3 ? "Adversarial review" : "MDT Chair synthesis";
                   const description = roundNumber === 2
-                    ? "All 45 roles respond to selected peer positions, state agreements and challenges, and explain any change in position."
+                    ? `All ${agents.length || 49} roles respond to selected peer positions, state agreements and challenges, and explain any change in position.`
                     : roundNumber === 3
-                    ? "All 45 roles challenge unsupported assumptions, evidence gaps, patient-context issues, feasibility and governance risks."
+                    ? `All ${agents.length || 49} roles challenge unsupported assumptions, evidence gaps, patient-context issues, feasibility and governance risks.`
                     : "The MDT Chair assembles consensus, unresolved disagreements, minority views, uncertainties and missing information.";
                   const results = roundResults[roundNumber] ?? [];
                   return (
@@ -1877,17 +2077,63 @@ function App() {
                         </div>
                         {summary && <span className={"round-state state-" + summary.status}>{summary.status.replaceAll("_", " ")}</span>}
                       </div>
-                      {!summary && (
-                        <button
-                          className="button button-secondary"
-                          type="button"
-                          disabled={!isPreviousComplete || roundActionBusy !== null}
-                          onClick={() => void startMdtRound(roundNumber)}
-                        >
-                          {roundActionBusy === roundNumber ? "Starting…" : roundNumber === 4 ? "Generate final MDT report" : "Start Round " + roundNumber}
-                          <span aria-hidden="true">→</span>
-                        </button>
-                      )}
+                      <div className="round-controls-bar">
+                        {!summary && (
+                          <button
+                            className="button button-primary button-xs"
+                            type="button"
+                            disabled={!isPreviousComplete || roundActionBusy !== null}
+                            onClick={() => void startMdtRound(roundNumber)}
+                          >
+                            {roundActionBusy === roundNumber ? "Starting…" : roundNumber === 4 ? "Generate final MDT report" : "Start Round " + roundNumber}
+                            <span aria-hidden="true">→</span>
+                          </button>
+                        )}
+                        {summary && summary.status === "running" && (
+                          <button className="button button-warning button-xs" type="button" disabled={controlBusyKey !== null} onClick={() => void pauseRound(roundNumber)}>
+                            ⏸ Pause Round
+                          </button>
+                        )}
+                        {summary && summary.status === "paused" && (
+                          <button className="button button-primary button-xs" type="button" disabled={controlBusyKey !== null} onClick={() => void resumeRound(roundNumber)}>
+                            ▶ Resume Round
+                          </button>
+                        )}
+                        {summary && (summary.status === "running" || summary.status === "paused") && (
+                          <button className="button button-danger button-xs" type="button" disabled={controlBusyKey !== null} onClick={() => void stopRound(roundNumber)}>
+                            ⏹ Stop Round
+                          </button>
+                        )}
+                        {summary && (
+                          <button
+                            className="button button-quiet button-xs"
+                            type="button"
+                            disabled={controlBusyKey !== null || roundActionBusy !== null}
+                            onClick={() => {
+                              if (window.confirm(`Restart Round ${roundNumber}? Current results for this round will be reset.`)) {
+                                void restartRound(roundNumber);
+                              }
+                            }}
+                          >
+                            🔄 Restart Round {roundNumber}
+                          </button>
+                        )}
+                        {roundNumber !== 4 && results.length > 0 && (
+                          <div className="selective-controls">
+                            <button className="button button-xs button-secondary" type="button" onClick={() => selectAllAgentsForRound(roundNumber, results.map(r => r.agent_id))}>
+                              Select All
+                            </button>
+                            <button className="button button-xs button-quiet" type="button" onClick={() => clearSelectedAgentsForRound(roundNumber)}>
+                              Clear
+                            </button>
+                            {(selectedAgentIds[roundNumber]?.length || 0) > 0 && (
+                              <button className="button button-xs button-primary" type="button" disabled={controlBusyKey !== null} onClick={() => void runSelectedAgents(roundNumber)}>
+                                ⚡ Run Selected ({selectedAgentIds[roundNumber]?.length})
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
                       {summary && (
                         <>
                           <div className="batch-status">
@@ -1936,12 +2182,42 @@ function App() {
                           )}
                           {roundNumber !== 4 && results.length > 0 && (
                             <div className="round-agent-list">
-                              {results.map((item) => (
+                              {(focusedPanelKey === "all" ? results : results.filter((item) => FOCUSED_PANELS[focusedPanelKey]?.agentIds.includes(item.agent_id))).map((item) => (
                                 <details className={"batch-agent-result status-" + item.status} key={item.agent_id}>
                                   <summary>
+                                    <input
+                                      type="checkbox"
+                                      className="agent-checkbox"
+                                      checked={selectedAgentIds[roundNumber]?.includes(item.agent_id) || false}
+                                      onClick={(e) => e.stopPropagation()}
+                                      onChange={() => toggleAgentSelection(roundNumber, item.agent_id)}
+                                      title={`Select ${item.agent_id} for Round ${roundNumber}`}
+                                    />
                                     <span className="agent-id">{item.agent_id}</span>
                                     <strong>{item.agent_name}</strong>
                                     <span className={"agent-status status-text-" + item.status}>{item.status}</span>
+                                    <div className="agent-item-quick-actions" onClick={(e) => e.stopPropagation()}>
+                                      <button
+                                        className="button-link-action"
+                                        type="button"
+                                        disabled={controlBusyKey !== null}
+                                        onClick={() => void runIndividualAgent(roundNumber, item.agent_id)}
+                                        title={`Run/Re-run ${item.agent_id} in Round ${roundNumber}`}
+                                      >
+                                        🔄 Run
+                                      </button>
+                                      {(item.status === "running" || item.status === "queued") && (
+                                        <button
+                                          className="button-link-action text-danger"
+                                          type="button"
+                                          disabled={controlBusyKey !== null}
+                                          onClick={() => void stopIndividualAgent(roundNumber, item.agent_id)}
+                                          title={`Stop ${item.agent_id}`}
+                                        >
+                                          ⏹ Stop
+                                        </button>
+                                      )}
+                                    </div>
                                   </summary>
                                   {item.result && (
                                     <div className="batch-agent-body">
@@ -2047,50 +2323,51 @@ function App() {
                 )}
               </section>
             )}
-            {validationError && (
-              <div className="result-card result-error" role="alert">
-                <strong>Validation failed</strong>
-                <p>{validationError}</p>
+            {!shouldShowBatchPanel(batchRun, validation, validatedCase) && !activeSavedCase && !hasCompletedIndependentAssessments(batchRun) && (
+              <div className="result-card" style={{ padding: "40px", textAlign: "center" }}>
+                <span style={{ fontSize: "40px", display: "block", marginBottom: "16px" }}>⚡</span>
+                <h3 style={{ fontSize: "18px", color: "#f8fafc" }}>No Case Active for Simulation</h3>
+                <p style={{ color: "#94a3b8", maxWidth: "520px", margin: "12px auto", lineHeight: "1.5" }}>
+                  Please load a patient case in the Case Workspace or choose one of the pre-loaded example cases before starting the MDT deliberation.
+                </p>
+                <button className="button button-primary" type="button" onClick={() => setActiveTab("case")}>
+                  ← Go to Case Workspace (Step 1)
+                </button>
               </div>
             )}
           </section>
+        )}
 
-          <section className="panel agents-panel">
-            <div className="panel-heading">
-              <div>
-                <p className="eyebrow">02 / MDT PERSPECTIVES</p>
-                <h2>Agent directory</h2>
-              </div>
-              <span className="count-chip">{agents.length || 45} ROLES</span>
-            </div>
-            <p className="panel-intro">
-              Every role is intended to participate in each simulation. These are role profiles, not separate AI models or real clinician opinions.
-            </p>
+        {activeTab === "chair" && (
+          <ChairReportTab
+            finalReport={finalReport}
+            primarySite={form.primary_site}
+            onGoToSimulation={() => setActiveTab("simulation")}
+            onOpenEvidenceDrawer={() => setIsEvidenceDrawerOpen(true)}
+          />
+        )}
 
-            <label className="filter-label">
-              Filter by perspective
-              <select value={agentFilter} onChange={(event) => setAgentFilter(event.target.value)}>
-                {categories.map((category) => <option key={category}>{category}</option>)}
-              </select>
-            </label>
-
-            <div className="agent-list">
-              {filteredAgents.map((agent) => (
-                <article className="agent-item" key={agent.agent_id}>
-                  <span className="agent-id">{agent.agent_id}</span>
-                  <div className="agent-copy">
-                    <strong>{agent.name}</strong>
-                    <p>{agent.mandate}</p>
-                  </div>
-                </article>
-              ))}
-              {agents.length === 0 && (
-                <p className="empty-state">The agent catalogue will appear when the backend API is running.</p>
-              )}
-            </div>
-            <p className="directory-footnote">Showing {filteredAgents.length} of {agents.length} configured perspectives.</p>
-          </section>
+        {activeTab === "specialists" && (
+          <SpecialistsTab
+            agents={agents}
+            filteredAgents={filteredAgents}
+            agentFilter={agentFilter}
+            categories={categories}
+            onFilterChange={setAgentFilter}
+          />
+        )}
         </div>
+
+        {(isEvidenceDrawerOpen || inspectingTrial) && (
+          <EvidenceDrawerModal
+            inspectingTrial={inspectingTrial}
+            onSelectTrial={setInspectingTrial}
+            onClose={() => {
+              setIsEvidenceDrawerOpen(false);
+              setInspectingTrial(null);
+            }}
+          />
+        )}
 
         <footer className="footer">
           <span>RADONC MDT SIMULATOR <span className="footer-separator">/</span> LOCAL-FIRST PROTOTYPE</span>
@@ -2098,29 +2375,6 @@ function App() {
         </footer>
       </main>
     </div>
-  );
-}
-
-function StatusCard({
-  label,
-  value,
-  detail,
-  state
-}: {
-  label: string;
-  value: string;
-  detail: string;
-  state: "good" | "bad" | "neutral";
-}) {
-  return (
-    <article className="status-card">
-      <div className="status-card-top">
-        <span>{label}</span>
-        <span className={"status-light " + state} />
-      </div>
-      <strong>{value}</strong>
-      <small>{detail}</small>
-    </article>
   );
 }
 

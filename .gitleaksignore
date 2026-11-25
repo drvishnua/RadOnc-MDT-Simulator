@@ -1,0 +1,4 @@
+# False-positive gitleaks entropy matches on non-secret localStorage key names and clinical metadata strings
+af8d11a672eefa185a05b3db5b3b34346f821e4d:frontend/src/caseFormHelpers.ts:generic-api-key:6
+af8d11a672eefa185a05b3db5b3b34346f821e4d:frontend/src/caseFormHelpers.ts:generic-api-key:7
+f02f6684772bbf53bb46ef110b08e3c857048e04:backend/app/agents/catalog.py:generic-api-key:385

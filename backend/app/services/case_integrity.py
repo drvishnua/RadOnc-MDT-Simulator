@@ -133,7 +133,17 @@ def _source_laterality_integrity_warnings(case_summary: str) -> list[str]:
     return []
 
 
+def _compute_prompt_staging_analysis(case: SyntheticCase) -> dict[str, Any]:
+    """Execute deterministic staging derivation & correlation according to latest AJCC/UICC standards."""
+    try:
+        from app.services.staging_engine import derive_or_verify_staging
+        return derive_or_verify_staging(case)
+    except Exception as exc:
+        return {"error": str(exc)}
+
+
 def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
+
     """Build one deterministic v2 case context without resolving unknowns or conflicts."""
     snapshot = case.model_dump(exclude_none=True, mode="json")
     model_snapshot = dict(snapshot)
@@ -301,8 +311,10 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
         ),
         "canonical_field_values": canonical_field_values,
         "field_status": field_status,
+        "staging_analysis": _compute_prompt_staging_analysis(case),
         "tnm_normalization_warnings": normalization_warnings,
         "staging_context_warnings": staging_context_warnings,
+
         "source_integrity_warnings": _source_laterality_integrity_warnings(case.case_summary),
         "interpretation_rules": [
             "The v2 canonical field registry is immutable; field IDs and meanings must not be renamed or repurposed.",
@@ -410,6 +422,7 @@ def build_source_case_facts(case: SyntheticCase) -> list[str]:
             facts.append(f"Structured case field — {label}: " + "; ".join(values))
     facts.append("Data-status rule: empty or missing structured fields are not reported, not confirmed negative.")
     return facts[:25]
+
 
 
 def build_case_report_title(case: SyntheticCase) -> str:

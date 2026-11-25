@@ -294,8 +294,23 @@ textarea { resize: vertical; min-height: 110px; line-height: 1.55; }
 .round-agent-list { margin-top: 12px; max-height: 520px; overflow: auto; border-top: 1px solid var(--line); }
 .final-mdt-report { margin-top: 18px; padding: 16px; border: 1px solid rgba(117,211,191,.32); border-radius: 9px; background: rgba(30,53,65,.34); }
 .final-mdt-report h4 { margin: 4px 0 8px; color: #e8f3f0; font-size: 16px; }
+.assessment-conclusion { margin-bottom: 14px; }
+.assessment-conclusion p {
+  color: #c2d1df;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  margin-top: 6px;
+  margin-bottom: 12px;
+}
 .final-mdt-report .assessment-conclusion { margin-bottom: 14px; }
-.final-mdt-report .assessment-conclusion p { color: #c2d1df; line-height: 1.65; }
+.final-mdt-report .assessment-conclusion p { color: #c2d1df; line-height: 1.65; white-space: pre-wrap; }
+.assessment-summary-text {
+  white-space: pre-line;
+  line-height: 1.65;
+  margin: 10px 0;
+  color: #c2d1df;
+  font-size: 13px;
+}
 .round-quality-audit-banner { margin-top: 12px; padding: 10px 14px; background: rgba(14, 30, 48, 0.55); border: 1px solid rgba(139, 220, 195, 0.28); border-radius: 8px; }
 .round-quality-audit-banner .audit-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
 .round-quality-audit-banner .audit-header strong { color: #dce8f4; font-size: 11px; }
@@ -308,3 +323,827 @@ textarea { resize: vertical; min-height: 110px; line-height: 1.55; }
 .report-section ul { margin: 6px 0 0; padding-left: 18px; }
 .report-section li { padding: 2px 0; }
 .report-section p { margin: 6px 0 0; }
+
+/* Enhanced Persona Deepening & Contrarian Badges */
+.agent-header-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+.agent-item-contrarian {
+  border-left: 3px solid #ff7b72;
+  background: rgba(255, 123, 114, 0.05);
+}
+.agent-id-contrarian {
+  color: #ff7b72 !important;
+  font-weight: 700;
+}
+.contrarian-badge {
+  background: rgba(255, 123, 114, 0.16);
+  color: #ff938a;
+  border: 1px solid rgba(255, 123, 114, 0.4);
+  font: 700 8.5px "Cascadia Code", monospace;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+}
+.risk-badge {
+  font: 600 8.5px "Cascadia Code", monospace;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+}
+.risk-low {
+  background: rgba(139, 220, 195, 0.12);
+  color: #8bdcc3;
+  border: 1px solid rgba(139, 220, 195, 0.3);
+}
+.risk-moderate {
+  background: rgba(237, 178, 121, 0.12);
+  color: #edb279;
+  border: 1px solid rgba(237, 178, 121, 0.3);
+}
+.risk-high {
+  background: rgba(248, 81, 73, 0.12);
+  color: #f85149;
+  border: 1px solid rgba(248, 81, 73, 0.3);
+}
+.agent-philosophy {
+  margin-top: 6px;
+  font-size: 9.5px;
+  color: #8fa3b7;
+  font-style: normal;
+  border-left: 2px solid rgba(117, 211, 191, 0.3);
+  padding-left: 8px;
+}
+
+.assessment-citations {
+  margin: 12px 0;
+  padding: 10px 14px;
+  background: rgba(117, 211, 191, 0.08);
+  border-left: 3px solid var(--accent);
+  border-radius: 4px;
+}
+.assessment-citations strong {
+  display: block;
+  font-size: 11px;
+  color: #8bdcc3;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.assessment-citations ul {
+  margin: 0;
+  padding-left: 18px;
+}
+.evidence-badge {
+  display: inline-block;
+  background: rgba(143, 216, 201, 0.15);
+  color: #bbf0e4;
+  border: 1px solid rgba(143, 216, 201, 0.35);
+  font: 600 11.5px/1.4 "Cascadia Code", monospace;
+  padding: 3px 8px;
+  border-radius: 4px;
+  margin: 2px 0;
+}
+.assessment-branches {
+  margin: 12px 0;
+  padding: 10px 14px;
+  background: rgba(237, 178, 121, 0.07);
+  border-left: 3px solid #edb279;
+  border-radius: 4px;
+}
+.assessment-branches strong {
+  display: block;
+  font-size: 11px;
+  color: #edb279;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.branch-condition {
+  font-weight: 700;
+  color: #ffe0b2;
+}
+.meta-audit-accordion {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  font-size: 12px;
+  color: #8293a9;
+}
+.meta-audit-accordion summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #a9b7c9;
+}
+
+
+
+/* ==========================================================================
+   UI / UX NAVIGATION & GUIDED STEPPER STYLES
+   ========================================================================== */
+
+.guided-stepper {
+  display: flex;
+  background: rgba(15, 23, 42, 0.85);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 10px 20px;
+  gap: 12px;
+  align-items: center;
+  overflow-x: auto;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  backdrop-filter: blur(8px);
+}
+
+.step-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #94a3b8;
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  white-space: nowrap;
+}
+
+.step-item:hover {
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.step-item.active {
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.15);
+}
+
+.step-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+}
+
+.step-item.active .step-num {
+  background: #38bdf8;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.step-arrow {
+  color: #475569;
+  font-size: 14px;
+  user-select: none;
+}
+
+.step-separator {
+  flex: 1;
+}
+
+.step-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+  text-transform: capitalize;
+}
+
+.step-badge.ready {
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
+}
+
+/* Preset Quick-Start Card */
+.preset-card {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.85), rgba(15, 23, 42, 0.95));
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.preset-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.preset-icon {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.preset-header strong {
+  font-size: 15px;
+  color: #f8fafc;
+  display: block;
+}
+
+.preset-header p {
+  font-size: 13px;
+  color: #94a3b8;
+  margin: 4px 0 0 0;
+  line-height: 1.4;
+}
+
+.preset-controls {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.preset-select {
+  flex: 1;
+  min-width: 280px;
+  padding: 10px 14px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  color: #f1f5f9;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.preset-select:focus {
+  border-color: #38bdf8;
+}
+
+.preset-desc {
+  margin-top: 12px;
+  font-size: 12.5px;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.08);
+  padding: 10px 14px;
+  border-radius: 6px;
+  border-left: 3px solid #38bdf8;
+  line-height: 1.5;
+}
+
+/* Tab View Animations & Full Width */
+.tab-view-container {
+  width: 100%;
+  animation: tabFadeIn 0.22s ease-in-out;
+}
+
+@keyframes tabFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.chair-full-view {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.chair-full-view h2 {
+  margin-top: 0;
+  font-size: 20px;
+  color: #f8fafc;
+}
+
+.consensus-badge-large {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 16px;
+}
+
+.consensus-badge-large.consensus {
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
+.consensus-badge-large.qualified_consensus {
+  background: rgba(234, 179, 8, 0.2);
+  color: #facc15;
+  border: 1px solid rgba(234, 179, 8, 0.4);
+}
+
+.consensus-badge-large.insufficient_information {
+  background: rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+}
+
+.consensus-badge-large.no_consensus {
+  background: rgba(244, 63, 94, 0.2);
+  color: #fb7185;
+  border: 1px solid rgba(244, 63, 94, 0.4);
+}
+
+/* ==========================================================================
+   Advanced Educational MDT Features: Perturbation, Dosimetry, Panels, Print
+   ========================================================================== */
+
+/* What-If Clinical Perturbation Lab */
+.perturbation-card {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+}
+
+.perturbation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.perturbation-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #f1f5f9;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.perturbation-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.perturbation-btn {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(100, 116, 139, 0.3);
+  color: #cbd5e1;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.perturbation-btn:hover {
+  background: rgba(30, 41, 59, 0.9);
+  border-color: #38bdf8;
+  color: #f8fafc;
+}
+
+.perturbation-btn.active {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: #38bdf8;
+  color: #38bdf8;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+}
+
+.perturbation-active-banner {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: rgba(234, 179, 8, 0.15);
+  border-left: 3px solid #eab308;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #fde047;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Focused Sub-Specialty Panels */
+.focused-panel-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.focused-panel-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #94a3b8;
+  margin-right: 4px;
+}
+
+.focused-panel-chip {
+  padding: 5px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid rgba(100, 116, 139, 0.3);
+  background: rgba(30, 41, 59, 0.6);
+  color: #cbd5e1;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.focused-panel-chip:hover {
+  border-color: #38bdf8;
+  color: #f8fafc;
+}
+
+.focused-panel-chip.active {
+  background: #0284c7;
+  border-color: #38bdf8;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* QUANTEC / PENTEC Dosimetric Constraints Table */
+.dosimetry-card {
+  margin-top: 24px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 10px;
+  padding: 16px 20px;
+}
+
+.dosimetry-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #f8fafc;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.dosimetry-subtitle {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-bottom: 14px;
+}
+
+.dosimetry-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  text-align: left;
+}
+
+.dosimetry-table th {
+  padding: 8px 12px;
+  background: rgba(30, 41, 59, 0.8);
+  color: #94a3b8;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.dosimetry-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  color: #e2e8f0;
+}
+
+.dosimetry-metric {
+  font-family: monospace;
+  font-weight: 700;
+  color: #38bdf8;
+}
+
+.dosimetry-limit {
+  font-weight: 700;
+  color: #4ade80;
+}
+
+/* Evidence / Landmark Trial Drawer */
+.evidence-drawer-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.evidence-drawer {
+  width: 520px;
+  max-width: 90vw;
+  height: 100%;
+  background: #0f172a;
+  border-left: 1px solid rgba(148, 163, 184, 0.25);
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  animation: slideInRight 0.25s ease;
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.evidence-drawer-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.evidence-drawer-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #f8fafc;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.evidence-drawer-body {
+  padding: 20px 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.trial-card-full {
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.trial-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #38bdf8;
+  margin-bottom: 6px;
+}
+
+.trial-citation-text {
+  font-size: 12px;
+  color: #94a3b8;
+  font-style: italic;
+  margin-bottom: 10px;
+}
+
+.trial-field-group {
+  margin-bottom: 8px;
+}
+
+.trial-field-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-bottom: 2px;
+}
+
+.trial-field-value {
+  font-size: 12px;
+  color: #cbd5e1;
+  line-height: 1.4;
+}
+
+.trial-takeaway-box {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: rgba(56, 189, 248, 0.1);
+  border-left: 3px solid #38bdf8;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #bae6fd;
+}
+
+/* -------------------------------------------------------------------------
+   Simulation Lifecycle & Selective Execution Controls
+   ------------------------------------------------------------------------- */
+.simulation-master-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background: rgba(14, 28, 44, 0.65);
+  border: 1px solid rgba(82, 186, 213, 0.28);
+  border-radius: 9px;
+}
+
+.button-full-simulation {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border: 1px solid rgba(16, 185, 129, 0.4) !important;
+  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.25);
+  padding: 8px 18px !important;
+  letter-spacing: 0.02em;
+}
+
+.button-full-simulation:hover:not(:disabled) {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+  transform: translateY(-1px);
+}
+
+.simulation-lifecycle-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.round-controls-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 12px;
+  padding: 8px 12px;
+  background: rgba(18, 32, 48, 0.5);
+  border: 1px solid rgba(117, 211, 191, 0.18);
+  border-radius: 7px;
+}
+
+.selective-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.agent-checkbox {
+  width: 15px;
+  height: 15px;
+  accent-color: #10b981;
+  cursor: pointer;
+  margin-right: 6px;
+}
+
+.agent-item-quick-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.button-link-action {
+  background: none;
+  border: none;
+  color: #6ee7b7;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.button-link-action:hover {
+  background: rgba(110, 231, 183, 0.15);
+}
+
+.button-link-action.text-danger {
+  color: #f87171;
+}
+
+.button-link-action.text-danger:hover {
+  background: rgba(248, 113, 113, 0.15);
+}
+
+.button-xs {
+  font-size: 11px !important;
+  padding: 3px 8px !important;
+  border-radius: 5px !important;
+}
+
+.button-warning {
+  background: #d97706 !important;
+  color: #ffffff !important;
+  border: 1px solid #b45309 !important;
+}
+
+.button-warning:hover:not(:disabled) {
+  background: #b45309 !important;
+}
+
+.button-danger {
+  background: #dc2626 !important;
+  color: #ffffff !important;
+  border: 1px solid #991b1b !important;
+}
+
+.button-danger:hover:not(:disabled) {
+  background: #991b1b !important;
+}
+
+.round-state.state-paused {
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.round-state.state-stopped {
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.status-text-paused {
+  color: #f59e0b;
+}
+
+.status-text-stopped {
+  color: #ef4444;
+}
+
+/* Print Stylesheet for Official MDT Tumor Board Summary */
+@media print {
+  header,
+  .guided-stepper,
+  .preset-card,
+  .perturbation-card,
+  .focused-panel-bar,
+  .button-group,
+  .status-banner,
+  .tab-nav,
+  button,
+  .evidence-drawer-overlay {
+    display: none !important;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 12pt !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .app-container {
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+
+  .tab-view-container {
+    display: block !important;
+  }
+
+  .chair-report-panel {
+    background: #ffffff !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: #000000 !important;
+    padding: 0 !important;
+  }
+
+  .chair-report-panel h2,
+  .chair-report-panel h3,
+  .chair-report-panel h4 {
+    color: #000000 !important;
+    border-bottom: 1px solid #ccc !important;
+  }
+
+  .dosimetry-table {
+    border: 1px solid #333 !important;
+    color: #000 !important;
+  }
+
+  .dosimetry-table th,
+  .dosimetry-table td {
+    border: 1px solid #ccc !important;
+    color: #000 !important;
+    background: #fff !important;
+  }
+}

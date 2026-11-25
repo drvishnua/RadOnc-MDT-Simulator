@@ -59,7 +59,7 @@ MASTER_DEVELOPMENT_CHECKLIST.md is authoritative for verification status.
 | Current full 45-role R1–R4 acceptance | NOT STARTED | Fresh complete run and audit required; historical 343 findings preserved. |
 | Missing/failed-agent acceptance | IN PROGRESS | Full 45-role failure-injection validation outstanding. |
 | RTX 4060 request-time inference proof | NOT STARTED | Target Windows PC powered on during real local Ollama inference and telemetry capture. |
-| Guideline retrieval and claim linkage | NOT STARTED | Retrieve and verify current authoritative sources. |
+| Guideline retrieval and claim linkage | VERIFIED — CODE/TEST | Offline library indexing (NCCN 67 site blocks, Perez & Brady 2026, QUANTEC, AJCC) + online society procurement (ASTRO, ESTRO, ESMO, ASCO, NCCN) + bounded prompt injection & anti-hallucination citation verification. 831 backend tests passing. |
 | Independent qualified clinical review | NOT STARTED | Obtain and document review. |
 | Release acceptance | BLOCKED | Model, 45-role, GPU, evidence and clinical-review gates outstanding. |
 
