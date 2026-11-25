@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import time
 from typing import Any
 
 from app.agents.catalog import AGENT_PROFILES
-from app.config import RADONC_AGENT_CONCURRENCY
+from app.config import CIRCUIT_BREAKER_THRESHOLD, RADONC_AGENT_CONCURRENCY
 from app.schemas import SyntheticCase
 from app.services import run_store
 from app.services.execution_lock import MODEL_EXECUTION_LOCK
@@ -24,9 +25,14 @@ from app.services.mdt_generation import (
     generate_chair_report,
     generate_debate_contribution,
 )
-from app.services.ollama import AgentGenerationError
+from app.services.ollama import AgentGenerationError, OllamaUnavailable
 
 logger = logging.getLogger("radonc.mdt_rounds")
+
+
+def _format_error_message(exc: Exception, max_chars: int = 400) -> str:
+    msg = f"{type(exc).__name__}: {exc}".strip()
+    return msg if len(msg) <= max_chars else msg[: max_chars - 3].rstrip() + "..."
 
 
 def _profile_map() -> dict[str, dict[str, str]]:
@@ -284,6 +290,27 @@ def _run_post_round_quality_gates(
                             "claim": claim_text,
                         })
 
+        # Also extract inline citations from narrative fields (e.g. [source_id: ...], [Sources: ...])
+        narrative_texts = [
+            payload.get("perspective_summary") or "",
+            payload.get("provisional_conclusion") or "",
+            payload.get("response_to_other_perspectives") or "",
+            *(str(opt) for opt in (payload.get("discussion_options") or [])),
+        ]
+        combined_narrative = " ".join(t for t in narrative_texts if isinstance(t, str))
+        inline_sources = re.findall(
+            r"\[(?:source_id|source|ref|citation):\s*([A-Za-z0-9_\-\.]+)\b",
+            combined_narrative,
+            re.IGNORECASE,
+        )
+        for inline_src in set(inline_sources):
+            claims_to_audit.append({
+                "role_id": agent_id,
+                "source_id": inline_src.strip(),
+                "doi_or_url": None,
+                "claim": "Inline narrative citation",
+            })
+
     if claims_to_audit:
         citation_report = audit_claim_citations(claims_to_audit)
         audit["citation_audit"] = citation_report
@@ -334,6 +361,19 @@ def _run_post_round_quality_gates(
         + audit.get("citation_audit", {}).get("unverified_count", 0)
     )
     audit["total_flags"] = total_flags
+    try:
+        summary = run_store.get_round_summary(run_id, round_number)
+        audit["telemetry_summary"] = {
+            "total_prompt_tokens": summary.get("total_prompt_tokens"),
+            "total_output_tokens": summary.get("total_output_tokens"),
+            "avg_tokens_per_second": summary.get("avg_tokens_per_second"),
+            "total_retries": summary.get("total_retries"),
+            "total_schema_failures": summary.get("total_schema_failures"),
+            "wall_clock_seconds": summary.get("wall_clock_seconds"),
+            "position_distribution": summary.get("position_distribution"),
+        }
+    except Exception as exc:
+        logger.warning("Failed to attach telemetry summary for run %s R%d: %s", run_id, round_number, exc)
     logger.info(
         "Post-round quality gates for run %s R%d: %d total flags.",
         run_id, round_number, total_flags,
@@ -341,17 +381,26 @@ def _run_post_round_quality_gates(
     return audit
 
 
-async def run_mdt_round(run_id: str, round_number: int) -> None:
+async def run_mdt_round(
+    run_id: str,
+    round_number: int,
+    selected_agent_ids: list[str] | None = None,
+) -> None:
     """Execute Round 2, 3, or 4, saving every individual result immediately."""
+    from app.services.simulation_controller import get_simulation_controller
+
     if round_number not in (2, 3, 4):
         raise ValueError("Round number must be 2, 3, or 4.")
 
     run_store.require_run_registry_version(run_id)
     run_store.require_run_intake_provenance(run_id)
+    controller = get_simulation_controller()
+
     async with MODEL_EXECUTION_LOCK:
         try:
             case = run_store.get_case(run_id)
-            run_store.mark_round_running(run_id, round_number)
+            if not controller.is_round_paused(run_id, round_number):
+                run_store.mark_round_running(run_id, round_number)
             round_rows = run_store.list_round_results(run_id, round_number)
             completed_ids = {
                 row["agent_id"] for row in round_rows if row["status"] == "completed"
@@ -376,7 +425,10 @@ async def run_mdt_round(run_id: str, round_number: int) -> None:
                 _require_exact_completed_role_payloads(
                     round3_rows, "result", "Round 3"
                 )
-                if "SG-07" not in completed_ids:
+                if "SG-07" not in completed_ids or selected_agent_ids:
+                    if not await controller.check_execution_allowed(run_id, 4, "SG-07"):
+                        logger.info("SG-07 in run %s Round 4 skipped (execution not allowed/stopped)", run_id)
+                        return
                     started = time.perf_counter()
                     run_store.mark_round_agent_running(run_id, 4, "SG-07")
                     tracker: dict[str, Any] = {"retries": 0, "schema_failures": 0}
@@ -419,13 +471,34 @@ async def run_mdt_round(run_id: str, round_number: int) -> None:
                     finally:
                         generation_telemetry_ctx.reset(token)
             else:
+                profiles_to_run = AGENT_PROFILES
+                if selected_agent_ids:
+                    allowed_set = set(selected_agent_ids)
+                    profiles_to_run = [p for p in AGENT_PROFILES if p["agent_id"] in allowed_set]
+
                 semaphore = asyncio.Semaphore(RADONC_AGENT_CONCURRENCY)
+                consecutive_infra_failures = 0
 
                 async def process_profile(profile: dict[str, str]) -> None:
+                    nonlocal consecutive_infra_failures
                     agent_id = profile["agent_id"]
-                    if agent_id in completed_ids:
+                    if agent_id in completed_ids and not selected_agent_ids:
+                        return
+                    if not await controller.check_execution_allowed(run_id, round_number, agent_id):
+                        logger.info("Agent %s in run %s R%d skipped (execution not allowed/stopped)", agent_id, run_id, round_number)
                         return
                     async with semaphore:
+                        if not await controller.check_execution_allowed(run_id, round_number, agent_id):
+                            return
+                        if consecutive_infra_failures >= CIRCUIT_BREAKER_THRESHOLD:
+                            run_store.save_round_failure(
+                                run_id, round_number, agent_id,
+                                "CircuitBreakerOpen: Halted after consecutive Ollama unavailable failures.",
+                                0.0,
+                                retries=0,
+                                schema_failures=0,
+                            )
+                            return
                         started = time.perf_counter()
                         run_store.mark_round_agent_running(run_id, round_number, agent_id)
                         tracker: dict[str, Any] = {"retries": 0, "schema_failures": 0}
@@ -453,6 +526,7 @@ async def run_mdt_round(run_id: str, round_number: int) -> None:
                                     peer_views,
                                     retry_max_tokens=1500,
                                 )
+                            consecutive_infra_failures = 0
                             run_store.save_round_success(
                                 run_id,
                                 round_number,
@@ -465,14 +539,33 @@ async def run_mdt_round(run_id: str, round_number: int) -> None:
                                 retries=tracker.get("retries", 0),
                                 schema_failures=tracker.get("schema_failures", 0),
                             )
+                        except OllamaUnavailable as exc:
+                            consecutive_infra_failures += 1
+                            logger.warning(
+                                "Round %s infrastructure failure for run %s agent %s (%d/%d): %s",
+                                round_number,
+                                run_id,
+                                agent_id,
+                                consecutive_infra_failures,
+                                CIRCUIT_BREAKER_THRESHOLD,
+                                exc,
+                            )
+                            run_store.save_round_failure(
+                                run_id, round_number, agent_id,
+                                _format_error_message(exc),
+                                time.perf_counter() - started,
+                                retries=tracker.get("retries", 0),
+                                schema_failures=tracker.get("schema_failures", 0),
+                            )
                         except Exception as exc:
+                            consecutive_infra_failures = 0
                             logger.exception(
                                 "Round %s contribution failed for run %s agent %s",
                                 round_number, run_id, agent_id,
                             )
                             run_store.save_round_failure(
                                 run_id, round_number, agent_id,
-                                f"{type(exc).__name__}: {exc}",
+                                _format_error_message(exc),
                                 time.perf_counter() - started,
                                 retries=tracker.get("retries", 0),
                                 schema_failures=tracker.get("schema_failures", 0),
@@ -480,9 +573,10 @@ async def run_mdt_round(run_id: str, round_number: int) -> None:
                         finally:
                             generation_telemetry_ctx.reset(token)
 
-                await asyncio.gather(*(process_profile(profile) for profile in AGENT_PROFILES))
+                await asyncio.gather(*(process_profile(profile) for profile in profiles_to_run))
 
-            run_store.mark_round_finished(run_id, round_number)
+            if not controller.is_round_stopped(run_id, round_number) and not controller.is_round_paused(run_id, round_number):
+                run_store.mark_round_finished(run_id, round_number)
 
             # Run deterministic post-round quality gates (U05-U08).
             # These are non-blocking: flags are logged and stored but do not

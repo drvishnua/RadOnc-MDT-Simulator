@@ -22,15 +22,13 @@ import time
 from typing import Any, Literal
 from pydantic import BaseModel, Field
 
+from app.config import RADONC_LIBRARY_PATH
 from app.services.reference_catalogue import ReferenceEntry, SourceType
 
 logger = logging.getLogger("radonc.library_indexer")
 
 _DEFAULT_LIBRARY_PATH = pathlib.Path(
-    os.environ.get(
-        "RADONC_LIBRARY_PATH",
-        r"C:\Users\VISHNU A\Documents\VCR\RadOnc\Medical books",
-    )
+    RADONC_LIBRARY_PATH or r"C:\Users\VISHNU A\Documents\VCR\RadOnc\Medical books"
 )
 
 _CACHE_DIR = pathlib.Path(__file__).resolve().parent.parent / "evidence_catalogues"
@@ -295,8 +293,8 @@ class MedicalLibraryIndexer:
         if self._mem_conn is not None:
             try:
                 self._mem_conn.close()
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("Failed to close in-memory library indexer connection: %s", exc)
             self._mem_conn = None
 
     def _get_cached_files_dict(self) -> dict[str, dict[str, Any]]:
@@ -380,7 +378,8 @@ class MedicalLibraryIndexer:
                         p_text = reader.pages[page_idx].extract_text()
                         if p_text:
                             text_parts.append(p_text)
-                    except Exception:
+                    except Exception as exc:
+                        logger.debug("Failed to extract PDF page %d from %s: %s", page_idx, path.name, exc)
                         continue
                 extracted_text = "\n\n".join(text_parts)
             except ImportError:
@@ -1279,6 +1278,55 @@ _CANONICAL_REFERENCES: list[ReferenceEntry] = [
             },
         ],
     ),
+    # Surgical Oncology Standards
+    ReferenceEntry(
+        source_id="ORATOR-TORS-2019",
+        title="Radiotherapy versus Transoral Robotic Surgery and Neck Dissection for Oropharyngeal Squamous-Cell Carcinoma (ORATOR): A Randomised Phase 2 Study",
+        organization="Lancet Oncology / Multi-Center Trial Group",
+        source_type="trial",
+        edition_or_version="Phase 2 RCT",
+        publication_date="2019-09-01",
+        jurisdiction="International",
+        specialties=["surgical_oncology", "radiation_oncology", "head_and_neck"],
+        topics=["tors", "radiotherapy", "oropharyngeal_cancer", "swallowing_function", "mdadi", "neck_dissection", "head and neck"],
+        doi_or_url="https://doi.org/10.1016/S1470-2045(19)30410-3",
+        access_status="available",
+        supersession="current",
+        key_passages=[
+            {
+                "section": "Functional Swallowing Outcomes (MDADI)",
+                "text": "In early-stage oropharyngeal carcinoma (T1-T2, N0-N2), radiotherapy resulted in superior swallowing quality-of-life scores compared with TORS plus neck dissection (MDADI total score 86.9 vs 80.1, p=0.042). Both modalities achieved excellent 3-year overall survival (>93%), but surgical neck dissection carries risk of accessory nerve injury and secondary lymphedema.",
+            },
+            {
+                "section": "Surgical Indications",
+                "text": "TORS is clinically favored in lateralized, exophytic tonsillar lesions without tongue base or soft palate midline involvement, allowing primary resection with negative margins and pathologic nodal staging.",
+            },
+        ],
+    ),
+    ReferenceEntry(
+        source_id="ECOG-ACRIN-3311",
+        title="Transoral Surgery and Low-Dose Postoperative Radiation in Intermediate-Risk HPV-Positive Oropharynx Cancer (ECOG-ACRIN E3311): A Phase 2 Randomized Trial",
+        organization="ECOG-ACRIN Cancer Research Group",
+        source_type="trial",
+        edition_or_version="Phase 2 RCT",
+        publication_date="2021-11-15",
+        jurisdiction="USA",
+        specialties=["surgical_oncology", "radiation_oncology", "head_and_neck"],
+        topics=["tors", "de_escalation", "hpv_positive", "oropharyngeal_cancer", "adjuvant_radiotherapy", "surgical_margins", "head and neck"],
+        doi_or_url="https://doi.org/10.1200/JCO.21.01752",
+        access_status="available",
+        supersession="current",
+        key_passages=[
+            {
+                "section": "Surgical De-escalation Paradigm",
+                "text": "Transoral robotic resection followed by low-dose post-operative radiation (50 Gy without chemotherapy) yielded a 2-year progression-free survival of 94.9% in intermediate-risk HPV-positive oropharyngeal cancer (clear margins, 2-4 lymph nodes without extranodal extension), demonstrating successful surgical de-escalation.",
+            },
+            {
+                "section": "Margin Adequacy",
+                "text": "Pathologic margin clearance >=3 mm defines negative margins. Close (<3 mm) or positive margins require adjuvant re-resection or postoperative chemoradiotherapy (60-66 Gy + cisplatin).",
+            },
+        ],
+    ),
 ]
 
 _CANONICAL_DOSE_FRACTIONATIONS: list[DoseFractionationRule] = [
@@ -1716,8 +1764,8 @@ class LibraryIndexer:
                                     notes=str(c.get("notes") or ""),
                                 )
                                 self._organ_constraints.append(oc)
-                            except Exception:
-                                pass
+                            except Exception as exc:
+                                logger.debug("Skipping malformed organ constraint in %s: %s", sid, exc)
 
                     # Ingest staging criteria
                     if "t_definitions" in item or "t_criteria" in item:
@@ -1735,8 +1783,8 @@ class LibraryIndexer:
                                 citation=str(item.get("title") or sid),
                             )
                             self._staging_criteria.append(sc)
-                        except Exception:
-                            pass
+                        except Exception as exc:
+                            logger.debug("Skipping malformed staging criteria in %s: %s", sid, exc)
 
                     # Ingest dose fractionations if explicitly provided in entry
                     raw_fracs = item.get("dose_fractionations") or item.get("fractionation_schemes") or []
@@ -1764,8 +1812,8 @@ class LibraryIndexer:
                                     notes=str(f.get("notes") or ""),
                                 )
                                 self._dose_fractionations.append(dfr)
-                            except Exception:
-                                pass
+                            except Exception as exc:
+                                logger.debug("Skipping malformed dose fractionation in %s: %s", sid, exc)
 
                     # Ingest clinical fitness rules if explicitly provided
                     raw_fit = item.get("fitness_rules") or item.get("clinical_decision_rules") or []
@@ -1782,8 +1830,8 @@ class LibraryIndexer:
                                     citation=str(fr.get("citation") or sid),
                                 )
                                 self._fitness_rules.append(cfr)
-                            except Exception:
-                                pass
+                            except Exception as exc:
+                                logger.debug("Skipping malformed fitness rule in %s: %s", sid, exc)
 
             except Exception as exc:
                 logger.debug("Could not ingest catalogue %s: %s", path.name, exc)

@@ -8,8 +8,11 @@ Supports specialist prompt injection and deterministic citation auditing.
 from __future__ import annotations
 
 import json
+import logging
 import pathlib
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from app.services.reference_catalogue import ReferenceEntry, verify_citation
 
@@ -62,7 +65,8 @@ def get_trials_as_reference_entries() -> list[ReferenceEntry]:
     for t in trials:
         try:
             entries.append(ReferenceEntry.model_validate(t))
-        except Exception:
+        except Exception as exc:
+            logger.warning("Skipping invalid landmark trial entry: %s", exc)
             continue
     return entries
 

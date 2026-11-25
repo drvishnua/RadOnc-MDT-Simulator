@@ -193,28 +193,42 @@ def _extract_node_details(text: str, primary_laterality: str = "unspecified") ->
     }
     lower_text = text.lower()
     if any(k in lower_text for k in ["node", "lymph", "jugular", "cervical adenopathy", "adenopathy", "level 1", "level 2", "level 3", "level 4", "level 5"]):
-        negative_node_patterns = [
-            "no lymph node", "no suspicious lymph node", "no suspicious node",
-            "no enlarged node", "no pathologically enlarged", "no cervical adenopathy",
-            "no cervical lymphadenopathy", "no lymphadenopathy", "no adenopathy",
-            "nodes clinically negative", "node negative", "nodes negative",
-            "nodes are normal", "node is normal", "nodes normal", "normal nodes",
-            "no regional lymph node", "no nodal", "no node", "without lymphadenopathy",
-            "without nodal", "free of nodal", "no node notes", "not reported",
-            "not assessed", "no node data", "node negative on pet", "pet-negative",
-            "pet negative", "pet/ct negative", "pet negative lymph nodes"
-        ]
-        if any(neg in lower_text for neg in negative_node_patterns):
-            return node_info
-
-        # Flexible proximity negation regex (e.g. "no fdg uptake in mediastinal, hilar lymph nodes", "without pelvic or para-aortic nodes")
-        neg_prox_match = re.search(
-            r"\b(?:no|without|negative\s+for|free\s+of|no\s+evidence\s+of|no\s+fdg\s+uptake\s+in)\s+[^.;\n]{1,80}?\b(?:lymph\s*nodes?|nodes?|adenopathy|lymphadenopathy)\b",
-            lower_text,
-            re.IGNORECASE,
+        # First check if there is an explicit positive nodal statement
+        # (e.g. "FDG-avid external iliac and obturator pelvic lymph nodes", "enlarged pelvic lymph nodes", "3 mesorectal lymph nodes")
+        has_explicit_positive = any(
+            k in lower_text
+            for k in [
+                "fdg-avid", "fdg avid", "enlarged lymph node", "enlarged node", "enlarged pelvic",
+                "involved node", "involved lymph node", "positive node", "positive lymph node",
+                "mesorectal lymph nodes", "pelvic lymphadenopathy", "mesorectal nodes",
+                "level 2 lymph node", "level ii", "level 2 node", "suspicious lymph node",
+                "suspicious mesorectal"
+            ]
         )
-        if neg_prox_match:
-            return node_info
+
+        if not has_explicit_positive:
+            negative_node_patterns = [
+                "no lymph node", "no suspicious lymph node", "no suspicious node",
+                "no enlarged node", "no pathologically enlarged", "no cervical adenopathy",
+                "no cervical lymphadenopathy", "no lymphadenopathy", "no adenopathy",
+                "nodes clinically negative", "node negative", "nodes negative",
+                "nodes are normal", "node is normal", "nodes normal", "normal nodes",
+                "no regional lymph node", "no nodal", "no node", "without lymphadenopathy",
+                "without nodal", "free of nodal", "no node notes", "not reported",
+                "not assessed", "no node data", "node negative on pet", "pet-negative",
+                "pet negative", "pet/ct negative", "pet negative lymph nodes"
+            ]
+            if any(neg in lower_text for neg in negative_node_patterns):
+                return node_info
+
+            # Flexible proximity negation regex (e.g. "no fdg uptake in mediastinal, hilar lymph nodes", "without pelvic or para-aortic nodes")
+            neg_prox_match = re.search(
+                r"\b(?:no|without|negative\s+for|free\s+of|no\s+evidence\s+of|no\s+fdg\s+uptake\s+in)\s+[^.;\n]{1,80}?\b(?:lymph\s*nodes?|nodes?|adenopathy|lymphadenopathy)\b",
+                lower_text,
+                re.IGNORECASE,
+            )
+            if neg_prox_match:
+                return node_info
 
         node_info["involved"] = True
         node_info["description"] = "documented nodal involvement"
@@ -310,9 +324,16 @@ def _derive_t_stage(
 
     # --- LUNG (AJCC 8th) ---
     if is_lung:
-        if any(k in lower_text for k in ["invades mediastinum", "heart", "great vessels", "trachea", "recurrent laryngeal nerve", "esophagus", "vertebral body", "carina"]):
+        if any(k in lower_text for k in [
+            "invades mediastinum", "invasion of mediastinum", "invades heart", "invades great vessels",
+            "invades trachea", "recurrent laryngeal nerve", "invades esophagus", "vertebral body", "invades carina",
+            "involvement of carina"
+        ]):
             return "T4"
-        if any(k in lower_text for k in ["chest wall", "parietal pleura", "phrenic nerve", "parietal pericardium"]):
+        if any(k in lower_text for k in [
+            "chest wall invasion", "invades chest wall", "parietal pleura invasion", "phrenic nerve",
+            "parietal pericardium"
+        ]):
             return "T3"
         if size_cm is not None:
             if size_cm > 7.0:
@@ -418,7 +439,19 @@ def _derive_n_stage(
 
     # --- CERVIX (FIGO 2018 / AJCC 9th) ---
     if is_cervix:
-        if any(k in lower_text for k in ["para-aortic", "paraaortic", "aortic"]):
+        # Check for positive para-aortic lymph nodes (noting negative statements like "no para-aortic")
+        has_positive_para_aortic = any(
+            k in lower_text
+            for k in [
+                "para-aortic lymphadenopathy", "para-aortic lymph node", "paraaortic lymph",
+                "fdg-avid para-aortic", "positive para-aortic", "positive paraaortic",
+                "involved para-aortic"
+            ]
+        ) and not any(
+            neg in lower_text
+            for neg in ["no para-aortic", "no paraaortic", "free of para-aortic", "without para-aortic"]
+        )
+        if has_positive_para_aortic:
             return "N2"  # FIGO IIIC2
         return "N1"  # Pelvic lymph nodes -> FIGO IIIC1
 

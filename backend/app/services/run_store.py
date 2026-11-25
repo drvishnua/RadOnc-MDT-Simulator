@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import sqlite3
 import uuid
@@ -12,16 +13,18 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+logger = logging.getLogger(__name__)
+
 from app.agents.catalog import AGENT_PROFILES
-from app.schemas import SyntheticCase
 from app.clinical_fields import CLINICAL_FIELD_REGISTRY_VERSION, require_supported_registry_version
+from app.config import RADONC_DATA_DIR, RADONC_LEGACY_DB_PATH
+from app.schemas import SyntheticCase
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 DEFAULT_DATA_DIR = BACKEND_DIR / "data"
-DATA_DIR = Path(os.environ.get("RADONC_DATA_DIR", str(DEFAULT_DATA_DIR))).expanduser().resolve()
+DATA_DIR = Path(RADONC_DATA_DIR or str(DEFAULT_DATA_DIR)).expanduser().resolve()
 DB_PATH = DATA_DIR / "simulation_runs.sqlite3"
-_legacy_path = os.environ.get("RADONC_LEGACY_DB_PATH")
-LEGACY_DB_PATH = Path(_legacy_path).expanduser().resolve() if _legacy_path else None
+LEGACY_DB_PATH = Path(RADONC_LEGACY_DB_PATH).expanduser().resolve() if RADONC_LEGACY_DB_PATH else None
 
 
 def _migrate_legacy_database_if_needed() -> bool:
@@ -79,6 +82,9 @@ def _connect():
     connection = sqlite3.connect(DB_PATH, timeout=30)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys=ON")
+    connection.execute("PRAGMA journal_mode=WAL")
+    connection.execute("PRAGMA synchronous=NORMAL")
+    connection.execute("PRAGMA busy_timeout=30000")
     try:
         yield connection
         connection.commit()
@@ -397,23 +403,57 @@ def get_patient(patient_id: str) -> dict[str, Any]:
 def list_patients() -> list[dict[str, Any]]:
     initialize_database()
     with _connect() as db:
-        patient_ids = [row["patient_id"] for row in db.execute(
-            "SELECT patient_id FROM synthetic_patients ORDER BY updated_at DESC, patient_id"
-        ).fetchall()]
-    patients = []
-    for patient_id in patient_ids:
-        detail = get_patient(patient_id)
-        latest = detail["versions"][0] if detail["versions"] else None
+        patient_rows = db.execute(
+            """
+            SELECT p.patient_id, p.patient_name, p.created_at, p.updated_at, r.registry_number
+            FROM synthetic_patients p
+            LEFT JOIN patient_registry_numbers r ON r.patient_id = p.patient_id
+            ORDER BY p.updated_at DESC, p.patient_id
+            """
+        ).fetchall()
+        version_counts = {
+            row["patient_id"]: row["version_count"]
+            for row in db.execute(
+                "SELECT patient_id, COUNT(*) AS version_count FROM patient_case_versions GROUP BY patient_id"
+            ).fetchall()
+        }
+        latest_version_rows = {
+            row["patient_id"]: row
+            for row in db.execute(
+                """
+                SELECT v.*
+                FROM patient_case_versions v
+                JOIN (
+                    SELECT patient_id, MAX(version_number) AS max_version
+                    FROM patient_case_versions
+                    GROUP BY patient_id
+                ) latest ON latest.patient_id = v.patient_id AND latest.max_version = v.version_number
+                """
+            ).fetchall()
+        }
+        run_counts = {
+            row["patient_id"]: row["simulation_count"]
+            for row in db.execute(
+                "SELECT patient_id, COUNT(*) AS simulation_count FROM simulation_runs WHERE patient_id IS NOT NULL GROUP BY patient_id"
+            ).fetchall()
+        }
+
+    patients: list[dict[str, Any]] = []
+    for patient in patient_rows:
+        patient_id = patient["patient_id"]
+        latest_row = latest_version_rows.get(patient_id)
+        latest = _version_record(latest_row) if latest_row is not None else None
+        reg_num = patient["registry_number"]
         patients.append({
-            "patient_id": detail["patient_id"],
-            "patient_identifier": detail["patient_identifier"],
-            "patient_name": detail["patient_name"],
+            "patient_id": patient_id,
+            "patient_identifier": f"RAD-{int(reg_num):06d}" if reg_num is not None else None,
+            "patient_name": patient["patient_name"],
             "age_years": latest["case"].get("age_years") if latest else None,
             "stage_group": latest["case"].get("stage_group") if latest else None,
-            "created_at": detail["created_at"],
-            "updated_at": detail["updated_at"],
-            "version_count": len(detail["versions"]),
-            "simulation_count": len(detail["runs"]),
+            "created_at": patient["created_at"],
+            "updated_at": patient["updated_at"],
+            "version_count": version_counts.get(patient_id, 0),
+            "simulation_count": run_counts.get(patient_id, 0),
             "latest_case_version_id": latest["case_version_id"] if latest else None,
             "latest_version_number": latest["version_number"] if latest else None,
             "scenario_title": latest["case"]["scenario_title"] if latest else "No saved case",
@@ -431,11 +471,7 @@ def delete_patient(patient_id: str) -> None:
         ).fetchone()
         if existing is None:
             raise KeyError(patient_id)
-        run_ids = [row["run_id"] for row in db.execute(
-            "SELECT run_id FROM simulation_runs WHERE patient_id = ?", (patient_id,)
-        ).fetchall()]
-        for run_id in run_ids:
-            db.execute("DELETE FROM simulation_runs WHERE run_id = ?", (run_id,))
+        db.execute("DELETE FROM simulation_runs WHERE patient_id = ?", (patient_id,))
         db.execute("DELETE FROM synthetic_patients WHERE patient_id = ?", (patient_id,))
 
 
@@ -571,6 +607,7 @@ def get_case(run_id: str) -> SyntheticCase:
 def get_run(run_id: str) -> dict[str, Any]:
     initialize_database()
     with _connect() as db:
+        _ensure_round_tables(db)
         row = db.execute(
             "SELECT * FROM simulation_runs WHERE run_id = ?", (run_id,)
         ).fetchone()
@@ -583,6 +620,13 @@ def get_run(run_id: str) -> dict[str, Any]:
                 SELECT status, COUNT(*) AS count
                 FROM agent_run_results WHERE run_id = ? GROUP BY status
                 """,
+                (run_id,),
+            ).fetchall()
+        }
+        round_status = {
+            r["round_number"]: r["status"]
+            for r in db.execute(
+                "SELECT round_number, status FROM round_runs WHERE run_id = ? ORDER BY round_number",
                 (run_id,),
             ).fetchall()
         }
@@ -625,6 +669,8 @@ def get_run(run_id: str) -> dict[str, Any]:
         "created_at": row["created_at"],
         "updated_at": row["updated_at"],
         "mdt_finished_at": row["mdt_finished_at"],
+        "completed_at": row["mdt_finished_at"],
+        "round_status": round_status,
         "wall_clock_runtime_seconds": wall_clock_runtime_seconds,
         "clinical_field_registry_version": row["clinical_field_registry_version"],
         "case_snapshot_sha256": hashlib.sha256(row["case_json"].encode("utf-8")).hexdigest(),
@@ -1043,8 +1089,8 @@ def get_round_summary(run_id: str, round_number: int) -> dict[str, Any]:
             if pos:
                 clean_pos = str(pos).strip().lower().replace("-", "_")
                 position_distribution[clean_pos] = position_distribution.get(clean_pos, 0) + 1
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Failed to parse result_json for position distribution: %s", exc)
 
     completed = counts.get("completed", 0)
     failed = counts.get("failed", 0)
@@ -1444,3 +1490,175 @@ def reset_failed_agents(run_id: str) -> None:
             """,
             (now, run_id),
         )
+
+
+def mark_run_status(run_id: str, status: str) -> None:
+    """Explicitly set simulation run status (e.g. paused, stopped, running)."""
+    now = _now()
+    with _connect() as db:
+        db.execute(
+            "UPDATE simulation_runs SET status = ?, updated_at = ? WHERE run_id = ?",
+            (status, now, run_id),
+        )
+
+
+def mark_round_status(run_id: str, round_number: int, status: str) -> None:
+    """Explicitly set round status (e.g. paused, stopped, running)."""
+    now = _now()
+    with _connect() as db:
+        db.execute(
+            "UPDATE round_runs SET status = ?, updated_at = ? WHERE run_id = ? AND round_number = ?",
+            (status, now, run_id, round_number),
+        )
+
+
+def mark_agent_status(run_id: str, round_number: int, agent_id: str, status: str) -> None:
+    """Explicitly set an agent's status (e.g. stopped, queued) for a specific round."""
+    now = _now()
+    with _connect() as db:
+        if round_number == 1:
+            db.execute(
+                "UPDATE agent_run_results SET status = ? WHERE run_id = ? AND agent_id = ?",
+                (status, run_id, agent_id),
+            )
+        else:
+            db.execute(
+                "UPDATE agent_round_results SET status = ? WHERE run_id = ? AND round_number = ? AND agent_id = ?",
+                (status, run_id, round_number, agent_id),
+            )
+
+
+def restart_simulation(run_id: str) -> None:
+    """Reset the entire simulation (all 4 rounds) back to clean initial queued state."""
+    now = _now()
+    with _connect() as db:
+        # Reset R1 agents
+        db.execute(
+            """
+            UPDATE agent_run_results
+            SET status = 'queued', assessment_json = NULL, error_message = NULL,
+                started_at = NULL, completed_at = NULL, duration_seconds = NULL,
+                prompt_tokens = NULL, output_tokens = NULL, tokens_per_second = NULL,
+                retries = 0, schema_failures = 0
+            WHERE run_id = ?
+            """,
+            (run_id,),
+        )
+        # Delete downstream rounds so they can be re-created fresh
+        db.execute("DELETE FROM agent_round_results WHERE run_id = ?", (run_id,))
+        db.execute("DELETE FROM round_runs WHERE run_id = ?", (run_id,))
+        db.execute("DELETE FROM quality_audits WHERE run_id = ?", (run_id,))
+        # Reset top-level simulation run
+        db.execute(
+            """
+            UPDATE simulation_runs
+            SET status = 'queued', current_agent_id = NULL, mdt_finished_at = NULL, updated_at = ?
+            WHERE run_id = ?
+            """,
+            (now, run_id),
+        )
+
+
+def restart_round(run_id: str, round_number: int) -> None:
+    """Reset a single round's agents back to queued state."""
+    now = _now()
+    with _connect() as db:
+        if round_number == 1:
+            db.execute(
+                """
+                UPDATE agent_run_results
+                SET status = 'queued', assessment_json = NULL, error_message = NULL,
+                    started_at = NULL, completed_at = NULL, duration_seconds = NULL,
+                    prompt_tokens = NULL, output_tokens = NULL, tokens_per_second = NULL,
+                    retries = 0, schema_failures = 0
+                WHERE run_id = ?
+                """,
+                (run_id,),
+            )
+            db.execute(
+                "UPDATE simulation_runs SET status = 'queued', current_agent_id = NULL, updated_at = ? WHERE run_id = ?",
+                (now, run_id),
+            )
+        else:
+            db.execute(
+                """
+                UPDATE agent_round_results
+                SET status = 'queued', result_json = NULL, error_message = NULL,
+                    started_at = NULL, completed_at = NULL, duration_seconds = NULL,
+                    prompt_tokens = NULL, output_tokens = NULL, tokens_per_second = NULL,
+                    retries = 0, schema_failures = 0
+                WHERE run_id = ? AND round_number = ?
+                """,
+                (run_id, round_number),
+            )
+            db.execute(
+                """
+                UPDATE round_runs
+                SET status = 'queued', current_agent_id = NULL, started_at = NULL,
+                    finished_at = NULL, updated_at = ?
+                WHERE run_id = ? AND round_number = ?
+                """,
+                (now, run_id, round_number),
+            )
+
+
+def restart_agent(run_id: str, round_number: int, agent_id: str) -> None:
+    """Reset a single agent's result back to queued state for re-execution."""
+    with _connect() as db:
+        if round_number == 1:
+            db.execute(
+                """
+                UPDATE agent_run_results
+                SET status = 'queued', assessment_json = NULL, error_message = NULL,
+                    started_at = NULL, completed_at = NULL, duration_seconds = NULL,
+                    prompt_tokens = NULL, output_tokens = NULL, tokens_per_second = NULL,
+                    retries = 0, schema_failures = 0
+                WHERE run_id = ? AND agent_id = ?
+                """,
+                (run_id, agent_id),
+            )
+        else:
+            db.execute(
+                """
+                UPDATE agent_round_results
+                SET status = 'queued', result_json = NULL, error_message = NULL,
+                    started_at = NULL, completed_at = NULL, duration_seconds = NULL,
+                    prompt_tokens = NULL, output_tokens = NULL, tokens_per_second = NULL,
+                    retries = 0, schema_failures = 0
+                WHERE run_id = ? AND round_number = ? AND agent_id = ?
+                """,
+                (run_id, round_number, agent_id),
+            )
+
+
+def mark_queued_agents_stopped(run_id: str, round_number: int | None = None) -> None:
+    """Mark all currently queued or interrupted agents as stopped."""
+    with _connect() as db:
+        if round_number is None or round_number == 1:
+            db.execute(
+                """
+                UPDATE agent_run_results
+                SET status = 'stopped'
+                WHERE run_id = ? AND status in ('queued', 'running')
+                """,
+                (run_id,),
+            )
+        if round_number is None or round_number > 1:
+            if round_number is not None:
+                db.execute(
+                    """
+                    UPDATE agent_round_results
+                    SET status = 'stopped'
+                    WHERE run_id = ? AND round_number = ? AND status in ('queued', 'running')
+                    """,
+                    (run_id, round_number),
+                )
+            else:
+                db.execute(
+                    """
+                    UPDATE agent_round_results
+                    SET status = 'stopped'
+                    WHERE run_id = ? AND status in ('queued', 'running')
+                    """,
+                    (run_id,),
+                )

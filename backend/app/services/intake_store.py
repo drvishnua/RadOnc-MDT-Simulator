@@ -37,6 +37,9 @@ def _connect():
     connection = sqlite3.connect(run_store.DB_PATH, timeout=30)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys=ON")
+    connection.execute("PRAGMA journal_mode=WAL")
+    connection.execute("PRAGMA synchronous=NORMAL")
+    connection.execute("PRAGMA busy_timeout=30000")
     try:
         connection.execute("""
         CREATE TABLE IF NOT EXISTS intake_sessions (

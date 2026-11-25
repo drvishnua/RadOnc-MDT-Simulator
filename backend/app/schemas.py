@@ -6,11 +6,13 @@ import hashlib
 import json
 import re
 from datetime import date, datetime
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.clinical_fields import CLINICAL_FIELD_REGISTRY, DataState
+
+AgentIdStr = Annotated[str, Field(pattern=r"^[A-Z]{2}-[0-9]{2}$")]
 
 
 class StrictModel(BaseModel):
@@ -33,7 +35,7 @@ class ClinicalFieldProvenance(StrictModel):
         "OTHER",
     ]
     source_reference: str = Field(min_length=1, max_length=300)
-    source_excerpt: str = Field(min_length=1, max_length=500000)
+    source_excerpt: str = Field(min_length=1, max_length=100000)
     verification_status: Literal["user_supplied_not_independently_verified"] = "user_supplied_not_independently_verified"
     observed_at: datetime | None = None
     recorded_at: datetime | None = None
@@ -64,7 +66,7 @@ class InvestigationRecord(StrictModel):
     performed_on: date | None = None
     reported_on: date | None = None
     source_reference: str | None = Field(default=None, max_length=300)
-    source_excerpt: str | None = Field(default=None, max_length=500000)
+    source_excerpt: str | None = Field(default=None, max_length=100000)
 
 
 class SyntheticCase(StrictModel):
@@ -271,6 +273,14 @@ class PatientRunRequest(StrictModel):
         max_length=36,
         pattern=r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
     )
+    full_simulation: bool = Field(default=False)
+    selected_agent_ids: list[AgentIdStr] | None = Field(default=None, min_length=1, max_length=60)
+
+
+class SelectedAgentsRequest(StrictModel):
+    """Strict list of agent IDs for selective execution in a simulation round."""
+
+    agent_ids: list[AgentIdStr] = Field(min_length=1, max_length=60)
 
 
 class CaseIntakeScreenRequest(StrictModel):
@@ -289,7 +299,7 @@ class IntakeSessionCreateRequest(StrictModel):
 class IntakeEventRequest(StrictModel):
     """Append one answer, correction or declined-domain event."""
 
-    event_type: str
+    event_type: str = Field(min_length=1, max_length=64)
     field_id: str | None = Field(default=None, max_length=80)
     value: object | None = None
     domain: str | None = Field(default=None, max_length=80)

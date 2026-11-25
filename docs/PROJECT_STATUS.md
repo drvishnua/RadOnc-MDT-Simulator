@@ -1,11 +1,19 @@
 # RadOnc MDT Simulator — Current Project Status
-Snapshot: 17 November 2026
+Snapshot: 24 November 2026
 
 Repository: drvishnua/RadOnc-MDT-Simulator  
 Development branch: feature/four-round-mdt-and-performance  
-Latest application/test commit: 9e781525fbf6ac07cf2f6a19d035b82b888f305a  
 PR #1: open, draft, unmerged, base main  
 Main SHA: 39a356b8eb09399aa2da1b9b9085965999f5105a (unchanged)
+
+## Immediate Quality Milestone (P0, P1, P2) — 24 November 2026
+- **Status**: COMPLETED and VERIFIED. Detailed report: `docs/QUALITY_MILESTONE_P1_P2_REPORT.md`.
+- **49 Specialist Personas**: Fully deepened and characterized across 7 clinical panels with distinct mandates, OAR limits, ASTRO/ESMO guidelines, and toxicities.
+- **P0 Grounded Staging**: Multi-site AJCC 8th ed. staging engine prevents unsupported TNM assertions.
+- **P1 Structured Debate & Chair**: Stance transitions preserve model-authored rationale. Chair synthesis segregates genuine dissent from stable uncertainty (`insufficient_information`). Titles are grounded strictly in verified case facts. Top-level `completed_at` and `round_status` API contracts fulfilled.
+- **P2 Inline Citation Audit & Rich Telemetry**: Post-round quality gates audit inline references with 100% concordance on live run. Rich token/time telemetry attached to quality audits.
+- **Backend Test Suite**: 839 tests passing, 0 failures. Dedicated tests in `test_p1_milestone_integrity.py` and `test_api_milestone_telemetry.py`.
+- **Local GPU Live Run**: Verified 4-round live simulation on NVIDIA RTX 4060 with Ollama (`qwen3.5:4b`) at concurrency 1.
 
 ## Current verified state
 

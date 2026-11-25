@@ -213,8 +213,8 @@ class EvidenceRetrievalEngine:
             # Pathologist: Staging, Histology, Biomarkers, Guidelines
             return ["staging_anatomy", "guidelines"]
         elif clean_id == "DS-03":
-            # Palliative Care: General medicine, Symptoms, Organ tolerances, Guidelines
-            return ["general_medicine", "guidelines", "organ_tolerances"]
+            # Molecular Pathologist & Geneticist: Biomarkers, Genomics, Systemic trials, General medicine, Organ tolerances
+            return ["staging_anatomy", "guidelines", "trials_systemic", "general_medicine", "organ_tolerances"]
         elif prefix == "PP":
             # Patient Perspective Lenses: Guidelines, Organ tolerances, General medicine
             return ["guidelines", "organ_tolerances", "general_medicine"]
@@ -415,12 +415,16 @@ class EvidenceRetrievalEngine:
                                 continue
 
                     # Exclude passages from mismatched anatomical subsites or disease sites
-                    if any(ex in entry_text or ex in entry.source_id.lower() for ex in subsite_exclusions):
+                    # (Allow normal tissue toxicity guidelines like QUANTEC even if other head and neck subsites like larynx are in topic tags)
+                    is_toxicity_guideline = any(k in entry.source_id.lower() for k in ["quantec", "pentec", "toxicity"])
+                    if not is_toxicity_guideline and any(ex in entry_text or ex in entry.source_id.lower() for ex in subsite_exclusions):
                         if entry.source_type != "textbook" and any(ex in entry.title.lower() for ex in subsite_exclusions):
                             continue
                     
                     # Site match or general oncologic reference/textbook
                     site_match_count = sum(1 for token in site_tokens if len(token) > 2 and token in entry_text)
+                    if is_head_neck_case and any(k in entry_text for k in ["head and neck", "parotid", "salivary", "constrictor", "xerostomia"]):
+                        site_match_count += 2
                     is_general_textbook = entry.source_type == "textbook"
                     if not site_match_count and not is_general_textbook and not (len(passages) == 0 and "HN" in entry.source_id):
                         continue
@@ -435,21 +439,92 @@ class EvidenceRetrievalEngine:
 
                     # Boost textbooks so standard texts (Perez & Brady, Gunderson & Tepper, DeVita, Harrison's) compete evenly with NCCN
                     # BUT for RO-01, guidelines are supreme over textbooks
+                    # For RO-02, prioritize toxicity (QUANTEC) and de-escalation/functional preservation trials
+                    # For RO-03, prioritize dose-escalation/intensification trials (RTOG, MACH-NC)
                     if clean_id == "RO-01":
-                        guideline_boost = 6.0 if entry.source_type == "guideline" else 0.0
+                        guideline_boost = 12.0 if entry.source_type == "guideline" else 0.0
+                        textbook_boost = 0.0
+                        toxicity_boost = 0.0
+                    elif clean_id == "RO-02":
+                        guideline_boost = 0.0
+                        textbook_boost = 15.0 if any(k in entry.source_id.lower() for k in ["perez", "brady", "fletcher", "textbook"]) else 3.0
+                        toxicity_boost = 15.0 if any(k in entry.source_id.lower() for k in ["quantec", "classical", "conventional", "rtog-9111"]) else 0.0
+                    elif clean_id == "RO-03":
+                        guideline_boost = 2.0 if entry.source_type == "guideline" else 0.0
+                        textbook_boost = 3.0 if entry.source_type == "textbook" else 0.0
+                        toxicity_boost = 20.0 if any(k in entry.source_id.lower() for k in ["rtog-0522", "cisplatin-3weekly", "mach-nc"]) else 0.0
+                    elif clean_id == "RO-04":
+                        guideline_boost = 3.0 if entry.source_type == "guideline" else 0.0
+                        textbook_boost = 2.0 if entry.source_type == "textbook" else 0.0
+                        toxicity_boost = 18.0 if any(k in entry.source_id.lower() for k in ["aroi", "faro", "hypo", "rapido", "short"]) else 0.0
+                    elif clean_id == "RO-05":
+                        guideline_boost = 2.0 if entry.source_type == "guideline" else 0.0
+                        textbook_boost = 2.0 if entry.source_type == "textbook" else 0.0
+                        toxicity_boost = 18.0 if any(k in entry.source_id.lower() for k in ["icru", "contour", "sbrt", "abs", "astro-hn"]) else 0.0
+                    elif clean_id == "RO-06":
+                        guideline_boost = 4.0 if entry.source_type == "guideline" else 0.0
                         textbook_boost = 1.0 if entry.source_type == "textbook" else 0.0
+                        toxicity_boost = 25.0 if any(k in entry.source_id.lower() for k in ["abs", "gec", "brachy", "implant"]) else 0.0
+                    elif clean_id == "RO-07":
+                        guideline_boost = 1.0 if entry.source_type == "guideline" else 0.0
+                        textbook_boost = 2.0 if entry.source_type == "textbook" else 0.0
+                        toxicity_boost = 22.0 if any(k in entry.source_id.lower() for k in ["rtog-9111", "rtog-9501", "eortc-22931", "mach-nc", "bernier"]) else 0.0
+                    elif clean_id == "RO-08":
+                        guideline_boost = 3.0 if entry.source_type == "guideline" else 0.0
+                        textbook_boost = 1.0 if entry.source_type == "textbook" else 0.0
+                        toxicity_boost = 20.0 if any(k in entry.source_id.lower() for k in ["nccn-hn-2026", "astro-hn-2024", "estro-eortc-hn-2023", "1016"]) else 0.0
+                    elif clean_id == "RO-09":
+                        guideline_boost = 1.0 if entry.source_type == "guideline" else 0.0
+                        textbook_boost = 5.0 if entry.source_type == "textbook" else 0.0
+                        toxicity_boost = 22.0 if any(k in entry.source_id.lower() for k in ["radiobiology", "hall", "perez", "icru-83"]) else 0.0
+                    elif clean_id == "RO-10":
+                        guideline_boost = 1.0 if entry.source_type == "guideline" else 0.0
+                        textbook_boost = 1.0 if entry.source_type == "textbook" else 0.0
+                        toxicity_boost = 25.0 if any(k in entry.source_id.lower() for k in ["quantec", "pentec", "toxicity", "morbidity"]) else 0.0
+                    elif clean_id == "SO-01":
+                        guideline_boost = 4.0 if entry.source_type == "guideline" else 0.0
+                        textbook_boost = 1.0 if entry.source_type == "textbook" else 0.0
+                        toxicity_boost = 22.0 if any(k in entry.source_id.lower() for k in ["nccn-hn", "surg", "resect", "sso"]) else 0.0
+                    elif clean_id == "SO-02":
+                        guideline_boost = 2.0 if entry.source_type == "guideline" else 0.0
+                        textbook_boost = 1.0 if entry.source_type == "textbook" else 0.0
+                        toxicity_boost = 25.0 if any(k in entry.source_id.lower() for k in ["orator", "ecog", "tors", "tlm"]) else 0.0
+                    elif clean_id == "MO-01":
+                        guideline_boost = 3.0 if entry.source_type == "guideline" else 0.0
+                        textbook_boost = 3.0 if entry.source_type == "textbook" else 0.0
+                        toxicity_boost = 25.0 if any(k in entry.source_id.lower() for k in ["cisplatin-3weekly", "harrisons-med", "rtog-9111", "mach-nc"]) else 0.0
+                    elif clean_id == "MO-02":
+                        guideline_boost = 3.0 if entry.source_type == "guideline" else 0.0
+                        textbook_boost = 2.0 if entry.source_type == "textbook" else 0.0
+                        toxicity_boost = 25.0 if any(k in entry.source_id.lower() for k in ["jastro", "aroi", "weekly", "cisplatin"]) else 0.0
+                    elif clean_id == "MO-04":
+                        guideline_boost = 2.0 if entry.source_type == "guideline" else 0.0
+                        textbook_boost = 1.0 if entry.source_type == "textbook" else 0.0
+                        toxicity_boost = 25.0 if any(k in entry.source_id.lower() for k in ["rtog-1016", "pembro", "nivo", "checkpoint", "pacific"]) else 0.0
                     else:
                         guideline_boost = 0.0
                         textbook_boost = 3.5 if entry.source_type == "textbook" else 0.0
+                        toxicity_boost = 0.0
 
-                    total_score = (site_match_count * 2.5) + (role_match_count * 1.5) + spec_match + named_bonus + textbook_boost + guideline_boost
+                    total_score = (site_match_count * 2.5) + (role_match_count * 1.5) + spec_match + named_bonus + textbook_boost + guideline_boost + toxicity_boost
                     scored_candidates.append((total_score, entry))
 
                 scored_candidates.sort(key=lambda x: x[0], reverse=True)
 
                 # Balanced selection: ensure at least one standard textbook and one guideline/trial are paired
                 selected_entries = []
-                if clean_id != "RO-01":
+                if clean_id == "RO-01":
+                    # For RO-01, systematically pick one entry from each distinct professional society first (ASTRO, ESTRO, JASTRO/FARO, AROI, ABS, NCCN)
+                    societies_seen = set()
+                    for _, entry in scored_candidates:
+                        if entry.source_type == "guideline":
+                            soc = entry.source_id.split("-")[0].upper()
+                            if soc not in societies_seen:
+                                societies_seen.add(soc)
+                                selected_entries.append(entry)
+                        if len(selected_entries) >= limit:
+                            break
+                else:
                     # First, pick highest scoring textbook if available for standard roles
                     textbook_cand = next((e for _, e in scored_candidates if e.source_type == "textbook"), None)
                     if textbook_cand:

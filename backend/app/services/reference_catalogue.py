@@ -6,10 +6,13 @@ retrieval, and deterministic anti-hallucination citation verification.
 from __future__ import annotations
 
 import json
+import logging
 import pathlib
 import re
 from typing import Any, Literal
 from pydantic import BaseModel, Field
+
+logger = logging.getLogger(__name__)
 
 SourceType = Literal["guideline", "textbook", "trial", "review", "consensus"]
 AccessStatus = Literal["available", "restricted", "unavailable"]
@@ -59,8 +62,8 @@ def load_reference_catalogue(path: pathlib.Path | None = None) -> list[Reference
                     if item.source_id.upper() not in seen:
                         entries.append(item)
                         seen.add(item.source_id.upper())
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Failed to merge library indexer entries into reference catalogue: %s", exc)
         return entries
     except (json.JSONDecodeError, OSError, ValueError):
         return []
@@ -153,20 +156,20 @@ def get_active_reference_catalogue(
                                 for a in item.aliases:
                                     if a not in match.aliases:
                                         match.aliases.append(a)
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Failed to merge library indexer entries into reference catalogue: %s", exc)
 
         if hasattr(indexer, "_load_all_indexed_docs"):
             try:
                 docs_to_convert.extend(indexer._load_all_indexed_docs())
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Failed to merge library indexer entries into reference catalogue: %s", exc)
 
         if not docs_to_convert and hasattr(indexer, "scan_catalog"):
             try:
                 docs_to_convert.extend(indexer.scan_catalog())
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Failed to merge library indexer entries into reference catalogue: %s", exc)
 
         if isinstance(indexer, (list, tuple)):
             for item in indexer:
