@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "plan_id": "radonc-mdt-master-sequential-plan",
-  "scope_baseline_commit": "5284483a26e87028f919966e304c472ed537e839",
-  "active_step": "U09-U10",
+  "scope_baseline_commit": "6566feb4b13b78f2698f1c24f605bb2085c25882",
+  "active_step": "U04",
   "steps": [
     {
       "id": "STEP-A",
@@ -90,7 +90,7 @@
     {
       "id": "U09-U10",
       "title": "Canonical clinical data contract and deterministic hallucination controls",
-      "status": "IN PROGRESS",
+      "status": "VERIFIED",
       "depends_on": [
         "U12"
       ],
@@ -113,12 +113,28 @@
         "Backend Tests",
         "Security and Dependency Audit"
       ],
-      "completion_evidence": null
+      "completion_evidence": {
+        "commit_sha": "6566feb4b13b78f2698f1c24f605bb2085c25882",
+        "workflow_runs": [
+          {
+            "id": 45585258544,
+            "name": "Sequential Development Gate"
+          },
+          {
+            "id": 45585258482,
+            "name": "Backend Tests"
+          },
+          {
+            "id": 45585259207,
+            "name": "Security and Dependency Audit"
+          }
+        ]
+      }
     },
     {
       "id": "U04",
       "title": "Pre-MDT conversational intake and completeness screener",
-      "status": "BLOCKED",
+      "status": "IN PROGRESS",
       "depends_on": [
         "U09-U10"
       ],
