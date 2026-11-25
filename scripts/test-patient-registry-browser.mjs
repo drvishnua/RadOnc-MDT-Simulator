@@ -439,7 +439,7 @@ async function verifyFourRoundDashboard() {
   if (
     rendered.headings.length !== 3 ||
     !rendered.completed.every(Boolean) ||
-    rendered.roundRoleCount !== 90 ||
+    rendered.roundRoleCount !== 98 ||
     !rendered.hasR2SourceReferenceWarning ||
     !rendered.hasServerBoundR2Opinion ||
     !rendered.hasR3SourceOpinionReview ||
@@ -460,7 +460,7 @@ async function verifyFourRoundDashboard() {
   dashboardRunId = null;
   await evaluate("window.localStorage.removeItem('radonc-mdt-active-batch'); true");
   console.log("FOUR_ROUND_DASHBOARD_BROWSER_E2E_OK");
-  console.log("Verified in headless Edge: saved R1 readiness, R2/R3 45-role result lists, completed R4 and persisted Chair report rendering. No model inference was invoked.");
+  console.log("Verified in headless Edge: saved R1 readiness, R2/R3 49-role result lists, completed R4 and persisted Chair report rendering. No model inference was invoked.");
 }
 
 try {
