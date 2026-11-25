@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { readDraft, writeDraft, createBlankDraft } from "./caseDraft.js";
 import { readSavedSingleAssessment, writeSavedSingleAssessment } from "./singleAssessmentStorage.js";
-import { hasCompletedIndependentAssessments, shouldOfferIndependentBatchResume, shouldShowBatchPanel } from "./runRecovery.js";
+import { hasCompletedIndependentAssessments, shouldShowBatchPanel } from "./runRecovery.js";
 import { patientVersionDisplayName } from "./patientVersionName.js";
 import { formatElapsedDuration } from "./roundTiming.js";
 import { PRESET_CASES } from "./presetCases.js";
@@ -50,6 +50,7 @@ import { ChairReportTab } from "./components/ChairReportTab.js";
 import { SpecialistsTab } from "./components/SpecialistsTab.js";
 import { CasePresetPerturbationPanel } from "./components/CasePresetPerturbationPanel.js";
 import { PreMdtIntakeReviewCard } from "./components/PreMdtIntakeReviewCard.js";
+import { SimulationMasterBar } from "./components/SimulationMasterBar.js";
 import { EvidenceDrawerModal } from "./components/EvidenceDrawerModal.js";
 
 function App() {
@@ -1671,132 +1672,29 @@ function App() {
                     <p className="result-footnote">Run ID: {batchRun.run_id} · Patient: {loadedPatient?.patient_identifier ?? (batchRun.patient_id ? "linked patient" : "legacy unlinked run")} · Case version: {batchRun.case_version_number ?? "not linked"} · SHA-256: {batchRun.case_snapshot_sha256}</p>
                   </div>
                 )}
-                <div className="simulation-master-bar">
-                  {activeSavedCase && (
-                    <>
-                      <button
-                        className="button button-full-simulation"
-                        type="button"
-                        onClick={() => void startFullSimulation()}
-                        disabled={!activeSavedCase.intake_backed || batchStarting || batchResuming || assessing || !runtime?.reachable || (batchRun !== null && ["queued", "running"].includes(batchRun.status))}
-                        title="Execute all 4 MDT rounds (Independent Assessments, Debate, Adversarial Review, and Chair Synthesis) on a single click"
-                      >
-                        {batchStarting ? "Starting Full Simulation…" : "▶ Run Entire Simulation (All 4 Rounds)"}
-                      </button>
-
-                      <button
-                        className="button button-secondary"
-                        type="button"
-                        onClick={() => void startAllAgents()}
-                        disabled={!activeSavedCase.intake_backed || batchStarting || batchResuming || assessing || !runtime?.reachable || (batchRun !== null && ["queued", "running"].includes(batchRun.status))}
-                        title="Run only Round 1 (independent assessments)"
-                      >
-                        Run Round 1 Only
-                      </button>
-
-                      <div className="single-agent-launcher" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                        <select
-                          className="agent-select-dropdown"
-                          value={singleAgentToRun}
-                          onChange={(e) => setSingleAgentToRun(e.target.value)}
-                          disabled={batchStarting || (batchRun !== null && ["queued", "running"].includes(batchRun.status))}
-                          style={{ padding: "6px 8px", borderRadius: "6px", background: "rgba(18, 34, 52, 0.95)", color: "#e2e8f0", border: "1px solid rgba(82, 186, 213, 0.4)", fontSize: "12px", height: "34px" }}
-                        >
-                          {agents.map((a) => (
-                            <option key={a.agent_id} value={a.agent_id}>
-                              {a.agent_id} · {a.name}
-                            </option>
-                          ))}
-                        </select>
-                        <button
-                          className="button button-secondary"
-                          type="button"
-                          onClick={() => void startSingleAgentRun(singleAgentToRun)}
-                          disabled={!activeSavedCase.intake_backed || batchStarting || batchResuming || assessing || !runtime?.reachable || (batchRun !== null && ["queued", "running"].includes(batchRun.status))}
-                          title={`Run ONLY ${singleAgentToRun} in Round 1`}
-                          style={{ borderColor: "#38bdf8", color: "#38bdf8", height: "34px", padding: "0 12px", fontSize: "12px" }}
-                        >
-                          ⚡ Run {singleAgentToRun} Only
-                        </button>
-                      </div>
-                    </>
-                  )}
-                  {!activeSavedCase && !batchRun && (
-                    <p className="batch-estimate-note">Complete and accept a pre-MDT intake to create an immutable patient case version before starting a new MDT run.</p>
-                  )}
-                  {batchRun && batchResults.length > 0 && (
-                    <button className="button button-quiet" type="button" onClick={downloadBatchResults}>
-                      Export JSON
-                    </button>
-                  )}
-                  {shouldOfferIndependentBatchResume(batchRun) && (
-                    <button
-                      className="button button-secondary"
-                      type="button"
-                      onClick={() => void resumeAllAgents()}
-                      disabled={batchResuming || batchStarting}
-                    >
-                      {batchResuming ? "Resuming…" : batchRun?.status === "completed_with_errors" ? "Retry failed agents" : "Recover interrupted run"}
-                    </button>
-                  )}
-                  {batchRun && (
-                    <div className="simulation-lifecycle-controls">
-                      {(batchRun.status === "running" || Object.values(roundSummaries).some(s => s?.status === "running")) && (
-                        <button className="button button-warning button-xs" type="button" disabled={controlBusyKey !== null} onClick={() => void pauseSimulation()} title="Pause all simulation activity">
-                          ⏸ Pause Simulation
-                        </button>
-                      )}
-                      {(batchRun.status === "paused" || Object.values(roundSummaries).some(s => s?.status === "paused")) && (
-                        <button className="button button-primary button-xs" type="button" disabled={controlBusyKey !== null} onClick={() => void resumeSimulation()} title="Resume paused simulation">
-                          ▶ Resume Simulation
-                        </button>
-                      )}
-                      {(["running", "paused", "queued"].includes(batchRun.status) || Object.values(roundSummaries).some(s => ["running", "paused", "queued"].includes(s?.status || ""))) && (
-                        <button className="button button-danger button-xs" type="button" disabled={controlBusyKey !== null} onClick={() => void stopSimulation()} title="Stop and cancel simulation">
-                          ⏹ Stop Simulation
-                        </button>
-                      )}
-                      <button
-                        className="button button-quiet button-xs"
-                        type="button"
-                        disabled={controlBusyKey !== null || batchStarting}
-                        onClick={() => {
-                          if (window.confirm("Restart entire simulation from Round 1? All current round results will be reset.")) {
-                            void restartSimulation();
-                          }
-                        }}
-                        title="Reset and re-run all 4 rounds from scratch"
-                      >
-                        🔄 Restart Whole Simulation
-                      </button>
-                    </div>
-                  )}
-                </div>
-                {batchRun && (
-                  <div className="batch-status" aria-live="polite">
-                    <div className="batch-status-top">
-                      <strong>
-                        {batchRun.status === "queued" ? "Queued" :
-                          batchRun.status === "running" ? "Running independently" :
-                          batchRun.status === "completed" ? `All ${batchRun.total_agents} assessments completed` :
-                          "Completed with some errors"}
-                      </strong>
-                      <span>{batchRun.finished_count} / {batchRun.total_agents} finished</span>
-                    </div>
-                    <div className="batch-progress-track">
-                      <div className="batch-progress-fill" style={{ width: batchRun.progress_percent + "%" }} />
-                    </div>
-                    <div className="batch-counts">
-                      <span className="count-complete">{batchRun.completed_count} completed</span>
-                      <span className="count-failed">{batchRun.failed_count} failed</span>
-                      <span>{batchRun.queued_count + batchRun.running_count} remaining</span>
-                      {batchRun.current_agent_id && <span>Now: {batchRun.current_agent_id}</span>}
-                    </div>
-                    {batchRun.status === "running" && (
-                      <p className="batch-estimate-note">This runs locally and sequentially. It may take several minutes. Keep the dashboard, backend and laptop running until it finishes.</p>
-                    )}
-                  </div>
-                )}
+                <SimulationMasterBar
+                  activeSavedCase={activeSavedCase}
+                  batchRun={batchRun}
+                  batchResults={batchResults}
+                  batchStarting={batchStarting}
+                  batchResuming={batchResuming}
+                  assessing={assessing}
+                  runtime={runtime}
+                  agents={agents}
+                  singleAgentToRun={singleAgentToRun}
+                  onSelectSingleAgent={setSingleAgentToRun}
+                  roundSummaries={roundSummaries}
+                  controlBusyKey={controlBusyKey}
+                  onStartFullSimulation={() => void startFullSimulation()}
+                  onStartAllAgents={() => void startAllAgents()}
+                  onStartSingleAgentRun={(id) => void startSingleAgentRun(id)}
+                  onDownloadBatchResults={() => void downloadBatchResults()}
+                  onResumeAllAgents={() => void resumeAllAgents()}
+                  onPauseSimulation={() => void pauseSimulation()}
+                  onResumeSimulation={() => void resumeSimulation()}
+                  onStopSimulation={() => void stopSimulation()}
+                  onRestartSimulation={() => void restartSimulation()}
+                />
                 {batchError && <div className="result-card result-error" role="alert">{batchError}</div>}
                 {batchResults.length > 0 && (
                   <div className="batch-results">
