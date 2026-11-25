@@ -180,3 +180,22 @@ class TestQualityAuditPersistence:
 
         result = run_store.get_round_quality_audit("nonexistent", 1)
         assert result is None
+
+    def test_r1_post_round_quality_gates_attaches_telemetry_via_get_run(self, monkeypatch):
+        monkeypatch.setattr(
+            run_store,
+            "get_run",
+            lambda _run_id: {
+                "total_prompt_tokens": 1200,
+                "total_output_tokens": 450,
+                "avg_tokens_per_second": 42.5,
+                "total_retries": 0,
+                "total_schema_failures": 0,
+                "wall_clock_seconds": 12.3,
+                "position_distribution": {"conditional": 49},
+            },
+        )
+        audit = _run_post_round_quality_gates("run-r1-telemetry", 1, [])
+        assert audit["telemetry_summary"]["total_prompt_tokens"] == 1200
+        assert audit["telemetry_summary"]["wall_clock_seconds"] == 12.3
+

@@ -369,7 +369,11 @@ def _run_post_round_quality_gates(
     )
     audit["total_flags"] = total_flags
     try:
-        summary = run_store.get_round_summary(run_id, round_number)
+        summary = (
+            run_store.get_run(run_id)
+            if round_number == 1
+            else run_store.get_round_summary(run_id, round_number)
+        )
         audit["telemetry_summary"] = {
             "total_prompt_tokens": summary.get("total_prompt_tokens"),
             "total_output_tokens": summary.get("total_output_tokens"),
