@@ -305,3 +305,4 @@ def test_ensure_ollama_service_and_model_spawns_on_win32(monkeypatch):
 
 def test_agent_profiles_catalog_count():
     assert len(AGENT_PROFILES) == 49
+    assert len(AGENT_PROFILES) * 2 == 98
