@@ -272,7 +272,8 @@ async def generate_agent_assessment(
 
 
     age_str = f"{case.age_years}" if case.age_years is not None else "adult"
-    sex_str = "M" if "MALE" in (case.sex_at_birth or "").upper() else ("F" if "FEMALE" in (case.sex_at_birth or "").upper() else case.sex_at_birth or "patient")
+    raw_sex = (case.sex_at_birth or "").upper()
+    sex_str = "F" if "FEMALE" in raw_sex else ("M" if "MALE" in raw_sex else case.sex_at_birth or "patient")
     sex_phrase = "male" if sex_str == "M" else ("female" if sex_str == "F" else sex_str.lower())
     site_str = case.primary_site or "cancer"
     subsite_str = f" ({case.anatomical_subsite})" if case.anatomical_subsite else ""
@@ -392,8 +393,12 @@ async def generate_agent_assessment(
             details = type(exc).__name__
         raise AgentGenerationError("Draft schema validation failed: " + details) from exc
 
-    # Format RO-01 preferred_educational_option and perspective_summary with structured multi-society comparative breakdown
-    if profile.get("agent_id") == "RO-01":
+    # Format RO-01 preferred_educational_option and perspective_summary with structured multi-society comparative breakdown (Head & Neck only)
+    is_hn_case = any(
+        tok in site_str.lower()
+        for tok in ["tonsil", "oropharynx", "larynx", "glott", "pharynx", "oral", "tongue", "nasopharynx", "hypopharynx", "head"]
+    )
+    if profile.get("agent_id") == "RO-01" and is_hn_case:
         lines = [
             f"For this {age_str}-year-old {sex_phrase} with {site_str.lower()}{subsite_str}{stage_clause}{comorb_clause}, the recognized radiation oncology society guidelines recommend:",
         ]

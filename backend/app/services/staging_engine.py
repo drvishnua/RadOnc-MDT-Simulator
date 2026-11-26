@@ -75,13 +75,17 @@ def derive_or_verify_staging(case: SyntheticCase, role_id: str = "") -> dict[str
 
     # 2. Derive Stage Components
     # Only derive N category if nodal status is actually examined/reported (and not merely stating missing/unreported notes)
-    unreported_node_tokens = ["no node notes", "node notes available", "not reported", "not assessed", "no node data", "node status unknown"]
+    unreported_node_tokens = [
+        "no node notes", "node notes available", "not reported", "not assessed",
+        "no node data", "node status unknown", "no pelvic nodal imaging",
+        "no nodal imaging", "no neck imaging", "no nodal exam",
+    ]
     has_unreported_node_statement = any(u in combined_text for u in unreported_node_tokens)
     has_node_examination = (
         any(
             k in combined_text
             for k in [
-                "node", "lymph", "jugular", "cervical adenopathy", "adenopathy",
+                "node", "nodal", "lymph", "jugular", "cervical adenopathy", "adenopathy",
                 "level 1", "level 2", "level 3", "level 4", "level 5", "neck",
                 "mediastin", "hilar", "pelvic", "inguinal", "para-aortic",
                 "perirectal", "retroperitoneal", "pet-negative", "pet negative"
