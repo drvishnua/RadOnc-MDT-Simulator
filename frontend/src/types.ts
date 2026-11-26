@@ -112,8 +112,11 @@ export type SavedSingleAssessment = {
 export type PreMDTStagingAssessment = {
   agent_id: string;
   agent_name: string;
+  staging_locked?: boolean;
   mode: "provisional_derived" | "verified_concordant" | "discrepancy_detected" | "insufficient_staging_data";
   applicable_system: string;
+  staging_reference_ids?: string[];
+  staging_rules_applied?: string[];
   provided_staging: Record<string, string | null>;
   provisional_tnm: Record<string, string | null>;
   provisional_stage_label: string;

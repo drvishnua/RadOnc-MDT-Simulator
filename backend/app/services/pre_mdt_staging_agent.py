@@ -12,6 +12,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from app.schemas import SyntheticCase
+from app.services.staging_anatomy_service import load_staging_catalogue
 from app.services.staging_engine import derive_or_verify_staging
 
 
@@ -20,6 +21,7 @@ class PreMDTStagingAssessment(BaseModel):
 
     agent_id: str = "STG-00"
     agent_name: str = "Pre-MDT Clinical & Imaging Staging Agent"
+    staging_locked: bool = True
     mode: Literal[
         "provisional_derived",
         "verified_concordant",
@@ -27,6 +29,8 @@ class PreMDTStagingAssessment(BaseModel):
         "insufficient_staging_data",
     ]
     applicable_system: str
+    staging_reference_ids: list[str] = Field(default_factory=list)
+    staging_rules_applied: list[str] = Field(default_factory=list)
     provided_staging: dict[str, str | None] = Field(default_factory=dict)
     provisional_tnm: dict[str, str | None] = Field(default_factory=dict)
     provisional_stage_label: str
@@ -36,6 +40,67 @@ class PreMDTStagingAssessment(BaseModel):
     missing_for_complete_staging: list[str] = Field(default_factory=list)
     summary: str
     safety_boundary: str = "educational_simulation_only"
+
+
+def _match_staging_catalogue_rules(
+    case: SyntheticCase,
+    applicable_system: str,
+    t_tok: str,
+    n_tok: str,
+    m_tok: str,
+) -> tuple[list[str], list[str]]:
+    """Select exact AJCC/UICC/FIGO reference IDs and rules applied from staging_anatomy_catalogue."""
+    entries = load_staging_catalogue()
+    by_id = {str(e.get("source_id", "")).upper(): e for e in entries}
+    ref_ids: list[str] = []
+    rules: list[str] = []
+
+    gen = by_id.get("UICC-AJCC-TNM-GENERAL-RULES")
+    if gen:
+        ref_ids.append(gen["source_id"])
+        for rule in (gen.get("key_innovations") or [])[:2]:
+            rules.append(str(rule))
+
+    site = (case.primary_site or "").lower()
+    sys_lower = applicable_system.lower()
+    site_id = None
+    if "cervix" in site or "figo" in sys_lower:
+        site_id = "FIGO-2023-ENDOMETRIUM" if "endometri" in site else "FIGO-2018-AJCC-CERVIX"
+    elif "hpv/p16-positive" in sys_lower:
+        site_id = "AJCC-8TH-HPV-OROPHARYNX"
+    elif any(k in site for k in ["oropharynx", "tonsil", "hypopharynx"]):
+        site_id = "AJCC-8TH-NONHPV-OROPHARYNX"
+    elif "nasopharynx" in site:
+        site_id = "AJCC-8TH-NASOPHARYNX"
+    elif "larynx" in site or "glott" in site:
+        site_id = "AJCC-8TH-LARYNX"
+    elif any(k in site for k in ["oral", "tongue", "buccal"]):
+        site_id = "AJCC-8TH-ORAL-CAVITY"
+    elif any(k in site for k in ["lung", "nsclc", "sclc"]):
+        site_id = "AJCC-8TH-9TH-NSCLC"
+    elif "breast" in site:
+        site_id = "AJCC-8TH-BREAST"
+    elif "prostate" in site:
+        site_id = "AJCC-8TH-PROSTATE"
+    elif any(k in site for k in ["rectum", "rectal", "colon", "colorectal"]):
+        site_id = "AJCC-8TH-COLORECTAL"
+    elif "esophag" in site:
+        site_id = "AJCC-8TH-ESOPHAGUS"
+
+    site_entry = by_id.get(site_id) if site_id else None
+    if site_entry:
+        ref_ids.append(site_entry["source_id"])
+        t_defs = site_entry.get("t_definitions") or {}
+        n_defs = site_entry.get("n_definitions") or {}
+        m_defs = site_entry.get("m_definitions") or {}
+        if t_tok in t_defs:
+            rules.append(f"{t_tok}: {t_defs[t_tok]}")
+        if n_tok in n_defs:
+            rules.append(f"{n_tok}: {n_defs[n_tok]}")
+        if m_tok in m_defs:
+            rules.append(f"{m_tok}: {m_defs[m_tok]}")
+
+    return ref_ids, rules
 
 
 def run_pre_mdt_staging_agent(case: SyntheticCase) -> PreMDTStagingAssessment:
@@ -116,9 +181,17 @@ def run_pre_mdt_staging_agent(case: SyntheticCase) -> PreMDTStagingAssessment:
             "All specialists must treat staging as Tx Nx Mx rather than assuming early-stage or node-negative disease."
         )
 
+    applicable_system = str(raw.get("applicable_system") or "AJCC 8th Edition")
+    ref_ids, rules_applied = _match_staging_catalogue_rules(
+        case, applicable_system, t_tok, n_tok, m_tok
+    )
+
     return PreMDTStagingAssessment(
+        staging_locked=True,
         mode=mode,
-        applicable_system=str(raw.get("applicable_system") or "AJCC 8th Edition"),
+        applicable_system=applicable_system,
+        staging_reference_ids=ref_ids,
+        staging_rules_applied=rules_applied,
         provided_staging={
             "clinical_t": provided_t,
             "clinical_n": provided_n,

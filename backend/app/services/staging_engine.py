@@ -401,13 +401,17 @@ def _derive_t_stage(
             return "T3" if size_cm > 3.0 else "T2"
         return "T3"
 
-    # --- HEAD & NECK / OROPHARYNX (AJCC 8th) ---
+    # --- HEAD & NECK / OROPHARYNX (AJCC 8th / UICC 8th) ---
+    if any(k in lower_text for k in [
+        "lateral pterygoid", "pterygoid plate", "pterygoid plates", "lateral nasopharynx",
+        "skull base", "carotid", "encases carotid"
+    ]):
+        return "T4b"
     if any(k in lower_text for k in [
         "invades larynx", "bone invasion", "pterygoid muscle", "medial pterygoid",
-        "lateral pterygoid", "pterygoid plate", "hard palate invasion", "mandible",
-        "nasopharynx", "skull base", "carotid", "extrinsic tongue muscle"
+        "hard palate invasion", "mandible", "extrinsic tongue muscle"
     ]):
-        return "T4"
+        return "T4a"
     if any(k in lower_text for k in ["lingual surface of epiglottis", "epiglottis"]):
         return "T3"
     if size_cm is not None:

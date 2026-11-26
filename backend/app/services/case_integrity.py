@@ -312,6 +312,10 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
         "canonical_field_values": canonical_field_values,
         "field_status": field_status,
         "staging_analysis": _compute_prompt_staging_analysis(case),
+        "pre_mdt_staging_lock": (
+            "STG-00 has fixed the authoritative staging for this simulation. "
+            "No other agent may rethink, re-stage, or invent alternative T/N/M values during R1-R4."
+        ),
         "tnm_normalization_warnings": normalization_warnings,
         "staging_context_warnings": staging_context_warnings,
 

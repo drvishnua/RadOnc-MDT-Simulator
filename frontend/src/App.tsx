@@ -1665,6 +1665,11 @@ function App() {
                         <span className={`pre-mdt-mode-pill is-${batchRun.pre_mdt_staging.mode}`}>
                           {batchRun.pre_mdt_staging.mode.replaceAll("_", " ")}
                         </span>
+                        {batchRun.pre_mdt_staging.staging_locked !== false && (
+                          <span className="pre-mdt-mode-pill is-verified_concordant">
+                            Locked for MDT
+                          </span>
+                        )}
                       </div>
                     </div>
                     <p className="pre-mdt-staging-summary">{batchRun.pre_mdt_staging.summary}</p>

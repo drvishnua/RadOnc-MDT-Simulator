@@ -466,7 +466,7 @@
       "source_type": "consensus",
       "disease_site": "Head & Neck",
       "doi_or_url": "https://doi.org/10.1016/j.radonc.2013.10.010",
-      "edition_or_version": "2013 Update (Gr\u00e9goire et al., Radiother Oncol 2014)",
+      "edition_or_version": "2013 Update (Grégoire et al., Radiother Oncol 2014)",
       "levels": {
         "Level Ia (Submental)": {
           "cranial": "Mylohyoid muscle",
@@ -724,6 +724,126 @@
         "Glioblastoma CTV": "GTV (contrast-enhancing cavity + rim on T1+Gd) + 15 to 20 mm expansion, constrained by bony skull, falx, and tentorium",
         "Prostate PTV Margin": "5 mm radially and 3 mm posteriorly (toward rectum) with daily fiducial/CBCT guidance; 8-10 mm without daily online 3D guidance"
       }
+    },
+    {
+      "source_id": "UICC-AJCC-TNM-GENERAL-RULES",
+      "title": "UICC TNM Classification of Malignant Tumours (8th Edition) & AJCC General Staging Rules",
+      "organization": "Union for International Cancer Control (UICC) / American Joint Committee on Cancer (AJCC)",
+      "source_type": "staging_atlas",
+      "disease_site": "General",
+      "doi_or_url": "https://www.uicc.org/resources/tnm",
+      "edition_or_version": "UICC 8th Edition / AJCC 8th-9th Edition General Rules",
+      "key_innovations": [
+        "Prefix rules: cTNM (clinical), pTNM (pathological), ycTNM/ypTNM (post-neoadjuvant), rTNM (recurrent), aTNM (autopsy).",
+        "X-category rule: Use TX, NX, or MX whenever the primary, regional nodes, or distant metastases cannot be assessed—never default to N0 or M0.",
+        "Uncertainty rule: If there is doubt concerning the correct T, N, or M category to assign, assign the lower (less advanced) category.",
+        "Simultaneous multiple tumors in one organ: Classify by the tumor with the highest T category and indicate multiplicity with (m) or number."
+      ],
+      "t_definitions": {
+        "TX": "Primary tumor cannot be assessed",
+        "T0": "No evidence of primary tumor",
+        "Tis": "Carcinoma in situ",
+        "T1-T4": "Increasing size and/or local extent of the primary tumor per site-specific AJCC/UICC criteria"
+      },
+      "n_definitions": {
+        "NX": "Regional lymph nodes cannot be assessed (never assume N0)",
+        "N0": "No regional lymph node metastasis on documented clinical/imaging or pathological assessment",
+        "N1-N3": "Increasing involvement of regional lymph nodes (size, number, laterality, extranodal extension)"
+      },
+      "m_definitions": {
+        "MX_cM0": "cM0 requires clinical/imaging evaluation; if unassessed, report Mx/unknown rather than assuming M0",
+        "M1": "Distant metastasis (including non-regional lymph nodes)"
+      },
+      "stage_groups": {
+        "Rule": "Clinical stage (cTNM) governs initial definitive non-surgical management; pathological stage (pTNM) requires resection and never retroactively alters cTNM."
+      },
+      "key_passages": [
+        {
+          "text": "UICC/AJCC General Rule: Unassessed nodal or metastatic status must remain NX/MX and must never be assumed N0 or M0. When uncertain between two categories, assign the lower category."
+        }
+      ]
+    },
+    {
+      "source_id": "AJCC-8TH-NONHPV-OROPHARYNX",
+      "title": "AJCC Cancer Staging Manual / UICC 8th Edition: p16-Negative (Non-HPV) Oropharyngeal & Hypopharyngeal Carcinoma",
+      "organization": "AJCC / UICC",
+      "source_type": "staging_atlas",
+      "disease_site": "Head & Neck",
+      "doi_or_url": "https://cancerstaging.org",
+      "edition_or_version": "8th Edition (2018)",
+      "key_innovations": [
+        "Separate staging from p16-positive oropharynx; retains N2a/N2b/N2c and ENE-driven N3b.",
+        "Clinical ENE (skin invasion, soft tissue infiltration, cranial nerve/brachial plexus fixation) upstages cN to cN3b."
+      ],
+      "t_definitions": {
+        "T1": "Tumor <= 2 cm in greatest dimension",
+        "T2": "Tumor > 2 cm but <= 4 cm in greatest dimension",
+        "T3": "Tumor > 4 cm in greatest dimension or extension to lingual surface of epiglottis",
+        "T4a": "Moderately advanced local disease: invades larynx, extrinsic muscle of tongue, medial pterygoid, hard palate, or mandible",
+        "T4b": "Very advanced local disease: invades lateral pterygoid muscle, pterygoid plates, lateral nasopharynx, skull base, or encases carotid artery"
+      },
+      "n_definitions": {
+        "NX": "Regional lymph nodes cannot be assessed",
+        "N0": "No regional lymph node metastasis",
+        "N1": "Single ipsilateral lymph node <= 3 cm and ENE(-)",
+        "N2a": "Single ipsilateral node > 3 cm but <= 6 cm and ENE(-)",
+        "N2b": "Multiple ipsilateral nodes, none > 6 cm and ENE(-)",
+        "N2c": "Bilateral or contralateral nodes, none > 6 cm and ENE(-)",
+        "N3a": "Metastasis in a lymph node > 6 cm and ENE(-)",
+        "N3b": "Metastasis in any node(s) with clinically overt ENE(+)"
+      },
+      "m_definitions": {
+        "M0": "No distant metastasis",
+        "M1": "Distant metastasis"
+      },
+      "stage_groups": {
+        "Stage I": "T1 N0 M0",
+        "Stage II": "T2 N0 M0",
+        "Stage III": "T3 N0 M0, or T1-T3 N1 M0",
+        "Stage IVA": "T4a N0-N1 M0, or T1-T4a N2 M0",
+        "Stage IVB": "Any T N3 M0, or T4b Any N M0",
+        "Stage IVC": "Any T Any N M1"
+      },
+      "key_passages": [
+        {
+          "text": "In p16-negative oropharyngeal SCC (AJCC/UICC 8th), T1 is <=2 cm, T2 is >2-4 cm, T3 is >4 cm or lingual epiglottis; any single ipsilateral node <=3 cm ENE(-) is cN1 (Stage III)."
+        }
+      ]
+    },
+    {
+      "source_id": "FIGO-2023-ENDOMETRIUM",
+      "title": "FIGO 2023 Staging of Endometrial Cancer (Anatomical & Molecular Integration)",
+      "organization": "International Federation of Gynecology and Obstetrics (FIGO)",
+      "source_type": "staging_atlas",
+      "disease_site": "GYN",
+      "doi_or_url": "https://www.figo.org",
+      "edition_or_version": "FIGO 2023",
+      "key_innovations": [
+        "Integrates histological type/grade, LVSI (substantial vs focal/none), and molecular classification (POLEmut, MMRd, NSMP, p53abn).",
+        "Distinguishes Stage IIIC1 (pelvic lymph node metastasis) and IIIC2 (para-aortic lymph node metastasis), with micrometastasis (i) vs macrometastasis (ii)."
+      ],
+      "t_definitions": {
+        "Stage I": "Confined to uterine corpus and ovary (IA: non-aggressive <50% myometrial invasion; IB: non-aggressive >=50%; IC: aggressive histological types limited to polyp/endometrium)",
+        "Stage II": "Invasion of cervical stroma without extrauterine extension, or substantial LVSI, or aggressive histological types with myometrial invasion (IIC)",
+        "Stage III": "Local and/or regional spread (IIIA adnexa/serosa, IIIB vagina/parametrium/pelvic peritoneum, IIIC1 pelvic LN, IIIC2 para-aortic LN)",
+        "Stage IV": "Invasion of bladder/intestinal mucosa (IVA), peritoneal metastasis beyond pelvis (IVB), distant metastasis (IVC)"
+      },
+      "n_definitions": {
+        "IIIC1": "Metastasis to pelvic lymph nodes (IIIC1i micrometastasis, IIIC1ii macrometastasis)",
+        "IIIC2": "Metastasis to para-aortic lymph nodes up to renal vessels (IIIC2i micrometastasis, IIIC2ii macrometastasis)"
+      },
+      "m_definitions": {
+        "IVB": "Abdominal peritoneal metastasis beyond pelvis",
+        "IVC": "Distant metastasis including extra-abdominal lymph nodes"
+      },
+      "stage_groups": {
+        "Molecular Shift": "POLEmut confined to uterus/cervix -> IAmPOLEmut; p53abn confined to uterus with any myometrial invasion -> IICmp53abn."
+      },
+      "key_passages": [
+        {
+          "text": "FIGO 2023 endometrial staging integrates histological aggressiveness, substantial LVSI, pelvic/para-aortic nodal status (IIIC1/IIIC2), and molecular subtype (POLEmut, p53abn)."
+        }
+      ]
     }
   ]
 }

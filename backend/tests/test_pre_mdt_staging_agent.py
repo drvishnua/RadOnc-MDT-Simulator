@@ -18,6 +18,10 @@ def test_staging_agent_never_invents_n0_when_nodal_imaging_missing():
     )
     res = run_pre_mdt_staging_agent(case)
     assert res.agent_id == "STG-00"
+    assert res.staging_locked is True
+    assert "UICC-AJCC-TNM-GENERAL-RULES" in res.staging_reference_ids
+    assert "AJCC-8TH-NONHPV-OROPHARYNX" in res.staging_reference_ids
+    assert res.staging_rules_applied
     assert res.mode == "provisional_derived"
     assert res.provisional_tnm["t"] == "T1"
     assert res.provisional_tnm["n"] is None
@@ -131,5 +135,22 @@ def test_ollama_prompt_includes_pre_mdt_staging_agent_report(monkeypatch):
         "mandate": "Recommend conservative radiotherapy.",
     }
     asyncio.run(ollama.generate_agent_assessment(profile, case, 1))
-    assert "PRE-MDT STAGING AGENT REPORT (STG-00)" in captured["request"]["prompt"]
+    assert "PRE-MDT STAGING AGENT REPORT (STG-00 — LOCKED FOR SIMULATION)" in captured["request"]["prompt"]
+    assert "STAGING LOCK MANDATE" in captured["request"]["prompt"]
+    assert "No other agent may rethink, re-stage" in captured["request"]["prompt"]
     assert "cT1 N1" in captured["request"]["prompt"]
+
+
+def test_staging_agent_grounds_figo_cervix_rules():
+    case = SyntheticCase(
+        scenario_title="Ca cervix with pelvic nodes",
+        case_summary="3.5 cm cervical lesion with parametrial invasion and pelvic lymph node.",
+        primary_site="Cervix",
+        histology="Squamous cell carcinoma",
+        imaging_summary="MRI pelvis shows parametrial invasion and 1.4 cm right external iliac lymph node; chest CT negative.",
+    )
+    res = run_pre_mdt_staging_agent(case)
+    assert "FIGO-2018-AJCC-CERVIX" in res.staging_reference_ids
+    assert res.provisional_tnm["t"] == "T2b"
+    assert res.provisional_tnm["n"] == "N1"
+    assert res.staging_locked is True

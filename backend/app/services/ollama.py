@@ -312,14 +312,16 @@ async def generate_agent_assessment(
         )
 
     staging_prompt_block = (
-        f"\n\nPRE-MDT STAGING AGENT REPORT (STG-00):\n"
+        f"\n\nPRE-MDT STAGING AGENT REPORT (STG-00 — LOCKED FOR SIMULATION):\n"
         f"- Mode: {pre_staging.mode}\n"
-        f"- Provisional/Verified Stage: {pre_staging.provisional_stage_label} ({pre_staging.applicable_system})\n"
+        f"- Locked Stage: {pre_staging.provisional_stage_label} ({pre_staging.applicable_system})\n"
+        f"- Rules Applied: {', '.join(pre_staging.staging_reference_ids)}\n"
         f"- Summary: {pre_staging.summary}\n"
         + (f"- Discrepancies: {'; '.join(pre_staging.discrepancies)}\n" if pre_staging.discrepancies else "")
         + (f"- Missing for Complete Staging: {'; '.join(pre_staging.missing_for_complete_staging)}\n" if pre_staging.missing_for_complete_staging else "")
-        + "STAGING INTEGRITY MANDATE: Respect the Pre-MDT Staging Agent's provisional/verified stage above. "
-        "NEVER invent N0 when nodal status is Nx/unreported, and NEVER ignore documented nodal involvement or staging discrepancies."
+        + "STAGING LOCK MANDATE: STG-00 has FIXED the authoritative staging for this simulation. "
+        "No other agent may rethink, re-stage, override, or dispute T, N, or M during this simulation. "
+        "Use ONLY the locked stage above, NEVER invent N0 when nodal status is Nx/unreported, and NEVER ignore imaging-documented nodal involvement."
     )
 
     prompt = (
