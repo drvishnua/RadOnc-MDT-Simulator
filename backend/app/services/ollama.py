@@ -185,6 +185,7 @@ async def generate_agent_assessment(
         "CORE MDT BEHAVIOR RULES:\n"
         "1. SPEAK IN YOUR UNIQUE ROLE PERSONA: Do not use a generic response. Argue aggressively and specifically from your unique clinical philosophy, specialty focus, and risk appetite.\n"
         "2. NO ESSAYS OR AUDIT CHECKLISTS: Speak concisely like an experienced senior consultant at the microphone in an MDT case conference (2-3 direct sentences for conclusion, 2-3 sentences for summary).\n"
+        "   PROPER GRAMMAR & NO REPETITION: Every field must use clean, grammatical clinical English with proper capitalization and punctuation. Never repeat preferred_educational_option verbatim inside perspective_summary.\n"
         "3. NEVER WITHHOLD OPINION / MANDATORY IF-CLAUSES: Never retreat into a generic insufficient_information response. Do not use a generic insufficient_information response as a substitute for analysing relevant supplied facts. If variables (ECOG, HPV/p16, renal function, histology grade) are pending or missing, give clear conditional branching recommendations. The condition must not be presented as true or met:\n"
         "   Example: 'If the patient is ECOG 0-1 with confirmed p16-positive status, I recommend definitive concurrent chemoradiation (70 Gy with high-dose cisplatin) based on [source_id: NCCN-HN-2026] and foundational dose-fractionation principles from [source_id: PEREZ-BRADY-2026]; however, if ECOG >= 2 or renal clearance is impaired per [source_id: HARRISONS-MED-21ST], I favor definitive RT alone.'\n"
         "4. CITE BOTH STANDARD TEXTBOOKS & GUIDELINES: Do not rely solely on NCCN guidelines. Ground your foundational principles in standard reference textbooks (e.g. Perez & Brady, Gunderson & Tepper, Harrison's, Hall's Radiobiology) alongside specific clinical guidelines or trials using their exact [source_id: <ID>] tags.\n"
@@ -198,15 +199,16 @@ async def generate_agent_assessment(
         "7. ROLE-SPECIFIC MANDATES:\n"
         "   - FOR RO-01 (Guideline-focused Radiation Oncologist):\n"
         "     * You trust ONLY formal published guidelines from recognized professional radiation oncology societies: ASTRO, ESTRO, NCCN, AROI, JASTRO/FARO, and ABS.\n"
-        "     * MANDATORY STRUCTURED COMPARATIVE FORMAT: Your perspective_summary MUST strictly open with the patient context and systematically report each society guideline with its recommendation and recommendation category, followed by your synthesized recommendation:\n"
-        "       'for this patient, a <Age>/<Sex>, a case of ca <Primary Site> - <Subsite>, <cTNM>, who is a <Comorbidities>, the following guidelines suggest like..\n"
+        "     * MANDATORY STRUCTURED COMPARATIVE FORMAT: Your preferred_educational_option MUST open with the patient context in proper clinical English and systematically report each society guideline with its recommendation and recommendation category, followed by your synthesized recommendation:\n"
+        "       'For this <Age>-year-old <sex/patient> with <primary site><subsite><optional stage><optional comorbidities>, the recognized radiation oncology society guidelines recommend:\n"
         "       - ASTRO - <recommendation details> (<recommendation category>) [source_id: ASTRO-...]\n"
         "       - ESTRO - <recommendation details> (<recommendation category>) [source_id: ESTRO-...]\n"
         "       - NCCN - <recommendation details> (<recommendation category>) [source_id: NCCN-...]\n"
         "       - AROI - <recommendation details> (<recommendation category>) [source_id: AROI-...]\n"
         "       - JASTRO/FARO - <recommendation details> (<recommendation category>) [source_id: JASTRO-...]\n"
         "       - ABS - <recommendation details> (<recommendation category>) [source_id: ABS-...]\n\n"
-        "       considering all these recommendations, I'd suggest <synthesized recommendation>.'\n"
+        "       Synthesizing these recommendations, I suggest <synthesized recommendation>.'\n"
+        "     * Keep perspective_summary as a distinct 2-sentence clinical overview (do NOT copy preferred_educational_option verbatim).\n"
         "   - FOR RO-02 (Conservative & Time-Tested Radiation Oncologist):\n"
         "     * You are an experienced, conservative radiation oncologist who prioritizes time-tested, proven techniques with decades of mature clinical data.\n"
         "     * Constructive Management Plan: Recommend definitive conventional radiotherapy (60-66 Gy in 30-33 fractions of 1.8-2.0 Gy/fraction) using robust Cobalt-60 or megavoltage 2D/3D-CRT opposed-lateral portals with an anterior low-neck field and reliable immobilization.\n"
@@ -268,28 +270,33 @@ async def generate_agent_assessment(
 
     age_str = f"{case.age_years}" if case.age_years is not None else "adult"
     sex_str = "M" if "MALE" in (case.sex_at_birth or "").upper() else ("F" if "FEMALE" in (case.sex_at_birth or "").upper() else case.sex_at_birth or "patient")
+    sex_phrase = "male" if sex_str == "M" else ("female" if sex_str == "F" else sex_str.lower())
     site_str = case.primary_site or "cancer"
-    subsite_str = f" - {case.anatomical_subsite}" if case.anatomical_subsite else ""
+    subsite_str = f" ({case.anatomical_subsite})" if case.anatomical_subsite else ""
     t_stage = case.clinical_t_stage or ""
     n_stage = case.clinical_n_stage or ""
     m_stage = case.clinical_m_stage or ""
-    c_tnm = f"{t_stage}{n_stage}{m_stage}".strip() or case.stage_group or "cT1N1M0"
+    c_tnm = f"{t_stage}{n_stage}{m_stage}".strip() or case.stage_group or ""
+    stage_clause = f", staged as {c_tnm}," if c_tnm else ""
+    stage_paren = f" ({c_tnm})" if c_tnm else ""
     comorbs = list(case.relevant_comorbidities) if case.relevant_comorbidities else []
-    comorb_str = " and ".join(comorbs) if comorbs else "no reported major comorbidities"
+    comorb_str = " and ".join(comorbs) if comorbs else ""
+    comorb_clause = f" with comorbidities of {comorb_str}" if comorbs else ""
 
     role_specific_prompt_additions = ""
     if profile.get("agent_id") == "RO-01":
         role_specific_prompt_additions = (
             "\n\nCRITICAL MANDATE & OUTPUT STRUCTURE FOR RO-01 (Guideline-focused Radiation Oncologist):\n"
-            "Your 'preferred_educational_option' MUST begin with this exact structured multi-society comparison:\n"
-            f"for this patient, a {age_str}/{sex_str}, a case of ca {site_str.lower()}{subsite_str}, {c_tnm}, who is a {comorb_str}, the following guidelines suggest like..\n"
+            "Your 'preferred_educational_option' MUST begin with this exact structured multi-society comparison in proper clinical English:\n"
+            f"For this {age_str}-year-old {sex_phrase} with {site_str.lower()}{subsite_str}{stage_clause}{comorb_clause}, the recognized radiation oncology society guidelines recommend:\n"
             "- ASTRO - <recommendation details> (<recommendation category>) [source_id: ASTRO-HN-2024]\n"
             "- ESTRO - <recommendation details> (<recommendation category>) [source_id: ESTRO-EORTC-HN-2023]\n"
             "- NCCN - <recommendation details> (<recommendation category>) [source_id: NCCN-HN-2026]\n"
             "- AROI - <recommendation details> (<recommendation category>) [source_id: AROI-ICMR-HN-2023]\n"
             "- JASTRO/FARO - <recommendation details> (<recommendation category>) [source_id: JASTRO-FARO-HN-2024]\n"
             "- ABS - <recommendation details> (<recommendation category>) [source_id: ABS-HN-BRACHY-2022]\n\n"
-            "considering all these recommendations, I'd suggest <synthesized recommendation>."
+            "Synthesizing these recommendations, I suggest <synthesized recommendation>.\n"
+            "Your 'perspective_summary' MUST be a distinct 2-sentence clinical overview (do not copy 'preferred_educational_option' verbatim)."
         )
     elif profile.get("agent_id") == "RO-02":
         role_specific_prompt_additions = (
@@ -372,7 +379,7 @@ async def generate_agent_assessment(
     # Format RO-01 preferred_educational_option and perspective_summary with structured multi-society comparative breakdown
     if profile.get("agent_id") == "RO-01":
         lines = [
-            f"for this patient, a {age_str}/{sex_str}, a case of ca {site_str.lower()}{subsite_str}, {c_tnm}, who is a {comorb_str}, the following guidelines suggest like..",
+            f"For this {age_str}-year-old {sex_phrase} with {site_str.lower()}{subsite_str}{stage_clause}{comorb_clause}, the recognized radiation oncology society guidelines recommend:",
         ]
         society_specs = [
             ("ASTRO", "ASTRO-HN-2024", "Strong Recommendation", "Concurrent platinum-based chemotherapy is strongly recommended over radiation alone for locally advanced disease receiving definitive radiation."),
@@ -419,14 +426,18 @@ async def generate_agent_assessment(
             f"and concurrent platinum-based chemotherapy (cisplatin 100 mg/m² q3w or weekly 40 mg/m²), "
             f"incorporating standardized elective neck delineation per ESTRO guidelines and proactive toxicity monitoring per AROI consensus."
         )
-        lines.append(f"\nconsidering all these recommendations, I'd suggest {synth_rec}")
+        lines.append(f"\nSynthesizing these recommendations, I suggest {synth_rec}")
         structured_guidelines_text = "\n".join(lines)
         draft.preferred_educational_option = structured_guidelines_text
-        draft.perspective_summary = structured_guidelines_text
+        draft.perspective_summary = (
+            f"Across ASTRO, ESTRO, NCCN, AROI, JASTRO/FARO, and ABS guidelines, definitive concurrent chemoradiation "
+            f"is the primary organ-preserving standard for this {age_str}-year-old {sex_phrase} with {site_str.lower()}{subsite_str}{stage_paren}. "
+            f"Treatment delivery should incorporate ESTRO-compliant elective nodal delineation and proactive AROI toxicity and nutritional monitoring."
+        )
         draft.provisional_conclusion = (
-            f"Synthesizing consensus across ASTRO, ESTRO, NCCN, AROI, JASTRO/FARO, and ABS guidelines for this {age_str}/{sex_str} "
-            f"with ca {site_str.lower()}{subsite_str} ({c_tnm}), I recommend definitive concurrent chemoradiation while adhering to multi-society toxicity protocols. "
-            f"Detailed multi-society comparative breakdown is reported in the educational option below."
+            f"Synthesizing ASTRO, ESTRO, NCCN, AROI, JASTRO/FARO, and ABS guidelines for this {age_str}-year-old {sex_phrase} "
+            f"with {site_str.lower()}{subsite_str}{stage_paren}, I recommend definitive concurrent chemoradiation while adhering to multi-society toxicity protocols. "
+            f"The detailed multi-society comparative breakdown is reported in the preferred educational option."
         )
     elif profile.get("agent_id") == "RO-02":
         draft.position = "supports"
@@ -436,10 +447,15 @@ async def generate_agent_assessment(
             f"cisplatin radiosensitization if renal clearance permits. Strict spinal cord maximum dose capping at <=45 Gy is mandatory to ensure "
             f"long-term normal tissue safety, adhering to time-tested principles established in Fletcher's Textbook of Radiotherapy and Perez & Brady."
         )
-        draft.perspective_summary = draft.preferred_educational_option
+        draft.perspective_summary = (
+            "From a conservative, time-tested radiotherapy perspective, proven 2D/3D-CRT or Cobalt-60 techniques with strict spinal cord "
+            "sparing (<=45 Gy) provide reliable tumor control and predictable long-term safety. Concurrent cisplatin should be conditioned on "
+            "baseline renal clearance and proactive mucositis support."
+        )
+        nodal_clause = f"given the documented staging ({c_tnm})." if c_tnm else "pending formal nodal and renal workup."
         draft.provisional_conclusion = (
             f"I recommend definitive conventional fractionated radiotherapy to 60-66 Gy using time-tested Cobalt-60 or 3D-CRT techniques with "
-            f"conservative normal tissue constraints (spinal cord <=45 Gy), combined with radiosensitizing chemotherapy given the patient's nodal involvement."
+            f"conservative normal tissue constraints (spinal cord <=45 Gy), combined with radiosensitizing chemotherapy {nodal_clause}"
         )
         draft.conditional_options = [
             ConditionalEducationalOption(

@@ -95,3 +95,9 @@ Execute work directly when tools allow. Do not fabricate results, local state, c
 
 ## Immediate quality milestone
 Fix: (P0) case-fact provenance and structured input semantics; prevent unsupported TNM/demographic claims. Then (P1) structured debate position-change traceability, Chair minority selection, title generation, and top-level completion timestamps. Then (P2) evidence retrieval/citation verification and richer performance telemetry. Re-run the same synthetic case and compare against the documented baseline. Keep PR #1 draft and `main` untouched.
+
+## Output structure, grammar, and non-repetition contract
+- Whenever any changes are made hereafter—including deepening of any agent role, prompt updates, post-processing formatters, or Chair synthesis—the proper structure, clinical English grammar, capitalization, and punctuation of every generated response field MUST be ensured.
+- Distinct schema fields (`provisional_conclusion`, `preferred_educational_option`, `perspective_summary`) MUST NOT be verbatim duplicates of one another.
+- Never hardcode fallback TNM stage strings (such as `cT1N1M0`) when staging fields are not supplied.
+- Add or update automated tests verifying grammatical/structural integrity and non-repetition whenever agent templates or deepening logic change.

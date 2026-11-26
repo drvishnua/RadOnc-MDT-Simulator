@@ -88,3 +88,74 @@ def test_r1_prompt_requires_fact_use_and_explicit_hypothetical_branches(monkeypa
     assert assessment.case_facts
 
 
+def test_ro01_and_ro02_enforce_grammar_non_repetition_and_no_fabricated_stage(monkeypatch):
+    draft = {
+        "position": "supports",
+        "provisional_conclusion": "Placeholder conclusion.",
+        "preferred_educational_option": "Placeholder option.",
+        "perspective_summary": "Placeholder summary.",
+        "assumptions": [],
+        "unknowns": ["HPV/p16 status is not supplied."],
+        "discussion_options": [],
+        "conditional_options": [],
+        "evidence_gaps": [],
+        "uncertainty_notes": [],
+        "disagreement_notes": [],
+        "confidence": 0.8,
+    }
+
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"response": json.dumps(draft)}
+
+    class FakeAsyncClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, traceback):
+            return False
+
+        async def post(self, path, json=None):
+            return FakeResponse()
+
+    monkeypatch.setattr(ollama.httpx, "AsyncClient", FakeAsyncClient)
+    case = SyntheticCase(
+        scenario_title="Ca oropharynx - right tonsil",
+        case_summary="2x1 cm growth in right tonsillar fossa.",
+        age_years=50,
+        sex_at_birth="Male",
+        primary_site="Right tonsil - oropharynx",
+        histology="Squamous cell carcinoma",
+        relevant_comorbidities=["T2DM & Hypertension"],
+    )
+
+    ro01_profile = {
+        "agent_id": "RO-01",
+        "name": "Guideline-focused Radiation Oncologist",
+        "mandate": "Synthesize multi-society guidelines.",
+    }
+    ro01 = asyncio.run(ollama.generate_agent_assessment(ro01_profile, case, 1))
+    assert ro01.preferred_educational_option.startswith("For this 50-year-old male with ")
+    assert "suggest like.." not in ro01.preferred_educational_option
+    assert "who is a " not in ro01.preferred_educational_option
+    assert "considering all these" not in ro01.preferred_educational_option
+    assert "cT1N1M0" not in ro01.preferred_educational_option
+    assert "cT1N1M0" not in ro01.provisional_conclusion
+    assert ro01.perspective_summary != ro01.preferred_educational_option
+
+    ro02_profile = {
+        "agent_id": "RO-02",
+        "name": "Conservative & Time-Tested Radiation Oncologist",
+        "mandate": "Recommend conservative radiotherapy.",
+    }
+    ro02 = asyncio.run(ollama.generate_agent_assessment(ro02_profile, case, 1))
+    assert ro02.perspective_summary != ro02.preferred_educational_option
+    assert "nodal involvement" not in ro02.provisional_conclusion
+
+
