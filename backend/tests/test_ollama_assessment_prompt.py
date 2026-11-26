@@ -154,8 +154,80 @@ def test_ro01_and_ro02_enforce_grammar_non_repetition_and_no_fabricated_stage(mo
         "name": "Conservative & Time-Tested Radiation Oncologist",
         "mandate": "Recommend conservative radiotherapy.",
     }
+    captured_ro02 = {}
+
+    class CapturingAsyncClient(FakeAsyncClient):
+        async def post(self, path, json=None):
+            captured_ro02["request"] = json
+            return FakeResponse()
+
+    monkeypatch.setattr(ollama.httpx, "AsyncClient", CapturingAsyncClient)
+    draft["provisional_conclusion"] = "Conventional 3D-CRT avoids unproven IMRT low-dose bath risks."
+    draft["preferred_educational_option"] = (
+        "Deliver conventional 3D-CRT 60-66 Gy at 2.0 Gy/fraction while questioning steep-gradient IMRT marginal-miss hazards [source_id: PMID-99999999]."
+    )
+    draft["perspective_summary"] = draft["preferred_educational_option"]
+
+    from app.services import evidence_retrieval
+
+    class FakeEngine:
+        def retrieve_evidence_for_role(self, role_id, case_obj, limit=3):
+            if role_id == "RO-02":
+                return [
+                    evidence_retrieval.RetrievedPassage(
+                        source_id="PMID-99999999",
+                        title="Conventional 3D-CRT vs IMRT late toxicity tradeoffs (Radiother Oncol, 2023)",
+                        domain="peer_reviewed_journal",
+                        snippet="Conventional fields remain reliable where steep gradients risk marginal miss.",
+                        evidence_type="review",
+                        url="https://pubmed.ncbi.nlm.nih.gov/99999999/",
+                        organization="Radiotherapy and Oncology",
+                    )
+                ]
+            return []
+
+        def format_prompt_injection(self, passages):
+            return "\n".join(f"[{p.source_id}] {p.title}: {p.snippet}" for p in passages)
+
+    monkeypatch.setattr(evidence_retrieval, "get_evidence_retrieval_engine", lambda: FakeEngine())
     ro02 = asyncio.run(ollama.generate_agent_assessment(ro02_profile, case, 1))
+    assert "PubMed" in captured_ro02["request"]["prompt"]
+    assert "question" in captured_ro02["request"]["prompt"].lower()
+    assert ro02.preferred_educational_option == draft["preferred_educational_option"]
     assert ro02.perspective_summary != ro02.preferred_educational_option
-    assert "nodal involvement" not in ro02.provisional_conclusion
+    assert any(c.sources[0].source_id == "PMID-99999999" for c in ro02.evidence_claims)
+
+
+def test_ro02_evidence_retrieval_combines_dataset_and_pubmed(monkeypatch):
+    from app.services import evidence_retrieval
+    from app.services import online_guideline_procurement
+
+    def fake_query_europe_pmc(self, query, limit=5):
+        return [
+            {
+                "pmid": "12345678",
+                "title": "Critical appraisal of IMRT vs conventional 3D-CRT late toxicity",
+                "journalTitle": "Int J Radiat Oncol Biol Phys",
+                "pubYear": "2024",
+                "abstractText": "Evaluates low-dose bath and marginal miss cons of newer IMRT compared with 3D-CRT.",
+            }
+        ]
+
+    monkeypatch.setattr(
+        online_guideline_procurement.OnlineGuidelineProcurementService,
+        "query_europe_pmc",
+        fake_query_europe_pmc,
+    )
+    engine = evidence_retrieval.get_evidence_retrieval_engine()
+    case = SyntheticCase(
+        scenario_title="Ca oropharynx",
+        case_summary="2x1 cm growth in right tonsil.",
+        primary_site="Right tonsil - oropharynx",
+        histology="Squamous cell carcinoma",
+    )
+    passages = engine.retrieve_evidence_for_role("RO-02", case, limit=6)
+    source_ids = [p.source_id for p in passages]
+    assert "PMID-12345678" in source_ids
+    assert any(sid != "PMID-12345678" for sid in source_ids)
 
 

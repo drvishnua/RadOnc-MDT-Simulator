@@ -24,7 +24,7 @@ logger = logging.getLogger("radonc.evidence_retrieval")
 
 
 class RetrievedPassage(BaseModel):
-    """Structured evidence passage retrieved from the indexed medical library."""
+    """Structured evidence passage retrieved from the indexed medical library or peer-reviewed literature."""
 
     source_id: str
     title: str
@@ -32,6 +32,8 @@ class RetrievedPassage(BaseModel):
     snippet: str
     relevance_score: float = 1.0
     evidence_type: str = "guideline"
+    url: str | None = None
+    organization: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -255,7 +257,11 @@ class EvidenceRetrievalEngine:
         clean_id = role_id.strip().upper()
         clean_site = raw_site.replace("_", " ")
 
-        if clean_id.startswith("RO"):
+        if clean_id == "RO-02":
+            search_queries.append(f"{clean_site} {histology} conventional 3D-CRT 2D Cobalt-60 radiotherapy".strip())
+            search_queries.append(f"{clean_site} IMRT proton SBRT toxicity cost late effects limitation".strip())
+            search_queries.append(f"{clean_site} spinal cord parotid QUANTEC normal tissue tolerance".strip())
+        elif clean_id.startswith("RO"):
             search_queries.append(f"{clean_site} {histology} radiation therapy dose guideline".strip())
             if facets["oars"]:
                 search_queries.append(f"{facets['oars'][0]} organ tolerance constraint QUANTEC".strip())
@@ -274,6 +280,11 @@ class EvidenceRetrievalEngine:
         else:
             search_queries.append(f"{clean_site} {histology} clinical practice guideline".strip())
             search_queries.append(f"{clean_site} treatment toxicity comorbidity".strip())
+
+        pubmed_passages: list[RetrievedPassage] = []
+        if clean_id == "RO-02":
+            pubmed_passages = self.retrieve_pubmed_conservative_evidence(case, limit=2)
+        local_limit = max(1, limit - len(pubmed_passages)) if pubmed_passages else limit
 
         passages: list[RetrievedPassage] = []
         seen_keys: set[tuple[str, int]] = set()
@@ -312,11 +323,15 @@ class EvidenceRetrievalEngine:
                                 evidence_type="guideline" if "guideline" in r["domain"] else "reference",
                             )
                         )
-                        if len(passages) >= limit:
-                            return passages[:limit]
+                        if len(passages) >= local_limit:
+                            break
+                if len(passages) >= local_limit:
+                    break
+            if len(passages) >= local_limit:
+                break
 
         # Broad fallback if initial search yielded fewer results
-        if len(passages) < limit:
+        if len(passages) < local_limit:
             fallback_query = f"{clean_site} {histology}".strip() or clean_site
             if fallback_query:
                 for domain in domains[:2]:
@@ -554,12 +569,72 @@ class EvidenceRetrievalEngine:
                             evidence_type=entry.source_type,
                         )
                     )
-                    if len(passages) >= limit:
+                    if len(passages) >= local_limit:
                         break
             except Exception as cat_exc:
                 logger.debug("Catalogue fallback failed: %s", cat_exc)
 
+        if pubmed_passages:
+            existing_ids = {p.source_id.upper() for p in passages}
+            for pm in pubmed_passages:
+                if pm.source_id.upper() not in existing_ids:
+                    passages.append(pm)
+                    existing_ids.add(pm.source_id.upper())
+
         return passages[:limit]
+
+    def retrieve_pubmed_conservative_evidence(
+        self,
+        case: SyntheticCase,
+        limit: int = 2,
+    ) -> list[RetrievedPassage]:
+        """Query PubMed / Europe PMC for peer-reviewed articles favoring conservative RT and critiquing new tech."""
+        try:
+            from app.services.online_guideline_procurement import OnlineGuidelineProcurementService
+
+            facets = self.extract_case_facets(case)
+            site_term = (facets["raw_primary_site"] or facets["primary_site"]).replace("_", " ")
+            service = OnlineGuidelineProcurementService(timeout=4)
+            query = (
+                f'({site_term}) AND ("conventional radiotherapy" OR "3D-CRT" OR "2D radiotherapy") '
+                f'AND ("IMRT" OR "toxicity" OR "cost-effectiveness" OR "late effects" OR "limitation")'
+            )
+            results = service.query_europe_pmc(query, limit=limit)
+            if not results:
+                results = service.query_europe_pmc(
+                    f"{site_term} conventional radiotherapy IMRT toxicity comparison",
+                    limit=limit,
+                )
+
+            passages: list[RetrievedPassage] = []
+            for item in results[:limit]:
+                title = str(item.get("title") or "").strip()
+                if not title:
+                    continue
+                pmid = str(item.get("pmid") or "").strip()
+                item_id = str(item.get("id") or abs(hash(title)) % 100000).strip()
+                source_id = f"PMID-{pmid}" if pmid else f"EPMC-{item_id}"
+                journal = str(item.get("journalTitle") or item.get("journalInfo", {}).get("journal", {}).get("title") or "PubMed / Peer-Reviewed Journal").strip()
+                year = str(item.get("pubYear") or "").strip()
+                raw_abstract = str(item.get("abstractText") or title)
+                clean_abstract = re.sub(r"<[^>]+>", " ", raw_abstract)
+                clean_abstract = re.sub(r"\s+", " ", clean_abstract).strip()
+                passages.append(
+                    RetrievedPassage(
+                        source_id=source_id,
+                        title=f"{title} ({journal}{', ' + year if year else ''})",
+                        domain="peer_reviewed_journal",
+                        snippet=clean_abstract[:320],
+                        relevance_score=0.88,
+                        evidence_type="review",
+                        url=f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/" if pmid else None,
+                        organization=journal,
+                    )
+                )
+            return passages
+        except Exception as exc:
+            logger.debug("PubMed conservative evidence retrieval skipped: %s", exc)
+            return []
 
     def format_prompt_injection(self, passages: list[RetrievedPassage]) -> str:
         """Formats verified retrieved passages into a concise, token-bounded prompt injection block.

@@ -148,8 +148,8 @@ async def generate_agent_assessment(
     try:
         engine = evidence_retrieval.get_evidence_retrieval_engine()
         role_id = profile.get("agent_id", "")
-        # For RO-01, provide 6 society guidelines so ASTRO, ESTRO, JASTRO/FARO, AROI, ABS, and NCCN are all available
-        evidence_limit = 6 if role_id == "RO-01" else 3
+        # For RO-01, provide 6 society guidelines; for RO-02, provide 6 passages combining local dataset + PubMed/journal articles
+        evidence_limit = 6 if role_id in ("RO-01", "RO-02") else 3
         passages = engine.retrieve_evidence_for_role(role_id, case, limit=evidence_limit)
         evidence_context = engine.format_prompt_injection(passages)
     except Exception as exc:
@@ -210,11 +210,10 @@ async def generate_agent_assessment(
         "       Synthesizing these recommendations, I suggest <synthesized recommendation>.'\n"
         "     * Keep perspective_summary as a distinct 2-sentence clinical overview (do NOT copy preferred_educational_option verbatim).\n"
         "   - FOR RO-02 (Conservative & Time-Tested Radiation Oncologist):\n"
-        "     * You are an experienced, conservative radiation oncologist who prioritizes time-tested, proven techniques with decades of mature clinical data.\n"
-        "     * Constructive Management Plan: Recommend definitive conventional radiotherapy (60-66 Gy in 30-33 fractions of 1.8-2.0 Gy/fraction) using robust Cobalt-60 or megavoltage 2D/3D-CRT opposed-lateral portals with an anterior low-neck field and reliable immobilization.\n"
-        "     * Strict OAR Safety: Mandate conservative normal tissue constraints, especially capping spinal cord maximum dose at <=45 Gy.\n"
-        "     * Classical Literature: Ground your clinical strategy in classical radiation oncology principles from Fletcher's Textbook of Radiotherapy and Perez & Brady.\n"
-        "     * Clinical Contingency: Provide constructive clinical decision branches for patient comorbidities (e.g. managing diabetes/hypertension-related renal function changes, or managing acute mucositis without treatment interruptions).\n"
+        "     * Research and synthesize BOTH the provided local dataset/classical textbook passages (Fletcher, Perez & Brady, QUANTEC) AND any retrieved PubMed/peer-reviewed journal passages ([source_id: PMID-...]).\n"
+        "     * Advocate conservative, historical, time-tested radiotherapy management (conventional 60-66 Gy at 1.8-2.0 Gy/fraction, proven 2D/3D-CRT or Cobalt-60 opposed-lateral portals with anterior low-neck field, spinal cord <=45 Gy).\n"
+        "     * Explicitly question the cons, toxicities, integral low-dose bath, marginal-miss hazards, cost, and unproven long-term survival claims of newer technologies and advances (e.g., steep-gradient IMRT/VMAT, adaptive RT, protons, SBRT, robotic surgery).\n"
+        "     * Keep provisional_conclusion, preferred_educational_option, and perspective_summary distinct, grammatical, and non-repetitive.\n"
         "   - FOR RO-03 (Locoregional Intensification & Dose-Escalation Radiation Oncologist):\n"
         "     * Prioritize maximal locoregional eradication of macroscopic and microscopic disease; salvage for in-field recurrence is catastrophic and rarely curative.\n"
         "     * Advocate for simultaneous integrated boost (SIB-IMRT) to 70 Gy+ to GTV, rigorous bilateral elective nodal coverage (54-56 Gy) especially when crossing the midline or extending to soft palate, and concurrent radiosensitizing systemic therapy.\n"
@@ -301,12 +300,11 @@ async def generate_agent_assessment(
     elif profile.get("agent_id") == "RO-02":
         role_specific_prompt_additions = (
             "\n\nCRITICAL MANDATE FOR RO-02 (Conservative & Time-Tested Radiation Oncologist):\n"
-            "- You provide a constructive, authoritative conservative management recommendation for this patient.\n"
-            "- Propose definitive conventional radiotherapy: 60-66 Gy in 30-33 fractions of 1.8-2.0 Gy/fraction using time-tested Cobalt-60 or megavoltage 2D/3D-CRT opposed-lateral portals with an anterior low-neck field and reliable immobilization.\n"
-            "- Enforce strict organ-at-risk safety: spinal cord maximum dose strictly capped at <=45 Gy.\n"
-            "- Ground recommendations in classical textbooks: Fletcher's Textbook of Radiotherapy and Perez & Brady.\n"
-            "- In 'conditional_options', provide realistic clinical contingency branches (e.g. IF baseline renal clearance is compromised by T2DM/hypertension: deliver definitive conventional RT alone without nephrotoxic cisplatin; IF acute confluent mucositis occurs: initiate aggressive supportive care to prevent treatment breaks).\n"
-            "- Position: set position to 'supports' for conventional radiotherapy.\n"
+            "- Synthesize BOTH the local dataset/classical textbook evidence (Fletcher, Perez & Brady, QUANTEC) AND any retrieved PubMed/peer-reviewed journal passages ([source_id: PMID-...]) provided above.\n"
+            "- Favor conservative, historical, time-tested management: conventional 1.8-2.0 Gy/fraction radiotherapy (60-66 Gy in 30-33 fractions) using proven Cobalt-60 or 2D/3D-CRT field borders with strict OAR safety (spinal cord <=45 Gy).\n"
+            "- Explicitly critique and question the cons of newer technologies and advances (marginal-miss risk from overly tight gradients, low-dose bath/secondary cancer risk, complexity/cost, and immature long-term follow-up in IMRT/VMAT, adaptive RT, protons, SBRT, or robotic surgery).\n"
+            "- In 'conditional_options', include realistic conservative branches for comorbidities (renal clearance, mucositis support without treatment breaks).\n"
+            "- Ensure proper clinical English grammar, capitalization, and distinct non-repetitive content across provisional_conclusion, preferred_educational_option, and perspective_summary.\n"
         )
 
     prompt = (
@@ -439,40 +437,11 @@ async def generate_agent_assessment(
             f"with {site_str.lower()}{subsite_str}{stage_paren}, I recommend definitive concurrent chemoradiation while adhering to multi-society toxicity protocols. "
             f"The detailed multi-society comparative breakdown is reported in the preferred educational option."
         )
-    elif profile.get("agent_id") == "RO-02":
-        draft.position = "supports"
-        draft.preferred_educational_option = (
-            f"Definitive conventional radiotherapy (60-66 Gy in 30-33 fractions of 1.8-2.0 Gy/fx) delivered via reliable Cobalt-60 "
-            f"or megavoltage 2D/3D-CRT bilateral opposed-lateral portals with an anterior low-neck field, combined with concurrent single-agent "
-            f"cisplatin radiosensitization if renal clearance permits. Strict spinal cord maximum dose capping at <=45 Gy is mandatory to ensure "
-            f"long-term normal tissue safety, adhering to time-tested principles established in Fletcher's Textbook of Radiotherapy and Perez & Brady."
-        )
-        draft.perspective_summary = (
-            "From a conservative, time-tested radiotherapy perspective, proven 2D/3D-CRT or Cobalt-60 techniques with strict spinal cord "
-            "sparing (<=45 Gy) provide reliable tumor control and predictable long-term safety. Concurrent cisplatin should be conditioned on "
-            "baseline renal clearance and proactive mucositis support."
-        )
-        nodal_clause = f"given the documented staging ({c_tnm})." if c_tnm else "pending formal nodal and renal workup."
-        draft.provisional_conclusion = (
-            f"I recommend definitive conventional fractionated radiotherapy to 60-66 Gy using time-tested Cobalt-60 or 3D-CRT techniques with "
-            f"conservative normal tissue constraints (spinal cord <=45 Gy), combined with radiosensitizing chemotherapy {nodal_clause}"
-        )
-        draft.conditional_options = [
-            ConditionalEducationalOption(
-                condition="IF baseline creatinine clearance is impaired (<50-60 mL/min) due to long-standing T2DM and hypertension:",
-                educational_option="Omit concurrent cisplatin and proceed with definitive conventional radiotherapy alone (66 Gy in 33 fractions) to prevent nephrotoxic decompensation.",
-                prerequisites=["Assess baseline serum creatinine and Cockcroft-Gault creatinine clearance"],
-                unresolved_unknowns=[],
-                limitations=["Omitting concurrent chemotherapy in stage III disease may compromise locoregional control, but prevents life-threatening nephrotoxicity."],
-            ),
-            ConditionalEducationalOption(
-                condition="IF acute confluent mucositis occurs during treatment:",
-                educational_option="Institute intensive nutritional and analgesic support to complete the 60-66 Gy course without treatment breaks, avoiding overall treatment time prolongation beyond 7 weeks.",
-                prerequisites=["Proactive weekly clinical evaluation and early enteral support access"],
-                unresolved_unknowns=[],
-                limitations=["Preserving overall treatment time is essential to prevent tumor clonogen accelerated repopulation."],
-            ),
-        ]
+    elif (
+        draft.perspective_summary.strip()
+        and draft.perspective_summary.strip() == draft.preferred_educational_option.strip()
+    ):
+        draft.perspective_summary = draft.provisional_conclusion
 
     # Deterministically extract and verify cited evidence sources from the draft conclusion, perspective, and assumptions
     constructed_claims = []
@@ -487,11 +456,17 @@ async def generate_agent_assessment(
         
         # Also extract known reference IDs or aliases mentioned directly in the text (e.g. NCCN-HN-2026, QUANTEC-HN-2010, RTOG-1016)
         matched_entries = []
+        matched_passages = []
+        passage_by_id = {p.source_id.strip().upper(): p for p in passages}
         for tag in cited_tags:
             tag_clean = tag.strip().upper()
             match = next((e for e in catalogue if e.source_id.upper() == tag_clean), None)
             if match and match not in matched_entries:
                 matched_entries.append(match)
+            elif not match and tag_clean in passage_by_id:
+                p_match = passage_by_id[tag_clean]
+                if p_match not in matched_passages:
+                    matched_passages.append(p_match)
 
         # Fallback to direct name mentions or active passages passed to this role
         full_text_upper = full_text.upper()
@@ -506,13 +481,17 @@ async def generate_agent_assessment(
                     match = next((e for e in catalogue if e.source_id.upper() == p.source_id.upper()), None)
                     if match and match not in matched_entries:
                         matched_entries.append(match)
+                    elif not match and p not in matched_passages:
+                        matched_passages.append(p)
 
         # If the model discussed the evidence or made a recommendation but omitted the bracket syntax, ground it with the role's verified primary passage
-        if not matched_entries and passages:
+        if not matched_entries and not matched_passages and passages:
             first_p = passages[0]
             match = next((e for e in catalogue if e.source_id.upper() == first_p.source_id.upper()), None)
             if match:
                 matched_entries.append(match)
+            else:
+                matched_passages.append(first_p)
 
         source_kind_map = {
             "guideline": "guideline",
@@ -535,6 +514,23 @@ async def generate_agent_assessment(
                 EvidenceClaim(
                     claim_text=f"Cited clinical rationale from [{match.source_id}]: {match.title}",
                     evidence_maturity="established_standard" if match.source_type in ("guideline", "trial") else "investigational",
+                    sources=[ev_source],
+                )
+            )
+        for p_match in matched_passages:
+            ev_source = EvidenceSource(
+                source_id=p_match.source_id,
+                title=p_match.title,
+                organization=p_match.organization or "PubMed / Peer-Reviewed Literature",
+                source_kind="systematic_review" if p_match.evidence_type == "review" else "other",
+                url=p_match.url,
+                identifier=p_match.source_id,
+                applicability_and_limitations="Retrieved peer-reviewed literature passage; verify full-text applicability.",
+            )
+            constructed_claims.append(
+                EvidenceClaim(
+                    claim_text=f"Cited peer-reviewed rationale from [{p_match.source_id}]: {p_match.title}",
+                    evidence_maturity="investigational",
                     sources=[ev_source],
                 )
             )
