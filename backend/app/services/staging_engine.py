@@ -119,7 +119,8 @@ def derive_or_verify_staging(case: SyntheticCase, role_id: str = "") -> dict[str
         if provided_c_t:
             norm_prov_t = _normalize_t(str(provided_c_t))
             if derived_t and norm_prov_t != derived_t:
-                discrepancies.append(f"Provided Clinical T ({provided_c_t}) differs from size-derived T category ({derived_t} based on {tumor_size_cm} cm).")
+                basis = f"based on {tumor_size_cm} cm" if tumor_size_cm is not None else "based on documented anatomical extent"
+                discrepancies.append(f"Provided Clinical T ({provided_c_t}) differs from derived T category ({derived_t} {basis}).")
             else:
                 correlation_notes.append(f"Clinical T ({provided_c_t}) is verified concordant with clinical tumor features ({tumor_size_cm or 'recorded'} cm).")
 
@@ -220,7 +221,7 @@ def _extract_node_details(text: str, primary_laterality: str = "unspecified") ->
             "not assessed", "no node data", "node negative on pet", "pet-negative",
             "pet negative", "pet/ct negative", "pet negative lymph nodes",
         ]
-        clauses = [c.strip() for c in re.split(r"[.;\n]+", lower_text) if c.strip()]
+        clauses = [c.strip() for c in re.split(r"(?<!\d)\.(?!\d)|[;\n]+", lower_text) if c.strip()]
         positive_clauses: list[str] = []
         for clause in clauses:
             if not any(k in clause for k in node_keywords):
@@ -318,9 +319,9 @@ def _extract_metastasis_details(text: str) -> dict[str, Any]:
 
 def _extract_hpv_p16_status(text: str) -> str:
     """Identify p16 / HPV status for oropharyngeal carcinomas."""
-    if any(k in text for k in ["p16 positive", "p16+", "hpv positive", "hpv+", "p16 overexpression"]):
+    if any(k in text for k in ["p16 positive", "p16-positive", "p16+", "hpv positive", "hpv-positive", "hpv+", "p16 overexpression"]):
         return "positive"
-    if any(k in text for k in ["p16 negative", "p16-", "hpv negative", "hpv-"]):
+    if any(k in text for k in ["p16 negative", "p16-negative", "p16-", "hpv negative", "hpv-negative", "hpv-"]):
         return "negative"
     return "unknown"
 
