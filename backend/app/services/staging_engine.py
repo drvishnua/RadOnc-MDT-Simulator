@@ -83,7 +83,7 @@ def derive_or_verify_staging(case: SyntheticCase, role_id: str = "") -> dict[str
             for k in [
                 "node", "lymph", "jugular", "cervical adenopathy", "adenopathy",
                 "level 1", "level 2", "level 3", "level 4", "level 5", "neck",
-                "mediastin", "hilar", "pelvic", "mesorectal", "inguinal", "para-aortic",
+                "mediastin", "hilar", "pelvic", "inguinal", "para-aortic",
                 "perirectal", "retroperitoneal", "pet-negative", "pet negative"
             ]
         )
@@ -93,13 +93,20 @@ def derive_or_verify_staging(case: SyntheticCase, role_id: str = "") -> dict[str
     derived_n = _derive_n_stage(is_head_neck, hpv_p16_status, node_details, combined_text, is_cervix=is_cervix, is_lung=is_lung, is_rectum=is_rectum) if has_node_examination else None
     
     # Only derive M category if metastatic workup or explicit negative/positive finding is documented
-    has_mets_examination = any(
-        k in combined_text
-        for k in [
-            "distant metastasis", "distant metastases", "metastatic", "chest xray",
-            "chest x-ray", "ct chest", "chest ct", "ct abdomen", "ct cap", "pet", "pet/ct", "pet-ct", "bone scan",
-            "m0", "m1", "non-metastatic", "without distant"
-        ]
+    unreported_mets_tokens = ["no metastatic workup", "no distant workup", "no imaging of distant"]
+    has_unreported_mets_statement = any(u in combined_text for u in unreported_mets_tokens)
+    has_mets_examination = (
+        any(
+            k in combined_text
+            for k in [
+                "distant metastasis", "distant metastases", "metastatic", "bone metastasis",
+                "lung metastasis", "liver metastasis", "hepatic metastasis", "pulmonary metastasis",
+                "brain metastasis", "chest xray", "chest x-ray", "ct chest", "chest ct",
+                "ct abdomen", "ct cap", "pet", "pet/ct", "pet-ct", "bone scan",
+                "m0", "m1", "non-metastatic", "without distant"
+            ]
+        )
+        and not (has_unreported_mets_statement and not metastasis_details.get("has_distant_mets"))
     )
     derived_m = ("M1" if metastasis_details.get("has_distant_mets") else "M0") if has_mets_examination else None
     derived_stage_group = _derive_stage_group(applicable_system, derived_t, derived_n, derived_m or "M0", hpv_p16_status, is_cervix=is_cervix, is_lung=is_lung, is_rectum=is_rectum) if (derived_t and derived_n) else None
@@ -248,8 +255,8 @@ def _extract_node_details(text: str, primary_laterality: str = "unspecified") ->
         if count_m:
             node_info["count"] = int(count_m.group(1))
 
-        # Size of lymph node: matches '1x1 cm lymph node' or '1.5 cm node'
-        size_m = re.search(r'(\d+(?:\.\d+)?)\s*(?:x\s*\d+(?:\.\d+)?\s*)?(?:cm|mm)\s*(?:lymph\s*node|node|cervical)', pos_text, re.IGNORECASE)
+        # Size of lymph node: matches '1x1 cm lymph node' or '4.2 cm right level II lymph node'
+        size_m = re.search(r'(\d+(?:\.\d+)?)\s*(?:x\s*\d+(?:\.\d+)?\s*)?(?:cm|mm)\s+(?:[\w-]+\s+){0,4}?(?:lymph\s*nodes?|nodes?|cervical)', pos_text, re.IGNORECASE)
         if not size_m:
             size_m = re.search(r'(?:node|lymph node|adenopathy)[^\.\n,;]*?(\d+(?:\.\d+)?)\s*(?:cm|mm)', pos_text, re.IGNORECASE)
         if size_m:
@@ -310,8 +317,10 @@ def _extract_metastasis_details(text: str) -> dict[str, Any]:
 
     has_mets = any(k in lower_text for k in [
         "distant metastasis", "distant metastases", "metastatic disease",
-        "pulmonary metastases", "hepatic metastases", "bone metastases",
-        "brain metastases", "peritoneal carcinomatosis"
+        "pulmonary metastases", "pulmonary metastasis", "lung metastasis", "lung metastases",
+        "hepatic metastases", "hepatic metastasis", "liver metastasis", "liver metastases",
+        "bone metastases", "bone metastasis", "brain metastases", "brain metastasis",
+        "peritoneal carcinomatosis"
     ])
     return {"has_distant_mets": has_mets}
 
@@ -340,9 +349,10 @@ def _derive_t_stage(
     # --- LUNG (AJCC 8th) ---
     if is_lung:
         if any(k in lower_text for k in [
-            "invades mediastinum", "invasion of mediastinum", "invades heart", "invades great vessels",
-            "invades trachea", "recurrent laryngeal nerve", "invades esophagus", "vertebral body", "invades carina",
-            "involvement of carina"
+            "invades mediastinum", "invasion of mediastinum", "mediastinum invasion",
+            "invades heart", "invades great vessels", "invades trachea",
+            "recurrent laryngeal nerve", "invades esophagus", "vertebral body",
+            "invades carina", "involvement of carina", "carina involvement"
         ]):
             return "T4"
         if any(k in lower_text for k in [
@@ -367,7 +377,7 @@ def _derive_t_stage(
                 return "T1a"
         if any(k in lower_text for k in ["visceral pleura", "main bronchus"]):
             return "T2a"
-        return "T1"
+        return None
 
     # --- CERVIX (FIGO 2018 / AJCC 9th) ---
     if is_cervix:
@@ -388,7 +398,7 @@ def _derive_t_stage(
                 return "T1b2"
             else:
                 return "T1b1"
-        return "T1b"
+        return None
 
     # --- RECTUM (AJCC 8th) ---
     if is_rectum:
@@ -613,23 +623,27 @@ def _derive_stage_group(
 
 
 def _normalize_t(val: str) -> str:
-    val = val.strip().upper()
-    m = re.search(r'T([0-4][A-D]?)', val)
+    clean = val.strip()
+    m = re.search(r'[tT]([0-4](?:[a-dA-D][1-3]?)?)', clean)
     if m:
-        return f"T{m.group(1)}"
-    if val in ["0", "1", "2", "3", "4"]:
-        return f"T{val}"
-    return val
+        num = m.group(1)[0]
+        suf = m.group(1)[1:].lower()
+        return f"T{num}{suf}"
+    if clean in ["0", "1", "2", "3", "4"]:
+        return f"T{clean}"
+    return clean.upper()
 
 
 def _normalize_n(val: str) -> str:
-    val = val.strip().upper()
-    m = re.search(r'N([0-3][A-C]?)', val)
+    clean = val.strip()
+    m = re.search(r'[nN]([0-3][a-cA-C]?)', clean)
     if m:
-        return f"N{m.group(1)}"
-    if val in ["0", "1", "2", "3"]:
-        return f"N{val}"
-    return val
+        num = m.group(1)[0]
+        suf = m.group(1)[1:].lower()
+        return f"N{num}{suf}"
+    if clean in ["0", "1", "2", "3"]:
+        return f"N{clean}"
+    return clean.upper()
 
 
 def _normalize_m(val: str) -> str:
