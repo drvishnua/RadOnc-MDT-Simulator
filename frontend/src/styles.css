@@ -1208,6 +1208,10 @@ textarea { resize: vertical; min-height: 110px; line-height: 1.55; }
   font-size: 12px;
   color: #94a3b8;
 }
+.hive-meta-failed {
+  color: #fb7185;
+  font-weight: 600;
+}
 
 /* progress ring */
 .hive-progress-ring {
@@ -1277,6 +1281,9 @@ textarea { resize: vertical; min-height: 110px; line-height: 1.55; }
   align-items: start;
   margin-bottom: 14px;
 }
+.hive-four-grid.has-failed {
+  grid-template-columns: 1.2fr 0.65fr 0.85fr 1fr 0.9fr;
+}
 
 /* ── zone panels ────────────────────────────────────────── */
 .hive-zone {
@@ -1291,6 +1298,7 @@ textarea { resize: vertical; min-height: 110px; line-height: 1.55; }
 .hive-zone-queued  { border-color: rgba(251, 191, 36, 0.4); }
 .hive-zone-active  { border-color: rgba(56, 189, 248, 0.5); }
 .hive-zone-done    { border-color: rgba(74, 222, 128, 0.4); }
+.hive-zone-failed  { border-color: rgba(244, 63, 94, 0.45); }
 
 .hive-zone-active.is-pulsing {
   animation: hive-pulse 2s infinite;
@@ -1484,6 +1492,7 @@ textarea { resize: vertical; min-height: 110px; line-height: 1.55; }
 .hive-pos-supports    { background: rgba(74, 222, 128, 0.15); color: #4ade80; }
 .hive-pos-conditional { background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
 .hive-pos-opposes     { background: rgba(244, 63, 94, 0.15); color: #fb7185; }
+.hive-pos-failed      { background: rgba(244, 63, 94, 0.15); color: #fb7185; }
 .hive-pos-insufficient_information { background: rgba(100, 116, 139, 0.15); color: #94a3b8; }
 
 /* ── legend ─────────────────────────────────────────────── */

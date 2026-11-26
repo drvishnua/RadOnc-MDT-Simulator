@@ -278,13 +278,17 @@ export function LiveHiveMonitor({
       }
 
       const position =
-        rN?.result?.position ?? r1?.assessment?.position ?? "insufficient_information";
+        status === "failed"
+          ? "failed"
+          : (rN?.result?.position ?? r1?.assessment?.position ?? "insufficient_information");
       const snippet =
-        rN?.result?.provisional_conclusion ??
-        r1?.assessment?.provisional_conclusion ??
-        (status === "active" ? "Generating specialist response…" :
-         status === "queued" ? "Up next…" :
-         "Waiting…");
+        status === "failed"
+          ? (rN?.error_message ?? r1?.error_message ?? "Failed to generate specialist response.")
+          : (rN?.result?.provisional_conclusion ??
+            r1?.assessment?.provisional_conclusion ??
+            (status === "active" ? "Generating specialist response…" :
+             status === "queued" ? "Up next…" :
+             "Waiting…"));
 
       return {
         agentId: agent.agent_id,
@@ -330,11 +334,13 @@ export function LiveHiveMonitor({
     [nodes, categoryFilter]
   );
 
-  const totalCompletedCount = nodes.filter((n) => n.status === "done" || n.status === "failed").length;
+  const totalCompletedCount = nodes.filter((n) => n.status === "done").length;
+  const totalFailedCount = nodes.filter((n) => n.status === "failed").length;
   const restingNodes   = visibleNodes.filter((n) => n.status === "resting");
   const queuedNodes    = visibleNodes.filter((n) => n.status === "queued");
   const activeNodes    = visibleNodes.filter((n) => n.status === "active");
-  const completedNodes = visibleNodes.filter((n) => n.status === "done" || n.status === "failed");
+  const completedNodes = visibleNodes.filter((n) => n.status === "done");
+  const failedNodes    = visibleNodes.filter((n) => n.status === "failed");
 
   const isLive =
     batchRun?.status === "running" ||
@@ -343,6 +349,7 @@ export function LiveHiveMonitor({
   const inspectedNode =
     nodes.find((n) => n.agentId === selectedId) ??
     activeNodes[0] ??
+    failedNodes[failedNodes.length - 1] ??
     completedNodes[completedNodes.length - 1] ??
     null;
 
@@ -350,6 +357,7 @@ export function LiveHiveMonitor({
 
   const restingGroups   = groupByCategory(restingNodes);
   const completedGroups = groupByCategory(completedNodes);
+  const failedGroups    = groupByCategory(failedNodes);
 
   return (
     <section className="hive-monitor-card" aria-label="Live MDT Specialist Hive Monitor">
@@ -361,6 +369,9 @@ export function LiveHiveMonitor({
             <strong>Live Specialist Hive · Round {activeRound}</strong>
             <span className="hive-meta">
               {totalCompletedCount} of {nodes.length} responded
+              {totalFailedCount > 0 && (
+                <span className="hive-meta-failed"> · {totalFailedCount} failed</span>
+              )}
               {finalReport ? " · Chair Synthesis Ready" : ""}
             </span>
           </div>
@@ -394,7 +405,7 @@ export function LiveHiveMonitor({
       </div>
 
       {/* ── Four-zone grid ───────────────────────── */}
-      <div className="hive-four-grid">
+      <div className={`hive-four-grid ${totalFailedCount > 0 ? "has-failed" : ""}`}>
         {/* Resting */}
         <ZonePanel title="Resting" count={restingNodes.length} status="resting">
           {restingGroups.size === 0 ? (
@@ -473,6 +484,27 @@ export function LiveHiveMonitor({
             ))
           )}
         </ZonePanel>
+
+        {/* Failed */}
+        {totalFailedCount > 0 && (
+          <ZonePanel title="Failed" count={failedNodes.length} status="failed">
+            {failedGroups.size === 0 ? (
+              <p className="hive-zone-empty">—</p>
+            ) : (
+              Array.from(failedGroups.entries()).map(([cat, catNodes]) => (
+                <CategoryGroup
+                  key={cat}
+                  category={cat}
+                  nodes={catNodes}
+                  selectedId={selectedId}
+                  onSelect={setSelectedId}
+                  defaultOpen={true}
+                  movedIds={movedIds}
+                />
+              ))
+            )}
+          </ZonePanel>
+        )}
       </div>
 
       {/* ── Inspector panel ──────────────────────── */}
