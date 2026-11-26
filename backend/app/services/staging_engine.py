@@ -26,7 +26,22 @@ def derive_or_verify_staging(case: SyntheticCase, role_id: str = "") -> dict[str
     summary = (case.case_summary or "").strip().lower()
     imaging = (case.imaging_summary or "").strip().lower()
     pathology = (case.pathology_summary or "").strip().lower()
-    investigations = " ".join(case.relevant_investigations).lower() if case.relevant_investigations else ""
+    investigations_parts = [str(item) for item in (case.relevant_investigations or []) if item]
+    for rec in getattr(case, "investigation_records", None) or []:
+        if isinstance(rec, dict):
+            parts = [rec.get("test_name"), rec.get("title"), rec.get("summary"), rec.get("findings"), rec.get("result")]
+        else:
+            parts = [
+                getattr(rec, "test_name", None),
+                getattr(rec, "title", None),
+                getattr(rec, "summary", None),
+                getattr(rec, "findings", None),
+                getattr(rec, "result", None),
+            ]
+        joined = " ".join(str(p) for p in parts if p)
+        if joined:
+            investigations_parts.append(joined)
+    investigations = " ".join(investigations_parts).lower()
     combined_text = f"{summary} {imaging} {pathology} {investigations}".strip()
 
     # Determine laterality of primary tumor
@@ -192,69 +207,64 @@ def _extract_node_details(text: str, primary_laterality: str = "unspecified") ->
         "description": "no documented lymphadenopathy"
     }
     lower_text = text.lower()
-    if any(k in lower_text for k in ["node", "lymph", "jugular", "cervical adenopathy", "adenopathy", "level 1", "level 2", "level 3", "level 4", "level 5"]):
-        # First check if there is an explicit positive nodal statement
-        # (e.g. "FDG-avid external iliac and obturator pelvic lymph nodes", "enlarged pelvic lymph nodes", "3 mesorectal lymph nodes")
-        has_explicit_positive = any(
-            k in lower_text
-            for k in [
-                "fdg-avid", "fdg avid", "enlarged lymph node", "enlarged node", "enlarged pelvic",
-                "involved node", "involved lymph node", "positive node", "positive lymph node",
-                "mesorectal lymph nodes", "pelvic lymphadenopathy", "mesorectal nodes",
-                "level 2 lymph node", "level ii", "level 2 node", "suspicious lymph node",
-                "suspicious mesorectal"
-            ]
-        )
-
-        if not has_explicit_positive:
-            negative_node_patterns = [
-                "no lymph node", "no suspicious lymph node", "no suspicious node",
-                "no enlarged node", "no pathologically enlarged", "no cervical adenopathy",
-                "no cervical lymphadenopathy", "no lymphadenopathy", "no adenopathy",
-                "nodes clinically negative", "node negative", "nodes negative",
-                "nodes are normal", "node is normal", "nodes normal", "normal nodes",
-                "no regional lymph node", "no nodal", "no node", "without lymphadenopathy",
-                "without nodal", "free of nodal", "no node notes", "not reported",
-                "not assessed", "no node data", "node negative on pet", "pet-negative",
-                "pet negative", "pet/ct negative", "pet negative lymph nodes"
-            ]
-            if any(neg in lower_text for neg in negative_node_patterns):
-                return node_info
-
-            # Flexible proximity negation regex (e.g. "no fdg uptake in mediastinal, hilar lymph nodes", "without pelvic or para-aortic nodes")
+    node_keywords = ["node", "lymph", "jugular", "cervical adenopathy", "adenopathy", "level 1", "level 2", "level 3", "level 4", "level 5"]
+    if any(k in lower_text for k in node_keywords):
+        negative_node_patterns = [
+            "no lymph node", "no suspicious lymph node", "no suspicious node",
+            "no enlarged node", "no pathologically enlarged", "no cervical adenopathy",
+            "no cervical lymphadenopathy", "no lymphadenopathy", "no adenopathy",
+            "nodes clinically negative", "node negative", "nodes negative",
+            "nodes are normal", "node is normal", "nodes normal", "normal nodes",
+            "no regional lymph node", "no nodal", "no node", "without lymphadenopathy",
+            "without nodal", "free of nodal", "no node notes", "not reported",
+            "not assessed", "no node data", "node negative on pet", "pet-negative",
+            "pet negative", "pet/ct negative", "pet negative lymph nodes",
+        ]
+        clauses = [c.strip() for c in re.split(r"[.;\n]+", lower_text) if c.strip()]
+        positive_clauses: list[str] = []
+        for clause in clauses:
+            if not any(k in clause for k in node_keywords):
+                continue
+            if any(neg in clause for neg in negative_node_patterns):
+                continue
             neg_prox_match = re.search(
                 r"\b(?:no|without|negative\s+for|free\s+of|no\s+evidence\s+of|no\s+fdg\s+uptake\s+in)\s+[^.;\n]{1,80}?\b(?:lymph\s*nodes?|nodes?|adenopathy|lymphadenopathy)\b",
-                lower_text,
+                clause,
                 re.IGNORECASE,
             )
             if neg_prox_match:
-                return node_info
+                continue
+            positive_clauses.append(clause)
 
+        if not positive_clauses:
+            return node_info
+
+        pos_text = " ; ".join(positive_clauses)
         node_info["involved"] = True
         node_info["description"] = "documented nodal involvement"
 
         # Size of lymph node: matches '1x1 cm lymph node' or '1.5 cm node'
-        size_m = re.search(r'(\d+(?:\.\d+)?)\s*(?:x\s*\d+(?:\.\d+)?\s*)?(?:cm|mm)\s*(?:lymph\s*node|node|cervical)', lower_text, re.IGNORECASE)
+        size_m = re.search(r'(\d+(?:\.\d+)?)\s*(?:x\s*\d+(?:\.\d+)?\s*)?(?:cm|mm)\s*(?:lymph\s*node|node|cervical)', pos_text, re.IGNORECASE)
         if not size_m:
-            size_m = re.search(r'(?:node|lymph node|adenopathy)[^\.\n,;]*?(\d+(?:\.\d+)?)\s*(?:cm|mm)', lower_text, re.IGNORECASE)
+            size_m = re.search(r'(?:node|lymph node|adenopathy)[^\.\n,;]*?(\d+(?:\.\d+)?)\s*(?:cm|mm)', pos_text, re.IGNORECASE)
         if size_m:
             val = float(size_m.group(1))
             node_info["size_cm"] = val if "cm" in size_m.group(0).lower() else round(val / 10.0, 1)
 
         # Laterality
-        if "bilateral" in lower_text:
+        if "bilateral" in pos_text:
             node_info["laterality"] = "bilateral"
-        elif "contralateral" in lower_text:
+        elif "contralateral" in pos_text:
             node_info["laterality"] = "contralateral"
-        elif "ipsilateral" in lower_text:
+        elif "ipsilateral" in pos_text:
             node_info["laterality"] = "ipsilateral"
-        elif "right" in lower_text and primary_laterality == "right":
+        elif "right" in pos_text and primary_laterality == "right":
             node_info["laterality"] = "ipsilateral"
-        elif "left" in lower_text and primary_laterality == "left":
+        elif "left" in pos_text and primary_laterality == "left":
             node_info["laterality"] = "ipsilateral"
-        elif "right" in lower_text and primary_laterality == "left":
+        elif "right" in pos_text and primary_laterality == "left":
             node_info["laterality"] = "contralateral"
-        elif "left" in lower_text and primary_laterality == "right":
+        elif "left" in pos_text and primary_laterality == "right":
             node_info["laterality"] = "contralateral"
         else:
             node_info["laterality"] = "ipsilateral"

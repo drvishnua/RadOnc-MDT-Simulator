@@ -142,6 +142,10 @@ async def generate_agent_assessment(
     """
     schema = AgentDraft.model_json_schema()
     case_payload = build_case_prompt_context(case)
+    from app.services.pre_mdt_staging_agent import run_pre_mdt_staging_agent
+
+    pre_staging = run_pre_mdt_staging_agent(case)
+    case_payload["pre_mdt_staging"] = pre_staging.model_dump(mode="json")
 
     evidence_context = ""
     passages: list[Any] = []
@@ -307,6 +311,17 @@ async def generate_agent_assessment(
             "- Ensure proper clinical English grammar, capitalization, and distinct non-repetitive content across provisional_conclusion, preferred_educational_option, and perspective_summary.\n"
         )
 
+    staging_prompt_block = (
+        f"\n\nPRE-MDT STAGING AGENT REPORT (STG-00):\n"
+        f"- Mode: {pre_staging.mode}\n"
+        f"- Provisional/Verified Stage: {pre_staging.provisional_stage_label} ({pre_staging.applicable_system})\n"
+        f"- Summary: {pre_staging.summary}\n"
+        + (f"- Discrepancies: {'; '.join(pre_staging.discrepancies)}\n" if pre_staging.discrepancies else "")
+        + (f"- Missing for Complete Staging: {'; '.join(pre_staging.missing_for_complete_staging)}\n" if pre_staging.missing_for_complete_staging else "")
+        + "STAGING INTEGRITY MANDATE: Respect the Pre-MDT Staging Agent's provisional/verified stage above. "
+        "NEVER invent N0 when nodal status is Nx/unreported, and NEVER ignore documented nodal involvement or staging discrepancies."
+    )
+
     prompt = (
         f"MDT Role: {role_name} ({profile.get('agent_id', '')})\n"
         f"Mandate: {role_mandate}\n"
@@ -314,6 +329,7 @@ async def generate_agent_assessment(
         f"Round: {round_number}\n\n"
         f"Patient Case:\n"
         + json.dumps(case_payload, ensure_ascii=False, separators=(",", ":"))
+        + staging_prompt_block
         + prompt_evidence
         + role_specific_prompt_additions
         + "\n\nReturn ONLY a valid JSON object adhering strictly to the schema. "

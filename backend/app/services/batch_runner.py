@@ -68,6 +68,10 @@ async def run_independent_assessments(
     async with _batch_lock:
         try:
             case = run_store.get_case(run_id)
+            from app.services.pre_mdt_staging_agent import run_pre_mdt_staging_agent
+
+            pre_staging = run_pre_mdt_staging_agent(case)
+            run_store.save_pre_mdt_staging(run_id, pre_staging.model_dump(mode="json"))
             if not controller.is_simulation_paused(run_id):
                 run_store.mark_run_running(run_id)
             existing = {

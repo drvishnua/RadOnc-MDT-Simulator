@@ -1644,6 +1644,48 @@ function App() {
                     <p className="result-footnote">Run ID: {batchRun.run_id} · Patient: {loadedPatient?.patient_identifier ?? (batchRun.patient_id ? "linked patient" : "legacy unlinked run")} · Case version: {batchRun.case_version_number ?? "not linked"} · SHA-256: {batchRun.case_snapshot_sha256}</p>
                   </div>
                 )}
+                {batchRun?.pre_mdt_staging && (
+                  <section
+                    className={`pre-mdt-staging-card is-${batchRun.pre_mdt_staging.mode}`}
+                    aria-label="Pre-MDT Staging Agent Report"
+                  >
+                    <div className="pre-mdt-staging-header">
+                      <div>
+                        <strong>
+                          {batchRun.pre_mdt_staging.agent_id} · {batchRun.pre_mdt_staging.agent_name}
+                        </strong>
+                        <span className="pre-mdt-staging-system">
+                          {batchRun.pre_mdt_staging.applicable_system}
+                        </span>
+                      </div>
+                      <div className="pre-mdt-staging-badges">
+                        <span className="pre-mdt-stage-pill">
+                          {batchRun.pre_mdt_staging.provisional_stage_label}
+                        </span>
+                        <span className={`pre-mdt-mode-pill is-${batchRun.pre_mdt_staging.mode}`}>
+                          {batchRun.pre_mdt_staging.mode.replaceAll("_", " ")}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="pre-mdt-staging-summary">{batchRun.pre_mdt_staging.summary}</p>
+                    {batchRun.pre_mdt_staging.discrepancies.length > 0 && (
+                      <div className="pre-mdt-staging-alert">
+                        <strong>Staging Discrepancies Detected:</strong>
+                        <ul>
+                          {batchRun.pre_mdt_staging.discrepancies.map((d, idx) => (
+                            <li key={idx}>{d}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {batchRun.pre_mdt_staging.missing_for_complete_staging.length > 0 && (
+                      <div className="pre-mdt-staging-missing">
+                        <strong>Missing for complete staging:</strong>{" "}
+                        {batchRun.pre_mdt_staging.missing_for_complete_staging.join(" · ")}
+                      </div>
+                    )}
+                  </section>
+                )}
                 <LiveHiveMonitor
                   agents={agents}
                   batchRun={batchRun}

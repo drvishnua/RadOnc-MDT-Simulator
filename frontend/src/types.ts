@@ -109,6 +109,22 @@ export type SavedSingleAssessment = {
   case_version_id?: string;
 };
 
+export type PreMDTStagingAssessment = {
+  agent_id: string;
+  agent_name: string;
+  mode: "provisional_derived" | "verified_concordant" | "discrepancy_detected" | "insufficient_staging_data";
+  applicable_system: string;
+  provided_staging: Record<string, string | null>;
+  provisional_tnm: Record<string, string | null>;
+  provisional_stage_label: string;
+  clinical_findings_used: string[];
+  discrepancies: string[];
+  correlation_notes: string[];
+  missing_for_complete_staging: string[];
+  summary: string;
+  safety_boundary: string;
+};
+
 export type BatchRunSummary = {
   run_id: string;
   status: "queued" | "running" | "completed" | "completed_with_errors" | "paused" | "stopped";
@@ -124,6 +140,7 @@ export type BatchRunSummary = {
   updated_at: string;
   mdt_finished_at: string | null;
   case_snapshot_sha256: string;
+  pre_mdt_staging?: PreMDTStagingAssessment | null;
   patient_id?: string | null;
   case_version_id?: string | null;
   case_version_number?: number | null;

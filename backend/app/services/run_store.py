@@ -268,6 +268,11 @@ def initialize_database() -> None:
                     "UPDATE patient_case_versions SET patient_name = ? WHERE case_version_id = ?",
                     (version_name, version["case_version_id"]),
                 )
+        sim_cols = {
+            r["name"] for r in db.execute("PRAGMA table_info(simulation_runs)").fetchall()
+        }
+        if "pre_mdt_staging_json" not in sim_cols:
+            db.execute("ALTER TABLE simulation_runs ADD COLUMN pre_mdt_staging_json TEXT")
 
 
 def _case_json_and_hash(case: SyntheticCase) -> tuple[str, str]:
@@ -674,9 +679,24 @@ def get_run(run_id: str) -> dict[str, Any]:
         "wall_clock_runtime_seconds": wall_clock_runtime_seconds,
         "clinical_field_registry_version": row["clinical_field_registry_version"],
         "case_snapshot_sha256": hashlib.sha256(row["case_json"].encode("utf-8")).hexdigest(),
+        "pre_mdt_staging": (
+            json.loads(row["pre_mdt_staging_json"])
+            if "pre_mdt_staging_json" in row.keys() and row["pre_mdt_staging_json"]
+            else None
+        ),
         "all_agents_required": True,
         "independent_assessments": True,
     }
+
+
+def save_pre_mdt_staging(run_id: str, staging_payload: dict[str, Any]) -> None:
+    """Persist the Pre-MDT Staging Agent (STG-00) assessment for a simulation run."""
+    initialize_database()
+    with _connect() as db:
+        db.execute(
+            "UPDATE simulation_runs SET pre_mdt_staging_json = ?, updated_at = ? WHERE run_id = ?",
+            (json.dumps(staging_payload, ensure_ascii=False), _now(), run_id),
+        )
 
 
 def list_results(run_id: str) -> list[dict[str, Any]]:
