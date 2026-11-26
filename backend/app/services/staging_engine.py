@@ -97,7 +97,7 @@ def derive_or_verify_staging(case: SyntheticCase, role_id: str = "") -> dict[str
         k in combined_text
         for k in [
             "distant metastasis", "distant metastases", "metastatic", "chest xray",
-            "chest x-ray", "ct chest", "pet", "pet/ct", "pet-ct", "bone scan",
+            "chest x-ray", "ct chest", "chest ct", "ct abdomen", "ct cap", "pet", "pet/ct", "pet-ct", "bone scan",
             "m0", "m1", "non-metastatic", "without distant"
         ]
     )
@@ -132,7 +132,7 @@ def derive_or_verify_staging(case: SyntheticCase, role_id: str = "") -> dict[str
 
         if provided_c_m:
             norm_prov_m = _normalize_m(str(provided_c_m))
-            if norm_prov_m != derived_m:
+            if derived_m and norm_prov_m != derived_m:
                 discrepancies.append(f"Provided M stage ({provided_c_m}) differs from documented systemic status ({derived_m}).")
             else:
                 correlation_notes.append(f"Clinical M ({provided_c_m}) is concordant with staging investigations.")
@@ -242,6 +242,10 @@ def _extract_node_details(text: str, primary_laterality: str = "unspecified") ->
         pos_text = " ; ".join(positive_clauses)
         node_info["involved"] = True
         node_info["description"] = "documented nodal involvement"
+
+        count_m = re.search(r"\b(\d+)\s+(?:[\w-]+\s+){0,2}(?:lymph\s*nodes?|nodes?)\b", pos_text, re.IGNORECASE)
+        if count_m:
+            node_info["count"] = int(count_m.group(1))
 
         # Size of lymph node: matches '1x1 cm lymph node' or '1.5 cm node'
         size_m = re.search(r'(\d+(?:\.\d+)?)\s*(?:x\s*\d+(?:\.\d+)?\s*)?(?:cm|mm)\s*(?:lymph\s*node|node|cervical)', pos_text, re.IGNORECASE)
