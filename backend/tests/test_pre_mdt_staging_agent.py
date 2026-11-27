@@ -141,6 +141,46 @@ def test_ollama_prompt_includes_pre_mdt_staging_agent_report(monkeypatch):
     assert "cT1 N1" in captured["request"]["prompt"]
 
 
+def test_build_case_prompt_context_redacts_discordant_n_stage():
+    from app.services.case_integrity import build_case_prompt_context
+
+    case = SyntheticCase(
+        scenario_title="Ca larynx with nodal discrepancy",
+        case_summary="3.0 cm glottic mass with vocal cord fixation.",
+        primary_site="Glottic larynx",
+        histology="Squamous cell carcinoma",
+        imaging_summary="CECT neck shows a 2.0 cm right level II lymph node; chest CT negative.",
+        clinical_t_stage="T3",
+        clinical_n_stage="N0",
+        clinical_m_stage="M0",
+    )
+    res = run_pre_mdt_staging_agent(case)
+    assert res.mode == "discrepancy_detected"
+    ctx = build_case_prompt_context(case)
+    assert ctx["case_snapshot"]["clinical_n_stage"] is None
+    assert "clinical_n_stage" in ctx["case_snapshot_redacted_conflicting_fields"]
+
+
+def test_build_case_prompt_context_preserves_concordant_n_stage():
+    from app.services.case_integrity import build_case_prompt_context
+
+    case = SyntheticCase(
+        scenario_title="Ca tonsil concordant N1",
+        clinical_t_stage="T1",
+        clinical_n_stage="N1",
+        clinical_m_stage="M0",
+        primary_site="Right tonsil - oropharynx",
+        case_summary="1.8 cm right tonsillar growth.",
+        imaging_summary="CECT neck shows a 1.5 cm right level II lymph node; chest CT negative.",
+        histology="Squamous cell carcinoma",
+    )
+    res = run_pre_mdt_staging_agent(case)
+    assert res.mode != "discrepancy_detected"
+    ctx = build_case_prompt_context(case)
+    assert ctx["case_snapshot"]["clinical_n_stage"] == "N1"
+    assert "clinical_n_stage" not in ctx["case_snapshot_redacted_conflicting_fields"]
+
+
 def test_staging_agent_grounds_figo_cervix_rules():
     case = SyntheticCase(
         scenario_title="Ca cervix with pelvic nodes",

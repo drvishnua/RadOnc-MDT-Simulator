@@ -298,6 +298,32 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
             "Performance-status value is recorded without its scale; do not assume ECOG, WHO or Karnofsky equivalence."
         )
 
+    staging_analysis = _compute_prompt_staging_analysis(case)
+    try:
+        from app.services.pre_mdt_staging_agent import run_pre_mdt_staging_agent
+        stg_assessment = run_pre_mdt_staging_agent(case)
+        if stg_assessment.mode == "discrepancy_detected":
+            for field_id, locked_val in (
+                ("clinical_t_stage", stg_assessment.provisional_tnm.get("t")),
+                ("clinical_n_stage", stg_assessment.provisional_tnm.get("n")),
+                ("clinical_m_stage", stg_assessment.provisional_tnm.get("m")),
+                ("stage_group", stg_assessment.provisional_tnm.get("stage_group")),
+            ):
+                raw_val = getattr(case, field_id, None)
+                if raw_val is not None and locked_val is not None:
+                    norm_raw = str(raw_val).strip().upper()
+                    norm_locked = str(locked_val).strip().upper()
+                    if field_id != "stage_group":
+                        norm_raw = norm_raw.lstrip("CP")
+                        norm_locked = norm_locked.lstrip("CP")
+                    if norm_raw != norm_locked:
+                        model_snapshot[field_id] = None
+                        if field_id not in redacted_conflicting_fields:
+                            redacted_conflicting_fields.append(field_id)
+            redacted_conflicting_fields.sort()
+    except Exception:
+        pass
+
     registry_payload = build_registry_prompt_payload()
     return {
         "clinical_field_registry": registry_payload,
@@ -311,7 +337,7 @@ def build_case_prompt_context(case: SyntheticCase) -> dict[str, Any]:
         ),
         "canonical_field_values": canonical_field_values,
         "field_status": field_status,
-        "staging_analysis": _compute_prompt_staging_analysis(case),
+        "staging_analysis": staging_analysis,
         "pre_mdt_staging_lock": (
             "STG-00 has fixed the authoritative staging for this simulation. "
             "No other agent may rethink, re-stage, or invent alternative T/N/M values during R1-R4."

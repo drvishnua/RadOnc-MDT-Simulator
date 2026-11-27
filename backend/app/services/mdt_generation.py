@@ -250,8 +250,11 @@ async def generate_debate_contribution(
         "does not establish agreement on an option. Record a substantive challenge only when "
         "you identify its source, exact claim or condition, the reason it is unsupported or "
         "misrepresented, and what information would resolve it. Do not manufacture challenges. "
-        "If no agreement or challenge is justified, explain the evidence limitation in "
-        "response_to_other_perspectives and leave the corresponding list empty. Preserve "
+        "Whenever SELECTED PEER POSITIONS is non-empty, include at least one grounded entry in "
+        "`agreements` or `substantive_challenges` citing an explicit peer `role_id` from SELECTED PEER POSITIONS "
+        "(either agreeing with a specific peer reasoning point or challenging an unsupported assumption/gap), "
+        "rather than leaving both lists empty. Only use `[source_id: <ID>]` inline tags when `<ID>` appears "
+        "verbatim in RETRIEVED EVIDENCE PASSAGES; never invent or guess `[source_id: ...]` tags. Preserve "
         "conditionality; do not convert conditional positions into support. "
         "SERVER CASE-INTEGRITY AUDIT: your own R1 assessment and selected peer R1 records may "
         "include case_integrity_audit_flags. These are deterministic server warnings that the "
@@ -264,7 +267,7 @@ async def generate_debate_contribution(
         f"ROLE: {profile['name']}\nMANDATE: {profile['mandate']}\nCLINICAL PHILOSOPHY: {profile.get('clinical_philosophy', '')}\n"
         "SUPPLIED CASE:\n"
         + json.dumps(build_case_prompt_context(case), ensure_ascii=False, separators=(",", ":"))
-        + "\nSTAGING LOCK (STG-00): Do NOT rethink, re-stage, or dispute T/N/M values during debate or adversarial review; accept STG-00's fixed staging.\n"
+        + "\nSTAGING LOCK (STG-00): Do NOT rethink, re-stage, or dispute T/N/M values during debate or adversarial review; accept STG-00's fixed staging and NEVER revert to a redacted/discrepant N0 or alternative T/N/M value.\n"
         + "\nSERVER-IDENTIFIED ATTRIBUTED SOURCE OPINIONS (exact case-summary excerpts; source statements, not verified facts or your endorsement):\n"
         + json.dumps(source_opinion_register, ensure_ascii=False, separators=(",", ":"))
         + "\nYOUR ROUND-1 POSITION:\n"
@@ -836,7 +839,7 @@ async def generate_adversarial_contribution(
         f"ROLE: {profile['name']}\nMANDATE: {profile['mandate']}\nCLINICAL PHILOSOPHY: {profile.get('clinical_philosophy', '')}\n"
         "SUPPLIED CASE:\n"
         + json.dumps(build_case_prompt_context(case), ensure_ascii=False, separators=(",", ":"))
-        + "\nSTAGING LOCK (STG-00): Do NOT rethink, re-stage, or dispute T/N/M values during debate or adversarial review; accept STG-00's fixed staging.\n"
+        + "\nSTAGING LOCK (STG-00): Do NOT rethink, re-stage, or dispute T/N/M values during debate or adversarial review; accept STG-00's fixed staging and NEVER revert to a redacted/discrepant N0 or alternative T/N/M value.\n"
         + "\nSERVER-IDENTIFIED ATTRIBUTED SOURCE OPINIONS (exact case-summary excerpts; not verified facts):\n"
         + json.dumps(source_opinion_register, ensure_ascii=False, separators=(",", ":"))
         + "\nYOUR R1 AND COMPLETE OWN R2 RECORD (bounded fields):\n"
