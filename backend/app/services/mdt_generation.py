@@ -469,6 +469,16 @@ async def generate_debate_contribution(
         role_name=profile["name"],
         allowed_sources=allowed_sources,
     )
+    from app.services.output_guards import (
+        enforce_staging_lock_on_payload,
+        ensure_r2_peer_engagement,
+        sanitize_unverified_citations_in_payload,
+    )
+    from app.services.pre_mdt_staging_agent import run_pre_mdt_staging_agent
+
+    enforce_staging_lock_on_payload(payload, run_pre_mdt_staging_agent(case))
+    sanitize_unverified_citations_in_payload(payload)
+    ensure_r2_peer_engagement(payload, peers)
     return RoundContribution(
         agent_id=profile["agent_id"],
         round_number=2,
@@ -1479,6 +1489,14 @@ async def generate_adversarial_contribution(
         role_name=profile["name"],
         allowed_sources=allowed_sources,
     )
+    from app.services.output_guards import (
+        enforce_staging_lock_on_payload,
+        sanitize_unverified_citations_in_payload,
+    )
+    from app.services.pre_mdt_staging_agent import run_pre_mdt_staging_agent
+
+    enforce_staging_lock_on_payload(payload, run_pre_mdt_staging_agent(case))
+    sanitize_unverified_citations_in_payload(payload)
     return RoundContribution(
         agent_id=profile["agent_id"],
         round_number=3,

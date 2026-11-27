@@ -466,6 +466,18 @@ async def generate_agent_assessment(
     ):
         draft.perspective_summary = draft.provisional_conclusion
 
+    from app.services.output_guards import (
+        enforce_staging_lock_on_payload,
+        sanitize_unverified_citations_in_payload,
+    )
+    draft_data = draft.model_dump()
+    enforce_staging_lock_on_payload(draft_data, pre_staging)
+    sanitize_unverified_citations_in_payload(
+        draft_data,
+        extra_valid_ids={p.source_id for p in passages if getattr(p, "source_id", None)},
+    )
+    draft = draft.model_copy(update=draft_data)
+
     # Deterministically extract and verify cited evidence sources from the draft conclusion, perspective, and assumptions
     constructed_claims = []
     try:
