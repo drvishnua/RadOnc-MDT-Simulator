@@ -658,12 +658,14 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
       });
     });
 
-    // Mouse parallax & raycasting
+    // Mouse orbital pan & raycasting (anchored around center point in front of stage & seats)
     const raycaster = new THREE.Raycaster();
     const pointerNdc = new THREE.Vector2(-99, -99);
-    let targetParallaxX = 0;
-    let targetParallaxY = 0;
+    const orbitRadius = baseCamPos.z - lookTarget.z;
+    const maxAzimuthRad = degToRad(68);
     let targetNormX = 0;
+    let targetNormY = 0;
+    let currentAzimuth = 0;
 
     const handlePointerMove = (e: PointerEvent) => {
       const rect = renderer.domElement.getBoundingClientRect();
@@ -672,8 +674,7 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
       pointerNdc.set(nx, ny);
       if (effectivePanModeRef.current === "mouse") {
         targetNormX = nx;
-        targetParallaxX = nx * 16.0;
-        targetParallaxY = ny * 2.8;
+        targetNormY = ny;
       }
 
       raycaster.setFromCamera(pointerNdc, camera);
@@ -707,8 +708,7 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
 
     const handlePointerLeave = () => {
       targetNormX = 0;
-      targetParallaxX = 0;
-      targetParallaxY = 0;
+      targetNormY = 0;
     };
 
     const domEl = renderer.domElement;
@@ -735,20 +735,19 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
       rafId = requestAnimationFrame(animate);
       const t = timeMs * 0.001;
 
-      // Full wing-to-center orbital pan: driven by mouse hover OR touch/slider controls
+      // Anchored orbital rotation around center point (0, 1.15, -1.6) in front of stage & seats
       if (effectivePanModeRef.current === "slider") {
         targetNormX = sliderPanRef.current.x;
-        targetParallaxX = sliderPanRef.current.x * 16.0;
-        targetParallaxY = sliderPanRef.current.y * 2.8;
+        targetNormY = sliderPanRef.current.y;
       }
-      const targetCamX = baseCamPos.x + targetParallaxX;
-      const targetCamY = Math.max(4.6, baseCamPos.y + targetParallaxY);
-      const targetCamZ = baseCamPos.z - Math.abs(targetNormX) * 4.5;
-      camera.position.x += (targetCamX - camera.position.x) * 0.065;
-      camera.position.y += (targetCamY - camera.position.y) * 0.065;
-      camera.position.z += (targetCamZ - camera.position.z) * 0.065;
-      currentLook.x += (lookTarget.x + targetNormX * 10.2 - currentLook.x) * 0.065;
-      currentLook.y += (lookTarget.y + targetParallaxY * 0.16 - currentLook.y) * 0.065;
+      const targetAzimuth = targetNormX * maxAzimuthRad;
+      currentAzimuth += (targetAzimuth - currentAzimuth) * 0.08;
+      const targetCamY = Math.max(4.4, baseCamPos.y + targetNormY * 3.0);
+      camera.position.x = Math.sin(currentAzimuth) * orbitRadius;
+      camera.position.z = lookTarget.z + Math.cos(currentAzimuth) * orbitRadius;
+      camera.position.y += (targetCamY - camera.position.y) * 0.08;
+      currentLook.x = lookTarget.x;
+      currentLook.y += (lookTarget.y + targetNormY * 0.35 - currentLook.y) * 0.08;
       camera.lookAt(currentLook);
 
       // Update seat status rings, beams, and hover lift
