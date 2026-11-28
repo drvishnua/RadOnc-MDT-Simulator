@@ -607,13 +607,15 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
     const pointerNdc = new THREE.Vector2(-99, -99);
     let targetParallaxX = 0;
     let targetParallaxY = 0;
+    let targetNormX = 0;
 
     const handlePointerMove = (e: PointerEvent) => {
       const rect = renderer.domElement.getBoundingClientRect();
       const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       const ny = -((e.clientY - rect.top) / rect.height) * 2 + 1;
       pointerNdc.set(nx, ny);
-      targetParallaxX = nx * 6.5;
+      targetNormX = nx;
+      targetParallaxX = nx * 12.5;
       targetParallaxY = ny * 2.8;
 
       raycaster.setFromCamera(pointerNdc, camera);
@@ -646,6 +648,7 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
     };
 
     const handlePointerLeave = () => {
+      targetNormX = 0;
       targetParallaxX = 0;
       targetParallaxY = 0;
     };
@@ -674,14 +677,14 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
       rafId = requestAnimationFrame(animate);
       const t = timeMs * 0.001;
 
-      // Wide orbital arc pan + look-target shift toward hovered wing & vertical angle
+      // Full wing-to-center orbital pan: brings far-left/far-right teams near screen center
       const targetCamX = baseCamPos.x + targetParallaxX;
       const targetCamY = Math.max(4.6, baseCamPos.y + targetParallaxY);
-      const targetCamZ = baseCamPos.z - Math.abs(targetParallaxX) * 0.22;
+      const targetCamZ = baseCamPos.z - Math.abs(targetNormX) * 3.8;
       camera.position.x += (targetCamX - camera.position.x) * 0.065;
       camera.position.y += (targetCamY - camera.position.y) * 0.065;
       camera.position.z += (targetCamZ - camera.position.z) * 0.065;
-      currentLook.x += (lookTarget.x + targetParallaxX * 0.37 - currentLook.x) * 0.065;
+      currentLook.x += (lookTarget.x + targetNormX * 7.5 - currentLook.x) * 0.065;
       currentLook.y += (lookTarget.y + targetParallaxY * 0.16 - currentLook.y) * 0.065;
       camera.lookAt(currentLook);
 
