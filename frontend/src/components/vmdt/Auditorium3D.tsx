@@ -613,8 +613,8 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
       const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       const ny = -((e.clientY - rect.top) / rect.height) * 2 + 1;
       pointerNdc.set(nx, ny);
-      targetParallaxX = nx * 3.2;
-      targetParallaxY = ny * 0.8;
+      targetParallaxX = nx * 6.5;
+      targetParallaxY = ny * 2.8;
 
       raycaster.setFromCamera(pointerNdc, camera);
       const hits = raycaster.intersectObjects(hitboxes, false);
@@ -674,10 +674,15 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
       rafId = requestAnimationFrame(animate);
       const t = timeMs * 0.001;
 
-      // Smooth orbital camera pan + subtle look-target shift toward hovered wing
-      camera.position.x += (baseCamPos.x + targetParallaxX - camera.position.x) * 0.065;
-      camera.position.y += (baseCamPos.y + targetParallaxY - camera.position.y) * 0.065;
-      currentLook.x += (lookTarget.x + targetParallaxX * 0.375 - currentLook.x) * 0.065;
+      // Wide orbital arc pan + look-target shift toward hovered wing & vertical angle
+      const targetCamX = baseCamPos.x + targetParallaxX;
+      const targetCamY = Math.max(4.6, baseCamPos.y + targetParallaxY);
+      const targetCamZ = baseCamPos.z - Math.abs(targetParallaxX) * 0.22;
+      camera.position.x += (targetCamX - camera.position.x) * 0.065;
+      camera.position.y += (targetCamY - camera.position.y) * 0.065;
+      camera.position.z += (targetCamZ - camera.position.z) * 0.065;
+      currentLook.x += (lookTarget.x + targetParallaxX * 0.37 - currentLook.x) * 0.065;
+      currentLook.y += (lookTarget.y + targetParallaxY * 0.16 - currentLook.y) * 0.065;
       camera.lookAt(currentLook);
 
       // Update seat status rings, beams, and hover lift
