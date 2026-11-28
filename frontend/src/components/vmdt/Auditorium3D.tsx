@@ -153,7 +153,11 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
   const [pinnedAgentId, setPinnedAgentId] = useState<string | null>(null);
   const [seatCoords, setSeatCoords] = useState<Record<string, ScreenPoint>>({});
   const [labelCoords, setLabelCoords] = useState<Record<string, ScreenPoint>>({});
-  const [sliderPan, setSliderPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [sliderPan, setSliderPan] = useState<{ x: number; y: number; zoom: number }>({
+    x: 0,
+    y: 0,
+    zoom: 0,
+  });
 
   const [touchDetected, setTouchDetected] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -182,7 +186,7 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
   const seatStatusesRef = useRef<Record<string, AgentSeatStatus>>(seatStatuses);
   const modeRef = useRef<"hall" | "live">(mode);
   const effectivePanModeRef = useRef<"mouse" | "slider">(effectivePanMode);
-  const sliderPanRef = useRef<{ x: number; y: number }>(sliderPan);
+  const sliderPanRef = useRef<{ x: number; y: number; zoom: number }>(sliderPan);
 
   hoveredAgentRef.current = hoveredAgentId;
   pinnedAgentRef.current = pinnedAgentId;
@@ -658,14 +662,16 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
       });
     });
 
-    // Mouse orbital pan & raycasting (anchored around center point in front of stage & seats)
+    // Mouse orbital pan, wheel zoom & raycasting (anchored around center point in front of stage & seats)
     const raycaster = new THREE.Raycaster();
     const pointerNdc = new THREE.Vector2(-99, -99);
-    const orbitRadius = baseCamPos.z - lookTarget.z;
+    const baseOrbitRadius = baseCamPos.z - lookTarget.z;
     const maxAzimuthRad = degToRad(68);
     let targetNormX = 0;
     let targetNormY = 0;
+    let targetZoomNorm = 0;
     let currentAzimuth = 0;
+    let currentRadius = baseOrbitRadius;
 
     const handlePointerMove = (e: PointerEvent) => {
       const rect = renderer.domElement.getBoundingClientRect();
@@ -711,10 +717,24 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
       targetNormY = 0;
     };
 
+    const handleWheel = (e: WheelEvent) => {
+      if (effectivePanModeRef.current !== "mouse") return;
+      e.preventDefault();
+      targetZoomNorm = Math.min(1, Math.max(-1, targetZoomNorm - e.deltaY * 0.0012));
+    };
+
+    const handleDoubleClick = () => {
+      if (effectivePanModeRef.current === "mouse") {
+        targetZoomNorm = 0;
+      }
+    };
+
     const domEl = renderer.domElement;
     domEl.addEventListener("pointermove", handlePointerMove);
     domEl.addEventListener("pointerleave", handlePointerLeave);
     domEl.addEventListener("click", handlePointerClick);
+    domEl.addEventListener("wheel", handleWheel, { passive: false });
+    domEl.addEventListener("dblclick", handleDoubleClick);
 
     const resizeObserver = new ResizeObserver(() => {
       if (!container) return;
@@ -735,16 +755,22 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
       rafId = requestAnimationFrame(animate);
       const t = timeMs * 0.001;
 
-      // Anchored orbital rotation around center point (0, 1.15, -1.6) in front of stage & seats
+      // Anchored orbital rotation & zoom around center point (0, 1.15, -1.6) in front of stage & seats
       if (effectivePanModeRef.current === "slider") {
         targetNormX = sliderPanRef.current.x;
         targetNormY = sliderPanRef.current.y;
+        targetZoomNorm = sliderPanRef.current.zoom;
       }
       const targetAzimuth = targetNormX * maxAzimuthRad;
       currentAzimuth += (targetAzimuth - currentAzimuth) * 0.08;
+      const targetRadius =
+        targetZoomNorm >= 0
+          ? baseOrbitRadius - targetZoomNorm * (baseOrbitRadius - 9.5)
+          : baseOrbitRadius - targetZoomNorm * (24.0 - baseOrbitRadius);
+      currentRadius += (targetRadius - currentRadius) * 0.08;
       const targetCamY = Math.max(4.4, baseCamPos.y + targetNormY * 3.0);
-      camera.position.x = Math.sin(currentAzimuth) * orbitRadius;
-      camera.position.z = lookTarget.z + Math.cos(currentAzimuth) * orbitRadius;
+      camera.position.x = Math.sin(currentAzimuth) * currentRadius;
+      camera.position.z = lookTarget.z + Math.cos(currentAzimuth) * currentRadius;
       camera.position.y += (targetCamY - camera.position.y) * 0.08;
       currentLook.x = lookTarget.x;
       currentLook.y += (lookTarget.y + targetNormY * 0.35 - currentLook.y) * 0.08;
@@ -834,6 +860,8 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
       domEl.removeEventListener("pointermove", handlePointerMove);
       domEl.removeEventListener("pointerleave", handlePointerLeave);
       domEl.removeEventListener("click", handlePointerClick);
+      domEl.removeEventListener("wheel", handleWheel);
+      domEl.removeEventListener("dblclick", handleDoubleClick);
       pmremGenerator.dispose();
       envTexture.dispose();
       renderer.dispose();
@@ -1037,10 +1065,23 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
               className="w-20 accent-blue-600 dark:accent-sky-400 sm:w-24"
             />
           </label>
-          {(sliderPan.x !== 0 || sliderPan.y !== 0) && (
+          <label className="flex items-center gap-2 font-medium text-slate-700 dark:text-slate-200">
+            <span>Zoom</span>
+            <input
+              type="range"
+              aria-label="Camera zoom"
+              min={-1}
+              max={1}
+              step={0.02}
+              value={sliderPan.zoom}
+              onChange={(e) => setSliderPan((p) => ({ ...p, zoom: Number(e.target.value) }))}
+              className="w-20 accent-blue-600 dark:accent-sky-400 sm:w-24"
+            />
+          </label>
+          {(sliderPan.x !== 0 || sliderPan.y !== 0 || sliderPan.zoom !== 0) && (
             <button
               type="button"
-              onClick={() => setSliderPan({ x: 0, y: 0 })}
+              onClick={() => setSliderPan({ x: 0, y: 0, zoom: 0 })}
               className="inline-flex items-center gap-1 rounded-lg bg-slate-200/80 px-2 py-1 text-[10px] font-semibold text-slate-700 hover:bg-slate-300/80 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
             >
               <RotateCcw className="h-3 w-3" />
