@@ -643,7 +643,7 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
       const ny = -((e.clientY - rect.top) / rect.height) * 2 + 1;
       pointerNdc.set(nx, ny);
       targetNormX = nx;
-      targetParallaxX = nx * 12.5;
+      targetParallaxX = nx * 16.0;
       targetParallaxY = ny * 2.8;
 
       raycaster.setFromCamera(pointerNdc, camera);
@@ -708,11 +708,11 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
       // Full wing-to-center orbital pan: brings far-left/far-right teams near screen center
       const targetCamX = baseCamPos.x + targetParallaxX;
       const targetCamY = Math.max(4.6, baseCamPos.y + targetParallaxY);
-      const targetCamZ = baseCamPos.z - Math.abs(targetNormX) * 3.8;
+      const targetCamZ = baseCamPos.z - Math.abs(targetNormX) * 4.5;
       camera.position.x += (targetCamX - camera.position.x) * 0.065;
       camera.position.y += (targetCamY - camera.position.y) * 0.065;
       camera.position.z += (targetCamZ - camera.position.z) * 0.065;
-      currentLook.x += (lookTarget.x + targetNormX * 7.5 - currentLook.x) * 0.065;
+      currentLook.x += (lookTarget.x + targetNormX * 10.2 - currentLook.x) * 0.065;
       currentLook.y += (lookTarget.y + targetParallaxY * 0.16 - currentLook.y) * 0.065;
       camera.lookAt(currentLook);
 
