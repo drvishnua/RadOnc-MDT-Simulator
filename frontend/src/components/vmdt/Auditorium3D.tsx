@@ -384,6 +384,7 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
       tierConfigs.forEach((tc) => {
         const geom = buildTierSectorGeometry(tc.rIn, tc.rOut, aStart, aEnd, tc.h, 14);
         const mesh = new THREE.Mesh(geom, mat);
+        mesh.position.z = ARC_CENTER_Z;
         mesh.receiveShadow = true;
         scene.add(mesh);
       });
@@ -398,7 +399,7 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
     ].forEach((edge) => {
       const trimGeom = buildTierSectorGeometry(edge.r - 0.025, edge.r + 0.025, MIN_ANGLE_DEG - 2, MAX_ANGLE_DEG + 2, 0.02, 48);
       const trimMesh = new THREE.Mesh(trimGeom, tierTrimMat);
-      trimMesh.position.y = edge.y - 0.01;
+      trimMesh.position.set(0, edge.y - 0.01, ARC_CENTER_Z);
       scene.add(trimMesh);
     });
 

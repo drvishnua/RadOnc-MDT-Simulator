@@ -151,15 +151,12 @@ export function buildRealisticClinicianMesh(
   shadowDisc.position.y = 0.008;
   group.add(shadowDisc);
 
-  // 5-Star Chrome Caster Base
-  for (let i = 0; i < 5; i += 1) {
-    const angle = (i / 5) * Math.PI * 2;
-    const spoke = new THREE.Mesh(new THREE.BoxGeometry(0.036, 0.024, 0.25), shared.chromeMat);
-    spoke.position.set(Math.sin(angle) * 0.125, 0.032, Math.cos(angle) * 0.125);
-    spoke.rotation.y = angle;
-    group.add(spoke);
-  }
-  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.034, 0.042, 0.22, 12), shared.chromeMat);
+  // Clean Dark Matte Pedestal Base (uncluttered inside glowing floor ring)
+  const baseDisc = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.19, 0.035, 18), shared.chairMat);
+  baseDisc.position.y = 0.02;
+  group.add(baseDisc);
+
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.044, 0.22, 12), shared.chairMat);
   stem.position.y = 0.14;
   group.add(stem);
 
