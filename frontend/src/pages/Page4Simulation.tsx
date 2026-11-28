@@ -12,9 +12,13 @@ import {
 import Auditorium25D from "../components/vmdt/Auditorium25D.js";
 import ConfirmDialog from "../components/vmdt/ConfirmDialog.js";
 import DoctorAvatar from "../components/vmdt/DoctorAvatar.js";
+import type { PreMDTStagingAssessment } from "../types.js";
 import type { AgentSeatStatus, VmdtAgentConfig } from "../virtualMdtTypes.js";
 
 interface Page4SimulationProps {
+  preMdtStaging?: PreMDTStagingAssessment | null;
+  simError?: string | null;
+
   agents: VmdtAgentConfig[];
   simState: "idle" | "running" | "paused" | "completed" | "stopped";
   activeRound: 1 | 2 | 3 | 4;
@@ -52,6 +56,8 @@ export const Page4Simulation: React.FC<Page4SimulationProps> = ({
   activeRound,
   maxRounds,
   completedRounds,
+  preMdtStaging,
+  simError,
   seatStatuses,
   seatConclusions,
   seatArguments,
@@ -127,6 +133,15 @@ export const Page4Simulation: React.FC<Page4SimulationProps> = ({
                   );
                 })}
             </div>
+
+            {preMdtStaging && (
+              <span
+                title={preMdtStaging.summary}
+                className="rounded-full border border-sky-400/35 bg-sky-500/10 px-3 py-1 text-[11px] font-semibold text-blue-700 dark:text-sky-300"
+              >
+                STG-00 Locked: {preMdtStaging.provisional_stage_label}
+              </span>
+            )}
           </div>
 
           {/* Right Global Playback Controls */}
@@ -187,7 +202,12 @@ export const Page4Simulation: React.FC<Page4SimulationProps> = ({
         </div>
 
         {/* Center Stage: Pre-Start OR Live Argument Feed */}
-        <div className="flex min-h-0 flex-1 items-center justify-center py-2">
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 py-2">
+          {simError && (
+            <div className="w-full max-w-2xl rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-2 text-xs font-medium text-rose-700 dark:text-rose-300">
+              {simError}
+            </div>
+          )}
           <AnimatePresence mode="wait">
             {simState === "idle" && !isReadOnly ? (
               <motion.div

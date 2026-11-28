@@ -21,8 +21,12 @@ import Page7Agents from "./pages/Page7Agents.js";
 import Page8Settings from "./pages/Page8Settings.js";
 import type {
   Agent,
+  BatchAgentResult,
+  BatchRunSummary,
   FinalMDTReport,
   IntakeScreening,
+  PatientDetail,
+  PreMDTStagingAssessment,
   RoundAgentResult,
   RoundSummary,
   Runtime,
@@ -58,6 +62,15 @@ function loadJson<T>(key: string, fallback: T): T {
     const raw = window.localStorage.getItem(key);
     if (!raw) return fallback;
     return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+async function readApiError(res: Response, fallback: string): Promise<string> {
+  try {
+    const body = (await res.json()) as { detail?: string };
+    return body.detail || fallback;
   } catch {
     return fallback;
   }
@@ -99,26 +112,26 @@ export function App() {
   const [auditFindings, setAuditFindings] = useState<AuditFinding[]>([]);
   const [isScanningAudit, setIsScanningAudit] = useState(false);
 
-  // Page 4 simulation state
+  // Page 4 real simulation state
   const [simState, setSimState] = useState<"idle" | "running" | "paused" | "completed" | "stopped">("idle");
+  const [simError, setSimError] = useState<string | null>(null);
   const [activeRound, setActiveRound] = useState<1 | 2 | 3 | 4>(1);
   const [completedRounds, setCompletedRounds] = useState<number[]>([]);
-  const [seatStatuses, setSeatStatuses] = useState<Record<string, AgentSeatStatus>>({});
-  const [seatConclusions, setSeatConclusions] = useState<Record<string, string>>({});
-  const [seatArguments, setSeatArguments] = useState<Record<string, string>>({});
+  const [preMdtStaging, setPreMdtStaging] = useState<PreMDTStagingAssessment | null>(null);
+  const [roundSeatStatuses, setRoundSeatStatuses] = useState<Record<number, Record<string, AgentSeatStatus>>>({});
+  const [roundSeatConclusions, setRoundSeatConclusions] = useState<Record<number, Record<string, string>>>({});
+  const [roundSeatArguments, setRoundSeatArguments] = useState<Record<number, Record<string, string>>>({});
   const [activeSpeakerId, setActiveSpeakerId] = useState<string | null>(null);
   const [selectedSimAgentId, setSelectedSimAgentId] = useState<string | null>(null);
-  const [activeRunId, setActiveRunId] = useState<string | null>(null);
   const [isTranscriptReadOnly, setIsTranscriptReadOnly] = useState(false);
   const [activeDecisionCase, setActiveDecisionCase] = useState<ArchivedCase>(
     archivedCases[0] ?? SEED_ARCHIVED_CASES[0],
   );
 
-  const demoTimerRef = useRef<number | null>(null);
   const pollTimerRef = useRef<number | null>(null);
-  const priorityQueueRef = useRef<string[]>([]);
+  const activeRunIdRef = useRef<string | null>(null);
+  const archivedRunIdsRef = useRef<Set<string>>(new Set());
 
-  // Persist local stores automatically
   useEffect(() => {
     try {
       window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
@@ -151,7 +164,7 @@ export function App() {
     }
   }, [form]);
 
-  // Fetch live agents & Ollama runtime on startup
+  // Fetch live 49 agents & Ollama runtime on startup
   useEffect(() => {
     let active = true;
     void Promise.all([
@@ -177,14 +190,13 @@ export function App() {
         }
       })
       .catch(() => {
-        // Offline / preview mode cleanly uses mapped fallback roster
+        // Keep initial mapped roster when backend is offline
       });
     return () => {
       active = false;
     };
   }, []);
 
-  // Build backend-compatible SyntheticCasePayload from form state
   const buildCasePayload = useCallback(
     (sourceForm: Record<string, string> = form): SyntheticCasePayload => {
       const ageRaw = Number(sourceForm.age_years);
@@ -215,7 +227,7 @@ export function App() {
     [form, settings.availableFacilities],
   );
 
-  // Page 2 -> Page 3 Audit logic (backend screen-intake + deterministic team rules)
+  // Page 2 -> Page 3 Audit logic (/api/cases/screen-intake + deterministic team checks)
   const runCaseAudit = useCallback(
     async (customForm?: Record<string, string>) => {
       setIsScanningAudit(true);
@@ -240,7 +252,7 @@ export function App() {
                 fieldKey: q.field_id || "case_summary",
                 domain: q.domain,
                 title: q.question,
-                description: `Requested by intake screening (${q.domain}) before convening MDT rounds.`,
+                description: `Requested by pre-MDT intake screening (${q.domain}) before convening rounds.`,
                 placeholder: `Provide ${q.field_id || q.domain} details...`,
               });
             }
@@ -252,7 +264,7 @@ export function App() {
       } catch {
         setAuditFindings(localFindings);
       } finally {
-        window.setTimeout(() => setIsScanningAudit(false), 1100);
+        window.setTimeout(() => setIsScanningAudit(false), 900);
       }
     },
     [agents, buildCasePayload, form],
@@ -286,7 +298,6 @@ export function App() {
     }
   };
 
-  // Auto-save helper when simulation completes or stops
   const finalizeAndArchiveCase = useCallback(
     (
       status: "Completed" | "Stopped Early",
@@ -294,16 +305,24 @@ export function App() {
       statusesMap: Record<string, AgentSeatStatus>,
       backendReport?: FinalMDTReport | null,
       runId?: string | null,
+      staging?: PreMDTStagingAssessment | null,
     ) => {
+      if (runId && archivedRunIdsRef.current.has(runId)) return;
+      if (runId) archivedRunIdsRef.current.add(runId);
+
       const payload = buildCasePayload();
       const activeList = agents.filter((a) => a.active);
-      const completedCount = activeList.filter((a) => statusesMap[a.id] === "completed").length;
+      const completedCount = Object.values(statusesMap).filter((s) => s === "completed").length;
       const consensusPct =
         status === "Completed"
-          ? Math.max(82, Math.min(97, Math.round(settings.consensusThreshold + 12)))
-          : Math.max(45, Math.round((completedCount / Math.max(1, activeList.length)) * 85));
+          ? backendReport?.consensus_status?.toLowerCase().includes("broad") ||
+            backendReport?.consensus_status?.toLowerCase().includes("strong")
+            ? 92
+            : 84
+          : Math.max(40, Math.round((completedCount / Math.max(1, activeList.length)) * 80));
 
       const stageStr =
+        staging?.provisional_stage_label ||
         [payload.clinical_t_stage, payload.clinical_n_stage, payload.clinical_m_stage]
           .filter(Boolean)
           .join(" ") ||
@@ -316,7 +335,7 @@ export function App() {
       const nowStr = new Date().toISOString().slice(0, 16).replace("T", " ");
 
       const newRecord: ArchivedCase = {
-        id: `case-${Date.now()}`,
+        id: runId ? `run-${runId}` : `case-${Date.now()}`,
         caseCode,
         patientName: (form.patient_name || "").trim() || "Synthetic Patient",
         ageSex: `${payload.age_years ?? "--"}${
@@ -334,41 +353,43 @@ export function App() {
         createdAt: nowStr,
         primaryRecommendation:
           backendReport?.chair_conclusion ||
-          `Multidisciplinary consensus for ${payload.scenario_title} (${stageStr}) recommends coordinated multimodal organ-preserving evaluation anchored by STG-00 locked staging and guideline-concordant QA.`,
+          backendReport?.overall_educational_synthesis ||
+          "Simulation stopped before Chair synthesis completed.",
         clinicalRationale:
           backendReport?.consensus_points?.length
             ? backendReport.consensus_points
-            : [
-                `Reviewed across ${activeList.length} active specialists across ${settings.rounds} structured MDT round(s).`,
-                `Respects institution resource baseline (${settings.availableFacilities.slice(0, 4).join(", ") || "standard facilities"}).`,
+            : backendReport?.recorded_agreements?.slice(0, 4) ?? [
+                `STG-00 Stage: ${stageStr}`,
+                `${completedCount} specialists recorded round outputs.`,
               ],
         followUpPlan:
           backendReport?.missing_information_before_real_world_review?.length
             ? backendReport.missing_information_before_real_world_review
-            : [
-                "Verify pathology biomarkers and imaging node measurements prior to final clinical sign-off.",
-                "Monitor acute mucosal/organ-at-risk toxicity thresholds and nutritional reserve weekly.",
+            : backendReport?.major_uncertainties ?? [
+                "Verify missing diagnostic biomarkers and imaging findings prior to clinical review.",
               ],
         dissentingViews: backendReport?.minority_and_dissenting_views ?? [],
         radiationPlan:
           conclusionsMap["RO-01"] ||
           conclusionsMap["RO-02"] ||
-          "Conformal definitive or adjuvant radiotherapy respecting serial OAR dose bounds.",
+          "Review Radiation Oncology R1–R3 outputs in transcript.",
         systemicPlan:
           conclusionsMap["MO-01"] ||
           conclusionsMap["MO-02"] ||
-          "Cisplatin-based concurrent or induction chemotherapy per organ clearance & biomarkers.",
+          "Review Medical Oncology R1–R3 outputs in transcript.",
         surgicalPlan:
           conclusionsMap["SO-01"] ||
-          "Surgical resectability vs organ-preservation balance aligned with R0 margin criteria.",
-        evidenceSummary: `${consensusPct}% agreement across ${completedCount}/${activeList.length} specialists (${status}).`,
+          "Review Surgical Oncology R1–R3 outputs in transcript.",
+        evidenceSummary:
+          backendReport?.consensus_status ||
+          `${consensusPct}% agreement across ${completedCount} specialists (${status}).`,
         specialtyWeighting: [
           { team: "Radiation Oncology", weight: 34, color: "#38BDF8" },
           { team: "Medical Oncology", weight: 28, color: "#818CF8" },
           { team: "Surgical Oncology", weight: 22, color: "#34D399" },
           { team: "Diagnostics & Genetics", weight: 16, color: "#F472B6" },
         ],
-        participatingAgents: activeList.slice(0, 12).map((a) => ({
+        participatingAgents: activeList.map((a) => ({
           id: a.id,
           name: a.displayName,
           specialty: a.specialty,
@@ -384,248 +405,291 @@ export function App() {
       setActiveDecisionCase(newRecord);
       return newRecord;
     },
-    [agents, buildCasePayload, form.patient_name, settings],
+    [agents, buildCasePayload, form.patient_name],
   );
 
-  // Stop background simulation loops on unmount
-  const clearTimers = useCallback(() => {
-    if (demoTimerRef.current !== null) {
-      window.clearInterval(demoTimerRef.current);
-      demoTimerRef.current = null;
-    }
+  const stopPolling = useCallback(() => {
     if (pollTimerRef.current !== null) {
       window.clearInterval(pollTimerRef.current);
       pollTimerRef.current = null;
     }
   }, []);
 
-  useEffect(() => () => clearTimers(), [clearTimers]);
+  useEffect(() => () => stopPolling(), [stopPolling]);
 
-  // Fast responsive step engine (works seamlessly with live backend or standalone demo fallback)
-  const startOrResumeStandaloneStepper = useCallback(
-    (initialStatuses: Record<string, AgentSeatStatus>, startRound: 1 | 2 | 3 | 4) => {
-      clearTimers();
-      const activeList = agents.filter((a) => a.active);
-      let currentStatuses = { ...initialStatuses };
-      let currentConclusions: Record<string, string> = { ...seatConclusions };
-      let currentRound = startRound;
+  // Real backend polling across R1 (/api/runs/{id}) -> R2/R3/R4 (/api/runs/{id}/rounds/{r}) -> /report
+  const pollBackendRun = useCallback(
+    async (runId: string) => {
+      if (activeRunIdRef.current !== runId) return;
+      try {
+        const [r1Res, r1ResultsRes] = await Promise.all([
+          fetch(`${API_BASE}/api/runs/${runId}`),
+          fetch(`${API_BASE}/api/runs/${runId}/results`),
+        ]);
+        if (!r1Res.ok) return;
 
-      demoTimerRef.current = window.setInterval(() => {
-        // Respect priority queue if user clicked "Run First"
-        const priorityId = priorityQueueRef.current.shift();
-        const queued = activeList.filter((a) => currentStatuses[a.id] === "queued");
-        const nextAgent =
-          (priorityId && activeList.find((a) => a.id === priorityId && currentStatuses[a.id] === "queued")) ||
-          queued[0];
+        const r1Summary = (await r1Res.json()) as BatchRunSummary;
+        if (r1Summary.pre_mdt_staging) {
+          setPreMdtStaging(r1Summary.pre_mdt_staging);
+        }
 
-        if (!nextAgent) {
-          // Mark round complete only when all active agents finished
-          setCompletedRounds((prev) => (prev.includes(currentRound) ? prev : [...prev, currentRound]));
-          if (currentRound < settings.rounds) {
-            currentRound = (currentRound + 1) as 1 | 2 | 3 | 4;
-            setActiveRound(currentRound);
-            const resetForNext: Record<string, AgentSeatStatus> = {};
-            activeList.forEach((a) => {
-              resetForNext[a.id] = "queued";
-            });
-            currentStatuses = resetForNext;
-            setSeatStatuses(resetForNext);
-            return;
+        if (r1ResultsRes.ok) {
+          const r1Body = (await r1ResultsRes.json()) as { results?: BatchAgentResult[] };
+          const st1: Record<string, AgentSeatStatus> = {};
+          const conc1: Record<string, string> = {};
+          const arg1: Record<string, string> = {};
+          for (const row of r1Body.results || []) {
+            st1[row.agent_id] = row.status === "stopped" ? "paused" : row.status;
+            if (row.assessment) {
+              conc1[row.agent_id] = row.assessment.provisional_conclusion;
+              arg1[row.agent_id] =
+                `${row.assessment.provisional_conclusion}\n\nPreferred option: ${row.assessment.preferred_educational_option}\n\n${row.assessment.perspective_summary}`.trim();
+            } else if (row.error_message) {
+              arg1[row.agent_id] = `Error: ${row.error_message}`;
+            }
           }
+          setRoundSeatStatuses((prev) => ({ ...prev, 1: st1 }));
+          setRoundSeatConclusions((prev) => ({ ...prev, 1: conc1 }));
+          setRoundSeatArguments((prev) => ({ ...prev, 1: arg1 }));
+        }
 
-          clearTimers();
-          setActiveSpeakerId(null);
+        const r1Done =
+          r1Summary.status === "completed" || r1Summary.status === "completed_with_errors";
+        const doneRounds: number[] = r1Done ? [1] : [];
+        let liveRound: 1 | 2 | 3 | 4 = 1;
+        let currentSpeaker: string | null = r1Summary.current_agent_id;
+        let latestStatus = r1Summary.status;
+
+        if (r1Done) {
+          for (const roundNum of [2, 3, 4] as const) {
+            const roundRes = await fetch(`${API_BASE}/api/runs/${runId}/rounds/${roundNum}`);
+            if (!roundRes.ok) break;
+            const roundSum = (await roundRes.json()) as RoundSummary;
+            liveRound = roundNum;
+            latestStatus = roundSum.status;
+            if (roundSum.current_agent_id) {
+              currentSpeaker = roundSum.current_agent_id;
+            }
+
+            const rrRes = await fetch(`${API_BASE}/api/runs/${runId}/rounds/${roundNum}/results`);
+            if (rrRes.ok) {
+              const rrBody = (await rrRes.json()) as { results?: RoundAgentResult[] };
+              const stR: Record<string, AgentSeatStatus> = {};
+              const concR: Record<string, string> = {};
+              const argR: Record<string, string> = {};
+              for (const row of rrBody.results || []) {
+                stR[row.agent_id] = row.status === "stopped" ? "paused" : row.status;
+                if (row.result) {
+                  concR[row.agent_id] = row.result.provisional_conclusion;
+                  argR[row.agent_id] =
+                    `${row.result.provisional_conclusion}\n\n${row.result.response_to_other_perspectives}`.trim();
+                } else if (row.error_message) {
+                  argR[row.agent_id] = `Error: ${row.error_message}`;
+                }
+              }
+              setRoundSeatStatuses((prev) => ({ ...prev, [roundNum]: stR }));
+              setRoundSeatConclusions((prev) => ({ ...prev, [roundNum]: concR }));
+              setRoundSeatArguments((prev) => ({ ...prev, [roundNum]: argR }));
+            }
+
+            if (roundSum.status === "completed" || roundSum.status === "completed_with_errors") {
+              doneRounds.push(roundNum);
+            } else {
+              break;
+            }
+          }
+        }
+
+        setCompletedRounds(doneRounds);
+        setActiveRound(liveRound);
+        setActiveSpeakerId(currentSpeaker);
+
+        if (latestStatus === "paused") {
+          setSimState("paused");
+        } else if (latestStatus === "stopped") {
+          stopPolling();
+          setSimState("stopped");
+        } else if (doneRounds.includes(4)) {
+          stopPolling();
           setSimState("completed");
-          finalizeAndArchiveCase("Completed", currentConclusions, currentStatuses, null, activeRunId);
-          return;
+          setActiveSpeakerId(null);
+          const repRes = await fetch(`${API_BASE}/api/runs/${runId}/report`);
+          const rep = repRes.ok ? ((await repRes.json()) as FinalMDTReport) : null;
+          finalizeAndArchiveCase(
+            "Completed",
+            roundSeatConclusions[1] ?? {},
+            roundSeatStatuses[1] ?? {},
+            rep,
+            runId,
+            r1Summary.pre_mdt_staging ?? preMdtStaging,
+          );
         }
-
-        // Complete any previously running speaker first, or step next speaker
-        const runningPrev = activeList.find((a) => currentStatuses[a.id] === "running");
-        if (runningPrev) {
-          currentStatuses[runningPrev.id] = "completed";
-        }
-
-        currentStatuses[nextAgent.id] = "running";
-        setActiveSpeakerId(nextAgent.id);
-        const payload = buildCasePayload();
-        const conc = `[Round ${currentRound}] ${nextAgent.specialty} (${nextAgent.subspecialty}): Recommends guideline-aligned plan for ${payload.primary_site || "tumor"} respecting STG-00 staging (${payload.clinical_t_stage || "cTx"} ${payload.clinical_n_stage || "cNx"} ${payload.clinical_m_stage || "cMx"}) and ${
-          nextAgent.availableResources.length
-            ? `available resources (${nextAgent.availableResources.slice(0, 2).join(", ")})`
-            : "patient functional priorities"
-        }.`;
-        currentConclusions[nextAgent.id] = conc;
-
-        setSeatStatuses({ ...currentStatuses });
-        setSeatConclusions((prev) => ({ ...prev, [nextAgent.id]: conc }));
-        setSeatArguments((prev) => ({
-          ...prev,
-          [nextAgent.id]: `${conc}\n\nReasoning basis: ${nextAgent.innatePersonality} Evaluated comorbidities (${payload.relevant_comorbidities.join(", ") || "none specified"}) and imaging summary (${payload.imaging_summary || "pending"}).`,
-        }));
-        window.setTimeout(() => {
-          currentStatuses[nextAgent.id] = "completed";
-          setSeatStatuses((prev) => ({ ...prev, [nextAgent.id]: "completed" }));
-        }, 120);
-      }, 170);
+      } catch {
+        // Transient network hiccup; keep polling
+      }
     },
-    [
-      activeRunId,
-      agents,
-      buildCasePayload,
-      clearTimers,
-      finalizeAndArchiveCase,
-      seatConclusions,
-      settings.rounds,
-    ],
+    [finalizeAndArchiveCase, preMdtStaging, roundSeatConclusions, roundSeatStatuses, stopPolling],
   );
 
+  // Real pipeline: /api/intakes -> /accept -> /promote -> /api/patients/{id}/runs (full_simulation: true)
   const handleStartSimulation = async () => {
+    setSimError(null);
     setIsTranscriptReadOnly(false);
+    stopPolling();
+
     const activeList = agents.filter((a) => a.active);
     const initStatuses: Record<string, AgentSeatStatus> = {};
     activeList.forEach((a) => {
       initStatuses[a.id] = "queued";
     });
-    setSeatStatuses(initStatuses);
-    setSeatConclusions({});
-    setSeatArguments({});
+    setRoundSeatStatuses({ 1: initStatuses });
+    setRoundSeatConclusions({});
+    setRoundSeatArguments({});
     setCompletedRounds([]);
     setActiveRound(1);
+    setPreMdtStaging(null);
     setSimState("running");
 
-    // Attempt backend batch run; fall back cleanly to local responsive simulation if offline
     try {
       const payload = buildCasePayload();
-      const createRes = await fetch(`${API_BASE}/api/runs`, {
+      // 1. Create intake session
+      const intakeRes = await fetch(`${API_BASE}/api/intakes`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ case: payload }),
       });
-      if (createRes.ok) {
-        const runBody = (await createRes.json()) as { run_id: string };
-        setActiveRunId(runBody.run_id);
-        await fetch(`${API_BASE}/api/runs/${runBody.run_id}/run-full`, { method: "POST" });
-
-        // Poll backend round 1..N while alive
-        pollTimerRef.current = window.setInterval(async () => {
-          try {
-            const [roundRes, resultsRes] = await Promise.all([
-              fetch(`${API_BASE}/api/runs/${runBody.run_id}/rounds/${activeRound}`),
-              fetch(`${API_BASE}/api/runs/${runBody.run_id}/rounds/${activeRound}/results`),
-            ]);
-            if (!roundRes.ok || !resultsRes.ok) return;
-            const summary = (await roundRes.json()) as RoundSummary;
-            const resultsBody = (await resultsRes.json()) as { results?: RoundAgentResult[] };
-            const statusPatch: Record<string, AgentSeatStatus> = {};
-            const concPatch: Record<string, string> = {};
-            const argPatch: Record<string, string> = {};
-            for (const row of resultsBody.results || []) {
-              statusPatch[row.agent_id] =
-                row.status === "stopped" ? "paused" : row.status;
-              if (row.result?.provisional_conclusion) {
-                concPatch[row.agent_id] = row.result.provisional_conclusion;
-                argPatch[row.agent_id] =
-                  `${row.result.provisional_conclusion}\n\n${row.result.response_to_other_perspectives || ""}`.trim();
-              }
-            }
-            setSeatStatuses((prev) => ({ ...prev, ...statusPatch }));
-            setSeatConclusions((prev) => ({ ...prev, ...concPatch }));
-            setSeatArguments((prev) => ({ ...prev, ...argPatch }));
-            setActiveSpeakerId(summary.current_agent_id);
-            if (summary.status === "completed") {
-              setCompletedRounds((prev) => (prev.includes(activeRound) ? prev : [...prev, activeRound]));
-              if (activeRound >= settings.rounds) {
-                clearTimers();
-                setSimState("completed");
-                const repRes = await fetch(`${API_BASE}/api/runs/${runBody.run_id}/report`);
-                const rep = repRes.ok ? ((await repRes.json()) as FinalMDTReport) : null;
-                finalizeAndArchiveCase("Completed", concPatch, statusPatch, rep, runBody.run_id);
-              }
-            }
-          } catch {
-            // keep polling or let standalone continue
-          }
-        }, 1800);
-        return;
+      if (!intakeRes.ok) {
+        throw new Error(await readApiError(intakeRes, "Failed to create pre-MDT intake session."));
       }
-    } catch {
-      // Backend unreachable -> run local interactive simulation engine cleanly
-    }
+      const intakeData = (await intakeRes.json()) as { session_id: string };
 
-    startOrResumeStandaloneStepper(initStatuses, 1);
+      // 2. Accept intake (with any preserved gaps)
+      const acceptRes = await fetch(`${API_BASE}/api/intakes/${intakeData.session_id}/accept`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmed: true }),
+      });
+      if (!acceptRes.ok) {
+        throw new Error(await readApiError(acceptRes, "Failed to accept pre-MDT intake."));
+      }
+
+      // 3. Promote to immutable patient case version
+      const rawName = (form.patient_name || "").trim();
+      const patientName =
+        rawName.length >= 2 ? rawName : payload.scenario_title.slice(0, 80) || "Synthetic Patient";
+      const promoteRes = await fetch(`${API_BASE}/api/intakes/${intakeData.session_id}/promote`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ patient_name: patientName }),
+      });
+      if (!promoteRes.ok) {
+        throw new Error(await readApiError(promoteRes, "Failed to promote case to patient version."));
+      }
+      const patientDetail = (await promoteRes.json()) as PatientDetail;
+      const versionId = patientDetail.versions?.[0]?.case_version_id;
+      if (!patientDetail.patient_id || !versionId) {
+        throw new Error("Promoted patient record did not return a case_version_id.");
+      }
+
+      // 4. Launch full 4-round simulation (STG-00 + R1 -> R2 -> R3 -> R4 Chair)
+      const runRes = await fetch(`${API_BASE}/api/patients/${patientDetail.patient_id}/runs`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          case_version_id: versionId,
+          full_simulation: true,
+        }),
+      });
+      if (!runRes.ok) {
+        throw new Error(await readApiError(runRes, "Failed to start 4-round MDT simulation."));
+      }
+      const runSummary = (await runRes.json()) as BatchRunSummary;
+      activeRunIdRef.current = runSummary.run_id;
+      if (runSummary.pre_mdt_staging) {
+        setPreMdtStaging(runSummary.pre_mdt_staging);
+      }
+
+      void pollBackendRun(runSummary.run_id);
+      pollTimerRef.current = window.setInterval(() => {
+        void pollBackendRun(runSummary.run_id);
+      }, 1500);
+    } catch (err) {
+      setSimState("idle");
+      setSimError(
+        err instanceof Error
+          ? err.message
+          : "Unable to reach the FastAPI/Ollama simulation backend.",
+      );
+    }
   };
 
-  const handlePauseToggle = () => {
+  const handlePauseToggle = async () => {
+    const runId = activeRunIdRef.current;
+    if (!runId) return;
     if (simState === "running") {
-      clearTimers();
       setSimState("paused");
-      if (activeRunId) {
-        void fetch(`${API_BASE}/api/runs/${activeRunId}/pause`, { method: "POST" }).catch(() => {});
-      }
+      await fetch(`${API_BASE}/api/runs/${runId}/pause`, { method: "POST" }).catch(() => {});
     } else if (simState === "paused") {
       setSimState("running");
-      if (activeRunId) {
-        void fetch(`${API_BASE}/api/runs/${activeRunId}/unpause`, { method: "POST" }).catch(() => {});
-      } else {
-        startOrResumeStandaloneStepper(seatStatuses, activeRound);
-      }
+      await fetch(`${API_BASE}/api/runs/${runId}/unpause`, { method: "POST" }).catch(() => {});
     }
   };
 
-  const handleStopSimulation = () => {
-    clearTimers();
-    if (activeRunId) {
-      void fetch(`${API_BASE}/api/runs/${activeRunId}/stop`, { method: "POST" }).catch(() => {});
+  const handleStopSimulation = async () => {
+    const runId = activeRunIdRef.current;
+    stopPolling();
+    if (runId) {
+      await fetch(`${API_BASE}/api/runs/${runId}/stop`, { method: "POST" }).catch(() => {});
+      const r1Conc = roundSeatConclusions[1] ?? {};
+      const r1Stat = roundSeatStatuses[1] ?? {};
+      if (Object.keys(r1Conc).length > 0) {
+        finalizeAndArchiveCase("Stopped Early", r1Conc, r1Stat, null, runId, preMdtStaging);
+      }
     }
-    if (Object.keys(seatConclusions).length > 0) {
-      finalizeAndArchiveCase("Stopped Early", seatConclusions, seatStatuses, null, activeRunId);
-    }
-    setActiveRunId(null);
+    activeRunIdRef.current = null;
     setSimState("idle");
     setActiveRound(1);
     setCompletedRounds([]);
-    setSeatStatuses({});
-    setSeatConclusions({});
-    setSeatArguments({});
+    setRoundSeatStatuses({});
+    setRoundSeatConclusions({});
+    setRoundSeatArguments({});
     setActiveSpeakerId(null);
     setSelectedSimAgentId(null);
   };
 
-  const handleRestartSimulation = () => {
-    clearTimers();
-    if (activeRunId) {
-      void fetch(`${API_BASE}/api/runs/${activeRunId}/restart`, { method: "POST" }).catch(() => {});
+  const handleRestartSimulation = async () => {
+    const runId = activeRunIdRef.current;
+    stopPolling();
+    if (runId) {
+      await fetch(`${API_BASE}/api/runs/${runId}/restart`, { method: "POST" }).catch(() => {});
     }
-    void handleStartSimulation();
+    await handleStartSimulation();
   };
 
-  const handleRunFirst = (agentId: string) => {
-    priorityQueueRef.current = [agentId, ...priorityQueueRef.current.filter((id) => id !== agentId)];
+  const handleRetryAgent = async (agentId: string) => {
+    const runId = activeRunIdRef.current;
+    if (!runId) return;
+    setRoundSeatStatuses((prev) => ({
+      ...prev,
+      [activeRound]: { ...(prev[activeRound] || {}), [agentId]: "queued" },
+    }));
+    await fetch(`${API_BASE}/api/runs/${runId}/rounds/${activeRound}/agents/${agentId}/run`, {
+      method: "POST",
+    }).catch(() => {});
   };
 
-  const handleRetryAgent = (agentId: string) => {
-    setSeatStatuses((prev) => ({ ...prev, [agentId]: "queued" }));
-    priorityQueueRef.current = [agentId, ...priorityQueueRef.current];
-    if (activeRunId) {
-      void fetch(`${API_BASE}/api/runs/${activeRunId}/rounds/${activeRound}/agents/${agentId}/run`, {
-        method: "POST",
-      }).catch(() => {});
-    } else if (simState === "completed" || simState === "paused") {
-      setSimState("running");
-      startOrResumeStandaloneStepper({ ...seatStatuses, [agentId]: "queued" }, activeRound);
-    }
+  const handlePauseAgent = async (agentId: string) => {
+    const runId = activeRunIdRef.current;
+    if (!runId) return;
+    setRoundSeatStatuses((prev) => ({
+      ...prev,
+      [activeRound]: { ...(prev[activeRound] || {}), [agentId]: "paused" },
+    }));
+    await fetch(`${API_BASE}/api/runs/${runId}/rounds/${activeRound}/agents/${agentId}/stop`, {
+      method: "POST",
+    }).catch(() => {});
   };
 
-  const handlePauseAgent = (agentId: string) => {
-    setSeatStatuses((prev) => ({ ...prev, [agentId]: "paused" }));
-    if (activeRunId) {
-      void fetch(`${API_BASE}/api/runs/${activeRunId}/rounds/${activeRound}/agents/${agentId}/stop`, {
-        method: "POST",
-      }).catch(() => {});
-    }
-  };
-
-  // Page 7 Agent management handlers
   const handleUpdateAgent = (id: string, patch: Partial<VmdtAgentConfig>) => {
     setAgents((prev) => {
       const next = prev.map((a) => (a.id === id ? { ...a, ...patch } : a));
@@ -697,7 +761,6 @@ export function App() {
     );
   };
 
-  // Profile Drawer KPI stats
   const profileStats = useMemo(() => {
     const convened = archivedCases.length;
     const completedList = archivedCases.filter((c) => c.status === "Completed");
@@ -719,6 +782,11 @@ export function App() {
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  const currentSeatStatuses = roundSeatStatuses[activeRound] ?? roundSeatStatuses[1] ?? {};
+  const currentSeatConclusions =
+    roundSeatConclusions[activeRound] ?? roundSeatConclusions[1] ?? {};
+  const currentSeatArguments = roundSeatArguments[activeRound] ?? roundSeatArguments[1] ?? {};
 
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-gradient-to-br from-[#F8FAFC] to-[#E2E8F0] text-[#0F172A] transition-colors duration-300 dark:from-[#070B14] dark:to-[#0D1526] dark:text-[#F8FAFC]">
@@ -770,6 +838,7 @@ export function App() {
                 onResolveFinding={handleResolveFinding}
                 onConveneBoard={() => {
                   setIsTranscriptReadOnly(false);
+                  setSimError(null);
                   setSimState("idle");
                   setCurrentPage("simulation");
                 }}
@@ -783,21 +852,23 @@ export function App() {
                 activeRound={activeRound}
                 maxRounds={settings.rounds}
                 completedRounds={completedRounds}
-                seatStatuses={seatStatuses}
-                seatConclusions={seatConclusions}
-                seatArguments={seatArguments}
+                preMdtStaging={preMdtStaging}
+                simError={simError}
+                seatStatuses={currentSeatStatuses}
+                seatConclusions={currentSeatConclusions}
+                seatArguments={currentSeatArguments}
                 activeSpeakerId={activeSpeakerId}
                 selectedAgentId={selectedSimAgentId}
                 isReadOnly={isTranscriptReadOnly}
                 onSelectAgent={setSelectedSimAgentId}
                 onSelectRound={(r) => setActiveRound(r)}
                 onStart={() => void handleStartSimulation()}
-                onPauseToggle={handlePauseToggle}
-                onRestart={handleRestartSimulation}
-                onStop={handleStopSimulation}
-                onRunFirst={handleRunFirst}
-                onRetryAgent={handleRetryAgent}
-                onPauseAgent={handlePauseAgent}
+                onPauseToggle={() => void handlePauseToggle()}
+                onRestart={() => void handleRestartSimulation()}
+                onStop={() => void handleStopSimulation()}
+                onRunFirst={(id) => void handleRetryAgent(id)}
+                onRetryAgent={(id) => void handleRetryAgent(id)}
+                onPauseAgent={(id) => void handlePauseAgent(id)}
                 onBackToAudit={() =>
                   setCurrentPage(isTranscriptReadOnly ? "past-cases" : "audit")
                 }
@@ -839,9 +910,9 @@ export function App() {
                     stMap[p.id] = p.status;
                     concMap[p.id] = p.conclusion;
                   });
-                  setSeatStatuses(stMap);
-                  setSeatConclusions(concMap);
-                  setSeatArguments(concMap);
+                  setRoundSeatStatuses({ 1: stMap, 2: stMap, 3: stMap, 4: stMap });
+                  setRoundSeatConclusions({ 1: concMap, 2: concMap, 3: concMap, 4: concMap });
+                  setRoundSeatArguments({ 1: concMap, 2: concMap, 3: concMap, 4: concMap });
                   setCompletedRounds([1, 2, 3, 4]);
                   setActiveRound(4);
                   setSimState("completed");
