@@ -613,8 +613,8 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
       const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       const ny = -((e.clientY - rect.top) / rect.height) * 2 + 1;
       pointerNdc.set(nx, ny);
-      targetParallaxX = nx * 0.45;
-      targetParallaxY = ny * 0.18;
+      targetParallaxX = nx * 3.2;
+      targetParallaxY = ny * 0.8;
 
       raycaster.setFromCamera(pointerNdc, camera);
       const hits = raycaster.intersectObjects(hitboxes, false);
@@ -645,8 +645,14 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
       }
     };
 
+    const handlePointerLeave = () => {
+      targetParallaxX = 0;
+      targetParallaxY = 0;
+    };
+
     const domEl = renderer.domElement;
     domEl.addEventListener("pointermove", handlePointerMove);
+    domEl.addEventListener("pointerleave", handlePointerLeave);
     domEl.addEventListener("click", handlePointerClick);
 
     const resizeObserver = new ResizeObserver(() => {
@@ -662,15 +668,17 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
     let rafId = 0;
     let frameCount = 0;
     const projVec = new THREE.Vector3();
+    const currentLook = lookTarget.clone();
 
     const animate = (timeMs: number) => {
       rafId = requestAnimationFrame(animate);
       const t = timeMs * 0.001;
 
-      // Smooth camera parallax
-      camera.position.x += (baseCamPos.x + targetParallaxX - camera.position.x) * 0.06;
-      camera.position.y += (baseCamPos.y + targetParallaxY - camera.position.y) * 0.06;
-      camera.lookAt(lookTarget);
+      // Smooth orbital camera pan + subtle look-target shift toward hovered wing
+      camera.position.x += (baseCamPos.x + targetParallaxX - camera.position.x) * 0.065;
+      camera.position.y += (baseCamPos.y + targetParallaxY - camera.position.y) * 0.065;
+      currentLook.x += (lookTarget.x + targetParallaxX * 0.375 - currentLook.x) * 0.065;
+      camera.lookAt(currentLook);
 
       // Update seat status rings, beams, and hover lift
       const curMode = modeRef.current;
@@ -754,6 +762,7 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
       themeObserver.disconnect();
       resizeObserver.disconnect();
       domEl.removeEventListener("pointermove", handlePointerMove);
+      domEl.removeEventListener("pointerleave", handlePointerLeave);
       domEl.removeEventListener("click", handlePointerClick);
       pmremGenerator.dispose();
       envTexture.dispose();
