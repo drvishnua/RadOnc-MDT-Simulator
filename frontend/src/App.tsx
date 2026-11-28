@@ -183,14 +183,15 @@ export function App() {
     }
   }, [form]);
 
-  // Fetch live 49 agents & Ollama runtime on startup
+  // Fetch live 49 agents, Ollama runtime & any active run on startup
   useEffect(() => {
     let active = true;
     void Promise.all([
       fetch(`${API_BASE}/api/agents`).then((r) => (r.ok ? r.json() : null)),
       fetch(`${API_BASE}/api/runtime`).then((r) => (r.ok ? r.json() : null)),
+      fetch(`${API_BASE}/api/runs/active`).then((r) => (r.ok ? r.json() : null)),
     ])
-      .then(([agentsRes, runtimeRes]) => {
+      .then(([agentsRes, runtimeRes, activeRunRes]) => {
         if (!active) return;
         const rawAgents = (agentsRes as { agents?: Agent[] } | null)?.agents ?? [];
         const runtime = runtimeRes as Runtime | null;
@@ -206,6 +207,19 @@ export function App() {
           );
           const overrides = loadJson<Record<string, Partial<VmdtAgentConfig>>>(AGENT_OVERRIDES_KEY, {});
           setAgents(mapped.map((a) => (overrides[a.id] ? { ...a, ...overrides[a.id] } : a)));
+        }
+        const activePayload = activeRunRes as { active?: boolean; run?: BatchRunSummary | null } | null;
+        const activeRun = activePayload?.run;
+        if (activePayload?.active && activeRun?.run_id && !activeRunIdRef.current) {
+          activeRunIdRef.current = activeRun.run_id;
+          setSimState(activeRun.status === "paused" ? "paused" : "running");
+          void pollBackendRun(activeRun.run_id);
+          if (pollTimerRef.current !== null) {
+            window.clearInterval(pollTimerRef.current);
+          }
+          pollTimerRef.current = window.setInterval(() => {
+            void pollBackendRun(activeRun.run_id);
+          }, 1500);
         }
       })
       .catch(() => {
@@ -823,6 +837,10 @@ export function App() {
         userProfile={userProfile}
         onOpenProfile={() => setProfileOpen(true)}
         profileOpen={profileOpen}
+        hasActiveRun={simState === "running" || simState === "paused"}
+        activeRunRound={activeRound}
+        activeRunPaused={simState === "paused"}
+        onReturnToActiveRun={() => setCurrentPage("simulation")}
       />
 
       <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden">

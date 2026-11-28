@@ -257,6 +257,37 @@ async def create_independent_batch(
     )
 
 
+@app.get("/api/runs/active")
+async def get_active_run() -> dict[str, object]:
+    """Return the latest active or paused simulation run, if any."""
+    run_store.initialize_database()
+    active_run_id: str | None = None
+    with run_store._connect() as db:
+        run_store._ensure_round_tables(db)
+        row = db.execute(
+            """
+            SELECT sr.run_id
+            FROM simulation_runs sr
+            LEFT JOIN round_runs rr
+              ON rr.run_id = sr.run_id
+             AND rr.round_number = (
+                 SELECT MAX(r2.round_number)
+                 FROM round_runs r2
+                 WHERE r2.run_id = sr.run_id
+             )
+            WHERE sr.status IN ('queued', 'running', 'paused')
+               OR rr.status IN ('queued', 'running', 'paused')
+            ORDER BY COALESCE(rr.updated_at, sr.updated_at) DESC, sr.created_at DESC, sr.rowid DESC
+            LIMIT 1
+            """
+        ).fetchone()
+        if row is not None:
+            active_run_id = row["run_id"]
+    if active_run_id is None:
+        return {"active": False, "run": None}
+    return {"active": True, "run": run_store.get_run(active_run_id)}
+
+
 @app.get("/api/runs/{run_id}")
 async def get_independent_batch(run_id: str) -> dict[str, object]:
     try:

@@ -10,6 +10,10 @@ interface TopNavbarProps {
   userProfile: UserProfile;
   onOpenProfile: () => void;
   profileOpen: boolean;
+  hasActiveRun?: boolean;
+  activeRunRound?: number;
+  activeRunPaused?: boolean;
+  onReturnToActiveRun?: () => void;
 }
 
 const NAV_ITEMS: Array<{ id: VmdtPageId; label: string }> = [
@@ -26,6 +30,10 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
   userProfile,
   onOpenProfile,
   profileOpen,
+  hasActiveRun = false,
+  activeRunRound = 1,
+  activeRunPaused = false,
+  onReturnToActiveRun,
 }) => {
   const initials =
     userProfile.fullName
@@ -98,8 +106,35 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
         })}
       </nav>
 
-      {/* Right Theme Switch & Profile Trigger */}
+      {/* Right Active Run Pill, Theme Switch & Profile Trigger */}
       <div className="flex items-center gap-3">
+        {hasActiveRun && currentPage !== "simulation" && (
+          <button
+            type="button"
+            onClick={() => onReturnToActiveRun?.()}
+            className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold shadow-sm transition-all hover:scale-[1.02] focus-visible:outline-2 focus-visible:outline-sky-400 ${
+              activeRunPaused
+                ? "border-amber-500/40 bg-amber-500/15 text-amber-800 hover:bg-amber-500/25 dark:border-amber-400/40 dark:bg-amber-500/20 dark:text-amber-200 dark:hover:bg-amber-500/30"
+                : "border-emerald-500/40 bg-emerald-500/15 text-emerald-800 hover:bg-emerald-500/25 dark:border-emerald-400/40 dark:bg-emerald-500/20 dark:text-emerald-200 dark:hover:bg-emerald-500/30"
+            }`}
+          >
+            <span className="relative flex h-2 w-2" aria-hidden="true">
+              <span
+                className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 ${
+                  activeRunPaused ? "bg-amber-500" : "bg-emerald-500"
+                }`}
+              />
+              <span
+                className={`relative inline-flex h-2 w-2 rounded-full ${
+                  activeRunPaused ? "bg-amber-500" : "bg-emerald-500"
+                }`}
+              />
+            </span>
+            <span className="whitespace-nowrap">
+              {activeRunPaused ? `Paused Run • R${activeRunRound}` : `Active Run • R${activeRunRound}`}
+            </span>
+          </button>
+        )}
         <button
           type="button"
           role="switch"
