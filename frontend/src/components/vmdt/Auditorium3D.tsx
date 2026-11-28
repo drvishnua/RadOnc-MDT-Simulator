@@ -1,8 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
+import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { AnimatePresence, motion } from "framer-motion";
 import { AlertCircle, Pause, Play, RotateCcw, Sparkles, X } from "lucide-react";
 import DoctorAvatar from "./DoctorAvatar.js";
+import {
+  buildRealisticClinicianMesh,
+  createContactShadowTexture,
+  createFlutedWallTexture,
+  createSpotAlphaTexture,
+  createStageFloorTexture,
+} from "./auditorium3dBuilders.js";
 import { TEAM_DEFINITIONS } from "../../utils/vmdtRoster.js";
 import {
   DEFAULT_TEAMS,
@@ -118,120 +126,6 @@ function buildTierSectorGeometry(
   });
   geom.rotateX(-Math.PI / 2);
   return geom;
-}
-
-const SKIN_TONES = ["#F5CBA7", "#E0AC69", "#C68642", "#8D5524", "#FAD7A0", "#D5A078", "#A5694F", "#F1C27D"];
-const HAIR_COLORS = ["#1E293B", "#4A3728", "#0F172A", "#6D4C3D", "#94A3B8", "#3B2F2F", "#2C222B", "#7C4D3A"];
-
-function buildClinicianMesh(
-  agent: VmdtAgentConfig,
-  coatMat: THREE.MeshStandardMaterial,
-  accentMat: THREE.MeshStandardMaterial,
-  skinMat: THREE.MeshStandardMaterial,
-  hairMat: THREE.MeshStandardMaterial,
-  chairMat: THREE.MeshStandardMaterial,
-  metalMat: THREE.MeshStandardMaterial,
-  pantsMat: THREE.MeshStandardMaterial
-): THREE.Group {
-  const group = new THREE.Group();
-
-  // Pedestal base + stem
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.24, 0.05, 16), metalMat);
-  base.position.y = 0.025;
-  group.add(base);
-
-  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.22, 10), metalMat);
-  stem.position.y = 0.14;
-  group.add(stem);
-
-  // Chair seat cushion
-  const seatCushion = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.08, 0.44), chairMat);
-  seatCushion.position.set(0, 0.27, 0.02);
-  seatCushion.castShadow = true;
-  group.add(seatCushion);
-
-  // Chair backrest (behind seated clinician, i.e., -z in local space where +z faces stage)
-  const backrest = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.48, 0.08), chairMat);
-  backrest.position.set(0, 0.54, -0.18);
-  backrest.rotation.x = -0.1;
-  backrest.castShadow = true;
-  group.add(backrest);
-
-  // Armrests
-  const armGeom = new THREE.BoxGeometry(0.06, 0.05, 0.34);
-  const leftArm = new THREE.Mesh(armGeom, chairMat);
-  leftArm.position.set(-0.24, 0.42, -0.02);
-  const rightArm = new THREE.Mesh(armGeom, chairMat);
-  rightArm.position.set(0.24, 0.42, -0.02);
-  group.add(leftArm, rightArm);
-
-  // Seated legs (thighs forward + calves down toward +z)
-  const thighGeom = new THREE.CylinderGeometry(0.065, 0.06, 0.3, 10);
-  thighGeom.rotateX(Math.PI / 2);
-  const leftThigh = new THREE.Mesh(thighGeom, pantsMat);
-  leftThigh.position.set(-0.1, 0.34, 0.14);
-  const rightThigh = new THREE.Mesh(thighGeom, pantsMat);
-  rightThigh.position.set(0.1, 0.34, 0.14);
-  group.add(leftThigh, rightThigh);
-
-  const calfGeom = new THREE.CylinderGeometry(0.055, 0.048, 0.28, 10);
-  const leftCalf = new THREE.Mesh(calfGeom, pantsMat);
-  leftCalf.position.set(-0.1, 0.2, 0.28);
-  const rightCalf = new THREE.Mesh(calfGeom, pantsMat);
-  rightCalf.position.set(0.1, 0.2, 0.28);
-  group.add(leftCalf, rightCalf);
-
-  // Torso (lab coat or scrubs based on variant)
-  const torsoMat = agent.avatarVariant % 3 === 1 ? accentMat : coatMat;
-  const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.19, 0.44, 14), torsoMat);
-  torso.position.set(0, 0.56, 0.0);
-  torso.castShadow = true;
-  group.add(torso);
-
-  // Inner scrub/shirt collar accent
-  const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 0.12, 12), accentMat);
-  collar.position.set(0, 0.74, 0.03);
-  group.add(collar);
-
-  // Shoulders & arms
-  const upperArmGeom = new THREE.CylinderGeometry(0.048, 0.044, 0.28, 10);
-  const leftUpperArm = new THREE.Mesh(upperArmGeom, torsoMat);
-  leftUpperArm.position.set(-0.21, 0.58, 0.04);
-  leftUpperArm.rotation.z = 0.15;
-  leftUpperArm.rotation.x = -0.35;
-  const rightUpperArm = new THREE.Mesh(upperArmGeom, torsoMat);
-  rightUpperArm.position.set(0.21, 0.58, 0.04);
-  rightUpperArm.rotation.z = -0.15;
-  rightUpperArm.rotation.x = -0.35;
-  group.add(leftUpperArm, rightUpperArm);
-
-  // Head
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.145, 16, 16), skinMat);
-  head.position.set(0, 0.92, 0.02);
-  head.castShadow = true;
-  group.add(head);
-
-  // Hair cap
-  const hair = new THREE.Mesh(
-    new THREE.SphereGeometry(0.152, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.58),
-    hairMat
-  );
-  hair.position.set(0, 0.94, 0.0);
-  hair.rotation.x = -0.22;
-  group.add(hair);
-
-  // Optional tablet prop in lap for variety
-  if (agent.propType === "tablet") {
-    const tablet = new THREE.Mesh(
-      new THREE.BoxGeometry(0.2, 0.015, 0.14),
-      new THREE.MeshStandardMaterial({ color: 0x0f172a, emissive: 0x38bdf8, emissiveIntensity: 0.35 })
-    );
-    tablet.position.set(0, 0.44, 0.22);
-    tablet.rotation.x = -0.35;
-    group.add(tablet);
-  }
-
-  return group;
 }
 
 export const Auditorium3D: React.FC<Auditorium3DProps> = ({
@@ -384,26 +278,20 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
     container.appendChild(renderer.domElement);
 
     const scene = new THREE.Scene();
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    const envTexture = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
+    scene.environment = envTexture;
+
     const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 100);
     const baseCamPos = new THREE.Vector3(0, 8.8, 16.0);
     const lookTarget = new THREE.Vector3(0, 1.15, -1.6);
     camera.position.copy(baseCamPos);
     camera.lookAt(lookTarget);
 
-    // Soft vertical gradient alpha map for volumetric spotlight cones
-    const spotCanvas = document.createElement("canvas");
-    spotCanvas.width = 4;
-    spotCanvas.height = 128;
-    const spotCtx = spotCanvas.getContext("2d");
-    if (spotCtx) {
-      const grad = spotCtx.createLinearGradient(0, 0, 0, 128);
-      grad.addColorStop(0, "#ffffff");
-      grad.addColorStop(0.55, "#888888");
-      grad.addColorStop(1, "#000000");
-      spotCtx.fillStyle = grad;
-      spotCtx.fillRect(0, 0, 4, 128);
-    }
-    const spotAlphaTex = new THREE.CanvasTexture(spotCanvas);
+    const spotAlphaTex = createSpotAlphaTexture();
+    const stageFloorTex = createStageFloorTexture();
+    const flutedWallTex = createFlutedWallTexture();
+    const contactShadowTex = createContactShadowTexture();
 
     // Theme-aware materials
     const isDarkNow = () => document.documentElement.classList.contains("dark");
@@ -411,10 +299,10 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
     const sceneBgLight = new THREE.Color(0xeef3f9);
 
     const floorMat = new THREE.MeshStandardMaterial({ roughness: 0.78, metalness: 0.12 });
-    const tierEvenMat = new THREE.MeshStandardMaterial({ roughness: 0.68, metalness: 0.18 });
-    const tierOddMat = new THREE.MeshStandardMaterial({ roughness: 0.68, metalness: 0.18 });
-    const stageMat = new THREE.MeshStandardMaterial({ roughness: 0.42, metalness: 0.22 });
-    const backdropMat = new THREE.MeshStandardMaterial({ roughness: 0.55, metalness: 0.15 });
+    const tierEvenMat = new THREE.MeshStandardMaterial({ map: stageFloorTex, roughness: 0.65, metalness: 0.2 });
+    const tierOddMat = new THREE.MeshStandardMaterial({ map: stageFloorTex, roughness: 0.65, metalness: 0.2 });
+    const stageMat = new THREE.MeshStandardMaterial({ map: stageFloorTex, roughness: 0.38, metalness: 0.28 });
+    const backdropMat = new THREE.MeshStandardMaterial({ map: flutedWallTex, roughness: 0.58, metalness: 0.16 });
     const stageRimMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
     const dividerStripMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.85 });
     const tierTrimMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.5 });
@@ -464,9 +352,10 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
       pillarGlowMat.opacity = dark ? 0.28 : 0.22;
       spotlightMat.color.setHex(dark ? 0x38bdf8 : 0x60a5fa);
       spotlightMat.opacity = dark ? 0.14 : 0.10;
-      ambientLight.intensity = dark ? 0.72 : 1.1;
-      keyLight.intensity = dark ? 1.5 : 1.3;
-      stagePointLight.intensity = dark ? 2.5 : 1.0;
+      ambientLight.intensity = dark ? 0.55 : 0.95;
+      keyLight.intensity = dark ? 1.55 : 1.3;
+      stagePointLight.intensity = dark ? 2.6 : 1.0;
+      scene.environmentIntensity = dark ? 0.45 : 0.75;
     };
     applyThemeToScene(isDarkNow());
 
@@ -513,13 +402,20 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
       scene.add(trimMesh);
     });
 
-    // 3D Architectural Aisle Divider Strips Between Teams
-    const addAisleSegment = (p1: THREE.Vector3, p2: THREE.Vector3) => {
+    // 3D Architectural Aisle Divider Strips Between Teams (flat radial strips + upright riser plates)
+    const addHorizontalAisle = (p1: THREE.Vector3, p2: THREE.Vector3) => {
       const len = p1.distanceTo(p2);
-      const strip = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.028, len), dividerStripMat);
+      const strip = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.022, len), dividerStripMat);
       strip.position.copy(p1).add(p2).multiplyScalar(0.5);
       strip.lookAt(p2);
       scene.add(strip);
+    };
+    const addVerticalRiser = (pos: THREE.Vector3, yBottom: number, yTop: number, angDeg: number) => {
+      const height = Math.max(0.05, yTop - yBottom);
+      const riser = new THREE.Mesh(new THREE.BoxGeometry(0.045, height, 0.03), dividerStripMat);
+      riser.position.set(pos.x, (yBottom + yTop) / 2, pos.z);
+      riser.rotation.y = degToRad(angDeg);
+      scene.add(riser);
     };
     dividerAngles.forEach((ang) => {
       const t1a = polarToWorld(ang, 4.6, 0.19);
@@ -528,11 +424,11 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
       const t2b = polarToWorld(ang, 8.45, 0.56);
       const t3a = polarToWorld(ang, 8.45, 0.95);
       const t3b = polarToWorld(ang, 10.4, 0.95);
-      addAisleSegment(t1a, t1b);
-      addAisleSegment(t1b, t2a);
-      addAisleSegment(t2a, t2b);
-      addAisleSegment(t2b, t3a);
-      addAisleSegment(t3a, t3b);
+      addHorizontalAisle(t1a, t1b);
+      addVerticalRiser(t1b, 0.19, 0.56, ang);
+      addHorizontalAisle(t2a, t2b);
+      addVerticalRiser(t2b, 0.56, 0.95, ang);
+      addHorizontalAisle(t3a, t3b);
     });
 
     // 3D Proscenium Stage Platform + Backstage Wall + Curved Apron + Stepped Side Stairs
@@ -585,23 +481,49 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
       });
     });
 
-    // Overhead Volumetric Spotlight Cones
+    // Overhead Truss, 3D Spotlight Fixtures, Volumetric Cones & Stage Light Pools
+    const trussMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.4, metalness: 0.75 });
+    const trussBar = new THREE.Mesh(new THREE.BoxGeometry(10.5, 0.14, 0.18), trussMat);
+    trussBar.position.set(0, 8.65, -5.0);
+    scene.add(trussBar);
+
     [-3.6, 0, 3.6].forEach((sx) => {
-      const cone = new THREE.Mesh(new THREE.ConeGeometry(2.6, 8.5, 24, 1, true), spotlightMat);
-      cone.position.set(sx, 4.5, -5.0);
+      const fixture = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.24, 0.45, 16), trussMat);
+      fixture.position.set(sx, 8.45, -5.0);
+      fixture.rotation.z = sx * -0.05;
+      scene.add(fixture);
+
+      const cone = new THREE.Mesh(new THREE.ConeGeometry(2.5, 8.2, 24, 1, true), spotlightMat);
+      cone.position.set(sx, 4.45, -5.0);
       cone.rotation.z = sx * -0.05;
       scene.add(cone);
+
+      const pool = new THREE.Mesh(new THREE.CircleGeometry(1.85, 28), spotlightMat);
+      pool.rotation.x = -Math.PI / 2;
+      pool.position.set(sx * 0.92, 0.79, -5.0);
+      scene.add(pool);
     });
 
-    // Shared materials for clinicians
-    const coatMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.55 });
-    const chairMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.65, metalness: 0.15 });
-    const metalMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.35, metalness: 0.7 });
-    const pantsMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.7 });
+    // Shared PBR materials for realistic sculpted clinicians & chairs
+    const coatMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.48, metalness: 0.04 });
+    const chairMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.52, metalness: 0.22 });
+    const chairPadMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.65, metalness: 0.1 });
+    const chromeMat = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, roughness: 0.22, metalness: 0.88 });
+    const pantsMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.7 });
+    const shoeMat = new THREE.MeshStandardMaterial({ color: 0x090d16, roughness: 0.45, metalness: 0.15 });
+    const glassesMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.25, metalness: 0.8 });
+    const shadowMat = new THREE.MeshBasicMaterial({
+      map: contactShadowTex,
+      transparent: true,
+      depthWrite: false,
+    });
 
     const seatEntries: {
       agent: VmdtAgentConfig;
       group: THREE.Group;
+      torsoGroup: THREE.Group;
+      headGroup: THREE.Group;
+      phaseOffset: number;
       ringMat: THREE.MeshBasicMaterial;
       beamMesh: THREE.Mesh;
       beamMat: THREE.MeshBasicMaterial;
@@ -611,37 +533,23 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
 
     const hitboxes: THREE.Mesh[] = [];
 
-    seats.forEach(({ agent, worldPos }) => {
+    seats.forEach(({ agent, worldPos }, idx) => {
       const seatGroup = new THREE.Group();
       seatGroup.position.copy(worldPos);
       // Face toward the center of the stage (0, y, -5.2)
       seatGroup.lookAt(0, worldPos.y, -5.2);
 
-      const variantIdx = Math.abs(agent.avatarVariant || 0) % 8;
-      const accentMat = new THREE.MeshStandardMaterial({
-        color: new THREE.Color(agent.scrubColor || "#0284c7"),
-        roughness: 0.55,
-      });
-      const skinMat = new THREE.MeshStandardMaterial({
-        color: new THREE.Color(SKIN_TONES[variantIdx]),
-        roughness: 0.65,
-      });
-      const hairMat = new THREE.MeshStandardMaterial({
-        color: new THREE.Color(HAIR_COLORS[variantIdx]),
-        roughness: 0.75,
-      });
-
-      const clinician = buildClinicianMesh(
-        agent,
+      const built = buildRealisticClinicianMesh(agent, {
         coatMat,
-        accentMat,
-        skinMat,
-        hairMat,
         chairMat,
-        metalMat,
-        pantsMat
-      );
-      seatGroup.add(clinician);
+        chairPadMat,
+        chromeMat,
+        pantsMat,
+        shoeMat,
+        glassesMat,
+        shadowMat,
+      });
+      seatGroup.add(built.group);
 
       // Floor status ring under chair
       const ringMat = new THREE.MeshBasicMaterial({
@@ -682,6 +590,9 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
       seatEntries.push({
         agent,
         group: seatGroup,
+        torsoGroup: built.torsoGroup,
+        headGroup: built.headGroup,
+        phaseOffset: idx * 0.45,
         ringMat,
         beamMesh,
         beamMat,
@@ -788,6 +699,12 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
         const targetScale = isHighlighted ? 0.96 : isSpeaker ? 0.92 : 0.84;
         entry.group.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.14);
 
+        // Subtle realistic idle breathing & gentle head micro-turns
+        const p = t + entry.phaseOffset;
+        entry.torsoGroup.scale.y = 1 + Math.sin(p * 1.6) * 0.014;
+        entry.headGroup.rotation.y = Math.sin(p * 0.55) * (isSpeaker ? 0.14 : 0.06);
+        entry.headGroup.rotation.x = Math.cos(p * 0.7) * 0.025;
+
         if (curMode === "live") {
           entry.beamMat.color.setHex(STATUS_HEX[rawStatus]);
           entry.beamMat.opacity = isSpeaker ? 0.24 + Math.sin(t * 5) * 0.08 : rawStatus === "completed" || rawStatus === "failed" ? 0.12 : 0.04;
@@ -837,6 +754,8 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
       resizeObserver.disconnect();
       domEl.removeEventListener("pointermove", handlePointerMove);
       domEl.removeEventListener("click", handlePointerClick);
+      pmremGenerator.dispose();
+      envTexture.dispose();
       renderer.dispose();
       if (domEl.parentNode === container) {
         container.removeChild(domEl);
