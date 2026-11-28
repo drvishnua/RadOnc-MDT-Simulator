@@ -1,0 +1,717 @@
+{
+  "catalogue_name": "general_med_comorbidities_catalogue",
+  "version": "1.0.0",
+  "generated_at": "2026-11-22T00:37:00+05:30",
+  "educational_simulation_only": true,
+  "not_a_treatment_instruction": true,
+  "description": "Structured clinical decision rules and conditional risk matrices extracted from Harrison's Principles of Internal Medicine 21e, Washington Manual of Medical Therapeutics 36e, and Decision Making in Medicine 3e for patient fitness evaluation in Radiation Oncology MDT simulation.",
+  "entries": [
+    {
+      "source_id": "WASHMAN-ECOG-KPS-2020",
+      "title": "Performance Status Assessment: ECOG and Karnofsky Score Correlation and Functional Impact",
+      "organization": "Washington University School of Medicine / Wolters Kluwer",
+      "source_type": "textbook",
+      "edition_or_version": "Washington Manual of Medical Therapeutics 36th Edition (Table 22-3)",
+      "publication_date": "2020-01-01",
+      "update_date": "2020-01-01",
+      "jurisdiction": "International",
+      "disease_site": "General",
+      "specialties": [
+        "general_internal_medicine",
+        "medical_oncology",
+        "radiation_oncology"
+      ],
+      "topics": [
+        "performance_status",
+        "ecog",
+        "karnofsky",
+        "treatment_fitness",
+        "multimodal_eligibility"
+      ],
+      "doi_or_url": "https://shop.lww.com/The-Washington-Manual-of-Medical-Therapeutics/p/9781975113483",
+      "access_status": "available",
+      "supersession": "current",
+      "threshold_criteria": {
+        "ecog_0": {
+          "kps_correlate": 100,
+          "functional_definition": "Fully active, able to carry on all predisease performance without restriction.",
+          "fitness_tier": "fit_for_all_treatments",
+          "standard_pathway": "Full-dose concurrent chemoradiotherapy (CCRT), radical surgery, definitive RT."
+        },
+        "ecog_1": {
+          "kps_correlate": [
+            80,
+            90
+          ],
+          "functional_definition": "Restricted in physically strenuous activity but ambulatory and able to carry out light/sedentary work.",
+          "fitness_tier": "fit_for_curative_multimodal",
+          "standard_pathway": "Full-dose definitive CCRT (e.g. cisplatin 100 mg/m2 q3w or 40 mg/m2 weekly) or surgery."
+        },
+        "ecog_2": {
+          "kps_correlate": [
+            60,
+            70
+          ],
+          "functional_definition": "Ambulatory and capable of all self-care but unable to carry out work activities. Up and about >50% of waking hours.",
+          "fitness_tier": "borderline_vulnerable",
+          "standard_pathway": "Conditional: Assess organ reserves. Unfit for high-dose 3-weekly cisplatin; consider split-dose/weekly low-dose cisplatin, carboplatin AUC 4-5, cetuximab (H&N), or definitive RT alone."
+        },
+        "ecog_3": {
+          "kps_correlate": [
+            40,
+            50
+          ],
+          "functional_definition": "Capable of only limited self-care, confined to bed or chair >50% of waking hours.",
+          "fitness_tier": "unfit_for_aggressive_therapy",
+          "standard_pathway": "Definitive full-course chemoradiation generally contraindicated. Recommend hypofractionated palliative RT, targeted therapy if low toxicity, or best supportive care."
+        },
+        "ecog_4": {
+          "kps_correlate": [
+            20,
+            30
+          ],
+          "functional_definition": "Completely disabled. Cannot carry on any self-care. Totally confined to bed or chair.",
+          "fitness_tier": "severely_compromised",
+          "standard_pathway": "Best supportive care / palliative hospice; short-course palliative radiation only for emergent symptom relief (bleeding, cord compression)."
+        },
+        "ecog_5": {
+          "kps_correlate": 0,
+          "functional_definition": "Dead.",
+          "fitness_tier": "terminal",
+          "standard_pathway": "N/A"
+        }
+      },
+      "clinical_decision_rules": [
+        "Do not assume normal performance status if missing from case facts.",
+        "Age alone is not an indicator of performance status or treatment eligibility.",
+        "ECOG 0-1 is mandatory for standard tri-weekly high-dose cisplatin (100 mg/m2) concurrent with radiotherapy.",
+        "ECOG 2 requires multidisciplinary risk-benefit discussion with conditional stratification for altered chemotherapy schedules or radiotherapy alone."
+      ],
+      "conditional_pathways": {
+        "unrecorded_performance_status": "If baseline ECOG/KPS is not recorded in the case facts, the MDT must formulate: 'Assuming ECOG 0-1 upon formal clinical staging, patient is a candidate for definitive concurrent chemoradiotherapy; if formal assessment reveals ECOG >= 2, omit concurrent high-dose cisplatin in favor of definitive radiation alone or carboplatin.'",
+        "borderline_ecog_2": "If baseline ECOG is 2: Evaluate whether impairment is cancer-related (potentially reversible with cytoreduction) or comorbid. If comorbid, avoid high-dose concurrent cisplatin; prefer definitive radiotherapy alone (66-70 Gy) or weekly carboplatin AUC 1.5-2 / cetuximab."
+      },
+      "key_passages": [
+        {
+          "section": "Table 22-3",
+          "text": "Performance status provides a quantitative measure of a patient's generalized well-being and quality of life. It has important implications for treatment planning."
+        }
+      ]
+    },
+    {
+      "source_id": "WASHMAN-CISPLATIN-RENAL-2020",
+      "title": "Renal Impairment Thresholds and Platinum Chemotherapy Allocation",
+      "organization": "Washington University School of Medicine / Wolters Kluwer",
+      "source_type": "textbook",
+      "edition_or_version": "Washington Manual of Medical Therapeutics 36th Edition (Ch 13 & 22)",
+      "publication_date": "2020-01-01",
+      "update_date": "2020-01-01",
+      "jurisdiction": "International",
+      "disease_site": "General",
+      "specialties": [
+        "medical_oncology",
+        "nephrology",
+        "radiation_oncology"
+      ],
+      "topics": [
+        "renal_failure",
+        "cisplatin",
+        "carboplatin",
+        "creatinine_clearance",
+        "calvert_formula",
+        "nephrotoxicity"
+      ],
+      "doi_or_url": "https://shop.lww.com/The-Washington-Manual-of-Medical-Therapeutics/p/9781975113483",
+      "access_status": "available",
+      "supersession": "current",
+      "threshold_criteria": {
+        "crcl_ge_60": {
+          "cutoff": ">= 60 mL/min",
+          "cisplatin_eligibility": "Eligible for standard full-dose cisplatin (100 mg/m2 q3w or 40 mg/m2 weekly)",
+          "hydration_required": "2-3 L normal saline with electrolyte replacement (KCl, MgSO4) and mannitol/furosemide diuresis."
+        },
+        "crcl_50_to_59": {
+          "cutoff": "50 - 59 mL/min",
+          "cisplatin_eligibility": "Borderline eligibility. High-dose 100 mg/m2 carries high AKI risk. Recommend weekly cisplatin (30-40 mg/m2) or substitution with Carboplatin AUC 4-5 or RT alone.",
+          "hydration_required": "Rigorous pre- and post-hydration with strict urine output monitoring (>100 mL/hr)."
+        },
+        "crcl_lt_50": {
+          "cutoff": "< 50 mL/min",
+          "cisplatin_eligibility": "Cisplatin strictly CONTRAINDICATED due to irreversible cumulative nephrotoxicity and acute tubular necrosis.",
+          "standard_pathway": "Switch to Carboplatin (dosed via Calvert formula) or Definitive Radiation Therapy alone."
+        },
+        "crcl_lt_30": {
+          "cutoff": "< 30 mL/min (CKD Stage 4-5 / ESRD)",
+          "cisplatin_eligibility": "Strictly contraindicated.",
+          "carboplatin_eligibility": "Carboplatin severely restricted / dose-reduced with nephrology co-management.",
+          "standard_pathway": "Definitive Radiation Therapy alone without concurrent nephrotoxic chemotherapy."
+        }
+      },
+      "clinical_decision_rules": [
+        "Calculate creatinine clearance using Cockcroft-Gault formula: CrCl = [(140 - Age) * Weight_kg] / (72 * SCr_mg_dL) [* 0.85 if female]. Do not rely solely on serum creatinine value.",
+        "Carboplatin dose must be calculated using Calvert Formula: Dose (mg) = Target AUC * (GFR + 25), with GFR capped at 125 mL/min.",
+        "Avoid concomitant nephrotoxic agents (aminoglycosides, NSAIDs, IV contrast, amphotericin B) during platinum therapy."
+      ],
+      "conditional_pathways": {
+        "unrecorded_renal_function": "If serum creatinine / CrCl is not reported: 'Baseline renal function is unverified. If calculated CrCl is >= 60 mL/min, proceed with concurrent cisplatin; if CrCl is 50-59 mL/min, consider weekly cisplatin or carboplatin AUC 4-5; if CrCl < 50 mL/min, cisplatin is contraindicated, deliver definitive radiotherapy alone or carboplatin.'",
+        "borderline_renal_function": "If CrCl is 50-59 mL/min: 'Given borderline creatinine clearance, patient is at heightened risk of nephrotoxicity with 3-weekly cisplatin 100 mg/m2. Recommend either weekly cisplatin 40 mg/m2 with prehydration or carboplatin AUC 4-5 (Calvert formula) concurrent with radiation.'"
+      },
+      "key_passages": [
+        {
+          "section": "Ch 22: Management Of Treatment Toxicities",
+          "text": "Cisplatin is associated with cumulative, dose-dependent nephrotoxicity. Vigorous hydration before and after administration is necessary. Patients with CrCl < 50-60 mL/min require dose attenuation or substitution with carboplatin."
+        }
+      ]
+    },
+    {
+      "source_id": "DECISION-MAKING-ARF-2009",
+      "title": "Algorithmic Approach to Acute Renal Impairment and Obstructive Uropathy in Pelvic Malignancy",
+      "organization": "Mosby / Elsevier",
+      "source_type": "textbook",
+      "edition_or_version": "Decision Making in Medicine: An Algorithmic Approach 3rd Edition (Ch 120)",
+      "publication_date": "2009-01-01",
+      "update_date": "2009-01-01",
+      "jurisdiction": "International",
+      "disease_site": "GYN",
+      "specialties": [
+        "nephrology",
+        "urology",
+        "radiation_oncology",
+        "gynecologic_oncology"
+      ],
+      "topics": [
+        "acute_renal_failure",
+        "obstructive_uropathy",
+        "hydronephrosis",
+        "cervical_cancer",
+        "ureteral_stenting"
+      ],
+      "doi_or_url": "https://doi.org/10.1016/B978-0-323-04107-2.X5001-4",
+      "access_status": "available",
+      "supersession": "current",
+      "threshold_criteria": {
+        "renal_ultrasound_indication": "Mandatory in any patient presenting with pelvic malignancy (cervical, prostate, bladder, rectal) and elevated serum creatinine or flank pain.",
+        "hydronephrosis_action": {
+          "unilateral_or_bilateral_obstruction": "Urologic emergency for decompression with retrograde double-J ureteral stenting or percutaneous nephrostomy (PCN) BEFORE declaring irreversible renal failure.",
+          "post_decompression_evaluation": "Allow 72-96 hours post-decompression for serum creatinine to reach new nadir before calculating CrCl for cisplatin eligibility."
+        }
+      },
+      "clinical_decision_rules": [
+        "Elevated creatinine in advanced cervical/pelvic cancer is frequently post-renal; never assume intrinsic nephropathy without renal ultrasound.",
+        "Decompress hydronephrosis prior to initiating definitive chemoradiation to recover GFR and allow curative cisplatin administration."
+      ],
+      "conditional_pathways": {
+        "pelvic_cancer_elevated_creatinine": "If creatinine is elevated in cervical or pelvic malignancy: 'Perform urgent renal ultrasound. If hydronephrosis is present, place ureteral stents or nephrostomies; re-calculate CrCl post-decompression. If recovered CrCl >= 60 mL/min, deliver definitive concurrent cisplatin (40 mg/m2 weekly); if CrCl remains < 50 mL/min, deliver definitive pelvic radiotherapy alone.'"
+      },
+      "key_passages": [
+        {
+          "section": "Ch 120: Acute Renal Failure",
+          "text": "Postrenal acute renal failure is caused by obstruction of urine outflow. Prompt relief of obstruction is critical because renal function recovery is inversely related to the duration of complete obstruction."
+        }
+      ]
+    },
+    {
+      "source_id": "ACC-AHA-LEE-RCRI-2014",
+      "title": "Perioperative and Multimodal Cardiovascular Risk Stratification: Revised Cardiac Risk Index (Lee Criteria) and METs",
+      "organization": "American College of Cardiology / American Heart Association",
+      "source_type": "guideline",
+      "edition_or_version": "2014 ACC/AHA Noncardiac Surgery Guideline & Washington Manual Ch 1",
+      "publication_date": "2014-08-01",
+      "update_date": "2020-01-01",
+      "jurisdiction": "International",
+      "disease_site": "General",
+      "specialties": [
+        "cardiology",
+        "general_internal_medicine",
+        "surgical_oncology",
+        "radiation_oncology"
+      ],
+      "topics": [
+        "cardiac_risk",
+        "rcri",
+        "functional_capacity",
+        "mets",
+        "heart_failure",
+        "fluid_overload"
+      ],
+      "doi_or_url": "https://doi.org/10.1161/CIR.0000000000000106",
+      "access_status": "available",
+      "supersession": "current",
+      "threshold_criteria": {
+        "rcri_factors": [
+          "High-risk surgery (intraperitoneal, intrathoracic, or suprainguinal vascular)",
+          "History of ischemic heart disease (prior MI, positive stress test, angina, nitrate use)",
+          "History of congestive heart failure (prior HF, pulmonary edema, paroxysmal nocturnal dyspnea, S3 gallop, peripheral edema)",
+          "History of cerebrovascular disease (prior stroke or TIA)",
+          "Diabetes mellitus requiring insulin therapy",
+          "Preoperative serum creatinine > 2.0 mg/dL"
+        ],
+        "rcri_risk_stratification": {
+          "class_I": {
+            "score": 0,
+            "risk_rate": "0.4% cardiac complication risk",
+            "clearance": "Proceed with planned oncologic intervention without additional cardiac testing."
+          },
+          "class_II": {
+            "score": 1,
+            "risk_rate": "0.9% cardiac complication risk",
+            "clearance": "Low-to-moderate risk; proceed with standard hemodynamic monitoring."
+          },
+          "class_III": {
+            "score": 2,
+            "risk_rate": "6.6% cardiac complication risk",
+            "clearance": "Elevated cardiac risk; obtain resting ECG and functional capacity assessment."
+          },
+          "class_IV": {
+            "score": ">= 3",
+            "risk_rate": "11.0% cardiac complication risk",
+            "clearance": "High cardiac risk; cardiology consultation, echocardiogram, and optimization prior to elective major surgery or aggressive hydration."
+          }
+        },
+        "functional_capacity_mets": {
+          "ge_4_mets": "Able to walk up a flight of stairs, climb a hill, or walk 4 mph without stopping. Low risk of perioperative/treatment cardiac event.",
+          "lt_4_mets": "Unable to climb a flight of stairs or walk 2 blocks on level ground. Poor functional reserve; high risk of perioperative ischemia, heart failure exacerbation, or fluid overload."
+        }
+      },
+      "clinical_decision_rules": [
+        "Patients with recent MI (< 30 days), unstable angina, or decompensated NYHA class IV heart failure require urgent stabilization before elective oncologic therapy.",
+        "High-volume IV hydration protocols for cisplatin (2-3 L saline) can precipitate acute pulmonary edema in patients with pre-existing heart failure (LVEF < 40-45%) or severe CAD.",
+        "For thoracic/mediastinal radiotherapy, radiation planning must respect cardiac constraints (Heart mean dose < 26 Gy, V30 < 45%, V25 < 10%) to prevent long-term ischemic heart disease and pericarditis."
+      ],
+      "conditional_pathways": {
+        "unrecorded_cardiac_history": "If cardiac comorbidity is unrecorded: 'Cardiovascular history is unrecorded. If patient has known heart failure (LVEF < 40%) or severe CAD, standard 2-3 L cisplatin hydration poses high risk of acute pulmonary edema; recommend echocardiography, strict input/output balance, or transition to weekly low-dose cisplatin/carboplatin with tailored fluid administration.'"
+      },
+      "key_passages": [
+        {
+          "section": "Washington Manual Ch 1: Preoperative Cardiac Evaluation",
+          "text": "Poor functional capacity (<4 METs) is associated with an increased risk of perioperative cardiac events. Current guidelines focus on active cardiac disease: unstable coronary syndromes, recent MI (within 30 days), decompensated CHF, and significant arrhythmias."
+        }
+      ]
+    },
+    {
+      "source_id": "WASHMAN-PULMONARY-EVAL-2020",
+      "title": "Pulmonary Function Thresholds and COPD Comorbidity Evaluation in Thoracic Multimodal Therapy",
+      "organization": "Washington University School of Medicine / ATS / ERS",
+      "source_type": "textbook",
+      "edition_or_version": "Washington Manual of Medical Therapeutics 36th Edition (Ch 1 & 9) & ATS/ERS Consensus",
+      "publication_date": "2020-01-01",
+      "update_date": "2021-01-01",
+      "jurisdiction": "International",
+      "disease_site": "Lung",
+      "specialties": [
+        "pulmonology",
+        "radiation_oncology",
+        "thoracic_surgery"
+      ],
+      "topics": [
+        "pulmonary_function_tests",
+        "fev1",
+        "dlco",
+        "copd",
+        "radiation_pneumonitis",
+        "sbrt",
+        "smoking_cessation"
+      ],
+      "doi_or_url": "https://shop.lww.com/The-Washington-Manual-of-Medical-Therapeutics/p/9781975113483",
+      "access_status": "available",
+      "supersession": "current",
+      "threshold_criteria": {
+        "fev1_and_dlco_grades": {
+          "normal_to_mild": {
+            "fev1_pct": ">= 80%",
+            "dlco_pct": ">= 80%",
+            "clinical_fitness": "Fit for standard surgical lobectomy, definitive concurrent chemoradiotherapy (60-66 Gy), or SBRT."
+          },
+          "moderate_impairment": {
+            "fev1_pct": "50 - 79%",
+            "dlco_pct": "50 - 79%",
+            "clinical_fitness": "Fit for definitive CCRT with strict normal lung constraints (Bilateral Lung V20 <= 30-35%, MLD <= 20 Gy). Surgical resection requires segmentectomy or sleeve resection rather than pneumonectomy."
+          },
+          "severe_impairment": {
+            "fev1_pct": "35 - 49%",
+            "dlco_pct": "35 - 49%",
+            "clinical_fitness": "Medically inoperable for lobectomy. SBRT (50-54 Gy in 3-5 fractions) strongly preferred over surgical resection for early-stage lung cancer. For locally advanced disease, conventional CCRT carries high risk of radiation pneumonitis; prioritize field reduction or RT alone."
+          },
+          "very_severe_impairment": {
+            "fev1_pct": "< 35% or home oxygen dependence",
+            "dlco_pct": "< 35%",
+            "clinical_fitness": "Prohibitive risk of fatal respiratory failure with conventional large-field CCRT. Consider stereotactic body radiotherapy (SBRT), palliative hypofractionation, or systemic therapy alone."
+          }
+        },
+        "interstitial_lung_disease_rule": {
+          "finding": "Pre-existing Idiopathic Pulmonary Fibrosis (IPF) or active Interstitial Lung Disease (ILD)",
+          "contraindication": "Relative to ABSOLUTE contraindication for definitive thoracic radiotherapy due to high risk of fatal acute radiation pneumonitis exacerbation (>30-50% mortality)."
+        },
+        "smoking_cessation_rule": {
+          "impact": "Active smoking during radiation therapy reduces locoregional control by 20-30%, exacerbates acute pulmonary and mucosal toxicity, and increases risk of secondary primary malignancies.",
+          "requirement": "Mandatory counseling, nicotine replacement therapy, and smoking cessation support before and throughout therapy."
+        }
+      },
+      "clinical_decision_rules": [
+        "Baseline spirometry (FEV1) and diffusing capacity of the lung for carbon monoxide (DLCO) are mandatory before definitive thoracic radiotherapy or surgery.",
+        "Normal lung dose-volume limits must be respected: Total lung V20 < 30-35%, Mean Lung Dose (MLD) < 20 Gy (preferably < 15 Gy in compromised lungs).",
+        "If early-stage NSCLC is diagnosed in a patient with severe COPD / inoperable pulmonary function, SBRT is the standard-of-care curative alternative to surgery."
+      ],
+      "conditional_pathways": {
+        "unrecorded_pulmonary_status": "If pulmonary history and PFTs are not recorded for a thoracic cancer case: 'Pulmonary reserve and smoking history are unrecorded. Spirometry and DLCO are required. If severe airflow limitation (FEV1 < 40%) or pre-existing ILD is identified, definitive large-volume concurrent chemoradiation is contraindicated due to lethal radiation pneumonitis risk; evaluate SBRT for localized disease or modified small-volume RT.'"
+      },
+      "key_passages": [
+        {
+          "section": "Washington Manual Ch 1: Preoperative Pulmonary Evaluation",
+          "text": "Clinically significant pulmonary complications include atelectasis, pneumonia, bronchospasm, exacerbation of preexisting chronic lung disease, and respiratory failure. Postoperative respiratory failure carries a 30-day mortality rate as high as 26.5%."
+        }
+      ]
+    },
+    {
+      "source_id": "ADA-WASHMAN-DIABETES-2022",
+      "title": "Glycemic Management, Steroid Hyperglycemia, and Metformin-Contrast Safety in Cancer Therapy",
+      "organization": "American Diabetes Association / Washington University School of Medicine",
+      "source_type": "textbook",
+      "edition_or_version": "Washington Manual 36th Edition (Ch 1 & 23) & ADA Standards of Care 2022",
+      "publication_date": "2022-01-01",
+      "update_date": "2022-01-01",
+      "jurisdiction": "International",
+      "disease_site": "General",
+      "specialties": [
+        "endocrinology",
+        "general_internal_medicine",
+        "medical_oncology",
+        "radiation_oncology"
+      ],
+      "topics": [
+        "diabetes_mellitus",
+        "glycemic_control",
+        "corticosteroid_hyperglycemia",
+        "metformin_safety",
+        "contrast_nephropathy",
+        "wound_healing"
+      ],
+      "doi_or_url": "https://doi.org/10.2337/dc22-S016",
+      "access_status": "available",
+      "supersession": "current",
+      "threshold_criteria": {
+        "glycemic_targets": {
+          "inpatient_oncology_random_bg": "140 - 180 mg/dL (7.8 - 10.0 mmol/L)",
+          "premeal_fasting_bg": "100 - 140 mg/dL",
+          "hba1c_target": "< 7.5 - 8.0% in patients with advanced oncologic disease to prevent symptomatic hyperglycemia without risking severe hypoglycemia"
+        },
+        "steroid_induced_hyperglycemia": {
+          "mechanism": "High-dose dexamethasone or prednisone (used for antiemesis, CNS edema, or pain) causes marked insulin resistance and predominantly afternoon/postprandial hyperglycemia.",
+          "action": "Routine fingerstick glucose monitoring before meals and bedtime; initiate NPH insulin in morning or basal-bolus insulin correction; avoid relying solely on reactive sliding-scale insulin."
+        },
+        "metformin_and_iodinated_contrast_rule": {
+          "indication": "Patients receiving IV iodinated contrast for CT simulation or staging scans with baseline eGFR < 60 mL/min or acute illness.",
+          "rule": "Metformin MUST be withheld on the day of contrast injection and for 48 hours afterward. Re-evaluate renal function before restarting metformin to prevent life-threatening lactic acidosis."
+        },
+        "tissue_healing_impact": {
+          "effect": "Severe uncontrolled hyperglycemia (glucose > 200 mg/dL, HbA1c > 8.5%) impairs neutrophil phagocytosis, quadruples postoperative wound dehiscence and surgical site infections, and significantly increases radiation dermatitis/mucositis severity."
+        }
+      },
+      "clinical_decision_rules": [
+        "Do not assume diabetes is absent if not explicitly stated; screen baseline fasting blood glucose and HbA1c.",
+        "Temporarily withhold metformin during iodinated contrast imaging in patients with renal compromise.",
+        "Anticipate and manage acute glycemic spikes whenever dexamethasone is prescribed during chemotherapy or brain radiotherapy."
+      ],
+      "conditional_pathways": {
+        "unrecorded_diabetic_status": "If diabetic history and glycemic parameters are unrecorded: 'Check baseline HbA1c and renal profile. If patient has diabetic nephropathy or eGFR < 60 mL/min, ensure metformin is withheld 48 hours post-contrast CT simulation. If high-dose dexamethasone is prescribed for CNS symptoms or antiemesis, order scheduled blood glucose checks to prevent hyperosmolar crises.'"
+      },
+      "key_passages": [
+        {
+          "section": "Washington Manual Ch 1: Perioperative Management of Diabetes",
+          "text": "Metformin should be withheld on the day of surgery/contrast and for 48 hours post-procedure until stable renal function is verified to prevent metformin-associated lactic acidosis."
+        }
+      ]
+    },
+    {
+      "source_id": "IDSA-ASCO-FEBRILE-NEUTROPENIA-2021",
+      "title": "Management of Febrile Neutropenia and Hematologic Toxicity Thresholds in Oncology",
+      "organization": "Infectious Diseases Society of America / American Society of Clinical Oncology",
+      "source_type": "guideline",
+      "edition_or_version": "IDSA/ASCO Clinical Practice Guideline & Washington Manual Ch 21-22",
+      "publication_date": "2021-06-01",
+      "update_date": "2021-06-01",
+      "jurisdiction": "International",
+      "disease_site": "General",
+      "specialties": [
+        "infectious_diseases",
+        "hematology",
+        "medical_oncology",
+        "radiation_oncology"
+      ],
+      "topics": [
+        "febrile_neutropenia",
+        "absolute_neutrophil_count",
+        "platelets",
+        "hemoglobin",
+        "empiric_antibiotics",
+        "transfusion_thresholds"
+      ],
+      "doi_or_url": "https://doi.org/10.1200/JCO.18.00374",
+      "access_status": "available",
+      "supersession": "current",
+      "threshold_criteria": {
+        "anc_cutoffs": {
+          "normal": ">= 1,500 / uL",
+          "grade_1_mild": "1,000 - 1,499 / uL (Proceed with standard chemotherapy or reduce dose by 20% if previous nadir)",
+          "grade_2_moderate": "500 - 999 / uL (Hold cytotoxic chemotherapy until recovery >= 1,500 / uL)",
+          "grade_3_4_severe": "< 500 / uL (Critical infection vulnerability; hold all cytotoxic agents)"
+        },
+        "febrile_neutropenia_definition": {
+          "fever_criterion": "Single oral temperature >= 38.3\u00b0C (101.0\u00b0F) OR sustained temperature >= 38.0\u00b0C (100.4\u00b0F) for >= 1 hour",
+          "neutropenia_criterion": "ANC < 500 / uL OR ANC < 1,000 / uL with expected nadir <= 500 / uL within 48 hours",
+          "emergency_action": "Medical emergency: Obtain blood cultures (peripheral and central lines), complete blood count, metabolic panel, and initiate empiric IV antipseudomonal beta-lactam monotherapy WITHIN 60 MINUTES (Door-to-needle time < 1 hour)."
+        },
+        "empiric_antimicrobial_regimens": [
+          "Cefepime 2 g IV every 8 hours",
+          "Piperacillin-tazobactam 4.5 g IV every 6 hours",
+          "Meropenem 1 g IV every 8 hours",
+          "Add Vancomycin 15-20 mg/kg IV q8-12h only for: hemodynamic instability, suspected catheter infection, skin/soft tissue infection, severe mucositis, or MRSA colonization."
+        ],
+        "platelet_cutoffs": {
+          "chemo_initiation_threshold": ">= 100,000 / uL required for full-dose myelosuppressive regimens",
+          "chemo_hold_threshold": "< 75,000 - 100,000 / uL (Hold or dose-reduce cytotoxic chemotherapy)",
+          "minor_procedure_threshold": ">= 50,000 / uL required for lumbar puncture, central line placement, or minor surgery",
+          "major_surgical_threshold": ">= 50,000 - 100,000 / uL required for major oncologic resection",
+          "prophylactic_transfusion_trigger": "<= 10,000 / uL in stable afebrile patients, or <= 20,000 / uL in febrile/septic patients"
+        },
+        "hemoglobin_and_radiotherapy_oxygenation": {
+          "target_in_radiotherapy": "Maintain Hemoglobin >= 10.0 g/dL throughout definitive curative radiotherapy",
+          "radiobiology_rationale": "Radiation cell kill depends on molecular oxygen to fix free radical-induced DNA double-strand breaks. Severe anemia (Hb < 10 g/dL) causes intratumoral hypoxia, conferring radioresistance and significantly decreasing locoregional control in head & neck, cervix, and lung cancers.",
+          "transfusion_action": "Transfuse packed red blood cells to maintain Hb >= 10.0 g/dL during active definitive radiation course."
+        }
+      },
+      "clinical_decision_rules": [
+        "Do not delay empiric antibiotics in febrile neutropenia for imaging or diagnostic procedures.",
+        "Definitive radiotherapy with curative intent requires active monitoring of hemoglobin; correct anemia to Hb >= 10.0 g/dL to prevent tumor hypoxia and treatment failure.",
+        "Hold myelosuppressive systemic therapy if ANC < 1,500/uL or platelets < 100,000/uL."
+      ],
+      "conditional_pathways": {
+        "unrecorded_hematologic_baseline": "If CBC is not reported: 'Baseline complete blood count (ANC, platelets, Hb) is unverified. Chemotherapy requires ANC >= 1,500/uL and platelets >= 100,000/uL. If baseline Hb is < 10.0 g/dL, investigate etiology and correct with transfusion/iron prior to and during definitive radiotherapy to prevent hypoxia-mediated radioresistance.'"
+      },
+      "key_passages": [
+        {
+          "section": "Washington Manual Ch 22: Management Of Treatment Toxicities",
+          "text": "Neutropenic fever is a medical emergency that requires prompt evaluation and early administration of broad-spectrum antibiotics covering Pseudomonas aeruginosa."
+        }
+      ]
+    },
+    {
+      "source_id": "ASCO-CDC-HBV-REACTIVATION-2021",
+      "title": "Hepatitis B Screening and Antiviral Prophylaxis Prior to Immunosuppressive Cancer Therapy",
+      "organization": "American Society of Clinical Oncology / Centers for Disease Control and Prevention",
+      "source_type": "guideline",
+      "edition_or_version": "ASCO Practice Guideline Update 2021 & Harrison's 21e Ch 191",
+      "publication_date": "2021-07-01",
+      "update_date": "2021-07-01",
+      "jurisdiction": "International",
+      "disease_site": "General",
+      "specialties": [
+        "gastroenterology_hepatology",
+        "infectious_diseases",
+        "medical_oncology",
+        "radiation_oncology"
+      ],
+      "topics": [
+        "hepatitis_b",
+        "hbv_reactivation",
+        "antiviral_prophylaxis",
+        "entecavir",
+        "tenofovir",
+        "immunosuppression"
+      ],
+      "doi_or_url": "https://doi.org/10.1200/JCO.20.01757",
+      "access_status": "available",
+      "supersession": "current",
+      "threshold_criteria": {
+        "screening_panel": "All patients initiating systemic chemotherapy, anti-CD20 monoclonal antibodies, or prolonged corticosteroids MUST be screened with: Hepatitis B surface antigen (HBsAg) and total Hepatitis B core antibody (anti-HBc).",
+        "hbsag_positive_chronic_carrier": {
+          "risk": "High risk (>10-50%) of acute fulminant HBV reactivation, hepatic necrosis, and death.",
+          "action": "Initiate prophylactic antiviral therapy with Entecavir 0.5 mg daily OR Tenofovir disoproxil fumarate (TDF) 300 mg daily (or TAF 25 mg daily) BEFORE chemotherapy initiation; continue throughout treatment and for at least 12 months after cessation."
+        },
+        "hbsag_negative_anti_hbc_positive_past_infection": {
+          "risk": "Moderate-to-high risk with B-cell depleting therapies (rituximab) or moderate risk with anthracycline/platinum regimens.",
+          "action": "Initiate antiviral prophylaxis with entecavir/tenofovir, or conduct serial monitoring of ALT and HBV DNA every 2-4 weeks during therapy."
+        },
+        "pjp_prophylaxis_rule": {
+          "criteria": "Patients receiving corticosteroids equivalent to >= 20 mg prednisone daily for >= 4 weeks, concurrent temozolomide chemoradiation, or severe lymphopenia (< 500/uL).",
+          "regimen": "Trimethoprim-sulfamethoxazole (TMP-SMX) 1 double-strength (DS) tablet orally 3 times weekly."
+        }
+      },
+      "clinical_decision_rules": [
+        "Universal HBV screening (HBsAg + anti-HBc) is mandatory prior to cytotoxic chemotherapy.",
+        "Never initiate immunosuppressive chemotherapy in an HBsAg-positive patient without concurrent entecavir or tenofovir prophylaxis."
+      ],
+      "conditional_pathways": {
+        "unrecorded_viral_hepatitis_screening": "If viral hepatitis status is unrecorded: 'Screening for Hepatitis B (HBsAg and anti-HBc) is mandatory prior to systemic chemotherapy. If HBsAg is positive, initiate antiviral prophylaxis (entecavir or tenofovir) before administering cytotoxic agents to prevent lethal HBV reactivation.'"
+      },
+      "key_passages": [
+        {
+          "section": "Harrison's 21e Ch 191",
+          "text": "Reactivation of hepatitis B virus replication can occur in patients with chronic or resolved HBV infection undergoing cancer chemotherapy or immunosuppressive therapy, potentially leading to fatal liver failure. Universal screening and early antiviral prophylaxis are strongly indicated."
+        }
+      ]
+    },
+    {
+      "source_id": "ASTRO-COLLAGEN-VASCULAR-RT-2021",
+      "title": "Connective Tissue and Collagen Vascular Diseases: Radiation Toxicity Risks and Contraindications",
+      "organization": "American Society for Radiation Oncology / Harrison's Ch 350",
+      "source_type": "consensus",
+      "edition_or_version": "ASTRO Clinical Guidance & Harrison's Principles of Internal Medicine 21e",
+      "publication_date": "2021-03-01",
+      "update_date": "2022-01-01",
+      "jurisdiction": "International",
+      "disease_site": "General",
+      "specialties": [
+        "rheumatology",
+        "radiation_oncology"
+      ],
+      "topics": [
+        "collagen_vascular_disease",
+        "scleroderma",
+        "systemic_lupus_erythematosus",
+        "radiation_fibrosis",
+        "soft_tissue_necrosis"
+      ],
+      "doi_or_url": "https://doi.org/10.1016/j.prro.2020.10.003",
+      "access_status": "available",
+      "supersession": "current",
+      "threshold_criteria": {
+        "scleroderma_systemic_sclerosis": {
+          "contraindication_level": "Relative to ABSOLUTE contraindication to definitive radiation therapy.",
+          "risk": "Profound, catastrophic radiation-induced microvascular damage and irreversible soft tissue fibrosis, joint contractures, skin breakdown, and non-healing ulceration.",
+          "pathway": "Surgical resection preferred whenever possible. If radiotherapy is absolutely unavoidable, treat with reduced field sizes, hyperfractionation, and rigorous patient counseling."
+        },
+        "systemic_lupus_erythematosus_sle": {
+          "contraindication_level": "Relative contraindication, especially if active flare.",
+          "risk": "Elevated risk of severe acute desquamation, late radiation necrosis, and vascular thrombosis.",
+          "pathway": "Ensure SLE is quiescent. Treat with standard or slightly reduced fractions; avoid hypofractionated stereotactic regimens directly overlying vital connective tissues."
+        },
+        "rheumatoid_arthritis_and_others": {
+          "contraindication_level": "Generally safe with standard fractionation and meticulous normal tissue sparing.",
+          "risk": "Slightly increased soft tissue stiffness; no absolute contraindication."
+        }
+      },
+      "clinical_decision_rules": [
+        "Inquire about connective tissue disease history (scleroderma, lupus) before committing to high-dose definitive radiotherapy.",
+        "Systemic sclerosis is a major relative-to-absolute contraindication for radiotherapy; surgery should be prioritized."
+      ],
+      "conditional_pathways": {
+        "unrecorded_rheumatologic_history": "If connective tissue disease history is unrecorded: 'Assess for personal history of systemic sclerosis (scleroderma) or active systemic lupus erythematosus. If systemic sclerosis is confirmed, definitive radiation therapy carries severe risk of catastrophic fibrosis and soft tissue necrosis; surgical alternatives should be prioritized if feasible.'"
+      },
+      "key_passages": [
+        {
+          "section": "Harrison's 21e Ch 350: Systemic Sclerosis",
+          "text": "Radiotherapy in patients with systemic sclerosis can provoke severe localized fibrotic reactions, skin ulceration, and severe contractures. Alternative therapeutic modalities should be sought."
+        }
+      ]
+    },
+    {
+      "source_id": "HARRISONS-GERIATRIC-FITNESS-2022",
+      "title": "Comprehensive Geriatric Assessment and Functional Reserve vs Chronological Age in Oncology",
+      "organization": "McGraw Hill / Harrison's Principles of Internal Medicine",
+      "source_type": "textbook",
+      "edition_or_version": "Harrison's Principles of Internal Medicine 21st Edition (Ch 69 & 73)",
+      "publication_date": "2022-01-01",
+      "update_date": "2022-01-01",
+      "jurisdiction": "International",
+      "disease_site": "General",
+      "specialties": [
+        "geriatric_medicine",
+        "medical_oncology",
+        "radiation_oncology"
+      ],
+      "topics": [
+        "geriatric_assessment",
+        "age_alone_rule",
+        "functional_reserve",
+        "polypharmacy",
+        "nutritional_reserve"
+      ],
+      "doi_or_url": "https://accessmedicine.mhmedical.com/book.aspx?bookid=3095",
+      "access_status": "available",
+      "supersession": "current",
+      "threshold_criteria": {
+        "age_alone_non_exclusion_rule": "Chronological age alone must NEVER be used to deny curative-intent definitive radiotherapy or appropriate multimodal therapy.",
+        "comprehensive_geriatric_domains": [
+          "Functional status: Activities of Daily Living (ADL: bathing, dressing, toileting) and Instrumental ADL (IADL: managing finances, medications, transportation). Impairment in >= 1 IADL indicates vulnerability.",
+          "Comorbidity burden: Charlson Comorbidity Index (CCI) or Cumulative Illness Rating Scale for Geriatrics (CIRS-G).",
+          "Cognitive status: Mini-Cog or Montreal Cognitive Assessment (MoCA).",
+          "Nutritional status: Unintentional weight loss > 5-10% over prior 6 months or BMI < 20 kg/m2 predicts high chemotherapy toxicity.",
+          "Polypharmacy: Use of >= 5 routine medications; high risk of drug-drug interactions with supportive oncology care."
+        ],
+        "geriatric_treatment_adaptation": {
+          "fit_older_adults": "Independent in ADL/IADL with no severe comorbidities: Eligible for standard curative-intent definitive chemoradiation with close supportive care.",
+          "vulnerable_older_adults": "Impaired IADL or mild-moderate comorbidities: Modify chemotherapy (e.g. weekly single-agent platinum or carboplatin AUC 4-5) while preserving full-dose definitive radiation.",
+          "frail_older_adults": "Dependent in ADL, multiple severe comorbidities, or severe dementia: Shift intent to quality of life, symptom control, or hypofractionated palliative radiotherapy."
+        }
+      },
+      "clinical_decision_rules": [
+        "Age alone is not an oncologic contraindication. Functional reserve determines treatment tolerance.",
+        "Vulnerable older adults benefit from maintaining definitive radiation doses while attenuating or substituting concurrent cytotoxic chemotherapy."
+      ],
+      "conditional_pathways": {
+        "elderly_patient_treatment_selection": "If patient is chronological age >= 70: 'Do not withhold definitive therapy on the basis of chronological age alone. If patient is functionally independent (preserved IADL, ECOG 0-1), proceed with curative-intent definitive radiation therapy with adapted systemic therapy; if frail with dependent ADL, deliver hypofractionated radiotherapy alone or supportive care.'"
+      },
+      "key_passages": [
+        {
+          "section": "Harrison's 21e Ch 69: Approach to the Patient with Cancer",
+          "text": "The most significant risk factor for cancer overall is age; two-thirds of all cases were in those aged >65 years. Treatment decisions should be based on physiological age and functional capacity rather than chronological age."
+        }
+      ]
+    },
+    {
+      "source_id": "WASHMAN-NUTRITION-DYSPHAGIA-2020",
+      "title": "Enteral Nutritional Support and Proactive Gastrostomy in High-Dose Radiotherapy",
+      "organization": "Washington University School of Medicine / Wolters Kluwer",
+      "source_type": "textbook",
+      "edition_or_version": "Washington Manual of Medical Therapeutics 36th Edition (Ch 2 & 22)",
+      "publication_date": "2020-01-01",
+      "update_date": "2020-01-01",
+      "jurisdiction": "International",
+      "disease_site": "Head & Neck",
+      "specialties": [
+        "clinical_nutrition",
+        "radiation_oncology",
+        "head_and_neck_surgery"
+      ],
+      "topics": [
+        "enteral_nutrition",
+        "gastrostomy",
+        "dysphagia",
+        "mucositis",
+        "head_and_neck_radiotherapy",
+        "weight_loss"
+      ],
+      "doi_or_url": "https://shop.lww.com/The-Washington-Manual-of-Medical-Therapeutics/p/9781975113483",
+      "access_status": "available",
+      "supersession": "current",
+      "threshold_criteria": {
+        "malnutrition_indicators": {
+          "severe_weight_loss": "Unintentional loss of > 10% body weight over prior 6 months or > 5% in prior 1 month",
+          "bmi_cutoff": "BMI < 18.5 kg/m2",
+          "albumin_prealbumin": "Serum albumin < 3.0 g/dL or prealbumin < 15 mg/dL"
+        },
+        "proactive_peg_rig_indications": [
+          "Locally advanced head and neck cancer (Stage III-IV) planned for definitive high-dose concurrent chemoradiation (66-70 Gy)",
+          "Severe baseline dysphagia or aspiration risk on swallowing evaluation",
+          "Anticipated severe grade 3-4 oral mucositis and odynophagia with extensive mucosal irradiation (pharyngeal constrictors, oral cavity, supraglottic larynx)",
+          "Baseline weight loss > 10% or BMI < 18.5 kg/m2"
+        ],
+        "timing_and_safety": "Proactive placement of PEG or radiologically inserted gastrostomy (RIG) BEFORE starting radiotherapy avoids emergency tube placement during acute severe mucositis/neutropenia and prevents unplanned radiation treatment breaks."
+      },
+      "clinical_decision_rules": [
+        "Severe weight loss (> 10%) during radiotherapy directly causes tumor geometric shifts, loss of immobilization fit, replanning delays, and reduced survival.",
+        "Proactive enteral nutrition support prevents hospitalization for severe dehydration and preserves scheduled radiation completion."
+      ],
+      "conditional_pathways": {
+        "head_neck_nutritional_risk": "If patient with locally advanced head and neck or esophageal cancer has baseline dysphagia or weight loss > 5%: 'Place proactive prophylactic PEG/RIG feeding tube prior to starting definitive 70 Gy chemoradiotherapy. Involve oncology dietitian for caloric targets (30-35 kcal/kg/day, 1.2-1.5 g/kg/day protein) to prevent treatment interruption.'"
+      },
+      "key_passages": [
+        {
+          "section": "Washington Manual Ch 2: Assessment of Nutritional Status",
+          "text": "Malnutrition in hospitalized and cancer patients is associated with increased morbidity, mortality, prolonged hospital stay, and higher complication rates. Enteral nutrition is the preferred route when the gastrointestinal tract is functional."
+        }
+      ]
+    }
+  ]
+}

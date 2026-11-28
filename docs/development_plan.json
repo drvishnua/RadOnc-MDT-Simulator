@@ -1,0 +1,409 @@
+{
+  "schema_version": 1,
+  "plan_id": "radonc-mdt-master-sequential-plan",
+  "scope_baseline_commit": "88629b9dc1513ffdc5cf4acdc0e78b51c23fc8a5",
+  "active_step": "RELEASE",
+  "steps": [
+    {
+      "id": "STEP-A",
+      "title": "Repository, branch, PR, commit, checklist and CI verification",
+      "status": "VERIFIED",
+      "depends_on": [],
+      "allowed_paths": [],
+      "required_workflow_names": [
+        "Windows Installer Build",
+        "GitHub-hosted Windows Packaging Prerequisites",
+        "Backend Tests",
+        "Patient Registry and Four-Round Dashboard Browser E2E",
+        "Frontend Build",
+        "Security and Dependency Audit"
+      ],
+      "completion_evidence": {
+        "commit_sha": "986593ec8aab00b7885f1db5ff39dab2546278fc",
+        "workflow_runs": [
+          {
+            "id": 44625679451,
+            "name": "Windows Installer Build"
+          },
+          {
+            "id": 44625679442,
+            "name": "GitHub-hosted Windows Packaging Prerequisites"
+          },
+          {
+            "id": 44625679759,
+            "name": "Backend Tests"
+          },
+          {
+            "id": 44625679486,
+            "name": "Patient Registry and Four-Round Dashboard Browser E2E"
+          },
+          {
+            "id": 44625679927,
+            "name": "Frontend Build"
+          },
+          {
+            "id": 44625679503,
+            "name": "Security and Dependency Audit"
+          }
+        ]
+      }
+    },
+    {
+      "id": "U12",
+      "title": "Fail-closed sequential development gate",
+      "status": "VERIFIED",
+      "depends_on": [
+        "STEP-A"
+      ],
+      "allowed_paths": [
+        "docs/development_plan.json",
+        "docs/MASTER_DEVELOPMENT_CHECKLIST.md",
+        "backend/scripts/validate_development_plan.py",
+        "backend/tests/test_development_plan.py",
+        ".github/workflows/sequential-development-gate.yml",
+        ".github/workflows/backend-tests.yml",
+        ".github/workflows/security-audit.yml"
+      ],
+      "required_workflow_names": [
+        "Sequential Development Gate",
+        "Backend Tests",
+        "Security and Dependency Audit"
+      ],
+      "completion_evidence": {
+        "commit_sha": "5284483a26e87028f919966e304c472ed537e839",
+        "workflow_runs": [
+          {
+            "id": 44660440836,
+            "name": "Sequential Development Gate"
+          },
+          {
+            "id": 44660440918,
+            "name": "Backend Tests"
+          },
+          {
+            "id": 44660440769,
+            "name": "Security and Dependency Audit"
+          }
+        ]
+      }
+    },
+    {
+      "id": "U09-U10",
+      "title": "Canonical clinical data contract and deterministic hallucination controls",
+      "status": "VERIFIED",
+      "depends_on": [
+        "U12"
+      ],
+      "allowed_paths": [
+        ".gitignore",
+        ".gitleaksignore",
+        "TEST_READY.md",
+        "VIBE_AUDIT_REPORT.md",
+        "add_society_guidelines.py",
+        "update_textbooks.py",
+        ".github/*",
+        "docs/*",
+        "backend/*",
+        "frontend/*",
+        "packaging/*",
+        "scripts/*"
+      ],
+      "required_workflow_names": [
+        "Sequential Development Gate",
+        "Backend Tests",
+        "Security and Dependency Audit"
+      ],
+      "completion_evidence": {
+        "commit_sha": "6566feb4b13b78f2698f1c24f605bb2085c25882",
+        "workflow_runs": [
+          {
+            "id": 45585258544,
+            "name": "Sequential Development Gate"
+          },
+          {
+            "id": 45585258482,
+            "name": "Backend Tests"
+          },
+          {
+            "id": 45585259207,
+            "name": "Security and Dependency Audit"
+          }
+        ]
+      }
+    },
+    {
+      "id": "U04",
+      "title": "Pre-MDT conversational intake and completeness screener",
+      "status": "VERIFIED",
+      "depends_on": [
+        "U09-U10"
+      ],
+      "allowed_paths": [
+        "docs/development_plan.json",
+        "docs/MASTER_DEVELOPMENT_CHECKLIST.md",
+        "backend/app/services/intake*",
+        "backend/app/main.py",
+        "backend/tests/*",
+        "frontend/src/*",
+        "frontend/tests/*"
+      ],
+      "required_workflow_names": [
+        "Sequential Development Gate",
+        "Backend Tests",
+        "Frontend Build",
+        "Patient Registry and Four-Round Dashboard Browser E2E"
+      ],
+      "completion_evidence": {
+        "commit_sha": "a9ab326bb628ea32b4dcf7ea397e83f1502d45a9",
+        "workflow_runs": [
+          {
+            "id": 45621847855,
+            "name": "Sequential Development Gate"
+          },
+          {
+            "id": 45621849150,
+            "name": "Backend Tests"
+          },
+          {
+            "id": 45621847948,
+            "name": "Frontend Build"
+          },
+          {
+            "id": 45621847973,
+            "name": "Patient Registry and Four-Round Dashboard Browser E2E"
+          }
+        ]
+      }
+    },
+    {
+      "id": "U05-U06",
+      "title": "Specialist role contract, conditional reasoning and round-specific arguments",
+      "status": "VERIFIED",
+      "depends_on": [
+        "U04"
+      ],
+      "allowed_paths": [
+        "docs/development_plan.json",
+        "docs/MASTER_DEVELOPMENT_CHECKLIST.md",
+        "backend/app/agents/*",
+        "backend/app/services/mdt_generation.py",
+        "backend/app/services/mdt_rounds.py",
+        "backend/tests/*"
+      ],
+      "required_workflow_names": [
+        "Sequential Development Gate",
+        "Backend Tests",
+        "Security and Dependency Audit"
+      ],
+      "completion_evidence": {
+        "commit_sha": "912d18cab33542afc452db148e6266db3883a4ec",
+        "workflow_runs": [
+          {
+            "id": 45626924105,
+            "name": "Sequential Development Gate"
+          },
+          {
+            "id": 45626924210,
+            "name": "Backend Tests"
+          },
+          {
+            "id": 45626924124,
+            "name": "Security and Dependency Audit"
+          }
+        ]
+      }
+    },
+    {
+      "id": "U06-U08",
+      "title": "Round orchestration, Chair reconciliation and copied/generic response controls",
+      "status": "VERIFIED",
+      "depends_on": [
+        "U05-U06"
+      ],
+      "allowed_paths": [
+        "docs/development_plan.json",
+        "docs/MASTER_DEVELOPMENT_CHECKLIST.md",
+        "backend/app/services/mdt_generation.py",
+        "backend/app/services/mdt_rounds.py",
+        "backend/app/services/chair_report_quality.py",
+        "backend/tests/*",
+        "frontend/src/*"
+      ],
+      "required_workflow_names": [
+        "Sequential Development Gate",
+        "Backend Tests",
+        "Frontend Build",
+        "Patient Registry and Four-Round Dashboard Browser E2E"
+      ],
+      "completion_evidence": {
+        "commit_sha": "e3ae6f3299e62d77a02e63ca055204865b18cd17",
+        "workflow_runs": [
+          {
+            "id": 45638993191,
+            "name": "Sequential Development Gate"
+          },
+          {
+            "id": 45638993183,
+            "name": "Backend Tests"
+          },
+          {
+            "id": 45638993107,
+            "name": "Frontend Build"
+          },
+          {
+            "id": 45638993407,
+            "name": "Patient Registry and Four-Round Dashboard Browser E2E"
+          }
+        ]
+      }
+    },
+    {
+      "id": "U07",
+      "title": "Versioned evidence catalogue and role-specific retrieval",
+      "status": "VERIFIED",
+      "depends_on": [
+        "U06-U08"
+      ],
+      "allowed_paths": [
+        "docs/development_plan.json",
+        "docs/MASTER_DEVELOPMENT_CHECKLIST.md",
+        "backend/app/*",
+        "backend/tests/*",
+        "docs/*"
+      ],
+      "required_workflow_names": [
+        "Sequential Development Gate",
+        "Backend Tests",
+        "Security and Dependency Audit"
+      ],
+      "completion_evidence": {
+        "commit_sha": "a1b83eab9740366c4e12e7517c73f47a53ffc3ce",
+        "workflow_runs": [
+          {
+            "id": 45640513262,
+            "name": "Sequential Development Gate"
+          },
+          {
+            "id": 45640513359,
+            "name": "Backend Tests"
+          },
+          {
+            "id": 45640513350,
+            "name": "Security and Dependency Audit"
+          }
+        ]
+      }
+    },
+    {
+      "id": "U03",
+      "title": "Ollama discovery, reuse and installer state machine",
+      "status": "VERIFIED",
+      "depends_on": [
+        "U07"
+      ],
+      "allowed_paths": [
+        "docs/development_plan.json",
+        "docs/MASTER_DEVELOPMENT_CHECKLIST.md",
+        ".github/scripts/*",
+        "packaging/windows/*",
+        "scripts/*",
+        "backend/tests/*"
+      ],
+      "required_workflow_names": [
+        "Sequential Development Gate",
+        "Backend Tests",
+        "Windows Installer Build",
+        "GitHub-hosted Windows Packaging Prerequisites"
+      ],
+      "completion_evidence": {
+        "commit_sha": "171adc8cdbe3fc1593c49387a03c2d223a533e64",
+        "workflow_runs": [
+          {
+            "id": 45641520248,
+            "name": "Sequential Development Gate"
+          },
+          {
+            "id": 45641520032,
+            "name": "Backend Tests"
+          },
+          {
+            "id": 45641519978,
+            "name": "Windows Installer Build"
+          },
+          {
+            "id": 45641520274,
+            "name": "GitHub-hosted Windows Packaging Prerequisites"
+          }
+        ]
+      }
+    },
+    {
+      "id": "U01-U02",
+      "title": "Remove development surfaces and complete standalone desktop UX",
+      "status": "VERIFIED",
+      "depends_on": [
+        "U03"
+      ],
+      "allowed_paths": [
+        "docs/development_plan.json",
+        "backend/scripts/validate_development_plan.py",
+        "backend/tests/*",
+        "frontend/src/*",
+        "frontend/tests/*",
+        "packaging/*",
+        ".github/workflows/*"
+      ],
+      "required_workflow_names": [
+        "Sequential Development Gate",
+        "Frontend Build",
+        "Patient Registry and Four-Round Dashboard Browser E2E",
+        "Windows Installer Build"
+      ],
+      "completion_evidence": {
+        "commit_sha": "88629b9dc1513ffdc5cf4acdc0e78b51c23fc8a5",
+        "workflow_runs": [
+          {
+            "id": 45655097207,
+            "name": "Sequential Development Gate"
+          },
+          {
+            "id": 45655097060,
+            "name": "Frontend Build"
+          },
+          {
+            "id": 45655097237,
+            "name": "Patient Registry and Four-Round Dashboard Browser E2E"
+          },
+          {
+            "id": 45655097310,
+            "name": "Windows Installer Build"
+          }
+        ]
+      }
+    },
+    {
+      "id": "RELEASE",
+      "title": "Integrated live-model, GPU, security, packaging and independent clinical validation",
+      "status": "IN PROGRESS",
+      "depends_on": [
+        "U01-U02"
+      ],
+      "allowed_paths": [
+        "docs/development_plan.json",
+        "docs/MASTER_DEVELOPMENT_CHECKLIST.md",
+        "backend/*",
+        "frontend/*",
+        "packaging/*",
+        ".github/workflows/*"
+      ],
+      "required_workflow_names": [
+        "Sequential Development Gate",
+        "Backend Tests",
+        "Frontend Build",
+        "Security and Dependency Audit",
+        "Windows Installer Build"
+      ],
+      "completion_evidence": null
+    }
+  ]
+}

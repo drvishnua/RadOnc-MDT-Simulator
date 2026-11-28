@@ -1,0 +1,1432 @@
+"""Bounded live R2/R3/R4 validation using the configured local Ollama endpoint.
+
+This is a synthetic software integration check, not a clinical accuracy assessment.
+Three role fixtures and actual generated R2/R3 outputs are saved and reloaded from an
+isolated temporary SQLite database for Chair synthesis; one R1 fixture deliberately seeds an
+unsupported TNM claim with a separate audit flag to verify cross-round warning handling.
+The seeded validation exercises source-specific prompt-view redaction in R2/R3/R4: only TNM
+components named by originating saved audit flags are masked in model-facing context, while
+persisted contributions, raw audit flags, and unflagged TNM components remain unchanged.
+The generated-output screen still rejects literal seeded-stage repetitions even when described
+as unsupported, and the whole-MDT positive control rejects a false claim repeated outside its
+qualifying source-bound challenge. Server-authored audit metadata is excluded from model-prose
+screens. No full 45-role MDT is run; these are bounded lexical/software gates, not clinical
+validation.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import hashlib
+import json
+import os
+import platform
+import re
+import subprocess
+import sys
+import tempfile
+import time
+import urllib.request
+from datetime import datetime, timezone
+from pathlib import Path
+
+# This script is invoked by path from the installer workflow, so Python sets
+# sys.path[0] to backend/scripts rather than the backend package root.
+# Add the backend root explicitly before importing the application package.
+BACKEND_DIR = Path(__file__).resolve().parents[1]
+backend_path = str(BACKEND_DIR)
+if backend_path not in sys.path:
+    sys.path.insert(0, backend_path)
+
+from app.agents.catalog import AGENT_PROFILES
+from app.config import OLLAMA_BASE_URL, OLLAMA_MODEL
+from app.schemas import SyntheticCase
+from app.services.chair_report_quality import (
+    build_source_opinion_review_coverage,
+    ensure_chair_report_completeness,
+)
+from app.services.mdt_generation import (
+    GENERATION_REQUEST_TIMEOUT_SECONDS,
+    generate_adversarial_contribution,
+    generate_chair_report,
+    generate_debate_contribution,
+)
+from app.services.case_integrity import (
+    extract_attributed_note_opinions,
+    is_empty_challenge_placeholder,
+)
+from app.services import run_store
+from app.services.mdt_rounds import _attach_r1_case_integrity_flags
+
+ARTIFACT_DIR = BACKEND_DIR / "validation_artifacts"
+ARTIFACT_PATH = Path(os.environ.get("RADONC_MODEL_VALIDATION_ARTIFACT_PATH", str(ARTIFACT_DIR / "representative_model_provenance_validation.json"))).expanduser()
+ROLE_IDS = ("RO-01", "SO-02", "MO-01")
+SEEDED_CASE_INTEGRITY_ROLE_ID = "RO-01"
+SEEDED_CASE_INTEGRITY_CLAIM = "cT1N0M0"
+SEEDED_CASE_INTEGRITY_RAW_STATEMENT = "The clinical stage is cT1N0M0."
+SEEDED_CASE_INTEGRITY_FLAG = (
+    "CASE_INTEGRITY_SEED_RO01: R1 states cT1N0M0, but the case supplies no T/N/M stage. "
+    "This claim is unsupported/unverified; do not infer any alternative stage."
+)
+WHOLE_MDT_POSITIVE_CONTROL_CLAIM = "The entire 45-role MDT agrees with this conclusion"
+MAX_SECONDS_PER_GENERATION = GENERATION_REQUEST_TIMEOUT_SECONDS + 60.0
+
+_STAGE_MENTION_PATTERN = re.compile(
+    r"\b(?:(?:yc|yp|c|p))?T(?:is|[0-4x])(?:N(?:[0-3x]))?(?:M(?:[01x]))?\b"
+    r"|\bN[0-3x]\b|\bM[01x]\b"
+    r"|\b(?:clinical\s+)?stage\s+(?:0|I{1,3}|IV|[1-4]|X)\b",
+    re.IGNORECASE,
+)
+_STAGE_UNCERTAINTY_PATTERN = re.compile(
+    r"\b(?:unverified|unsupported|not supported|not established|not supplied|"
+    r"not documented|not reported|not provided|not confirmed|not verified|unknown|"
+    r"does not establish|doesn't establish|does not prove|cannot establish|"
+    r"cannot be established|cannot infer|cannot be inferred|do not infer|"
+    r"must not be inferred|quarantin\w*|not a clinical fact|not a finding|"
+    r"not substantiated|not demonstrated|insufficient information|insufficient data|"
+    r"not enough information|not enough data|audit warning|flagged as unsupported|"
+    r"remains unclear)\b",
+    re.IGNORECASE,
+)
+
+
+def _iter_text_leaves(value: object, path: str = "$"):
+    """Yield text leaves with stable paths for narrowly scoped output checks."""
+    if isinstance(value, str):
+        yield path, value
+    elif isinstance(value, dict):
+        for key, child in value.items():
+            yield from _iter_text_leaves(child, f"{path}.{key}")
+    elif isinstance(value, (list, tuple)):
+        for index, child in enumerate(value):
+            yield from _iter_text_leaves(child, f"{path}[{index}]")
+
+
+_SERVER_AUTHORED_AUDIT_TEXT_FIELDS = frozenset({
+    "case_data_integrity_flags",
+    "source_reference_integrity_flags",
+    "integrity_repair_flags",
+    "integrity_repair_original_flags",
+})
+
+
+def _iter_model_authored_text(value: object, path: str = "$"):
+    """Yield generated prose while excluding server-authored audit metadata."""
+    if isinstance(value, str):
+        yield path, value
+    elif isinstance(value, dict):
+        for key, child in value.items():
+            if key in _SERVER_AUTHORED_AUDIT_TEXT_FIELDS:
+                continue
+            yield from _iter_model_authored_text(child, f"{path}.{key}")
+    elif isinstance(value, (list, tuple)):
+        for index, child in enumerate(value):
+            yield from _iter_model_authored_text(child, f"{path}[{index}]")
+
+
+def _unqualified_stage_assertions(value: object, path: str = "$") -> list[dict]:
+    """Find unqualified model-authored TNM/stage mentions; server audit flags are excluded."""
+    findings: list[dict] = []
+    for text_path, text_value in _iter_model_authored_text(value, path):
+        sentences = re.split(r"(?<=[.!?])\s+|\r?\n+", text_value)
+        for sentence in sentences:
+            candidate = sentence.strip()
+            if (
+                candidate
+                and _STAGE_MENTION_PATTERN.search(candidate)
+                and not _STAGE_UNCERTAINTY_PATTERN.search(candidate)
+            ):
+                findings.append({"path": text_path, "text": candidate[:600]})
+    return findings
+
+
+_SEEDED_FLAGGED_STAGE_LITERAL_PATTERN = re.compile(
+    r"\b(?:cT1N0M0|T1|N0|M0)\b",
+    re.IGNORECASE,
+)
+
+
+def _literal_seeded_stage_repetition_findings(value: object, path: str = "$") -> list[dict]:
+    """Fail if model-authored later-round prose repeats any literal seeded stage component."""
+    findings: list[dict] = []
+    for text_path, text_value in _iter_model_authored_text(value, path):
+        for match in _SEEDED_FLAGGED_STAGE_LITERAL_PATTERN.finditer(text_value):
+            start = max(0, match.start() - 100)
+            end = min(len(text_value), match.end() + 100)
+            findings.append({
+                "path": text_path,
+                "token": match.group(0),
+                "text": text_value[start:end].strip()[:300],
+            })
+    return findings
+
+
+def _positive_control_claim_repetition_findings(
+    result: object,
+    claim: str,
+    *,
+    source_agent_id: str,
+) -> list[dict]:
+    """Allow one qualifying source-bound challenge quote, but reject the claim elsewhere."""
+    if (
+        not isinstance(result, dict)
+        or not isinstance(claim, str)
+        or not claim.strip()
+        or not isinstance(source_agent_id, str)
+        or not source_agent_id.strip()
+    ):
+        return []
+
+    challenges = result.get("substantive_challenges")
+    allowed_challenge_index = None
+    if isinstance(challenges, (list, tuple)):
+        for index, challenge in enumerate(challenges):
+            if not isinstance(challenge, str):
+                continue
+            occurrences = re.findall(re.escape(claim), challenge, flags=re.IGNORECASE)
+            if len(occurrences) != 1:
+                continue
+            candidate = dict(result)
+            candidate["substantive_challenges"] = [challenge]
+            if _has_expected_source_bound_challenge(
+                candidate,
+                source_agent_id=source_agent_id,
+                quoted_claim=claim,
+            ):
+                allowed_challenge_index = index
+                break
+
+    findings: list[dict] = []
+    for text_path, text_value in _iter_model_authored_text(result):
+        challenge_match = re.fullmatch(r"\$\.substantive_challenges\[(\d+)\]", text_path)
+        if (
+            challenge_match
+            and allowed_challenge_index is not None
+            and int(challenge_match.group(1)) == allowed_challenge_index
+        ):
+            continue
+        lowered = text_value.casefold()
+        needle = claim.casefold()
+        offset = 0
+        while (index := lowered.find(needle, offset)) >= 0:
+            start = max(0, index - 100)
+            end = min(len(text_value), index + len(claim) + 100)
+            findings.append({
+                "path": text_path,
+                "text": text_value[start:end].strip()[:300],
+            })
+            offset = index + len(claim)
+    return findings
+
+
+EXPLICIT_REBUTTAL_MARKERS = (
+    "unsupported",
+    "not supported",
+    "does not establish",
+    "doesn't establish",
+    "cannot establish",
+    "cannot be established",
+    "not established",
+    "no complete",
+    "no full",
+    "only the supplied",
+    "only selected",
+    "no evidence",
+    "not substantiated",
+    "unsubstantiated",
+    "not demonstrated",
+    "not justified",
+    "does not justify",
+    "cannot conclude",
+    "cannot be concluded",
+    "should not be claimed",
+    "cannot be claimed",
+    "overstates",
+    "overbroad",
+)
+
+
+def _has_explicit_rebuttal(text: str, quoted_claim: str) -> bool:
+    """Require a rejection/qualification phrase outside the verbatim quoted claim."""
+    remainder = re.sub(re.escape(quoted_claim), " ", text, flags=re.IGNORECASE)
+    return any(
+        re.search(
+            rf"(?<![A-Za-z]){re.escape(marker)}(?![A-Za-z])",
+            remainder,
+            flags=re.IGNORECASE,
+        )
+        for marker in EXPLICIT_REBUTTAL_MARKERS
+    )
+
+
+def _has_expected_source_bound_challenge(
+    result: dict,
+    *,
+    source_agent_id: str,
+    quoted_claim: str,
+) -> bool:
+    """Require a supplied-peer citation, verbatim claim, and explicit rebuttal."""
+    if (
+        not isinstance(result, dict)
+        or not isinstance(source_agent_id, str)
+        or not source_agent_id.strip()
+        or not isinstance(quoted_claim, str)
+        or not quoted_claim.strip()
+    ):
+        return False
+
+    supplied_peer_ids = result.get("source_peer_ids")
+    if (
+        not isinstance(supplied_peer_ids, (list, tuple))
+        or source_agent_id not in supplied_peer_ids
+    ):
+        return False
+
+    expected_source = f"R2:{source_agent_id}"
+    # A substring check would incorrectly accept identifiers such as
+    # R2:SO-02-extra. Require a complete source token on both sides.
+    source_token = re.compile(
+        rf"(?<![A-Za-z0-9_-]){re.escape(expected_source)}(?![A-Za-z0-9_-])"
+    )
+    challenges = result.get("substantive_challenges")
+    if not isinstance(challenges, (list, tuple)):
+        return False
+
+    return any(
+        isinstance(item, str)
+        and source_token.search(item)
+        and quoted_claim.casefold() in item.casefold()
+        and _has_explicit_rebuttal(item, quoted_claim)
+        for item in challenges
+    )
+
+
+def _ollama_snapshot() -> dict:
+    """Capture Ollama runtime, installed model registry and process information."""
+    result: dict = {}
+    for suffix, url in (
+        ("version", f"{OLLAMA_BASE_URL}/api/version"),
+        ("processes", f"{OLLAMA_BASE_URL}/api/ps"),
+        ("tags", f"{OLLAMA_BASE_URL}/api/tags"),
+    ):
+        try:
+            with urllib.request.urlopen(url, timeout=8) as response:
+                result[suffix] = json.loads(response.read().decode("utf-8"))
+        except Exception as exc:
+            result[f"{suffix}_error"] = f"{type(exc).__name__}: {exc}"
+    try:
+        result["cli_ps"] = subprocess.check_output(
+            ["ollama", "ps"], text=True, timeout=8
+        ).strip()
+    except Exception as exc:
+        result["cli_ps_error"] = f"{type(exc).__name__}: {exc}"
+    try:
+        result["configured_model_modelfile"] = subprocess.check_output(
+            ["ollama", "show", "--modelfile", OLLAMA_MODEL],
+            text=True,
+            timeout=15,
+        ).strip()
+    except Exception as exc:
+        result["configured_model_modelfile_error"] = f"{type(exc).__name__}: {exc}"
+    return result
+
+
+def _assert_artifact_path_is_new(path: Path) -> None:
+    """Refuse to overwrite an earlier raw validation artifact."""
+    if path.exists():
+        raise FileExistsError(f"Refusing to overwrite existing validation artifact: {path}")
+
+
+def _require_installed_model_record(snapshot: dict, model_name: str) -> dict:
+    """Require one exact installed Ollama record with a full SHA-256 digest."""
+    tags = snapshot.get("tags")
+    if not isinstance(tags, dict) or not isinstance(tags.get("models"), list):
+        raise RuntimeError("Ollama /api/tags did not return a valid installed-model list.")
+
+    matches = [
+        item
+        for item in tags["models"]
+        if isinstance(item, dict)
+        and model_name in (item.get("name"), item.get("model"))
+    ]
+    if len(matches) != 1:
+        raise RuntimeError(
+            f"Expected exactly one installed Ollama model record for {model_name!r}; "
+            f"found {len(matches)}. No model pull or inference was attempted."
+        )
+
+    record = dict(matches[0])
+    digest = record.get("digest")
+    if not isinstance(digest, str):
+        raise RuntimeError(
+            f"Installed Ollama model {model_name!r} has no full SHA-256 digest; "
+            "short tag identifiers are not accepted. No inference was attempted."
+        )
+    # Ollama /api/tags and /api/ps may expose the full digest as bare hex.
+    # Accept only that exact representation or the optional sha256: prefix,
+    # then canonicalise before persisting or comparing any model identity.
+    bare_digest = digest[7:] if digest[:7].casefold() == "sha256:" else digest
+    if re.fullmatch(r"[0-9a-fA-F]{64}", bare_digest) is None:
+        raise RuntimeError(
+            f"Installed Ollama model {model_name!r} has no full SHA-256 digest; "
+            "short tag identifiers are not accepted. No inference was attempted."
+        )
+    record["digest"] = f"sha256:{bare_digest.lower()}"
+    return record
+
+
+def _build_case() -> SyntheticCase:
+    return SyntheticCase(
+        scenario_title="Fictional source-attribution validation case",
+        case_summary=(
+            "Fictional educational record with incomplete staging and investigation data. "
+            "The surgical oncology note favours a surgery-led assessment first, conditional "
+            "on complete local staging and resectability review; the medical oncology note "
+            "favours discussing a preoperative multimodality sequence, conditional on MRI "
+            "staging, metastatic work-up and fitness assessment. "
+            "Neither note supplies the missing investigations or establishes a final plan."
+        ),
+        known_unknowns=[
+            "Clinical stage is not supplied.",
+            "Required imaging and investigation results are not supplied.",
+            "Performance status and patient goals are not supplied.",
+        ],
+    )
+
+
+def _r1_fixture(
+    role_id: str,
+    *,
+    include_seeded_case_integrity_flag: bool = True,
+) -> dict:
+    """Build an explicit R1 fixture, optionally seeding one separately flagged audit-test claim."""
+    fixture = {
+        "position": "insufficient_information",
+        "provisional_conclusion": (
+            "The supplied fictional record does not establish clinical stage, "
+            "investigation results, fitness, patient goals, or a definitive pathway."
+        ),
+        "preferred_educational_option": (
+            "No educational pathway can be established from the supplied information."
+        ),
+        "disagreement_notes": [],
+        "unknowns": [
+            "Clinical stage and investigation results are not supplied.",
+            "Fitness and patient goals are not supplied.",
+        ],
+        "case_facts": [],
+        "evidence_claims": [],
+        "not_a_treatment_instruction": True,
+        "fixture_id": f"R1-FIXTURE:{role_id}",
+    }
+    if role_id == SEEDED_CASE_INTEGRITY_ROLE_ID and include_seeded_case_integrity_flag:
+        # Deliberately seed one unsupported narrative assertion while preserving a
+        # separate audit-warning field. The case snapshot above still leaves TNM unknown.
+        fixture["disagreement_notes"] = [SEEDED_CASE_INTEGRITY_RAW_STATEMENT]
+        fixture["case_data_integrity_flags"] = [SEEDED_CASE_INTEGRITY_FLAG]
+    return fixture
+
+
+def _build_r3_peer_views(
+    roles: list[dict],
+    own_role_id: str,
+    r2_by_id: dict[str, dict],
+) -> list[dict]:
+    """Build R3 peer inputs and attach each peer's R1 audit warnings by role ID."""
+    peer_views = [
+        {
+            "agent_id": peer["agent_id"],
+            "agent_name": peer["name"],
+            "result": r2_by_id[peer["agent_id"]],
+        }
+        for peer in roles
+        if peer["agent_id"] != own_role_id
+    ]
+    round1_by_id = {
+        role["agent_id"]: _r1_fixture(role["agent_id"])
+        for role in roles
+    }
+    return _attach_r1_case_integrity_flags(peer_views, round1_by_id)
+
+
+def _role_rows():
+    by_id = {item["agent_id"]: item for item in AGENT_PROFILES}
+    missing = sorted(set(ROLE_IDS) - set(by_id))
+    if missing:
+        raise RuntimeError(f"Configured representative roles are missing: {missing}")
+    return [by_id[role_id] for role_id in ROLE_IDS]
+
+
+def _chair_source_opinion_coverage_failures(
+    chair_report,
+    expected_opinions: list[dict],
+    expected_role_ids: set[str],
+) -> list[dict]:
+    """Validate source-review coverage in its dedicated report section."""
+    failures: list[dict] = []
+    coverage_items = getattr(chair_report, "source_opinion_review_coverage", None)
+    disagreements = getattr(chair_report, "unresolved_disagreements", None)
+
+    if not isinstance(coverage_items, list):
+        return [{
+            "round": 4,
+            "type": "chair_source_opinion_review_coverage_field_missing_or_invalid",
+        }]
+    if not isinstance(disagreements, list):
+        failures.append({
+            "round": 4,
+            "type": "chair_unresolved_disagreements_field_missing_or_invalid",
+        })
+        disagreements = []
+
+    misplaced = [
+        item for item in disagreements
+        if isinstance(item, str) and "source-opinion review coverage" in item.casefold()
+    ]
+    if misplaced:
+        failures.append({
+            "round": 4,
+            "type": "chair_source_opinion_coverage_misplaced_in_disagreements",
+            "matching_sections": misplaced,
+        })
+
+    expected_count = len(expected_role_ids)
+    for source in expected_opinions:
+        source_id = source["source_id"]
+        matching = [
+            item for item in coverage_items
+            if isinstance(item, str)
+            and source_id in item
+            and "roles supplied an exact source-bound review" in item
+        ]
+        if len(matching) != 1:
+            failures.append({
+                "round": 4,
+                "type": "chair_source_opinion_review_coverage",
+                "source_id": source_id,
+                "matching_sections": matching,
+            })
+            continue
+
+        expected_summary = (
+            f"{expected_count}/{expected_count} roles supplied an exact source-bound review"
+        )
+        if expected_summary not in matching[0]:
+            failures.append({
+                "round": 4,
+                "type": "chair_source_opinion_review_coverage_incomplete",
+                "source_id": source_id,
+                "expected": expected_summary,
+                "actual": matching[0],
+            })
+
+    return failures
+
+
+async def _timed_call(label: str, callback, metrics: list[dict]):
+    started = time.perf_counter()
+    try:
+        value = await asyncio.wait_for(callback(), timeout=MAX_SECONDS_PER_GENERATION)
+    except Exception as exc:
+        cause = exc.__cause__
+        metrics.append({
+            "stage": label,
+            "wall_seconds": round(time.perf_counter() - started, 3),
+            "status": "failed",
+            "error_type": type(exc).__name__,
+            "cause_type": type(cause).__name__ if cause is not None else None,
+        })
+        raise
+    metrics.append({
+        "stage": label,
+        "wall_seconds": round(time.perf_counter() - started, 3),
+        "status": "completed",
+    })
+    return value
+
+
+def _persist_bounded_round_records(
+    case: SyntheticCase,
+    roles: list[dict],
+    round2_rows: list[dict],
+    round3_rows: list[dict],
+    generation_metrics: list[dict],
+) -> dict:
+    """Persist three synthetic R1 fixtures and actual R2/R3 outputs in a disposable DB.
+
+    This deliberately does not use create_round_job or run_mdt_round: those production
+    paths correctly require all 45 preceding-role records. Only this isolated validation
+    database contains three role rows per round. Its database file is removed on return.
+    """
+    expected_ids = {role["agent_id"] for role in roles}
+    if len(expected_ids) != 3 or expected_ids != set(ROLE_IDS):
+        raise ValueError("Bounded Chair validation requires the three configured representative roles.")
+
+    original_data_dir = run_store.DATA_DIR
+    original_db_path = run_store.DB_PATH
+    original_legacy_path = run_store.LEGACY_DB_PATH
+    temporary_db_path: Path | None = None
+    result: dict | None = None
+    try:
+        with tempfile.TemporaryDirectory(prefix="radonc-bounded-chair-r4-") as temporary_root:
+            temporary_data_dir = Path(temporary_root)
+            temporary_db_path = temporary_data_dir / "simulation_runs.sqlite3"
+            run_store.DATA_DIR = temporary_data_dir
+            run_store.DB_PATH = temporary_db_path
+            run_store.LEGACY_DB_PATH = None
+
+            from app.services import intake_store
+
+            intake = intake_store.create_intake_session(case)
+            session_id = intake["session_id"]
+            intake_store.accept_intake_with_gaps(session_id, confirmed=True)
+            patient = intake_store.promote_accepted_intake_to_patient(
+                session_id,
+                patient_name="Synthetic Representative Validation",
+            )
+            version = patient["versions"][0]
+            run = run_store.create_run_for_case_version(
+                patient["patient_id"], version["case_version_id"]
+            )
+            run_id = run["run_id"]
+            for role in roles:
+                fixture = _r1_fixture(role["agent_id"])
+                run_store.save_agent_success(
+                    run_id,
+                    role["agent_id"],
+                    json.dumps(fixture, ensure_ascii=False),
+                    0.0,
+                )
+            saved_round1 = run_store.list_results(run_id)
+            completed_r1_ids = {
+                row["agent_id"] for row in saved_round1
+                if row["status"] == "completed" and row.get("assessment")
+            }
+            if completed_r1_ids != expected_ids or len(saved_round1) != len(AGENT_PROFILES):
+                raise RuntimeError(
+                    "Temporary R1 fixture persistence did not retain exactly three "
+                    "completed representative roles in the MDT run structure."
+                )
+
+            metrics_by_stage = {
+                item["stage"]: item["wall_seconds"]
+                for item in generation_metrics
+                if item.get("status") == "completed"
+            }
+            saved_by_round: dict[int, list[dict]] = {}
+            summaries: dict[int, dict] = {}
+
+            for round_number, source_rows in ((2, round2_rows), (3, round3_rows)):
+                rows_by_id = {row["agent_id"]: row for row in source_rows}
+                if set(rows_by_id) != expected_ids or len(rows_by_id) != 3:
+                    raise RuntimeError(
+                        f"Round {round_number} does not contain exactly one completed "
+                        "contribution from each representative role."
+                    )
+                now = datetime.now(timezone.utc).isoformat()
+                with run_store._connect() as db:
+                    run_store._ensure_round_tables(db)
+                    db.execute(
+                        """
+                        INSERT INTO round_runs
+                        (run_id, round_number, status, total_agents, current_agent_id,
+                         created_at, updated_at, started_at, finished_at)
+                        VALUES (?, ?, 'queued', 3, NULL, ?, ?, NULL, NULL)
+                        """,
+                        (run_id, round_number, now, now),
+                    )
+                    db.executemany(
+                        """
+                        INSERT INTO agent_round_results
+                        (run_id, round_number, agent_id, agent_name, category_label, status)
+                        VALUES (?, ?, ?, ?, ?, 'queued')
+                        """,
+                        [
+                            (
+                                run_id,
+                                round_number,
+                                role["agent_id"],
+                                role["name"],
+                                role.get("category_label", role.get("category", "Specialist")),
+                            )
+                            for role in roles
+                        ],
+                    )
+
+                for role in roles:
+                    role_id = role["agent_id"]
+                    row = rows_by_id[role_id]
+                    result_field = row.get("result")
+                    if not isinstance(result_field, dict):
+                        raise RuntimeError(
+                            f"Round {round_number} {role_id} has no structured result to persist."
+                        )
+                    if result_field.get("agent_id") != role_id:
+                        raise RuntimeError(
+                            f"Round {round_number} stored contribution identity mismatch for {role_id}."
+                        )
+                    duration = metrics_by_stage.get(
+                        f"R{round_number}:{role_id}", 0.0
+                    )
+                    run_store.save_round_success(
+                        run_id,
+                        round_number,
+                        role_id,
+                        json.dumps(result_field, ensure_ascii=False),
+                        duration,
+                    )
+                run_store.mark_round_finished(run_id, round_number)
+                summary = run_store.get_round_summary(run_id, round_number)
+                persisted_rows = run_store.list_round_results(run_id, round_number)
+                if (
+                    summary["status"] != "completed"
+                    or summary["completed_count"] != 3
+                    or summary["failed_count"] != 0
+                    or len(persisted_rows) != 3
+                ):
+                    raise RuntimeError(
+                        f"Round {round_number} did not persist and reload as three "
+                        "completed contributions."
+                    )
+                summaries[round_number] = summary
+                saved_by_round[round_number] = persisted_rows
+
+            # Prove this bounded fixture cannot accidentally enter the production
+            # R2 orchestration path: that path still requires all 45 successful R1s.
+            try:
+                run_store.create_round_job(run_id, 2)
+            except ValueError as exc:
+                production_guard = str(exc)
+                if "successful independent assessments" not in production_guard:
+                    raise
+            else:
+                raise RuntimeError(
+                    "Production R2 creation unexpectedly accepted only three R1 fixtures."
+                )
+
+            run_summary = run_store.get_run(run_id)
+            if (
+                run_summary["patient_id"] != patient["patient_id"]
+                or run_summary["case_version_id"] != version["case_version_id"]
+                or run_summary["completed_count"] != 3
+            ):
+                raise RuntimeError(
+                    "Temporary bounded validation run has unexpected accepted-intake linkage or R1 count."
+                )
+            result = {
+                "run_id": run_id,
+                "round1_rows": saved_round1,
+                "round2_rows": saved_by_round[2],
+                "round3_rows": saved_by_round[3],
+                "round_summaries": summaries,
+                "run_summary": run_summary,
+                "production_round2_guard": production_guard,
+                "temporary_database_path": str(temporary_db_path),
+                "temporary_database_deleted": False,
+            }
+    finally:
+        run_store.DATA_DIR = original_data_dir
+        run_store.DB_PATH = original_db_path
+        run_store.LEGACY_DB_PATH = original_legacy_path
+
+    if result is None:
+        raise RuntimeError("Temporary SQLite persistence did not produce validation records.")
+    result["temporary_database_deleted"] = (
+        temporary_db_path is not None and not temporary_db_path.exists()
+    )
+    if not result["temporary_database_deleted"]:
+        raise RuntimeError("Temporary Chair-validation SQLite database was not removed.")
+    return result
+
+
+async def main() -> int:
+    ARTIFACT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    _assert_artifact_path_is_new(ARTIFACT_PATH)
+    case = _build_case()
+    case_json = case.model_dump_json(exclude_none=True)
+    roles = _role_rows()
+    expected_opinions = extract_attributed_note_opinions(case.case_summary)
+    if len(expected_opinions) != 2:
+        raise RuntimeError(
+            "Validation fixture must yield exactly two server-extracted source opinions."
+        )
+
+    payload = {
+        "validation_type": "representative_live_r2_r3_provenance",
+        "execution_mode": "local_ollama_bounded_validation",
+        "gpu_measured": False,
+        "clinical_accuracy_evaluated": False,
+        "evidence_retrieval_connected": False,
+        "synthetic_only": True,
+        "created_saved_mdt_run": False,
+        "created_temporary_sqlite_validation_run": False,
+        "persisted_patient_record": False,
+        "rounds_attempted": [],
+        "rounds_completed": [],
+        "r1_inputs": (
+            "Deterministic non-model fixture records; not presented as model assessments. "
+            "RO-01 contains one deliberately seeded unsupported cT1N0M0 narrative assertion "
+            "with a separate server audit warning; the synthetic case snapshot supplies no TNM stage."
+        ),
+        "seeded_case_integrity_audit_test": {
+            "status": "pending",
+            "seeded_role_id": SEEDED_CASE_INTEGRITY_ROLE_ID,
+            "raw_r1_statement": SEEDED_CASE_INTEGRITY_RAW_STATEMENT,
+            "server_audit_flag": SEEDED_CASE_INTEGRITY_FLAG,
+            "case_snapshot_tnm_supplied": False,
+            "expected_handling": (
+                "Treat the statement as unverified/quarantined; do not repeat it as a fact "
+                "or infer a different T, N, or M finding."
+            ),
+            "round2_warning_context_by_role": {},
+            "round3_warning_context_by_role": {},
+            "model_output_review": {"status": "pending", "unqualified_stage_assertions": []},
+        },
+        "r4_validation_mode": "Bounded three-role Chair synthesis; not the production 45-role R4 orchestration.",
+        "r4_executed": False,
+        "started_at": datetime.now(timezone.utc).isoformat(),
+        "host_platform": platform.platform(),
+        "python_version": platform.python_version(),
+        "model": OLLAMA_MODEL,
+        "ollama_base_url": OLLAMA_BASE_URL,
+        "case_snapshot": json.loads(case_json),
+        "case_snapshot_sha256": hashlib.sha256(case_json.encode("utf-8")).hexdigest(),
+        "selected_roles": [
+            {"agent_id": role["agent_id"], "name": role["name"], "category": role["category"]}
+            for role in roles
+        ],
+        "server_source_opinion_register": expected_opinions,
+        "ollama_before": _ollama_snapshot(),
+        "generation_metrics": [],
+        "round2": [],
+        "round3": [],
+        "source_opinion_coverage": [],
+        "source_opinion_coverage_integrity": [],
+        "quality_gate_failures": [],
+        "status": "running",
+    }
+
+    try:
+        if not payload["ollama_before"].get("version"):
+            raise RuntimeError("Ollama version endpoint is not reachable.")
+        payload["model_registry_record"] = _require_installed_model_record(
+            payload["ollama_before"], OLLAMA_MODEL
+        )
+        payload["model_digest"] = payload["model_registry_record"]["digest"]
+        payload["model_tag"] = OLLAMA_MODEL
+        payload["configured_model_modelfile"] = payload["ollama_before"].get(
+            "configured_model_modelfile"
+        )
+        # Round 2: each of the three roles sees the other two R1 fixture records.
+        payload["rounds_attempted"].append("R2")
+        r2_by_id = {}
+        r1_by_id = {role["agent_id"]: _r1_fixture(role["agent_id"]) for role in roles}
+        for role in roles:
+            role_id = role["agent_id"]
+            own_r1 = r1_by_id[role_id]
+            peers = [
+                {
+                    "agent_id": peer["agent_id"],
+                    "agent_name": peer["name"],
+                    "assessment": r1_by_id[peer["agent_id"]],
+                }
+                for peer in roles
+                if peer["agent_id"] != role_id
+            ]
+            has_seeded_flag = (
+                SEEDED_CASE_INTEGRITY_FLAG in (own_r1.get("case_data_integrity_flags") or [])
+                or any(
+                    SEEDED_CASE_INTEGRITY_FLAG
+                    in (peer["assessment"].get("case_data_integrity_flags") or [])
+                    for peer in peers
+                )
+            )
+            if not has_seeded_flag:
+                raise RuntimeError(f"R2:{role_id} did not receive the seeded R1 case-integrity flag.")
+            payload["seeded_case_integrity_audit_test"]["round2_warning_context_by_role"][role_id] = {
+                "delivered": True,
+                "delivery": (
+                    "own_R1"
+                    if SEEDED_CASE_INTEGRITY_FLAG in (own_r1.get("case_data_integrity_flags") or [])
+                    else "selected_peer_R1"
+                ),
+            }
+            contribution = await _timed_call(
+                f"R2:{role_id}",
+                lambda role=role, own_r1=own_r1, peers=peers: generate_debate_contribution(
+                    role, case, own_r1, peers
+                ),
+                payload["generation_metrics"],
+            )
+            row = contribution.model_dump()
+            r2_by_id[role_id] = row
+            payload["round2"].append(row)
+        payload["rounds_completed"].append("R2")
+
+        # Round 3: each role receives the actual R2 records from the other two roles.
+        payload["rounds_attempted"].append("R3")
+        r3_rows = []
+        for role in roles:
+            role_id = role["agent_id"]
+            own_r1 = r1_by_id[role_id]
+            peer_views = _build_r3_peer_views(roles, role_id, r2_by_id)
+            has_seeded_flag = (
+                SEEDED_CASE_INTEGRITY_FLAG in (own_r1.get("case_data_integrity_flags") or [])
+                or any(
+                    SEEDED_CASE_INTEGRITY_FLAG
+                    in (peer.get("round1_case_integrity_flags") or [])
+                    for peer in peer_views
+                )
+            )
+            if not has_seeded_flag:
+                raise RuntimeError(f"R3:{role_id} did not receive the seeded R1 case-integrity flag.")
+            payload["seeded_case_integrity_audit_test"]["round3_warning_context_by_role"][role_id] = {
+                "delivered": True,
+                "delivery": (
+                    "own_R1"
+                    if SEEDED_CASE_INTEGRITY_FLAG in (own_r1.get("case_data_integrity_flags") or [])
+                    else "selected_peer_R1"
+                ),
+            }
+            contribution = await _timed_call(
+                f"R3:{role_id}",
+                lambda role=role, own_r1=own_r1, peer_views=peer_views: generate_adversarial_contribution(
+                    role,
+                    case,
+                    own_r1,
+                    r2_by_id[role_id],
+                    peer_views,
+                ),
+                payload["generation_metrics"],
+            )
+            row = {
+                "agent_id": role_id,
+                "agent_name": role["name"],
+                "status": "completed",
+                "result": contribution.model_dump(),
+            }
+            r3_rows.append(row)
+            payload["round3"].append(row)
+        payload["rounds_completed"].append("R3")
+
+        coverage, coverage_integrity = build_source_opinion_review_coverage(
+            r3_rows, case.case_summary
+        )
+        payload["source_opinion_coverage"] = coverage
+        payload["source_opinion_coverage_integrity"] = coverage_integrity
+
+        failures = payload["quality_gate_failures"]
+        expected_ids = {item["source_id"] for item in expected_opinions}
+        for row in payload["round2"]:
+            role_id = row["agent_id"]
+            if row["source_reference_integrity_flags"]:
+                failures.append({
+                    "role": role_id,
+                    "round": 2,
+                    "type": "source_reference_integrity",
+                    "details": row["source_reference_integrity_flags"],
+                })
+            if row["case_data_integrity_flags"]:
+                failures.append({
+                    "role": role_id,
+                    "round": 2,
+                    "type": "case_data_integrity",
+                    "details": row["case_data_integrity_flags"],
+                })
+
+        for row in r3_rows:
+            role_id = row["agent_id"]
+            result = row["result"]
+            if result["source_reference_integrity_flags"]:
+                failures.append({
+                    "role": role_id,
+                    "round": 3,
+                    "type": "source_reference_integrity",
+                    "details": result["source_reference_integrity_flags"],
+                })
+            if result["case_data_integrity_flags"]:
+                failures.append({
+                    "role": role_id,
+                    "round": 3,
+                    "type": "case_data_integrity",
+                    "details": result["case_data_integrity_flags"],
+                })
+            reviews = result["source_opinion_reviews"]
+            review_ids = [review["source_id"] for review in reviews]
+            if len(review_ids) != len(set(review_ids)) or set(review_ids) != expected_ids:
+                failures.append({
+                    "role": role_id,
+                    "round": 3,
+                    "type": "source_opinion_register_coverage",
+                    "expected": sorted(expected_ids),
+                    "actual": review_ids,
+                })
+            for review in reviews:
+                if review["source_id"] in expected_ids:
+                    expected_excerpt = next(
+                        item["source_excerpt"]
+                        for item in expected_opinions
+                        if item["source_id"] == review["source_id"]
+                    )
+                    if review["source_excerpt"] != expected_excerpt:
+                        failures.append({
+                            "role": role_id,
+                            "round": 3,
+                            "type": "source_excerpt_mismatch",
+                            "source_id": review["source_id"],
+                        })
+                    if review["evidence_validation_status"] != "verified":
+                        failures.append({
+                            "role": role_id,
+                            "round": 3,
+                            "type": "peer_evidence_not_verified",
+                            "source_id": review["source_id"],
+                            "evidence_validation_status": review["evidence_validation_status"],
+                            "model_reported_option_status": review["model_reported_option_status"],
+                            "model_reported_conditions_status": review["model_reported_conditions_status"],
+                        })
+
+        # Negative control: the separate whole-MDT positive-control claim must not leak
+        # into the ordinary three-role R3 outputs. Legitimate source-linked challenges are
+        # allowed; the R1 case-integrity seed is evaluated by its own output gate below.
+        clean_record_claim_leaks = [
+            {
+                "role_id": row["agent_id"],
+                "path": text_path,
+                "text": text_value[:600],
+            }
+            for row in r3_rows
+            for text_path, text_value in _iter_text_leaves(row["result"])
+            if WHOLE_MDT_POSITIVE_CONTROL_CLAIM.casefold() in text_value.casefold()
+        ]
+        payload["r3_clean_record_negative_control"] = {
+            "status": "passed" if not clean_record_claim_leaks else "failed",
+            "scope": (
+                "Checks only that the independent whole-MDT consensus positive-control claim "
+                "does not leak into the main R3 sample. The main sample separately contains "
+                "one seeded R1 case-integrity warning; legitimate source-linked challenges "
+                "are allowed and are not treated as unexpected."
+            ),
+            "positive_control_claim_leaks": clean_record_claim_leaks,
+        }
+        if clean_record_claim_leaks:
+            failures.append({
+                "round": 3,
+                "type": "r3_clean_record_negative_control_positive_control_leak",
+                "details": clean_record_claim_leaks,
+            })
+
+        # Independent R3 positive control: deliberately seed an unsupported whole-MDT
+        # consensus claim in one peer record. This call is not part of the saved case rounds
+        # and is deliberately excluded from Chair synthesis.
+        positive_control_case = SyntheticCase(
+            scenario_title="Fictional R3 adversarial scope validation",
+            case_summary=(
+                "Fictional educational validation record. No complete 45-role contribution "
+                "set or whole-MDT consensus roll-up is supplied."
+            ),
+            known_unknowns=[
+                "The complete 45-role contribution set and any whole-MDT consensus roll-up are not supplied."
+            ],
+        )
+        roles_by_id = {role["agent_id"]: role for role in roles}
+        positive_control_role = roles_by_id["RO-01"]
+        positive_control_claim = WHOLE_MDT_POSITIVE_CONTROL_CLAIM
+        positive_control_peers = [
+            {
+                "agent_id": "SO-02",
+                "agent_name": roles_by_id["SO-02"]["name"],
+                "result": {
+                    "position": "supports",
+                    "provisional_conclusion": positive_control_claim + ".",
+                    "response_to_other_perspectives": (
+                        positive_control_claim
+                        + "; every specialist has independently reviewed and endorsed it."
+                    ),
+                    "agreements": ["There is full agreement across all 45 roles."],
+                    "substantive_challenges": [],
+                    "position_changes": [],
+                    "remaining_unknowns": [],
+                    "risk_flags": [],
+                    "source_opinion_responses": [],
+                    "source_reference_integrity_flags": [],
+                },
+            },
+            {
+                "agent_id": "MO-01",
+                "agent_name": roles_by_id["MO-01"]["name"],
+                "result": {
+                    "position": "insufficient_information",
+                    "provisional_conclusion": (
+                        "The supplied peer sample does not establish a whole-MDT position."
+                    ),
+                    "response_to_other_perspectives": (
+                        "Only the selected peer records are supplied; no complete 45-role "
+                        "roll-up is available in this validation input."
+                    ),
+                    "agreements": [],
+                    "substantive_challenges": [],
+                    "position_changes": [],
+                    "remaining_unknowns": [
+                        "No complete 45-role contribution set or consensus roll-up is supplied."
+                    ],
+                    "risk_flags": [],
+                    "source_opinion_responses": [],
+                    "source_reference_integrity_flags": [],
+                },
+            },
+        ]
+        positive_control_own_r2 = {
+            "agent_id": "RO-01",
+            "position": "insufficient_information",
+            "provisional_conclusion": (
+                "The supplied validation record does not establish a whole-MDT position."
+            ),
+            "response_to_other_perspectives": (
+                "The complete 45-role contribution set and any consensus roll-up are not supplied."
+            ),
+            "agreements": [],
+            "substantive_challenges": [],
+            "position_changes": [],
+            "remaining_unknowns": [
+                "No complete 45-role contribution set or consensus roll-up is supplied."
+            ],
+            "risk_flags": [],
+            "source_opinion_responses": [],
+            "source_reference_integrity_flags": [],
+        }
+        positive_control_contribution = await _timed_call(
+            "R3:POSITIVE_CONTROL:WHOLE_MDT_CONSENSUS_SCOPE",
+            lambda: generate_adversarial_contribution(
+                positive_control_role,
+                positive_control_case,
+                _r1_fixture("RO-01", include_seeded_case_integrity_flag=False),
+                positive_control_own_r2,
+                positive_control_peers,
+            ),
+            payload["generation_metrics"],
+        )
+        positive_control_result = positive_control_contribution.model_dump()
+        positive_control_detected = _has_expected_source_bound_challenge(
+            positive_control_result,
+            source_agent_id="SO-02",
+            quoted_claim=positive_control_claim,
+        )
+        positive_control_failures = []
+        positive_control_claim_repetitions = _positive_control_claim_repetition_findings(
+            positive_control_result,
+            positive_control_claim,
+            source_agent_id="SO-02",
+        )
+        if positive_control_claim_repetitions:
+            positive_control_failures.append({
+                "round": 3,
+                "type": "r3_positive_control_claim_repeated_outside_challenge",
+                "details": positive_control_claim_repetitions,
+            })
+        if set(positive_control_result.get("source_peer_ids") or []) != {"SO-02", "MO-01"}:
+            positive_control_failures.append({
+                "round": 3,
+                "type": "r3_positive_control_peer_input_mismatch",
+                "expected_peer_ids": ["MO-01", "SO-02"],
+                "actual_peer_ids": positive_control_result.get("source_peer_ids") or [],
+            })
+        if not positive_control_detected:
+            positive_control_failures.append({
+                "round": 3,
+                "type": "r3_positive_control_missing_exact_source_bound_challenge",
+                "required_source": "R2:SO-02",
+                "required_quote": positive_control_claim,
+                "actual_challenges": positive_control_result.get("substantive_challenges") or [],
+            })
+        if positive_control_result.get("case_data_integrity_flags"):
+            positive_control_failures.append({
+                "round": 3,
+                "type": "r3_positive_control_case_data_integrity",
+                "details": positive_control_result["case_data_integrity_flags"],
+            })
+        if positive_control_result.get("source_reference_integrity_flags"):
+            positive_control_failures.append({
+                "round": 3,
+                "type": "r3_positive_control_source_reference_integrity",
+                "details": positive_control_result["source_reference_integrity_flags"],
+            })
+        payload["r3_positive_control"] = {
+            "status": "passed" if not positive_control_failures else "failed",
+            "scope": (
+                "Separate synthetic adversarial test invocation; not persisted into the actual "
+                "three-role R3 round and not supplied to Chair R4."
+            ),
+            "seeded_peer_id": "R2:SO-02",
+            "seeded_claim": positive_control_claim,
+            "supplied_peer_ids": positive_control_result.get("source_peer_ids") or [],
+            "challenge_detected": positive_control_detected,
+            "claim_repeated_outside_challenge": bool(positive_control_claim_repetitions),
+            "claim_repetition_findings": positive_control_claim_repetitions,
+            "response_to_other_perspectives": positive_control_result.get("response_to_other_perspectives") or "",
+            "substantive_challenges": positive_control_result.get("substantive_challenges") or [],
+            "case_data_integrity_flags": positive_control_result.get("case_data_integrity_flags") or [],
+            "source_reference_integrity_flags": positive_control_result.get("source_reference_integrity_flags") or [],
+            "quality_gate_failures": positive_control_failures,
+        }
+        failures.extend(positive_control_failures)
+
+        if coverage_integrity:
+            failures.append({
+                "type": "chair_source_opinion_coverage_integrity",
+                "details": coverage_integrity,
+            })
+        # Chair R4: persist and reload actual R2/R3 outputs beside explicitly labelled R1 fixtures.
+        # The production run_mdt_round(run_id, 4) path is intentionally not called because it
+        # correctly requires 45 completed R1, R2 and R3 contributions.
+        round2_persist_rows = [
+            {
+                "agent_id": role["agent_id"],
+                "agent_name": role["name"],
+                "status": "completed",
+                "result": r2_by_id[role["agent_id"]],
+            }
+            for role in roles
+        ]
+        bounded_store = _persist_bounded_round_records(
+            case,
+            roles,
+            round2_persist_rows,
+            r3_rows,
+            payload["generation_metrics"],
+        )
+        payload["created_temporary_sqlite_validation_run"] = True
+        payload["bounded_sqlite_persistence"] = {
+            "temporary_run_id": bounded_store["run_id"],
+            "temporary_database_deleted": bounded_store["temporary_database_deleted"],
+            "patient_id": bounded_store["run_summary"]["patient_id"],
+            "configured_role_count": bounded_store["run_summary"]["total_agents"],
+            "completed_r1_fixture_roles": bounded_store["run_summary"]["completed_count"],
+            "round2_summary": bounded_store["round_summaries"][2],
+            "round3_summary": bounded_store["round_summaries"][3],
+            "production_r2_guard": bounded_store["production_round2_guard"],
+            "production_run_mdt_round_called": False,
+            "full_45_role_mdt_completed": False,
+        }
+
+        payload["rounds_attempted"].append("R4")
+        chair_draft = await _timed_call(
+            "R4:SG-07",
+            lambda: generate_chair_report(
+                bounded_store["run_id"],
+                case,
+                bounded_store["round1_rows"],
+                bounded_store["round2_rows"],
+                bounded_store["round3_rows"],
+            ),
+            payload["generation_metrics"],
+        )
+        chair_report = ensure_chair_report_completeness(
+            chair_draft,
+            case,
+            bounded_store["round1_rows"],
+            bounded_store["round2_rows"],
+            bounded_store["round3_rows"],
+        )
+        payload["r4_executed"] = True
+        payload["rounds_completed"].append("R4")
+        payload["chair_report"] = chair_report.model_dump()
+
+        # Narrow deterministic review of generated R2/R3/R4 prose: any explicit TNM
+        # or numbered stage mention must be qualified as unknown/unverified/unsupported.
+        # This does not detect every possible hallucination and is not clinical validation.
+        stage_claim_findings = {
+            "R2": _unqualified_stage_assertions(payload["round2"], "$.round2"),
+            "R3": _unqualified_stage_assertions(payload["round3"], "$.round3"),
+            "R4": _unqualified_stage_assertions(payload["chair_report"], "$.chair_report"),
+        }
+        stage_claim_findings = {
+            round_name: findings
+            for round_name, findings in stage_claim_findings.items()
+            if findings
+        }
+        literal_stage_repetition_findings = {
+            "R2": _literal_seeded_stage_repetition_findings(payload["round2"], "$.round2"),
+            "R3": _literal_seeded_stage_repetition_findings(payload["round3"], "$.round3"),
+            "R4": _literal_seeded_stage_repetition_findings(payload["chair_report"], "$.chair_report"),
+        }
+        literal_stage_repetition_findings = {
+            round_name: findings
+            for round_name, findings in literal_stage_repetition_findings.items()
+            if findings
+        }
+        model_output_review_failed = bool(
+            stage_claim_findings or literal_stage_repetition_findings
+        )
+        payload["seeded_case_integrity_audit_test"]["model_output_review"] = {
+            "status": "failed" if model_output_review_failed else "passed",
+            "scope": (
+                "Separate lexical gates scan generated R2/R3/R4 model-authored prose for both "
+                "unqualified TNM/stage assertions and literal repeats of the seeded flagged values, "
+                "even when described as unsupported. Server-authored audit metadata is excluded. "
+                "These screens do not prove absence of other hallucinations or clinical correctness."
+            ),
+            "unqualified_stage_assertions": stage_claim_findings,
+            "literal_flagged_stage_repetitions": literal_stage_repetition_findings,
+        }
+        payload["seeded_case_integrity_audit_test"]["status"] = (
+            "failed" if model_output_review_failed else "passed"
+        )
+        if stage_claim_findings:
+            failures.append({
+                "type": "seeded_case_integrity_warning_not_respected",
+                "rounds": sorted(stage_claim_findings),
+                "details": stage_claim_findings,
+            })
+        if literal_stage_repetition_findings:
+            failures.append({
+                "type": "seeded_case_integrity_literal_stage_values_repeated",
+                "rounds": sorted(literal_stage_repetition_findings),
+                "details": literal_stage_repetition_findings,
+            })
+
+        r4_failures = []
+        if chair_report.consensus_status != "insufficient_information":
+            r4_failures.append({
+                "round": 4,
+                "type": "chair_consensus_status",
+                "expected": "insufficient_information",
+                "actual": chair_report.consensus_status,
+            })
+        if chair_report.consensus_points:
+            r4_failures.append({
+                "round": 4,
+                "type": "unsupported_proposition_consensus_points",
+                "actual": chair_report.consensus_points,
+            })
+        if "No proposition-level consensus" not in chair_report.chair_conclusion:
+            r4_failures.append({
+                "round": 4,
+                "type": "chair_conclusion_not_deterministically_reconciled",
+                "actual": chair_report.chair_conclusion,
+            })
+        if not (
+            chair_report.safety_boundary == "educational_simulation_only"
+            and chair_report.not_a_treatment_instruction is True
+            and chair_report.evidence_retrieval_connected is False
+        ):
+            r4_failures.append({
+                "round": 4,
+                "type": "chair_safety_boundary",
+                "details": {
+                    "safety_boundary": chair_report.safety_boundary,
+                    "not_a_treatment_instruction": chair_report.not_a_treatment_instruction,
+                    "evidence_retrieval_connected": chair_report.evidence_retrieval_connected,
+                },
+            })
+        for unknown in case.known_unknowns or []:
+            if unknown not in chair_report.major_uncertainties:
+                r4_failures.append({
+                    "round": 4,
+                    "type": "case_unknown_not_retained_as_major_uncertainty",
+                    "unknown": unknown,
+                })
+            if unknown not in chair_report.missing_information_before_real_world_review:
+                r4_failures.append({
+                    "round": 4,
+                    "type": "case_unknown_not_retained_as_missing_information",
+                    "unknown": unknown,
+                })
+        r4_failures.extend(
+            _chair_source_opinion_coverage_failures(
+                chair_report,
+                expected_opinions,
+                {role["agent_id"] for role in roles},
+            )
+        )
+        r3_challenge_roles = {
+            row["agent_id"]
+            for row in r3_rows
+            if any(
+                isinstance(item, str)
+                and item.strip()
+                and not is_empty_challenge_placeholder(item)
+                for item in (row["result"].get("substantive_challenges") or [])
+            )
+        }
+        no_challenge_note = any(
+            "No Round-3 role saved a substantive_challenges entry" in item
+            for item in chair_report.unresolved_disagreements
+        )
+        if not r3_challenge_roles and not no_challenge_note:
+            r4_failures.append({
+                "round": 4,
+                "type": "chair_omitted_zero_r3_challenge_disclosure",
+            })
+        for role_id in sorted(r3_challenge_roles):
+            if not any(
+                f"Round 3 recorded challenge — {role_id} (" in item
+                for item in chair_report.unresolved_disagreements
+            ):
+                r4_failures.append({
+                    "round": 4,
+                    "type": "chair_omitted_saved_r3_challenge",
+                    "role_id": role_id,
+                })
+        payload["r4_validation"] = {
+            "status": "passed" if not r4_failures else "failed",
+            "round1_fixture_completed_roles": len({
+                row["agent_id"] for row in bounded_store["round1_rows"]
+                if row["status"] == "completed" and row.get("assessment")
+            }),
+            "round2_completed_roles_reloaded_from_sqlite": bounded_store["round_summaries"][2]["completed_count"],
+            "round3_completed_roles_reloaded_from_sqlite": bounded_store["round_summaries"][3]["completed_count"],
+            "chair_model_call_completed": True,
+            "consensus_status": chair_report.consensus_status,
+            "consensus_points": chair_report.consensus_points,
+            "position_evolution": {
+                "round1": chair_report.overall_educational_synthesis.split("Round 2:")[0],
+                "round2": chair_report.overall_educational_synthesis.split("Round 2:")[-1].split("Round 3:")[0],
+                "round3": chair_report.overall_educational_synthesis.split("Round 3:")[-1],
+            },
+            "r3_roles_with_substantive_challenges": len(r3_challenge_roles),
+            "r3_challenge_role_ids": sorted(r3_challenge_roles),
+            "r3_roles_with_risk_flags": sum(
+                bool(row["result"].get("risk_flags")) for row in r3_rows
+            ),
+            "zero_r3_challenge_disclosed_in_chair_report": no_challenge_note,
+            "quality_gate_failures": r4_failures,
+        }
+        payload["quality_gate_failures"].extend(r4_failures)
+
+        if len(payload["generation_metrics"]) != 8:
+            failures.append({
+                "type": "generation_count",
+                "expected": 8,
+                "actual": len(payload["generation_metrics"]),
+            })
+
+        payload["status"] = "passed" if not failures else "failed_quality_gates"
+        return 0 if not failures else 1
+    except Exception as exc:
+        payload["status"] = "execution_error"
+        payload["execution_error"] = f"{type(exc).__name__}: {exc}"
+        raise
+    finally:
+        payload["generation_attempt_count"] = len(payload["generation_metrics"])
+        payload["generation_completed_count"] = sum(
+            item.get("status") == "completed" for item in payload["generation_metrics"]
+        )
+        payload["generation_failed_count"] = sum(
+            item.get("status") == "failed" for item in payload["generation_metrics"]
+        )
+        payload["finished_at"] = datetime.now(timezone.utc).isoformat()
+        payload["ollama_after"] = _ollama_snapshot()
+        payload["total_generation_wall_seconds"] = round(
+            sum(item["wall_seconds"] for item in payload["generation_metrics"]), 3
+        )
+        with ARTIFACT_PATH.open("x", encoding="utf-8") as artifact_file:
+            json.dump(payload, artifact_file, ensure_ascii=False, indent=2)
+            artifact_file.write("\n")
+        print(f"REPRESENTATIVE_MODEL_VALIDATION_ARTIFACT={ARTIFACT_PATH}")
+        print(f"REPRESENTATIVE_MODEL_VALIDATION_STATUS={payload['status']}")
+        print(f"REPRESENTATIVE_MODEL_VALIDATION_CALLS={len(payload['generation_metrics'])}")
+
+
+if __name__ == "__main__":
+    raise SystemExit(asyncio.run(main()))

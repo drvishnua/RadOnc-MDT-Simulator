@@ -1,0 +1,58 @@
+name: Sync frontend dependency lockfile
+
+on:
+  push:
+    branches:
+      - feature/four-round-mdt-and-performance
+    paths:
+      - "frontend/package.json"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: frontend-lockfile-sync
+  cancel-in-progress: false
+
+jobs:
+  lockfile:
+    name: Generate and commit the reviewed frontend lockfile
+    if: github.ref == 'refs/heads/feature/four-round-mdt-and-performance'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out trusted development branch push
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+        with:
+          node-version: "22"
+
+      - name: Generate lockfile without executing package scripts
+        working-directory: frontend
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          test -s package-lock.json
+          node -e "const p=require('./package-lock.json'); if(p.lockfileVersion!==3) process.exit(1); if(p.packages[''].devDependencies.vite!=='7.3.8') process.exit(2); console.log('LOCKFILE_ROOT_AND_PATCHED_VITE_OK')"
+
+      - name: Commit lockfile only when it changed
+        shell: bash
+        env:
+          GIT_AUTHOR_NAME: github-actions[bot]
+          GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+        run: |
+          set -euo pipefail
+          git add frontend/package-lock.json
+          if git diff --cached --quiet; then
+            echo "Frontend lockfile is already current."
+            exit 0
+          fi
+          git commit -m "ci: sync frontend dependency lockfile"
+          git push origin "HEAD:${GITHUB_REF_NAME}"

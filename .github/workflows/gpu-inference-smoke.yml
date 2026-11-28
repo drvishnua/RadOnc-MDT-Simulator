@@ -1,0 +1,19 @@
+name: "PAUSED — Ollama GPU inference smoke test"
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  notice:
+    name: "Security pause — no target-machine test executed"
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Explain temporary hosted-runner policy
+        run: |
+          echo "This workflow is intentionally paused while the repository is public."
+          echo "GPU inference requires the target laptop and is not available on standard GitHub-hosted runners."
+          echo "No laptop installation, local source sync, Ollama inference, MDT stress run, or GPU measurement was performed."
+          echo "This notice is not a functional test pass. Use the standard hosted CI workflows for code validation."

@@ -1,46 +1,78 @@
-"""Initial API surface: runtime, agent catalogue, and synthetic case assessment."""
+"""Initial API surface: runtime, agent catalogue, and educational case assessment."""
 
 from __future__ import annotations
 
 import logging
+import sys
+from pathlib import Path
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.agent_schemas import AgentAssessment
 from app.agents.catalog import AGENT_PROFILES, EXPECTED_AGENT_COUNT
-from app.config import APP_NAME, APP_VERSION
-from app.schemas import AgentAssessmentRequest, BatchRunRequest, CaseValidationResult, SyntheticCase
+from app.config import APP_NAME, APP_VERSION, CORS_ORIGINS
+from app.clinical_fields import require_supported_registry_version
+from app.schemas import (
+    AgentAssessmentRequest, BatchRunRequest, CaseValidationResult,
+    PatientCaseUpdateRequest, PatientRegistrationRequest, PatientRunRequest, SelectedAgentsRequest, SyntheticCase, CaseIntakeScreenRequest,
+    IntakeSessionCreateRequest, IntakeEventRequest, IntakeAcceptRequest, IntakePromoteRequest,
+)
+from app.services.case_integrity import build_case_validation_warnings
+from app.services.intake_screening import screen_case_intake
+from app.services.intake_store import (
+    accept_intake_with_gaps, create_intake_session, get_intake_session, record_intake_event,
+    promote_accepted_intake_to_patient,
+)
 from app.services import run_store
 from app.services.batch_runner import batch_is_running, run_independent_assessments, validate_resume_state
+from app.services.mdt_rounds import prepare_round_resume, round_is_running, run_mdt_round
+from app.services.simulation_controller import get_simulation_controller
+from contextlib import asynccontextmanager
+
 from app.services.ollama import (
     AgentGenerationError,
     OllamaUnavailable,
+    ensure_ollama_service_and_model,
     generate_agent_assessment,
     get_ollama_status,
 )
 
 logger = logging.getLogger("radonc.agent")
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Ensure Ollama daemon is running and model is verified on startup
+    try:
+        status = await ensure_ollama_service_and_model(auto_pull=True)
+        logger.info(
+            "Ollama startup check: reachable=%s, model_installed=%s",
+            status.get("reachable"),
+            status.get("configured_model_installed"),
+        )
+    except Exception as exc:
+        logger.warning("Ollama startup verification non-blocking warning: %s", exc)
+    yield
+
+
 app = FastAPI(
     title=APP_NAME,
     version=APP_VERSION,
     description=(
-        "Educational simulation backend. Synthetic cases only; not clinical decision support."
+        "Educational simulation backend. Fictional training cases only; not clinical decision support."
     ),
+    lifespan=lifespan,
 )
 
-# Allow only the local Vite development/preview origins. Do not expose the API to arbitrary sites.
+
+# Allow only configured local/explicit origins. Do not expose the API to arbitrary sites.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://127.0.0.1:5173",
-        "http://localhost:5173",
-        "http://127.0.0.1:4173",
-        "http://localhost:4173",
-    ],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=False,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["Content-Type"],
 )
 
@@ -82,23 +114,131 @@ async def assess_with_agent(
     if profile is None:
         raise HTTPException(status_code=404, detail="Unknown agent profile.")
 
+    # This compatibility endpoint accepts only raw case payloads and therefore
+    # cannot prove accepted-intake provenance. All new R1 assessments must use
+    # a saved immutable patient case version created from an accepted intake.
+    raise HTTPException(
+        status_code=409,
+        detail=(
+            "Direct assessment of an unlinked case is disabled. Complete and accept "
+            "the pre-MDT intake, promote it to an immutable patient case version, "
+            "then start the assessment from that saved version."
+        ),
+    )
+
+
+
+
+@app.get("/api/patients")
+async def list_training_patients() -> dict[str, object]:
+    return {"patients": run_store.list_patients(), "training_records_only": True}
+
+
+@app.post("/api/patients")
+async def create_training_patient(request: PatientRegistrationRequest) -> dict[str, object]:
+    """Save a fictional registry profile and a separate de-identified case snapshot."""
+    return run_store.create_patient(request.patient_name, request.case)
+
+
+@app.get("/api/patients/{patient_id}")
+async def get_training_patient(patient_id: str) -> dict[str, object]:
     try:
-        return await generate_agent_assessment(
-            profile=profile,
-            case=request.case,
-            round_number=request.round_number,
-        )
+        return run_store.get_patient(patient_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Patient record not found.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=500, detail="Saved case-version integrity check failed.") from exc
+
+
+@app.post("/api/patients/{patient_id}/versions")
+async def save_training_case_version(patient_id: str, request: PatientCaseUpdateRequest) -> dict[str, object]:
+    """Update the registry profile and append a new immutable case version."""
+    try:
+        return run_store.create_case_version(patient_id, request.patient_name, request.case)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Patient record not found.") from exc
+
+
+@app.delete("/api/patients/{patient_id}")
+async def delete_training_patient(patient_id: str) -> dict[str, object]:
+    """Delete a training patient and its linked simulation outputs."""
+    if batch_is_running() or round_is_running():
+        raise HTTPException(status_code=409, detail="Wait until active MDT inference has stopped before deleting a patient.")
+    try:
+        run_store.delete_patient(patient_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Patient record not found.") from exc
+    return {"deleted": True, "patient_id": patient_id}
+
+
+@app.post("/api/patients/{patient_id}/runs")
+async def create_patient_simulation(
+    patient_id: str,
+    request: PatientRunRequest,
+    background_tasks: BackgroundTasks,
+) -> dict[str, object]:
+    """Run only a case version already saved under this training record."""
+    if batch_is_running() or round_is_running():
+        raise HTTPException(status_code=409, detail="Another local model run is already active.")
+    try:
+        record = run_store.create_run_for_case_version(patient_id, request.case_version_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Patient or saved case version not found.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if request.full_simulation:
+        controller = get_simulation_controller()
+        background_tasks.add_task(controller.run_full_simulation, record["run_id"])
+    elif request.selected_agent_ids:
+        background_tasks.add_task(run_independent_assessments, record["run_id"], request.selected_agent_ids)
+    else:
+        background_tasks.add_task(run_independent_assessments, record["run_id"])
+    return record
+
+
+@app.post("/api/patients/{patient_id}/versions/{case_version_id}/assess/RO-01")
+async def assess_saved_patient_case(patient_id: str, case_version_id: str) -> dict[str, object]:
+    """Generate and persist the standalone RO-01 assessment against a saved version."""
+    if batch_is_running() or round_is_running():
+        raise HTTPException(status_code=409, detail="Another local model run is already active.")
+    try:
+        version = run_store.require_intake_backed_case_version(patient_id, case_version_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Patient or saved case version not found.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    try:
+        require_supported_registry_version(version["clinical_field_registry_version"])
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    profile = next(item for item in AGENT_PROFILES if item["agent_id"] == "RO-01")
+    case = SyntheticCase.model_validate(version["case"])
+    try:
+        assessment = await generate_agent_assessment(profile=profile, case=case, round_number=1)
     except OllamaUnavailable as exc:
-        raise HTTPException(
-            status_code=503,
-            detail="The local Ollama service is unavailable.",
-        ) from exc
+        raise HTTPException(status_code=503, detail="The local Ollama service is unavailable.") from exc
     except AgentGenerationError as exc:
-        logger.warning("Agent generation rejected for %s: %s", agent_id, exc)
-        raise HTTPException(
-            status_code=502,
-            detail="The local model output did not meet the required educational assessment schema.",
-        ) from exc
+        logger.warning("Saved-case RO-01 generation rejected: %s", exc)
+        raise HTTPException(status_code=502, detail="The local model output did not meet the required educational assessment schema.") from exc
+    return run_store.save_patient_assessment(
+        patient_id, case_version_id, "RO-01", 1,
+        assessment.model_dump_json(exclude_none=True),
+    )
+
+
+@app.get("/api/patients/{patient_id}/versions/{case_version_id}/assessments")
+async def get_saved_patient_assessments(patient_id: str, case_version_id: str) -> dict[str, object]:
+    try:
+        return {
+            "patient_id": patient_id,
+            "case_version_id": case_version_id,
+            "assessments": run_store.list_patient_assessments(patient_id, case_version_id),
+        }
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Patient or saved case version not found.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=500, detail="Saved case-version integrity check failed.") from exc
+
 
 
 @app.post("/api/runs")
@@ -106,17 +246,72 @@ async def create_independent_batch(
     request: BatchRunRequest,
     background_tasks: BackgroundTasks,
 ) -> dict[str, object]:
-    """Queue all 45 independent first-round assessments and return immediately."""
+    """Reject unlinked case payloads; R1 must start from a verified saved version."""
+    raise HTTPException(
+        status_code=409,
+        detail=(
+            "Direct runs from unlinked case payloads are disabled. Complete and accept "
+            "the pre-MDT intake, promote it to an immutable patient case version, "
+            "then start R1 from that saved version."
+        ),
+    )
+
+
+@app.get("/api/runs/active")
+async def get_active_run() -> dict[str, object]:
+    """Return the latest active or paused simulation run only when a live worker is active."""
+    if not (batch_is_running() or round_is_running()):
+        return {"active": False, "run": None}
     run_store.initialize_database()
-    record = run_store.create_run(request.case)
-    background_tasks.add_task(run_independent_assessments, record["run_id"])
-    return record
+    active_run_id: str | None = None
+    with run_store._connect() as db:
+        run_store._ensure_round_tables(db)
+        row = db.execute(
+            """
+            SELECT sr.run_id
+            FROM simulation_runs sr
+            LEFT JOIN round_runs rr
+              ON rr.run_id = sr.run_id
+             AND rr.round_number = (
+                 SELECT MAX(r2.round_number)
+                 FROM round_runs r2
+                 WHERE r2.run_id = sr.run_id
+             )
+            WHERE sr.status IN ('queued', 'running', 'paused')
+               OR rr.status IN ('queued', 'running', 'paused')
+            ORDER BY COALESCE(rr.updated_at, sr.updated_at) DESC, sr.created_at DESC, sr.rowid DESC
+            LIMIT 1
+            """
+        ).fetchone()
+        if row is not None:
+            active_run_id = row["run_id"]
+    if active_run_id is None:
+        return {"active": False, "run": None}
+    return {"active": True, "run": run_store.get_run(active_run_id)}
 
 
 @app.get("/api/runs/{run_id}")
 async def get_independent_batch(run_id: str) -> dict[str, object]:
     try:
         return run_store.get_run(run_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Simulation run not found.") from exc
+
+
+@app.get("/api/runs/{run_id}/case")
+async def get_run_case_snapshot(run_id: str) -> dict[str, object]:
+    """Return the exact case snapshot saved when this run was created."""
+    try:
+        case_json = run_store.get_case_json(run_id)
+        case = run_store.get_case(run_id)
+        summary = run_store.get_run(run_id)
+        return {
+            "run_id": run_id,
+            "case_snapshot_sha256": summary["case_snapshot_sha256"],
+            "clinical_field_registry_version": summary["clinical_field_registry_version"],
+            "case_snapshot_json": case_json,
+            "case": case.model_dump(exclude_none=True),
+        }
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="Simulation run not found.") from exc
 
@@ -140,26 +335,459 @@ async def resume_independent_batch(
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="Simulation run not found.") from exc
 
+    try:
+        run_store.require_run_registry_version(run_id)
+        run_store.require_run_intake_provenance(run_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
     if batch_is_running():
         raise HTTPException(status_code=409, detail="Another 45-agent batch is currently running.")
     if summary["status"] == "completed":
         raise HTTPException(status_code=409, detail="All 45 agents have already completed.")
+    if summary["completed_count"] == summary["total_agents"] and summary["failed_count"] == 0:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "All 45 independent assessments are complete; resume the failed MDT round "
+                "instead of restarting Round 1."
+            ),
+        )
 
     updated = validate_resume_state(run_id)
     background_tasks.add_task(run_independent_assessments, run_id)
     return updated
 
 
+@app.post("/api/runs/{run_id}/run-full")
+async def trigger_full_simulation(
+    run_id: str,
+    background_tasks: BackgroundTasks,
+) -> dict[str, object]:
+    """Execute all 4 simulation rounds (R1, R2, R3, R4) sequentially on single click."""
+    if batch_is_running() or round_is_running():
+        raise HTTPException(status_code=409, detail="Another local model run is already active.")
+    try:
+        run_store.require_run_registry_version(run_id)
+        run_store.require_run_intake_provenance(run_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Simulation run not found.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    controller = get_simulation_controller()
+    background_tasks.add_task(controller.run_full_simulation, run_id)
+    return {"status": "queued", "run_id": run_id, "mode": "full_simulation_all_4_rounds"}
+
+
+@app.post("/api/runs/{run_id}/pause")
+async def pause_simulation_run(run_id: str) -> dict[str, object]:
+    """Pause the active simulation run across all rounds."""
+    try:
+        run_store.get_run(run_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Simulation run not found.") from exc
+    controller = get_simulation_controller()
+    controller.pause_simulation(run_id)
+    return {"status": "paused", "run_id": run_id}
+
+
+@app.post("/api/runs/{run_id}/unpause")
+async def unpause_simulation_run(run_id: str) -> dict[str, object]:
+    """Resume a paused simulation run."""
+    try:
+        run_store.get_run(run_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Simulation run not found.") from exc
+    controller = get_simulation_controller()
+    controller.resume_simulation(run_id)
+    return {"status": "resumed", "run_id": run_id}
+
+
+@app.post("/api/runs/{run_id}/stop")
+async def stop_simulation_run(run_id: str) -> dict[str, object]:
+    """Stop the entire simulation run, cancelling queued and running agents."""
+    try:
+        run_store.get_run(run_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Simulation run not found.") from exc
+    controller = get_simulation_controller()
+    controller.stop_simulation(run_id)
+    return {"status": "stopped", "run_id": run_id}
+
+
+def _validate_round_number(round_number: int) -> None:
+    if round_number not in (1, 2, 3, 4):
+        raise HTTPException(status_code=422, detail="round_number must be between 1 and 4.")
+
+
+def _require_run_exists(run_id: str) -> dict[str, object]:
+    try:
+        return run_store.get_run(run_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Simulation run not found.") from exc
+
+
+@app.post("/api/runs/{run_id}/restart")
+async def restart_simulation_run(
+    run_id: str,
+    background_tasks: BackgroundTasks,
+) -> dict[str, object]:
+    """Reset all 4 rounds and restart the entire simulation fresh."""
+    _require_run_exists(run_id)
+    if batch_is_running() or round_is_running():
+        raise HTTPException(
+            status_code=409,
+            detail="Another local model run is currently active. Stop it and wait for the current step to finish before restarting.",
+        )
+    controller = get_simulation_controller()
+    controller.clear_stopped_simulation(run_id)
+    run_store.restart_simulation(run_id)
+    # Restart R1
+    background_tasks.add_task(run_independent_assessments, run_id)
+    return {"status": "queued", "run_id": run_id, "message": "Simulation restarted from Round 1."}
+
+
+@app.post("/api/runs/{run_id}/rounds/{round_number}/pause")
+async def pause_specific_round(run_id: str, round_number: int) -> dict[str, object]:
+    """Pause execution of a specific round."""
+    _validate_round_number(round_number)
+    _require_run_exists(run_id)
+    controller = get_simulation_controller()
+    controller.pause_round(run_id, round_number)
+    return {"status": "paused", "run_id": run_id, "round_number": round_number}
+
+
+@app.post("/api/runs/{run_id}/rounds/{round_number}/unpause")
+async def unpause_specific_round(run_id: str, round_number: int) -> dict[str, object]:
+    """Resume execution of a paused round."""
+    _validate_round_number(round_number)
+    _require_run_exists(run_id)
+    controller = get_simulation_controller()
+    controller.resume_round(run_id, round_number)
+    return {"status": "resumed", "run_id": run_id, "round_number": round_number}
+
+
+@app.post("/api/runs/{run_id}/rounds/{round_number}/stop")
+async def stop_specific_round(run_id: str, round_number: int) -> dict[str, object]:
+    """Stop execution of a specific round."""
+    _validate_round_number(round_number)
+    _require_run_exists(run_id)
+    controller = get_simulation_controller()
+    controller.stop_round(run_id, round_number)
+    return {"status": "stopped", "run_id": run_id, "round_number": round_number}
+
+
+@app.post("/api/runs/{run_id}/rounds/{round_number}/restart")
+async def restart_specific_round(
+    run_id: str,
+    round_number: int,
+    background_tasks: BackgroundTasks,
+) -> dict[str, object]:
+    """Reset and re-run all agents in a specific round."""
+    _validate_round_number(round_number)
+    _require_run_exists(run_id)
+    if batch_is_running() or round_is_running():
+        raise HTTPException(
+            status_code=409,
+            detail="Another local model run is currently active. Stop it and wait for the current step to finish before restarting.",
+        )
+    controller = get_simulation_controller()
+    controller.clear_stopped_round(run_id, round_number)
+    run_store.restart_round(run_id, round_number)
+    if round_number == 1:
+        background_tasks.add_task(run_independent_assessments, run_id)
+    else:
+        background_tasks.add_task(run_mdt_round, run_id, round_number)
+    return {"status": "queued", "run_id": run_id, "round_number": round_number}
+
+
+@app.post("/api/runs/{run_id}/rounds/{round_number}/run-selected")
+async def run_selected_agents(
+    run_id: str,
+    round_number: int,
+    request: SelectedAgentsRequest,
+    background_tasks: BackgroundTasks,
+) -> dict[str, object]:
+    """Run only a specified subset of agents in a given round."""
+    _validate_round_number(round_number)
+    _require_run_exists(run_id)
+    if not request.agent_ids:
+        raise HTTPException(status_code=400, detail="No agent IDs provided.")
+    if batch_is_running() or round_is_running():
+        raise HTTPException(
+            status_code=409,
+            detail="Another local model run is already active.",
+        )
+    controller = get_simulation_controller()
+    for aid in request.agent_ids:
+        controller.clear_stopped_agent(run_id, round_number, aid)
+        run_store.restart_agent(run_id, round_number, aid)
+    if round_number == 1:
+        background_tasks.add_task(run_independent_assessments, run_id, request.agent_ids)
+    else:
+        background_tasks.add_task(run_mdt_round, run_id, round_number, request.agent_ids)
+    return {
+        "status": "queued",
+        "run_id": run_id,
+        "round_number": round_number,
+        "selected_agents": request.agent_ids,
+    }
+
+
+@app.post("/api/runs/{run_id}/rounds/{round_number}/agents/{agent_id}/run")
+async def run_individual_agent(
+    run_id: str,
+    round_number: int,
+    agent_id: str,
+    background_tasks: BackgroundTasks,
+) -> dict[str, object]:
+    """Run or re-run a single agent in a specific round."""
+    _validate_round_number(round_number)
+    _require_run_exists(run_id)
+    if batch_is_running() or round_is_running():
+        raise HTTPException(
+            status_code=409,
+            detail="Another local model run is already active.",
+        )
+    controller = get_simulation_controller()
+    controller.clear_stopped_agent(run_id, round_number, agent_id)
+    run_store.restart_agent(run_id, round_number, agent_id)
+    if round_number == 1:
+        background_tasks.add_task(run_independent_assessments, run_id, [agent_id])
+    else:
+        background_tasks.add_task(run_mdt_round, run_id, round_number, [agent_id])
+    return {
+        "status": "queued",
+        "run_id": run_id,
+        "round_number": round_number,
+        "agent_id": agent_id,
+    }
+
+
+@app.post("/api/runs/{run_id}/rounds/{round_number}/agents/{agent_id}/stop")
+async def stop_individual_agent(
+    run_id: str,
+    round_number: int,
+    agent_id: str,
+) -> dict[str, object]:
+    """Stop/cancel a single agent in a specific round."""
+    _validate_round_number(round_number)
+    _require_run_exists(run_id)
+    controller = get_simulation_controller()
+    controller.stop_agent(run_id, round_number, agent_id)
+    return {
+        "status": "stopped",
+        "run_id": run_id,
+        "round_number": round_number,
+        "agent_id": agent_id,
+    }
+
+
+@app.post("/api/runs/{run_id}/rounds/{round_number}")
+async def start_mdt_round(
+    run_id: str,
+    round_number: int,
+    background_tasks: BackgroundTasks,
+) -> dict[str, object]:
+    if round_is_running() or batch_is_running():
+        raise HTTPException(status_code=409, detail="Another local model run is already active.")
+    try:
+        summary = run_store.create_round_job(run_id, round_number)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Simulation run or preceding round not found.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    background_tasks.add_task(run_mdt_round, run_id, round_number)
+    return summary
+
+
+@app.get("/api/runs/{run_id}/rounds/{round_number}")
+async def get_mdt_round(run_id: str, round_number: int) -> dict[str, object]:
+    try:
+        return run_store.get_round_summary(run_id, round_number)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="MDT round not found.") from exc
+
+
+@app.get("/api/runs/{run_id}/rounds/{round_number}/results")
+async def get_mdt_round_results(run_id: str, round_number: int) -> dict[str, object]:
+    try:
+        return {
+            "run_id": run_id,
+            "round_number": round_number,
+            "results": run_store.list_round_results(run_id, round_number),
+        }
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="MDT round not found.") from exc
+
+
+@app.get("/api/runs/{run_id}/rounds/{round_number}/quality-audit")
+async def get_mdt_round_quality_audit(run_id: str, round_number: int) -> dict[str, object]:
+    """Retrieve post-round quality audit results (U05-U08 flags) for a completed round."""
+    try:
+        # Verify run and round exist
+        if round_number == 1:
+            run_store.get_run(run_id)
+        else:
+            run_store.get_round_summary(run_id, round_number)
+        audit = run_store.get_round_quality_audit(run_id, round_number)
+        return {
+            "run_id": run_id,
+            "round_number": round_number,
+            "quality_audit": audit,
+            "has_audit": audit is not None,
+        }
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Run or round not found.") from exc
+
+
+@app.post("/api/runs/{run_id}/rounds/{round_number}/resume")
+async def resume_mdt_round(
+    run_id: str,
+    round_number: int,
+    background_tasks: BackgroundTasks,
+) -> dict[str, object]:
+    if round_is_running() or batch_is_running():
+        raise HTTPException(status_code=409, detail="Another local model run is already active.")
+    try:
+        summary = run_store.get_round_summary(run_id, round_number)
+        run_store.require_run_registry_version(run_id)
+        if summary["status"] == "completed":
+            raise HTTPException(status_code=409, detail="This round is already complete.")
+        updated = prepare_round_resume(run_id, round_number)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="MDT round not found.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    background_tasks.add_task(run_mdt_round, run_id, round_number)
+    return updated
+
+
+@app.get("/api/runs/{run_id}/report")
+async def get_final_mdt_report(run_id: str) -> dict[str, object]:
+    try:
+        report = run_store.get_final_report(run_id)
+        if report is None:
+            raise HTTPException(status_code=404, detail="Final Chair synthesis is not available yet.")
+        return report
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Simulation run not found.") from exc
+
+
+
+
+
+
+@app.post("/api/intakes")
+async def create_pre_mdt_intake(request: IntakeSessionCreateRequest) -> dict[str, object]:
+    """Start a new persisted, auditable pre-MDT intake session."""
+    return create_intake_session(request.case)
+
+
+@app.get("/api/intakes/{session_id}")
+async def get_pre_mdt_intake(session_id: str) -> dict[str, object]:
+    """Return current intake snapshot, screening and verified append-only event history."""
+    try:
+        return get_intake_session(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Intake session not found.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=500, detail="Intake audit integrity verification failed.") from exc
+
+
+@app.post("/api/intakes/{session_id}/events")
+async def append_pre_mdt_intake_event(
+    session_id: str, request: IntakeEventRequest,
+) -> dict[str, object]:
+    """Record an answer, correction or explicit domain decline without overwriting history."""
+    try:
+        return record_intake_event(
+            session_id,
+            event_type=request.event_type,
+            field_id=request.field_id,
+            value=request.value,
+            domain=request.domain,
+            source_text=request.source_text,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Intake session not found.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/api/intakes/{session_id}/accept")
+async def accept_pre_mdt_intake(
+    session_id: str, request: IntakeAcceptRequest,
+) -> dict[str, object]:
+    """Explicitly accept a saved case while preserving all outstanding gaps."""
+    try:
+        return accept_intake_with_gaps(session_id, confirmed=request.confirmed)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Intake session not found.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+
+
+@app.post("/api/intakes/{session_id}/promote")
+async def promote_pre_mdt_intake(
+    session_id: str, request: IntakePromoteRequest,
+) -> dict[str, object]:
+    """Create an immutable patient case version from an accepted, audited intake."""
+    try:
+        return promote_accepted_intake_to_patient(
+            session_id, patient_name=request.patient_name, patient_id=request.patient_id,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Intake session not found.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@app.post("/api/cases/screen-intake")
+async def screen_pre_mdt_intake(request: CaseIntakeScreenRequest) -> dict[str, object]:
+    """Identify missing intake information before MDT; never infer or fill values."""
+    try:
+        return screen_case_intake(
+            request.case,
+            declined_domains=request.declined_domains,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
 @app.post("/api/cases/validate", response_model=CaseValidationResult)
 async def validate_case(case: SyntheticCase) -> CaseValidationResult:
-    warnings: list[str] = []
-    if case.age_years is None:
-        warnings.append("Age is not supplied; keep it marked as unknown in the simulation.")
-    if not case.primary_site:
-        warnings.append("Primary site is not supplied.")
-    if not case.histology:
-        warnings.append("Histology is not supplied.")
+    warnings = build_case_validation_warnings(case)
     if not case.known_unknowns:
         warnings.append("No explicit known-unknowns were listed; review for missing case details.")
-
     return CaseValidationResult(valid=True, warnings=warnings)
+
+
+def mount_frontend_assets(application: FastAPI, dist_directory: Path) -> bool:
+    """Mount a completed Vite build after API routes; return False when no build exists."""
+    index_file = dist_directory / "index.html"
+    if not index_file.is_file():
+        return False
+    application.mount(
+        "/",
+        StaticFiles(directory=str(dist_directory), html=True),
+        name="frontend",
+    )
+    return True
+
+
+def _frontend_dist_directory() -> Path:
+    """Resolve frontend assets in both source and PyInstaller onedir layouts."""
+    if getattr(sys, "frozen", False):
+        bundle_root = Path(getattr(sys, "_MEIPASS", Path(sys.executable).resolve().parent))
+    else:
+        bundle_root = Path(__file__).resolve().parents[2]
+    return bundle_root / "frontend" / "dist"
+
+
+# In development the Vite server owns the UI. In an installed build the bundled
+# static assets are served by this same FastAPI process on the API origin.
+FRONTEND_STATIC_MOUNTED = mount_frontend_assets(app, _frontend_dist_directory())

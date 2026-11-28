@@ -3,9 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#101a2a" />
+    <meta name="color-scheme" content="light dark" />
+    <script>
+      try {
+        var saved = localStorage.getItem("color-scheme");
+        document.querySelector('meta[name="color-scheme"]').content = saved || "light dark";
+        var isDark = saved === "dark" || (!saved && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        if (isDark) document.documentElement.classList.add("dark");
+      } catch (e) {}
+    </script>
     <meta name="description" content="Local-first educational oncology MDT simulator using synthetic cases." />
-    <title>RadOnc MDT Simulator</title>
+    <title>Virtual MDT — Virtual Multidisciplinary Tumor Board</title>
   </head>
   <body>
     <div id="root"></div>

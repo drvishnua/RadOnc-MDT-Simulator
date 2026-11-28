@@ -1,0 +1,834 @@
+{
+  "catalog_type": "standard_systemic_chemotherapy_immunotherapy_protocols",
+  "version": "1.0",
+  "generated_by": "trials-systemic-indexer",
+  "total_protocols": 10,
+  "disease_sites": [
+    "CNS",
+    "GI",
+    "GYN",
+    "Head & Neck",
+    "Lung",
+    "Prostate"
+  ],
+  "entries": [
+    {
+      "protocol_id": "CISPLATIN-3WEEKLY-HNSCC",
+      "protocol_name": "High-Dose 3-Weekly Cisplatin Concurrent Chemoradiotherapy",
+      "disease_site": "Head & Neck",
+      "clinical_indication": "Definitive chemoradiation for locally advanced head and neck squamous cell carcinoma (larynx, oropharynx, hypopharynx) or postoperative adjuvant CRT for high-risk resected disease with positive margins or extranodal extension (ENE)",
+      "regimen_components": [
+        {
+          "drug": "Cisplatin",
+          "dose": 100,
+          "unit": "mg/m2",
+          "route": "IV infusion over 1-2 hours",
+          "frequency": "Every 21 days on days 1, 22, and 43",
+          "total_cycles": 3,
+          "target_cumulative_dose": "200-300 mg/m2"
+        }
+      ],
+      "prehydration_and_hydration": {
+        "prehydration": "1000 mL Normal Saline (0.9% NaCl) + 20 mEq KCl + 1 g MgSO4 IV over 2 to 3 hours prior to cisplatin infusion",
+        "mannitol_or_diuretic": "Mannitol 12.5-25 g IV given over 15 minutes before or during cisplatin to ensure brisk diuresis",
+        "posthydration": "1000-2000 mL Normal Saline + 20 mEq KCl IV over 4 to 6 hours post-infusion",
+        "urine_output_target": "Maintain urine output >= 100 mL/hr during infusion and for 4 hours post-infusion"
+      },
+      "antiemetic_protocol": {
+        "emetogenic_risk": "High emetogenic risk (>90% frequency of emesis without antiemetics)",
+        "regimen": "Four-drug combination: (1) NK1 receptor antagonist: Aprepitant 125 mg PO d1, then 80 mg PO d2-3 (or Fosaprepitant 150 mg IV d1); (2) 5-HT3 receptor antagonist: Ondansetron 8-16 mg IV/PO or Palonosetron 0.25 mg IV d1; (3) Dexamethasone 12 mg PO/IV d1, then 8 mg PO daily d2-4; (4) Olanzapine 5-10 mg PO daily on days 1-4"
+      },
+      "eligibility_thresholds": {
+        "creatinine_clearance": "CrCl >= 60 mL/min (calculated via Cockcroft-Gault formula)",
+        "absolute_neutrophil_count": "ANC >= 1.5 x 10^9/L (>= 1500/uL)",
+        "platelet_count": "Platelets >= 100 x 10^9/L (>= 100,000/uL)",
+        "total_bilirubin": "<= 1.5x Upper Limit of Normal",
+        "performance_status": "ECOG 0-1 (KPS >= 80%)",
+        "audiogram": "No severe pre-existing sensorineural high-frequency hearing loss or disabling tinnitus",
+        "neuropathy": "No pre-existing peripheral sensory neuropathy >= Grade 2"
+      },
+      "dose_modifications": {
+        "crcl_50_to_59": "Reduce cisplatin dose by 25-50% or switch to weekly cisplatin (40 mg/m2) or carboplatin AUC 4-5",
+        "crcl_less_than_50": "Cisplatin absolutely contraindicated. Switch to Carboplatin (AUC 4-5) or Cetuximab (400 load / 250 weekly) or RT alone",
+        "neutrophil_nadir": "Delay cycle if ANC < 1.5 x 10^9/L or Plt < 100 x 10^9/L until recovery; reduce dose by 25% for febrile neutropenia",
+        "ototoxicity": "Discontinue cisplatin and switch to alternative if new >= Grade 2 hearing loss develops"
+      },
+      "landmark_evidence_link": [
+        "RTOG-9111",
+        "EORTC-22931",
+        "RTOG-9501",
+        "BERNIER-COOPER-2005",
+        "RTOG-0522"
+      ]
+    },
+    {
+      "protocol_id": "CISPLATIN-WEEKLY-CERVIX",
+      "protocol_name": "Weekly Cisplatin Concurrent Chemoradiotherapy for Cervical Cancer",
+      "disease_site": "GYN",
+      "clinical_indication": "Definitive concurrent chemoradiotherapy for locally advanced cervical carcinoma (FIGO Stage IB2 to IVA) or postoperative high-risk resected disease",
+      "regimen_components": [
+        {
+          "drug": "Cisplatin",
+          "dose": 40,
+          "unit": "mg/m2",
+          "route": "IV infusion over 1 hour",
+          "frequency": "Weekly (days 1, 8, 15, 22, 29; up to 6 cycles max)",
+          "total_cycles": 5,
+          "target_cumulative_dose": ">= 200 mg/m2 (at least 5 weekly cycles)"
+        }
+      ],
+      "prehydration_and_hydration": {
+        "prehydration": "1000 mL Normal Saline IV over 1-2 hours prior to weekly cisplatin",
+        "posthydration": "Encourage oral fluids (2 liters/day) or administer 500-1000 mL Normal Saline post-infusion",
+        "urine_output_target": "Maintain brisk urine output during infusion"
+      },
+      "antiemetic_protocol": {
+        "emetogenic_risk": "Moderate emetogenic risk (30-90%)",
+        "regimen": "Two-drug combination: (1) 5-HT3 receptor antagonist: Ondansetron 8 mg IV/PO 30 minutes prior to infusion; (2) Dexamethasone 8-12 mg IV/PO 30 minutes prior to infusion"
+      },
+      "eligibility_thresholds": {
+        "creatinine_clearance": "CrCl >= 50 mL/min",
+        "absolute_neutrophil_count": "ANC >= 1.5 x 10^9/L",
+        "platelet_count": "Platelets >= 100 x 10^9/L",
+        "total_bilirubin": "<= 1.5x ULN",
+        "performance_status": "ECOG 0-2"
+      },
+      "dose_modifications": {
+        "weekly_hold_criteria": "Hold dose if ANC < 1.0 x 10^9/L, Platelets < 50 x 10^9/L, or serum creatinine > 1.5x baseline until recovery",
+        "crcl_less_than_50": "Switch to Carboplatin AUC 2 weekly if renal impairment develops or persists"
+      },
+      "landmark_evidence_link": [
+        "GOG-123",
+        "OUTBACK"
+      ]
+    },
+    {
+      "protocol_id": "CROSS-CARBO-PACLITAXEL",
+      "protocol_name": "CROSS Neoadjuvant Carboplatin and Paclitaxel Chemoradiation",
+      "disease_site": "GI",
+      "clinical_indication": "Neoadjuvant chemoradiation for resectable esophageal or gastroesophageal junction adenocarcinoma or squamous cell carcinoma",
+      "regimen_components": [
+        {
+          "drug": "Paclitaxel",
+          "dose": 50,
+          "unit": "mg/m2",
+          "route": "IV infusion over 1 hour",
+          "frequency": "Weekly on days 1, 8, 15, 22, and 29",
+          "total_cycles": 5
+        },
+        {
+          "drug": "Carboplatin",
+          "dose": 2,
+          "unit": "AUC",
+          "route": "IV infusion over 30 minutes (Calvert formula: Dose = AUC x [CrCl + 25])",
+          "frequency": "Weekly on days 1, 8, 15, 22, and 29 following paclitaxel",
+          "total_cycles": 5
+        }
+      ],
+      "prehydration_and_hydration": {
+        "premedication": "Dexamethasone 20 mg PO 12h and 6h prior to paclitaxel (or 10-20 mg IV 30 min prior), Diphenhydramine 50 mg IV 30 min prior, and Famotidine 20 mg IV 30 min prior to prevent hypersensitivity reactions"
+      },
+      "antiemetic_protocol": {
+        "emetogenic_risk": "Moderate emetogenic risk",
+        "regimen": "Ondansetron 8 mg IV + Dexamethasone 10-20 mg IV pre-chemotherapy"
+      },
+      "eligibility_thresholds": {
+        "creatinine_clearance": "CrCl >= 30 mL/min (Calvert formula caps CrCl at 125 mL/min)",
+        "absolute_neutrophil_count": "ANC >= 1.5 x 10^9/L",
+        "platelet_count": "Platelets >= 100 x 10^9/L",
+        "performance_status": "ECOG 0-1"
+      },
+      "dose_modifications": {
+        "hematologic": "Hold weekly dose if ANC < 1.0 x 10^9/L or Platelets < 75 x 10^9/L until recovery; reduce paclitaxel to 40 mg/m2 and carboplatin to AUC 1.6 for febrile neutropenia",
+        "neuropathy": "Reduce paclitaxel by 20% for Grade 2 sensory neuropathy; hold for Grade >= 3 neuropathy"
+      },
+      "landmark_evidence_link": [
+        "CROSS",
+        "CHECKMATE-577"
+      ]
+    },
+    {
+      "protocol_id": "PACIFIC-DURVALUMAB",
+      "protocol_name": "PACIFIC Consolidation Durvalumab Protocol",
+      "disease_site": "Lung",
+      "clinical_indication": "Consolidation immunotherapy in patients with unresectable Stage III NSCLC whose disease has not progressed after definitive concurrent platinum-based chemoradiotherapy",
+      "regimen_components": [
+        {
+          "drug": "Durvalumab",
+          "dose": 10,
+          "unit": "mg/kg",
+          "route": "IV infusion over 60 minutes",
+          "frequency": "Every 2 weeks (or fixed dose 1500 mg IV every 4 weeks)",
+          "duration": "Up to 12 months (or until confirmed disease progression or unmanageable toxicity)",
+          "initiation_window": "Commence within 1 to 42 days following completion of definitive chemoradiotherapy"
+        }
+      ],
+      "prehydration_and_hydration": {
+        "monitoring": "Baseline and routine monitoring prior to each infusion: Complete metabolic panel (ALT, AST, alkaline phosphatase, total bilirubin, creatinine), Thyroid function tests (TSH, free T4), and clinical assessment for pneumonitis"
+      },
+      "antiemetic_protocol": {
+        "emetogenic_risk": "Minimal emetogenic risk (<10%); routine antiemetics not indicated"
+      },
+      "eligibility_thresholds": {
+        "post_crt_status": "No evidence of disease progression on post-CRT restaging chest CT",
+        "performance_status": "ECOG 0-1",
+        "radiation_pneumonitis": "Resolution of any acute radiation-related pneumonitis to <= Grade 1",
+        "autoimmune": "No active severe autoimmune disease requiring systemic immunosuppression"
+      },
+      "dose_modifications": {
+        "immune_pneumonitis_grade_2": "Withhold durvalumab; initiate systemic corticosteroids (prednisone 1-2 mg/kg/day); resume durvalumab only after steroid taper and resolution to <= Grade 1",
+        "immune_pneumonitis_grade_3_4": "Permanently discontinue durvalumab; administer high-dose IV methylprednisolone (1-2 mg/kg/day); obtain urgent pulmonary and infectious disease consultation",
+        "immune_hepatitis_grade_2": "Withhold durvalumab for AST/ALT > 3x ULN or total bilirubin > 1.5x ULN; initiate prednisone 0.5-1 mg/kg/day",
+        "immune_hepatitis_grade_3_4": "Permanently discontinue durvalumab for AST/ALT > 5x ULN or total bilirubin > 3x ULN; administer IV methylprednisolone 1-2 mg/kg/day"
+      },
+      "landmark_evidence_link": [
+        "PACIFIC",
+        "RTOG-0617"
+      ]
+    },
+    {
+      "protocol_id": "STUPP-TEMOZOLOMIDE",
+      "protocol_name": "Stupp Temozolomide Radiochemotherapy Protocol for Glioblastoma",
+      "disease_site": "CNS",
+      "clinical_indication": "Newly diagnosed glioblastoma (WHO Grade 4 astrocytoma) or IDH-wildtype diffuse astrocytic glioma",
+      "regimen_components": [
+        {
+          "phase": "Concomitant Phase",
+          "drug": "Temozolomide",
+          "dose": 75,
+          "unit": "mg/m2/day",
+          "route": "Oral daily",
+          "frequency": "7 days/week for 42 to 49 days throughout radiation therapy (60 Gy / 30 fx)",
+          "administration_instructions": "Take orally on empty stomach (at least 1 hour before or 2 hours after food), 1 hour before radiation treatment on treatment days",
+          "mandatory_pjp_prophylaxis": "Trimethoprim-sulfamethoxazole (TMP-SMX) 1 DS tablet PO 3 times weekly throughout concomitant phase"
+        },
+        {
+          "phase": "Adjuvant Phase",
+          "drug": "Temozolomide",
+          "dose": 150,
+          "unit": "mg/m2/day",
+          "route": "Oral daily on days 1 to 5 of 28-day cycle for Cycle 1; escalate to 200 mg/m2/day for Cycles 2-6 if no hematologic toxicity",
+          "frequency": "Days 1-5 every 28 days for 6 cycles",
+          "initiation": "Commences 4 weeks after completion of radiotherapy"
+        }
+      ],
+      "antiemetic_protocol": {
+        "emetogenic_risk": "Moderate emetogenic risk during daily dosing",
+        "regimen": "Ondansetron 4-8 mg PO taken 30-60 minutes prior to each temozolomide dose"
+      },
+      "eligibility_thresholds": {
+        "absolute_neutrophil_count": "ANC >= 1.5 x 10^9/L prior to starting and each cycle",
+        "platelet_count": "Platelets >= 100 x 10^9/L",
+        "performance_status": "Karnofsky Performance Status >= 60% (ECOG 0-2)"
+      },
+      "dose_modifications": {
+        "concomitant_phase_hold": "Hold temozolomide if ANC < 1.5 x 10^9/L or Platelets < 100 x 10^9/L; discontinue if not recovered within 2 weeks",
+        "adjuvant_cycle_escalation": "Escalate to 200 mg/m2/day for Cycle 2 only if Cycle 1 nadir ANC >= 1.5 and Platelets >= 100",
+        "adjuvant_dose_reduction": "Reduce dose from 200 to 150 mg/m2 (or 150 to 100 mg/m2) if nadir ANC < 1.0 or Platelets < 50 x 10^9/L"
+      },
+      "landmark_evidence_link": [
+        "STUPP-EORTC-26981"
+      ]
+    },
+    {
+      "protocol_id": "5FU-MITOMYCIN-ANAL",
+      "protocol_name": "Nigro / ACT II 5-Fluorouracil and Mitomycin C Protocol",
+      "disease_site": "GI",
+      "clinical_indication": "Definitive chemoradiotherapy for squamous cell / epidermoid carcinoma of the anal canal",
+      "regimen_components": [
+        {
+          "drug": "5-Fluorouracil",
+          "dose": 1000,
+          "unit": "mg/m2/day",
+          "route": "Continuous IV infusion over 24 hours on days 1-4 (96-hour continuous infusion) and days 29-32",
+          "total_cycles": 2
+        },
+        {
+          "drug": "Mitomycin C",
+          "dose": 10,
+          "unit": "mg/m2",
+          "route": "IV bolus on day 1 (capped at max 20 mg single dose)",
+          "total_cycles": 1
+        }
+      ],
+      "antiemetic_protocol": {
+        "emetogenic_risk": "Moderate emetogenic risk",
+        "regimen": "Ondansetron 8 mg IV + Dexamethasone 10 mg IV on days of chemotherapy initiation"
+      },
+      "eligibility_thresholds": {
+        "absolute_neutrophil_count": "ANC >= 1.5 x 10^9/L",
+        "platelet_count": "Platelets >= 100 x 10^9/L",
+        "creatinine_clearance": "CrCl >= 50 mL/min",
+        "dpyd_testing": "Recommend screening for DPYD deficiency prior to 5-FU initiation to prevent fatal fluoropyrimidine toxicity"
+      },
+      "dose_modifications": {
+        "delayed_myelosuppression": "Mitomycin causes delayed and cumulative myelosuppression with nadir at 4 to 6 weeks; monitor weekly CBC closely",
+        "cycle_2_hold": "Hold Day 29 5-FU if severe radiation proctitis/dermatitis >= Grade 3, ANC < 1.0, or Platelets < 75 until recovery"
+      },
+      "landmark_evidence_link": [
+        "ACT-II"
+      ]
+    },
+    {
+      "protocol_id": "CHECKMATE-577-NIVOLUMAB",
+      "protocol_name": "CheckMate 577 Adjuvant Nivolumab Protocol",
+      "disease_site": "GI",
+      "clinical_indication": "Adjuvant immunotherapy for patients with completely resected esophageal or gastroesophageal junction cancer with residual pathologic disease (ypT+ or ypN+) after neoadjuvant chemoradiotherapy",
+      "regimen_components": [
+        {
+          "phase": "Initial Phase",
+          "drug": "Nivolumab",
+          "dose": 240,
+          "unit": "mg",
+          "route": "IV infusion over 30 minutes",
+          "frequency": "Every 2 weeks for 16 weeks (8 doses)"
+        },
+        {
+          "phase": "Subsequent Phase",
+          "drug": "Nivolumab",
+          "dose": 480,
+          "unit": "mg",
+          "route": "IV infusion over 30 minutes",
+          "frequency": "Every 4 weeks starting at week 17 for a total treatment duration of 1 year"
+        }
+      ],
+      "antiemetic_protocol": {
+        "emetogenic_risk": "Minimal emetogenic risk"
+      },
+      "eligibility_thresholds": {
+        "pathologic_status": "Pathologically confirmed residual disease (>= ypT1 or ypN+) in surgical specimen; R0 resection required",
+        "performance_status": "ECOG 0-1",
+        "organ_function": "Adequate hepatic, renal, and endocrine function"
+      },
+      "dose_modifications": {
+        "immune_adverse_events": "Withhold for Grade 2 immune-mediated pneumonitis, colitis, or nephritis; discontinue permanently for Grade >= 3 toxicity"
+      },
+      "landmark_evidence_link": [
+        "CHECKMATE-577"
+      ]
+    },
+    {
+      "protocol_id": "RAPIDO-TNT-CAPOX",
+      "protocol_name": "RAPIDO Total Neoadjuvant Therapy CAPOX Consolidation Protocol",
+      "disease_site": "GI",
+      "clinical_indication": "Consolidation chemotherapy following short-course radiotherapy (5x5 Gy) in high-risk locally advanced rectal cancer prior to TME surgery",
+      "regimen_components": [
+        {
+          "drug": "Oxaliplatin",
+          "dose": 130,
+          "unit": "mg/m2",
+          "route": "IV infusion over 2 hours on day 1",
+          "frequency": "Every 21 days for 6 cycles"
+        },
+        {
+          "drug": "Capecitabine",
+          "dose": 1000,
+          "unit": "mg/m2",
+          "route": "Oral twice daily on days 1 to 14",
+          "frequency": "Every 21 days for 6 cycles"
+        }
+      ],
+      "antiemetic_protocol": {
+        "emetogenic_risk": "Moderate emetogenic risk (due to Oxaliplatin)",
+        "regimen": "Ondansetron 8 mg IV/PO + Dexamethasone 12 mg IV/PO on day 1"
+      },
+      "eligibility_thresholds": {
+        "creatinine_clearance": "CrCl >= 50 mL/min (reduce capecitabine by 25% for CrCl 30-49 mL/min)",
+        "absolute_neutrophil_count": "ANC >= 1.5 x 10^9/L",
+        "platelet_count": "Platelets >= 100 x 10^9/L",
+        "performance_status": "ECOG 0-1"
+      },
+      "dose_modifications": {
+        "neurotoxicity": "Hold or reduce oxaliplatin by 20% for persistent Grade >= 2 cold-induced or painful sensory neuropathy",
+        "diarrhea": "Hold capecitabine for Grade >= 2 diarrhea; restart with 25% dose reduction after complete resolution to Grade 0-1"
+      },
+      "landmark_evidence_link": [
+        "RAPIDO"
+      ]
+    },
+    {
+      "protocol_id": "PROSTATE-ADT-SHORT-TERM",
+      "protocol_name": "Short-Term Androgen Deprivation Therapy (ST-ADT)",
+      "disease_site": "Prostate",
+      "clinical_indication": "Unfavorable intermediate-risk localized adenocarcinoma of the prostate in combination with definitive external beam radiotherapy",
+      "regimen_components": [
+        {
+          "drug": "Leuprolide (or Goserelin)",
+          "dose": 22.5,
+          "unit": "mg",
+          "route": "IM 3-month depot (or Goserelin 10.8 mg SC 3-month depot)",
+          "frequency": "Given at Month 0 and Month 3 (total 4 to 6 months duration)",
+          "initiation": "Initiated 2 months prior to start of radiotherapy (neoadjuvant, concurrent, and short adjuvant)"
+        },
+        {
+          "drug": "Bicalutamide",
+          "dose": 50,
+          "unit": "mg",
+          "route": "Oral daily",
+          "frequency": "Daily starting 1-2 weeks prior to first LHRH injection and continuing for 2-4 weeks to block testosterone surge flare"
+        }
+      ],
+      "antiemetic_protocol": {
+        "emetogenic_risk": "Minimal emetogenic risk"
+      },
+      "eligibility_thresholds": {
+        "baseline_workup": "Baseline serum PSA, total testosterone, fasting lipid panel, glucose/HbA1c, liver function tests, and baseline DEXA scan"
+      },
+      "dose_modifications": {
+        "alternative": "GnRH antagonist (Degarelix 240 mg initial SC then 80 mg monthly or Relugolix 120 mg PO daily) avoids testosterone surge without requiring bicalutamide flare protection"
+      },
+      "landmark_evidence_link": [
+        "RTOG-9408"
+      ]
+    },
+    {
+      "protocol_id": "PROSTATE-ADT-LONG-TERM",
+      "protocol_name": "Long-Term Androgen Deprivation Therapy (LT-ADT)",
+      "disease_site": "Prostate",
+      "clinical_indication": "High-risk or very high-risk localized or locally advanced adenocarcinoma of the prostate in combination with definitive radiotherapy",
+      "regimen_components": [
+        {
+          "drug": "Leuprolide (or Goserelin)",
+          "dose": 22.5,
+          "unit": "mg",
+          "route": "IM 3-month depot (or 45 mg 6-month depot)",
+          "frequency": "Every 3 to 6 months for a total duration of 24 to 36 months (2 to 3 years)",
+          "initiation": "Initiated 2 to 3 months prior to radiotherapy and continued throughout RT and for 2-3 years adjuvantly"
+        },
+        {
+          "drug": "Bicalutamide",
+          "dose": 50,
+          "unit": "mg",
+          "route": "Oral daily",
+          "frequency": "Daily for 2 to 4 weeks starting prior to initial LHRH agonist dose to prevent testosterone surge flare"
+        }
+      ],
+      "antiemetic_protocol": {
+        "emetogenic_risk": "Minimal emetogenic risk"
+      },
+      "supportive_care": {
+        "bone_health": "Baseline DEXA bone density scan; Calcium 1000-1200 mg daily + Vitamin D3 1000-2000 IU daily; consider Zoledronic acid 4 mg IV annually or Denosumab 60 mg SC q6m if osteopenic/osteoporotic",
+        "cardiometabolic": "Monitor lipid profile, fasting blood glucose/HbA1c, and encourage resistance and aerobic exercise to prevent sarcopenic obesity and metabolic syndrome"
+      },
+      "eligibility_thresholds": {
+        "stage_criteria": "High-risk features: cT3-T4, or Gleason score 8-10, or initial PSA > 20 ng/mL"
+      },
+      "dose_modifications": {
+        "duration": "Standard duration is 24 to 36 months based on EORTC 22961 and RTOG 9202; 18 months may be considered in selected elderly patients with favorable biology"
+      },
+      "landmark_evidence_link": [
+        "EORTC-22961"
+      ]
+    }
+  ],
+  "protocols": [
+    {
+      "protocol_id": "CISPLATIN-3WEEKLY-HNSCC",
+      "protocol_name": "High-Dose 3-Weekly Cisplatin Concurrent Chemoradiotherapy",
+      "disease_site": "Head & Neck",
+      "clinical_indication": "Definitive chemoradiation for locally advanced head and neck squamous cell carcinoma (larynx, oropharynx, hypopharynx) or postoperative adjuvant CRT for high-risk resected disease with positive margins or extranodal extension (ENE)",
+      "regimen_components": [
+        {
+          "drug": "Cisplatin",
+          "dose": 100,
+          "unit": "mg/m2",
+          "route": "IV infusion over 1-2 hours",
+          "frequency": "Every 21 days on days 1, 22, and 43",
+          "total_cycles": 3,
+          "target_cumulative_dose": "200-300 mg/m2"
+        }
+      ],
+      "prehydration_and_hydration": {
+        "prehydration": "1000 mL Normal Saline (0.9% NaCl) + 20 mEq KCl + 1 g MgSO4 IV over 2 to 3 hours prior to cisplatin infusion",
+        "mannitol_or_diuretic": "Mannitol 12.5-25 g IV given over 15 minutes before or during cisplatin to ensure brisk diuresis",
+        "posthydration": "1000-2000 mL Normal Saline + 20 mEq KCl IV over 4 to 6 hours post-infusion",
+        "urine_output_target": "Maintain urine output >= 100 mL/hr during infusion and for 4 hours post-infusion"
+      },
+      "antiemetic_protocol": {
+        "emetogenic_risk": "High emetogenic risk (>90% frequency of emesis without antiemetics)",
+        "regimen": "Four-drug combination: (1) NK1 receptor antagonist: Aprepitant 125 mg PO d1, then 80 mg PO d2-3 (or Fosaprepitant 150 mg IV d1); (2) 5-HT3 receptor antagonist: Ondansetron 8-16 mg IV/PO or Palonosetron 0.25 mg IV d1; (3) Dexamethasone 12 mg PO/IV d1, then 8 mg PO daily d2-4; (4) Olanzapine 5-10 mg PO daily on days 1-4"
+      },
+      "eligibility_thresholds": {
+        "creatinine_clearance": "CrCl >= 60 mL/min (calculated via Cockcroft-Gault formula)",
+        "absolute_neutrophil_count": "ANC >= 1.5 x 10^9/L (>= 1500/uL)",
+        "platelet_count": "Platelets >= 100 x 10^9/L (>= 100,000/uL)",
+        "total_bilirubin": "<= 1.5x Upper Limit of Normal",
+        "performance_status": "ECOG 0-1 (KPS >= 80%)",
+        "audiogram": "No severe pre-existing sensorineural high-frequency hearing loss or disabling tinnitus",
+        "neuropathy": "No pre-existing peripheral sensory neuropathy >= Grade 2"
+      },
+      "dose_modifications": {
+        "crcl_50_to_59": "Reduce cisplatin dose by 25-50% or switch to weekly cisplatin (40 mg/m2) or carboplatin AUC 4-5",
+        "crcl_less_than_50": "Cisplatin absolutely contraindicated. Switch to Carboplatin (AUC 4-5) or Cetuximab (400 load / 250 weekly) or RT alone",
+        "neutrophil_nadir": "Delay cycle if ANC < 1.5 x 10^9/L or Plt < 100 x 10^9/L until recovery; reduce dose by 25% for febrile neutropenia",
+        "ototoxicity": "Discontinue cisplatin and switch to alternative if new >= Grade 2 hearing loss develops"
+      },
+      "landmark_evidence_link": [
+        "RTOG-9111",
+        "EORTC-22931",
+        "RTOG-9501",
+        "BERNIER-COOPER-2005",
+        "RTOG-0522"
+      ]
+    },
+    {
+      "protocol_id": "CISPLATIN-WEEKLY-CERVIX",
+      "protocol_name": "Weekly Cisplatin Concurrent Chemoradiotherapy for Cervical Cancer",
+      "disease_site": "GYN",
+      "clinical_indication": "Definitive concurrent chemoradiotherapy for locally advanced cervical carcinoma (FIGO Stage IB2 to IVA) or postoperative high-risk resected disease",
+      "regimen_components": [
+        {
+          "drug": "Cisplatin",
+          "dose": 40,
+          "unit": "mg/m2",
+          "route": "IV infusion over 1 hour",
+          "frequency": "Weekly (days 1, 8, 15, 22, 29; up to 6 cycles max)",
+          "total_cycles": 5,
+          "target_cumulative_dose": ">= 200 mg/m2 (at least 5 weekly cycles)"
+        }
+      ],
+      "prehydration_and_hydration": {
+        "prehydration": "1000 mL Normal Saline IV over 1-2 hours prior to weekly cisplatin",
+        "posthydration": "Encourage oral fluids (2 liters/day) or administer 500-1000 mL Normal Saline post-infusion",
+        "urine_output_target": "Maintain brisk urine output during infusion"
+      },
+      "antiemetic_protocol": {
+        "emetogenic_risk": "Moderate emetogenic risk (30-90%)",
+        "regimen": "Two-drug combination: (1) 5-HT3 receptor antagonist: Ondansetron 8 mg IV/PO 30 minutes prior to infusion; (2) Dexamethasone 8-12 mg IV/PO 30 minutes prior to infusion"
+      },
+      "eligibility_thresholds": {
+        "creatinine_clearance": "CrCl >= 50 mL/min",
+        "absolute_neutrophil_count": "ANC >= 1.5 x 10^9/L",
+        "platelet_count": "Platelets >= 100 x 10^9/L",
+        "total_bilirubin": "<= 1.5x ULN",
+        "performance_status": "ECOG 0-2"
+      },
+      "dose_modifications": {
+        "weekly_hold_criteria": "Hold dose if ANC < 1.0 x 10^9/L, Platelets < 50 x 10^9/L, or serum creatinine > 1.5x baseline until recovery",
+        "crcl_less_than_50": "Switch to Carboplatin AUC 2 weekly if renal impairment develops or persists"
+      },
+      "landmark_evidence_link": [
+        "GOG-123",
+        "OUTBACK"
+      ]
+    },
+    {
+      "protocol_id": "CROSS-CARBO-PACLITAXEL",
+      "protocol_name": "CROSS Neoadjuvant Carboplatin and Paclitaxel Chemoradiation",
+      "disease_site": "GI",
+      "clinical_indication": "Neoadjuvant chemoradiation for resectable esophageal or gastroesophageal junction adenocarcinoma or squamous cell carcinoma",
+      "regimen_components": [
+        {
+          "drug": "Paclitaxel",
+          "dose": 50,
+          "unit": "mg/m2",
+          "route": "IV infusion over 1 hour",
+          "frequency": "Weekly on days 1, 8, 15, 22, and 29",
+          "total_cycles": 5
+        },
+        {
+          "drug": "Carboplatin",
+          "dose": 2,
+          "unit": "AUC",
+          "route": "IV infusion over 30 minutes (Calvert formula: Dose = AUC x [CrCl + 25])",
+          "frequency": "Weekly on days 1, 8, 15, 22, and 29 following paclitaxel",
+          "total_cycles": 5
+        }
+      ],
+      "prehydration_and_hydration": {
+        "premedication": "Dexamethasone 20 mg PO 12h and 6h prior to paclitaxel (or 10-20 mg IV 30 min prior), Diphenhydramine 50 mg IV 30 min prior, and Famotidine 20 mg IV 30 min prior to prevent hypersensitivity reactions"
+      },
+      "antiemetic_protocol": {
+        "emetogenic_risk": "Moderate emetogenic risk",
+        "regimen": "Ondansetron 8 mg IV + Dexamethasone 10-20 mg IV pre-chemotherapy"
+      },
+      "eligibility_thresholds": {
+        "creatinine_clearance": "CrCl >= 30 mL/min (Calvert formula caps CrCl at 125 mL/min)",
+        "absolute_neutrophil_count": "ANC >= 1.5 x 10^9/L",
+        "platelet_count": "Platelets >= 100 x 10^9/L",
+        "performance_status": "ECOG 0-1"
+      },
+      "dose_modifications": {
+        "hematologic": "Hold weekly dose if ANC < 1.0 x 10^9/L or Platelets < 75 x 10^9/L until recovery; reduce paclitaxel to 40 mg/m2 and carboplatin to AUC 1.6 for febrile neutropenia",
+        "neuropathy": "Reduce paclitaxel by 20% for Grade 2 sensory neuropathy; hold for Grade >= 3 neuropathy"
+      },
+      "landmark_evidence_link": [
+        "CROSS",
+        "CHECKMATE-577"
+      ]
+    },
+    {
+      "protocol_id": "PACIFIC-DURVALUMAB",
+      "protocol_name": "PACIFIC Consolidation Durvalumab Protocol",
+      "disease_site": "Lung",
+      "clinical_indication": "Consolidation immunotherapy in patients with unresectable Stage III NSCLC whose disease has not progressed after definitive concurrent platinum-based chemoradiotherapy",
+      "regimen_components": [
+        {
+          "drug": "Durvalumab",
+          "dose": 10,
+          "unit": "mg/kg",
+          "route": "IV infusion over 60 minutes",
+          "frequency": "Every 2 weeks (or fixed dose 1500 mg IV every 4 weeks)",
+          "duration": "Up to 12 months (or until confirmed disease progression or unmanageable toxicity)",
+          "initiation_window": "Commence within 1 to 42 days following completion of definitive chemoradiotherapy"
+        }
+      ],
+      "prehydration_and_hydration": {
+        "monitoring": "Baseline and routine monitoring prior to each infusion: Complete metabolic panel (ALT, AST, alkaline phosphatase, total bilirubin, creatinine), Thyroid function tests (TSH, free T4), and clinical assessment for pneumonitis"
+      },
+      "antiemetic_protocol": {
+        "emetogenic_risk": "Minimal emetogenic risk (<10%); routine antiemetics not indicated"
+      },
+      "eligibility_thresholds": {
+        "post_crt_status": "No evidence of disease progression on post-CRT restaging chest CT",
+        "performance_status": "ECOG 0-1",
+        "radiation_pneumonitis": "Resolution of any acute radiation-related pneumonitis to <= Grade 1",
+        "autoimmune": "No active severe autoimmune disease requiring systemic immunosuppression"
+      },
+      "dose_modifications": {
+        "immune_pneumonitis_grade_2": "Withhold durvalumab; initiate systemic corticosteroids (prednisone 1-2 mg/kg/day); resume durvalumab only after steroid taper and resolution to <= Grade 1",
+        "immune_pneumonitis_grade_3_4": "Permanently discontinue durvalumab; administer high-dose IV methylprednisolone (1-2 mg/kg/day); obtain urgent pulmonary and infectious disease consultation",
+        "immune_hepatitis_grade_2": "Withhold durvalumab for AST/ALT > 3x ULN or total bilirubin > 1.5x ULN; initiate prednisone 0.5-1 mg/kg/day",
+        "immune_hepatitis_grade_3_4": "Permanently discontinue durvalumab for AST/ALT > 5x ULN or total bilirubin > 3x ULN; administer IV methylprednisolone 1-2 mg/kg/day"
+      },
+      "landmark_evidence_link": [
+        "PACIFIC",
+        "RTOG-0617"
+      ]
+    },
+    {
+      "protocol_id": "STUPP-TEMOZOLOMIDE",
+      "protocol_name": "Stupp Temozolomide Radiochemotherapy Protocol for Glioblastoma",
+      "disease_site": "CNS",
+      "clinical_indication": "Newly diagnosed glioblastoma (WHO Grade 4 astrocytoma) or IDH-wildtype diffuse astrocytic glioma",
+      "regimen_components": [
+        {
+          "phase": "Concomitant Phase",
+          "drug": "Temozolomide",
+          "dose": 75,
+          "unit": "mg/m2/day",
+          "route": "Oral daily",
+          "frequency": "7 days/week for 42 to 49 days throughout radiation therapy (60 Gy / 30 fx)",
+          "administration_instructions": "Take orally on empty stomach (at least 1 hour before or 2 hours after food), 1 hour before radiation treatment on treatment days",
+          "mandatory_pjp_prophylaxis": "Trimethoprim-sulfamethoxazole (TMP-SMX) 1 DS tablet PO 3 times weekly throughout concomitant phase"
+        },
+        {
+          "phase": "Adjuvant Phase",
+          "drug": "Temozolomide",
+          "dose": 150,
+          "unit": "mg/m2/day",
+          "route": "Oral daily on days 1 to 5 of 28-day cycle for Cycle 1; escalate to 200 mg/m2/day for Cycles 2-6 if no hematologic toxicity",
+          "frequency": "Days 1-5 every 28 days for 6 cycles",
+          "initiation": "Commences 4 weeks after completion of radiotherapy"
+        }
+      ],
+      "antiemetic_protocol": {
+        "emetogenic_risk": "Moderate emetogenic risk during daily dosing",
+        "regimen": "Ondansetron 4-8 mg PO taken 30-60 minutes prior to each temozolomide dose"
+      },
+      "eligibility_thresholds": {
+        "absolute_neutrophil_count": "ANC >= 1.5 x 10^9/L prior to starting and each cycle",
+        "platelet_count": "Platelets >= 100 x 10^9/L",
+        "performance_status": "Karnofsky Performance Status >= 60% (ECOG 0-2)"
+      },
+      "dose_modifications": {
+        "concomitant_phase_hold": "Hold temozolomide if ANC < 1.5 x 10^9/L or Platelets < 100 x 10^9/L; discontinue if not recovered within 2 weeks",
+        "adjuvant_cycle_escalation": "Escalate to 200 mg/m2/day for Cycle 2 only if Cycle 1 nadir ANC >= 1.5 and Platelets >= 100",
+        "adjuvant_dose_reduction": "Reduce dose from 200 to 150 mg/m2 (or 150 to 100 mg/m2) if nadir ANC < 1.0 or Platelets < 50 x 10^9/L"
+      },
+      "landmark_evidence_link": [
+        "STUPP-EORTC-26981"
+      ]
+    },
+    {
+      "protocol_id": "5FU-MITOMYCIN-ANAL",
+      "protocol_name": "Nigro / ACT II 5-Fluorouracil and Mitomycin C Protocol",
+      "disease_site": "GI",
+      "clinical_indication": "Definitive chemoradiotherapy for squamous cell / epidermoid carcinoma of the anal canal",
+      "regimen_components": [
+        {
+          "drug": "5-Fluorouracil",
+          "dose": 1000,
+          "unit": "mg/m2/day",
+          "route": "Continuous IV infusion over 24 hours on days 1-4 (96-hour continuous infusion) and days 29-32",
+          "total_cycles": 2
+        },
+        {
+          "drug": "Mitomycin C",
+          "dose": 10,
+          "unit": "mg/m2",
+          "route": "IV bolus on day 1 (capped at max 20 mg single dose)",
+          "total_cycles": 1
+        }
+      ],
+      "antiemetic_protocol": {
+        "emetogenic_risk": "Moderate emetogenic risk",
+        "regimen": "Ondansetron 8 mg IV + Dexamethasone 10 mg IV on days of chemotherapy initiation"
+      },
+      "eligibility_thresholds": {
+        "absolute_neutrophil_count": "ANC >= 1.5 x 10^9/L",
+        "platelet_count": "Platelets >= 100 x 10^9/L",
+        "creatinine_clearance": "CrCl >= 50 mL/min",
+        "dpyd_testing": "Recommend screening for DPYD deficiency prior to 5-FU initiation to prevent fatal fluoropyrimidine toxicity"
+      },
+      "dose_modifications": {
+        "delayed_myelosuppression": "Mitomycin causes delayed and cumulative myelosuppression with nadir at 4 to 6 weeks; monitor weekly CBC closely",
+        "cycle_2_hold": "Hold Day 29 5-FU if severe radiation proctitis/dermatitis >= Grade 3, ANC < 1.0, or Platelets < 75 until recovery"
+      },
+      "landmark_evidence_link": [
+        "ACT-II"
+      ]
+    },
+    {
+      "protocol_id": "CHECKMATE-577-NIVOLUMAB",
+      "protocol_name": "CheckMate 577 Adjuvant Nivolumab Protocol",
+      "disease_site": "GI",
+      "clinical_indication": "Adjuvant immunotherapy for patients with completely resected esophageal or gastroesophageal junction cancer with residual pathologic disease (ypT+ or ypN+) after neoadjuvant chemoradiotherapy",
+      "regimen_components": [
+        {
+          "phase": "Initial Phase",
+          "drug": "Nivolumab",
+          "dose": 240,
+          "unit": "mg",
+          "route": "IV infusion over 30 minutes",
+          "frequency": "Every 2 weeks for 16 weeks (8 doses)"
+        },
+        {
+          "phase": "Subsequent Phase",
+          "drug": "Nivolumab",
+          "dose": 480,
+          "unit": "mg",
+          "route": "IV infusion over 30 minutes",
+          "frequency": "Every 4 weeks starting at week 17 for a total treatment duration of 1 year"
+        }
+      ],
+      "antiemetic_protocol": {
+        "emetogenic_risk": "Minimal emetogenic risk"
+      },
+      "eligibility_thresholds": {
+        "pathologic_status": "Pathologically confirmed residual disease (>= ypT1 or ypN+) in surgical specimen; R0 resection required",
+        "performance_status": "ECOG 0-1",
+        "organ_function": "Adequate hepatic, renal, and endocrine function"
+      },
+      "dose_modifications": {
+        "immune_adverse_events": "Withhold for Grade 2 immune-mediated pneumonitis, colitis, or nephritis; discontinue permanently for Grade >= 3 toxicity"
+      },
+      "landmark_evidence_link": [
+        "CHECKMATE-577"
+      ]
+    },
+    {
+      "protocol_id": "RAPIDO-TNT-CAPOX",
+      "protocol_name": "RAPIDO Total Neoadjuvant Therapy CAPOX Consolidation Protocol",
+      "disease_site": "GI",
+      "clinical_indication": "Consolidation chemotherapy following short-course radiotherapy (5x5 Gy) in high-risk locally advanced rectal cancer prior to TME surgery",
+      "regimen_components": [
+        {
+          "drug": "Oxaliplatin",
+          "dose": 130,
+          "unit": "mg/m2",
+          "route": "IV infusion over 2 hours on day 1",
+          "frequency": "Every 21 days for 6 cycles"
+        },
+        {
+          "drug": "Capecitabine",
+          "dose": 1000,
+          "unit": "mg/m2",
+          "route": "Oral twice daily on days 1 to 14",
+          "frequency": "Every 21 days for 6 cycles"
+        }
+      ],
+      "antiemetic_protocol": {
+        "emetogenic_risk": "Moderate emetogenic risk (due to Oxaliplatin)",
+        "regimen": "Ondansetron 8 mg IV/PO + Dexamethasone 12 mg IV/PO on day 1"
+      },
+      "eligibility_thresholds": {
+        "creatinine_clearance": "CrCl >= 50 mL/min (reduce capecitabine by 25% for CrCl 30-49 mL/min)",
+        "absolute_neutrophil_count": "ANC >= 1.5 x 10^9/L",
+        "platelet_count": "Platelets >= 100 x 10^9/L",
+        "performance_status": "ECOG 0-1"
+      },
+      "dose_modifications": {
+        "neurotoxicity": "Hold or reduce oxaliplatin by 20% for persistent Grade >= 2 cold-induced or painful sensory neuropathy",
+        "diarrhea": "Hold capecitabine for Grade >= 2 diarrhea; restart with 25% dose reduction after complete resolution to Grade 0-1"
+      },
+      "landmark_evidence_link": [
+        "RAPIDO"
+      ]
+    },
+    {
+      "protocol_id": "PROSTATE-ADT-SHORT-TERM",
+      "protocol_name": "Short-Term Androgen Deprivation Therapy (ST-ADT)",
+      "disease_site": "Prostate",
+      "clinical_indication": "Unfavorable intermediate-risk localized adenocarcinoma of the prostate in combination with definitive external beam radiotherapy",
+      "regimen_components": [
+        {
+          "drug": "Leuprolide (or Goserelin)",
+          "dose": 22.5,
+          "unit": "mg",
+          "route": "IM 3-month depot (or Goserelin 10.8 mg SC 3-month depot)",
+          "frequency": "Given at Month 0 and Month 3 (total 4 to 6 months duration)",
+          "initiation": "Initiated 2 months prior to start of radiotherapy (neoadjuvant, concurrent, and short adjuvant)"
+        },
+        {
+          "drug": "Bicalutamide",
+          "dose": 50,
+          "unit": "mg",
+          "route": "Oral daily",
+          "frequency": "Daily starting 1-2 weeks prior to first LHRH injection and continuing for 2-4 weeks to block testosterone surge flare"
+        }
+      ],
+      "antiemetic_protocol": {
+        "emetogenic_risk": "Minimal emetogenic risk"
+      },
+      "eligibility_thresholds": {
+        "baseline_workup": "Baseline serum PSA, total testosterone, fasting lipid panel, glucose/HbA1c, liver function tests, and baseline DEXA scan"
+      },
+      "dose_modifications": {
+        "alternative": "GnRH antagonist (Degarelix 240 mg initial SC then 80 mg monthly or Relugolix 120 mg PO daily) avoids testosterone surge without requiring bicalutamide flare protection"
+      },
+      "landmark_evidence_link": [
+        "RTOG-9408"
+      ]
+    },
+    {
+      "protocol_id": "PROSTATE-ADT-LONG-TERM",
+      "protocol_name": "Long-Term Androgen Deprivation Therapy (LT-ADT)",
+      "disease_site": "Prostate",
+      "clinical_indication": "High-risk or very high-risk localized or locally advanced adenocarcinoma of the prostate in combination with definitive radiotherapy",
+      "regimen_components": [
+        {
+          "drug": "Leuprolide (or Goserelin)",
+          "dose": 22.5,
+          "unit": "mg",
+          "route": "IM 3-month depot (or 45 mg 6-month depot)",
+          "frequency": "Every 3 to 6 months for a total duration of 24 to 36 months (2 to 3 years)",
+          "initiation": "Initiated 2 to 3 months prior to radiotherapy and continued throughout RT and for 2-3 years adjuvantly"
+        },
+        {
+          "drug": "Bicalutamide",
+          "dose": 50,
+          "unit": "mg",
+          "route": "Oral daily",
+          "frequency": "Daily for 2 to 4 weeks starting prior to initial LHRH agonist dose to prevent testosterone surge flare"
+        }
+      ],
+      "antiemetic_protocol": {
+        "emetogenic_risk": "Minimal emetogenic risk"
+      },
+      "supportive_care": {
+        "bone_health": "Baseline DEXA bone density scan; Calcium 1000-1200 mg daily + Vitamin D3 1000-2000 IU daily; consider Zoledronic acid 4 mg IV annually or Denosumab 60 mg SC q6m if osteopenic/osteoporotic",
+        "cardiometabolic": "Monitor lipid profile, fasting blood glucose/HbA1c, and encourage resistance and aerobic exercise to prevent sarcopenic obesity and metabolic syndrome"
+      },
+      "eligibility_thresholds": {
+        "stage_criteria": "High-risk features: cT3-T4, or Gleason score 8-10, or initial PSA > 20 ng/mL"
+      },
+      "dose_modifications": {
+        "duration": "Standard duration is 24 to 36 months based on EORTC 22961 and RTOG 9202; 18 months may be considered in selected elderly patients with favorable biology"
+      },
+      "landmark_evidence_link": [
+        "EORTC-22961"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1317 @@
+{
+  "entries": [
+    {
+      "source_id": "QUANTEC-CNS-2010",
+      "title": "QUANTEC: Normal Tissue Effects in the Central Nervous System (Brain, Brainstem, Spinal Cord, Optic Apparatus, Cochlea)",
+      "organization": "American Association of Physicists in Medicine (AAPM) / ASTRO",
+      "source_type": "consensus",
+      "disease_site": "CNS",
+      "edition_or_version": "2010 Consensus",
+      "publication_date": "2010-03-01",
+      "doi_or_url": "https://doi.org/10.1016/j.ijrobp.2009.07.1754",
+      "jurisdiction": "International",
+      "specialties": [
+        "radiation_oncology",
+        "medical_physics"
+      ],
+      "organ_constraints": [
+        {
+          "id": "QUANTEC-CNS-BRAIN-DMAX-60",
+          "source_id": "QUANTEC-CNS-2010",
+          "anatomical_site": "CNS",
+          "organ": "Brain",
+          "volume_spec": "Whole organ",
+          "fractionation_type": "conventional",
+          "fractions": "standard (1.8-2.0 Gy/fx)",
+          "endpoint": "Symptomatic necrosis",
+          "metric": "Dmax",
+          "limit_value": 60.0,
+          "unit": "Gy",
+          "operator": "<",
+          "risk_rate_percent": "<3%",
+          "risk_level": "standard_safe",
+          "notes": "Data at 72 and 90 Gy show 5% and 10% risk, extrapolated from BED models. Keep Dmax < 60 Gy for partial brain irradiation.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "QUANTEC-CNS-BRAIN-SRS-V12",
+          "source_id": "QUANTEC-CNS-2010",
+          "anatomical_site": "CNS",
+          "organ": "Brain",
+          "volume_spec": "Normal brain tissue excluding target",
+          "fractionation_type": "stereotactic_single_fx",
+          "fractions": "1 fx",
+          "endpoint": "Symptomatic necrosis",
+          "metric": "V12",
+          "limit_value": 5.0,
+          "unit": "cc",
+          "operator": "<",
+          "risk_rate_percent": "<20%",
+          "risk_level": "standard_safe",
+          "notes": "Volume of normal brain receiving >= 12 Gy should be < 5-10 cc. Rapid rise in symptomatic radionecrosis when V12 > 5-10 cc.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "QUANTEC-CNS-BRAINSTEM-DMAX-54",
+          "source_id": "QUANTEC-CNS-2010",
+          "anatomical_site": "CNS",
+          "organ": "Brainstem",
+          "volume_spec": "Whole organ",
+          "fractionation_type": "conventional",
+          "fractions": "standard (1.8-2.0 Gy/fx)",
+          "endpoint": "Permanent cranial neuropathy or necrosis",
+          "metric": "Dmax",
+          "limit_value": 54.0,
+          "unit": "Gy",
+          "operator": "<",
+          "risk_rate_percent": "<5%",
+          "risk_level": "standard_safe",
+          "notes": "Whole brainstem dose constraint. Small subvolume (D1-10cc) <= 59 Gy has < 5% risk. Point dose (< 0.1-1 cc) Dmax < 64 Gy has < 5% risk.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "QUANTEC-CNS-BRAINSTEM-SRS-DMAX",
+          "source_id": "QUANTEC-CNS-2010",
+          "anatomical_site": "CNS",
+          "organ": "Brainstem",
+          "volume_spec": "Surface / Max point",
+          "fractionation_type": "stereotactic_single_fx",
+          "fractions": "1 fx",
+          "endpoint": "Permanent cranial neuropathy or necrosis",
+          "metric": "Dmax",
+          "limit_value": 12.5,
+          "unit": "Gy",
+          "operator": "<",
+          "risk_rate_percent": "<5%",
+          "risk_level": "standard_safe",
+          "notes": "Single fraction SRS point dose limit, derived primarily from acoustic neuroma / vestibular schwannoma series.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "QUANTEC-CNS-OPTIC-PATHWAY-DMAX-55",
+          "source_id": "QUANTEC-CNS-2010",
+          "anatomical_site": "CNS",
+          "organ": "Optic Nerve / Chiasm",
+          "volume_spec": "Whole structure",
+          "fractionation_type": "conventional",
+          "fractions": "standard (1.8-2.0 Gy/fx)",
+          "endpoint": "Radiation-induced optic neuropathy (RION) / blindness",
+          "metric": "Dmax",
+          "limit_value": 55.0,
+          "unit": "Gy",
+          "operator": "<",
+          "risk_rate_percent": "<3%",
+          "risk_level": "standard_safe",
+          "notes": "Dmax 55-60 Gy carries 3-7% risk; Dmax > 60 Gy carries > 7-20% risk. For pituitary adenomas, tolerance may be lower. Strict limit < 54 Gy commonly used.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "QUANTEC-CNS-OPTIC-PATHWAY-SRS-DMAX",
+          "source_id": "QUANTEC-CNS-2010",
+          "anatomical_site": "CNS",
+          "organ": "Optic Nerve / Chiasm",
+          "volume_spec": "Max point",
+          "fractionation_type": "stereotactic_single_fx",
+          "fractions": "1 fx",
+          "endpoint": "Radiation-induced optic neuropathy (RION)",
+          "metric": "Dmax",
+          "limit_value": 12.0,
+          "unit": "Gy",
+          "operator": "<",
+          "risk_rate_percent": "<10%",
+          "risk_level": "standard_safe",
+          "notes": "Single fraction SRS constraint. Many centres enforce conservative Dmax < 8-10 Gy to optic chiasm in single fraction.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "QUANTEC-CNS-SPINAL-CORD-DMAX-50",
+          "source_id": "QUANTEC-CNS-2010",
+          "anatomical_site": "CNS",
+          "organ": "Spinal Cord",
+          "volume_spec": "Full cross-section",
+          "fractionation_type": "conventional",
+          "fractions": "standard (1.8-2.0 Gy/fx)",
+          "endpoint": "Radiation myelopathy",
+          "metric": "Dmax",
+          "limit_value": 50.0,
+          "unit": "Gy",
+          "operator": "<=",
+          "risk_rate_percent": "0.2%",
+          "risk_level": "standard_safe",
+          "notes": "Full cross section of cord irradiated to 50 Gy has 0.2% myelopathy risk; 60 Gy has 6% risk; 69 Gy has 50% risk. Standard clinical constraint is Dmax <= 45-50 Gy.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "QUANTEC-CNS-SPINAL-CORD-SRS-1FX",
+          "source_id": "QUANTEC-CNS-2010",
+          "anatomical_site": "CNS",
+          "organ": "Spinal Cord",
+          "volume_spec": "Partial cord cross-section",
+          "fractionation_type": "stereotactic_single_fx",
+          "fractions": "1 fx",
+          "endpoint": "Radiation myelopathy",
+          "metric": "Dmax",
+          "limit_value": 13.0,
+          "unit": "Gy",
+          "operator": "<=",
+          "risk_rate_percent": "1%",
+          "risk_level": "standard_safe",
+          "notes": "Single fraction spine SBRT with partial cross-section. Cord Dmax <= 13 Gy or D0.03cc <= 14 Gy has ~1% myelopathy risk.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "QUANTEC-CNS-SPINAL-CORD-SBRT-3FX",
+          "source_id": "QUANTEC-CNS-2010",
+          "anatomical_site": "CNS",
+          "organ": "Spinal Cord",
+          "volume_spec": "Partial cord cross-section",
+          "fractionation_type": "hypofractionated_sbrt",
+          "fractions": "3 fx",
+          "endpoint": "Radiation myelopathy",
+          "metric": "Dmax",
+          "limit_value": 20.0,
+          "unit": "Gy",
+          "operator": "<=",
+          "risk_rate_percent": "1%",
+          "risk_level": "standard_safe",
+          "notes": "3-fraction spine SBRT. Partial cord cross-section Dmax <= 20 Gy carries ~1% myelopathy risk.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "QUANTEC-CNS-COCHLEA-DMEAN-45",
+          "source_id": "QUANTEC-CNS-2010",
+          "anatomical_site": "CNS",
+          "organ": "Cochlea",
+          "volume_spec": "Whole organ",
+          "fractionation_type": "conventional",
+          "fractions": "standard (1.8-2.0 Gy/fx)",
+          "endpoint": "Sensorineural hearing loss (SNHL at 4 kHz)",
+          "metric": "Mean dose",
+          "limit_value": 45.0,
+          "unit": "Gy",
+          "operator": "<=",
+          "risk_rate_percent": "<30%",
+          "risk_level": "standard_safe",
+          "notes": "Mean cochlear dose <= 45 Gy maintains risk of SNHL < 30%. Sparing to Mean < 30-35 Gy strongly recommended, particularly with concurrent cisplatin.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "QUANTEC-CNS-COCHLEA-SRS-DMAX",
+          "source_id": "QUANTEC-CNS-2010",
+          "anatomical_site": "CNS",
+          "organ": "Cochlea",
+          "volume_spec": "Whole organ",
+          "fractionation_type": "stereotactic_single_fx",
+          "fractions": "1 fx",
+          "endpoint": "Sensorineural hearing loss / loss of serviceable hearing",
+          "metric": "Prescription / Dmax",
+          "limit_value": 14.0,
+          "unit": "Gy",
+          "operator": "<=",
+          "risk_rate_percent": "<25%",
+          "risk_level": "standard_safe",
+          "notes": "Single fraction acoustic neuroma / vestibular schwannoma SRS. Prescription dose <= 14 Gy keeps loss of serviceable hearing < 25%.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        }
+      ],
+      "key_passages": [
+        {
+          "section": "Brain & Necrosis",
+          "text": "For partial brain irradiation using conventional fractionation (1.8-2.0 Gy/fx), Dmax < 60 Gy is associated with < 3% risk of symptomatic necrosis. Higher doses of 72 Gy and 90 Gy yield 5% and 10% necrosis risk."
+        },
+        {
+          "section": "Spinal Cord & Myelopathy",
+          "text": "Myelopathy risk after full cross-section cord irradiation is 0.2% at 50 Gy, 6% at 60 Gy, and 50% at 69 Gy. In single-fraction SRS, Dmax <= 13 Gy carries ~1% risk."
+        },
+        {
+          "section": "Optic Nerve & Chiasm",
+          "text": "Optic neuropathy risk is < 3% for Dmax < 55 Gy, 3-7% for 55-60 Gy, and > 7-20% for > 60 Gy. Single fraction SRS threshold is Dmax < 12 Gy."
+        }
+      ]
+    },
+    {
+      "source_id": "QUANTEC-HN-2010",
+      "title": "QUANTEC: Normal Tissue Effects in the Head & Neck (Salivary Glands, Pharyngeal Constrictors, Larynx)",
+      "organization": "AAPM / ASTRO",
+      "source_type": "consensus",
+      "disease_site": "Head & Neck",
+      "edition_or_version": "2010 Consensus",
+      "publication_date": "2010-03-01",
+      "doi_or_url": "https://doi.org/10.1016/j.ijrobp.2009.07.1754",
+      "jurisdiction": "International",
+      "specialties": [
+        "radiation_oncology",
+        "medical_physics"
+      ],
+      "organ_constraints": [
+        {
+          "id": "QUANTEC-HN-PAROTID-BILATERAL-DMEAN-25",
+          "source_id": "QUANTEC-HN-2010",
+          "anatomical_site": "Head and Neck",
+          "organ": "Parotid Gland",
+          "volume_spec": "Bilateral whole glands",
+          "fractionation_type": "conventional",
+          "fractions": "standard (1.8-2.0 Gy/fx)",
+          "endpoint": "Severe xerostomia (salivary function < 25% baseline)",
+          "metric": "Mean dose",
+          "limit_value": 25.0,
+          "unit": "Gy",
+          "operator": "<",
+          "risk_rate_percent": "<20%",
+          "risk_level": "standard_safe",
+          "notes": "Combined bilateral parotid mean dose < 25 Gy preserves stimulated salivary output. Bilateral mean < 39 Gy has < 50% risk.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "QUANTEC-HN-PAROTID-UNILATERAL-DMEAN-20",
+          "source_id": "QUANTEC-HN-2010",
+          "anatomical_site": "Head and Neck",
+          "organ": "Parotid Gland",
+          "volume_spec": "Unilateral single gland",
+          "fractionation_type": "conventional",
+          "fractions": "standard (1.8-2.0 Gy/fx)",
+          "endpoint": "Severe xerostomia (salivary function < 25% baseline)",
+          "metric": "Mean dose",
+          "limit_value": 20.0,
+          "unit": "Gy",
+          "operator": "<",
+          "risk_rate_percent": "<20%",
+          "risk_level": "standard_safe",
+          "notes": "If one parotid gland receives substantial dose, sparing the contralateral single parotid gland to mean dose < 20 Gy ensures < 20% long-term xerostomia.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "QUANTEC-HN-PHARYNX-DMEAN-50",
+          "source_id": "QUANTEC-HN-2010",
+          "anatomical_site": "Head and Neck",
+          "organ": "Pharyngeal Constrictors",
+          "volume_spec": "Superior, middle, inferior constrictor muscles",
+          "fractionation_type": "conventional",
+          "fractions": "standard (1.8-2.0 Gy/fx)",
+          "endpoint": "Symptomatic dysphagia and aspiration",
+          "metric": "Mean dose",
+          "limit_value": 50.0,
+          "unit": "Gy",
+          "operator": "<",
+          "risk_rate_percent": "<20%",
+          "risk_level": "standard_safe",
+          "notes": "Mean constrictor dose < 50 Gy correlates with < 20% symptomatic dysphagia and aspiration risk. Sparing larynx and constrictors reduces long-term gastrostomy tube dependence.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "QUANTEC-HN-LARYNX-DMAX-66",
+          "source_id": "QUANTEC-HN-2010",
+          "anatomical_site": "Head and Neck",
+          "organ": "Larynx",
+          "volume_spec": "Whole organ",
+          "fractionation_type": "conventional",
+          "fractions": "standard (1.8-2.0 Gy/fx)",
+          "endpoint": "Vocal dysfunction",
+          "metric": "Dmax",
+          "limit_value": 66.0,
+          "unit": "Gy",
+          "operator": "<",
+          "risk_rate_percent": "<20%",
+          "risk_level": "standard_safe",
+          "notes": "In combined chemoradiation, keeping whole larynx Dmax < 66 Gy prevents severe vocal dysfunction. Mean larynx dose < 50 Gy prevents aspiration (< 30%).",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "QUANTEC-HN-LARYNX-EDEMA-DMEAN-44",
+          "source_id": "QUANTEC-HN-2010",
+          "anatomical_site": "Head and Neck",
+          "organ": "Larynx",
+          "volume_spec": "Whole organ",
+          "fractionation_type": "conventional",
+          "fractions": "standard (1.8-2.0 Gy/fx)",
+          "endpoint": "Laryngeal edema",
+          "metric": "Mean dose",
+          "limit_value": 44.0,
+          "unit": "Gy",
+          "operator": "<",
+          "risk_rate_percent": "<20%",
+          "risk_level": "standard_safe",
+          "notes": "Without concurrent chemotherapy, larynx mean dose < 44 Gy or V50 < 27% limits symptomatic edema risk to < 20%.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        }
+      ],
+      "key_passages": [
+        {
+          "section": "Salivary Glands & Xerostomia",
+          "text": "Severe xerostomia (stimulated flow < 25% baseline) is reduced to < 20% if bilateral parotid mean dose is < 25 Gy, or if at least one parotid is spared to mean dose < 20 Gy."
+        },
+        {
+          "section": "Pharynx & Larynx",
+          "text": "Mean dose to the pharyngeal constrictor muscles < 50 Gy reduces symptomatic dysphagia and aspiration to < 20%. Vocal cord dysfunction risk is < 20% if whole larynx Dmax < 66 Gy."
+        }
+      ]
+    },
+    {
+      "source_id": "QUANTEC-THORAX-2010",
+      "title": "QUANTEC: Normal Tissue Effects in the Thorax (Lungs, Esophagus, Heart)",
+      "organization": "AAPM / ASTRO",
+      "source_type": "consensus",
+      "disease_site": "Lung",
+      "edition_or_version": "2010 Consensus",
+      "publication_date": "2010-03-01",
+      "doi_or_url": "https://doi.org/10.1016/j.ijrobp.2009.07.1754",
+      "jurisdiction": "International",
+      "specialties": [
+        "radiation_oncology",
+        "medical_physics"
+      ],
+      "organ_constraints": [
+        {
+          "id": "QUANTEC-THORAX-LUNG-V20-30",
+          "source_id": "QUANTEC-THORAX-2010",
+          "anatomical_site": "Thorax",
+          "organ": "Lungs (Bilateral)",
+          "volume_spec": "Total bilateral lungs minus GTV",
+          "fractionation_type": "conventional",
+          "fractions": "standard (1.8-2.0 Gy/fx)",
+          "endpoint": "Symptomatic radiation pneumonitis (Grade >= 2)",
+          "metric": "V20",
+          "limit_value": 30.0,
+          "unit": "%",
+          "operator": "<=",
+          "risk_rate_percent": "<20%",
+          "risk_level": "standard_safe",
+          "notes": "Standard fractionation threshold. V20 <= 30-35% keeps pneumonitis < 20%. V5 should ideally be kept < 60-65% in IMRT plans.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "QUANTEC-THORAX-LUNG-MLD-20",
+          "source_id": "QUANTEC-THORAX-2010",
+          "anatomical_site": "Thorax",
+          "organ": "Lungs (Bilateral)",
+          "volume_spec": "Total bilateral lungs minus GTV",
+          "fractionation_type": "conventional",
+          "fractions": "standard (1.8-2.0 Gy/fx)",
+          "endpoint": "Symptomatic radiation pneumonitis",
+          "metric": "Mean dose",
+          "limit_value": 20.0,
+          "unit": "Gy",
+          "operator": "<=",
+          "risk_rate_percent": "20%",
+          "risk_level": "standard_safe",
+          "notes": "Gradual dose-response curve: MLD 7 Gy = 5%, MLD 13 Gy = 10%, MLD 20 Gy = 20%, MLD 24 Gy = 30%, MLD 27 Gy = 40%.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "AAPM-TG101-THORAX-LUNG-SBRT-V20",
+          "source_id": "QUANTEC-THORAX-2010",
+          "anatomical_site": "Thorax",
+          "organ": "Lungs (Bilateral)",
+          "volume_spec": "Total bilateral lungs minus ITV/PTV",
+          "fractionation_type": "hypofractionated_sbrt",
+          "fractions": "3-5 fx",
+          "endpoint": "Radiation pneumonitis",
+          "metric": "V20",
+          "limit_value": 10.0,
+          "unit": "%",
+          "operator": "<",
+          "risk_rate_percent": "<10%",
+          "risk_level": "standard_safe",
+          "notes": "In 3 to 5 fraction lung SBRT, V20 < 10% (or < 1000 cc receiving 13.5 Gy) is strongly protective against fatal pneumonitis.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "QUANTEC-THORAX-ESOPHAGUS-DMEAN-34",
+          "source_id": "QUANTEC-THORAX-2010",
+          "anatomical_site": "Thorax",
+          "organ": "Esophagus",
+          "volume_spec": "Whole organ",
+          "fractionation_type": "conventional",
+          "fractions": "standard (1.8-2.0 Gy/fx)",
+          "endpoint": "Grade >= 3 acute esophagitis",
+          "metric": "Mean dose",
+          "limit_value": 34.0,
+          "unit": "Gy",
+          "operator": "<",
+          "risk_rate_percent": "5-20%",
+          "risk_level": "standard_safe",
+          "notes": "Whole organ mean dose < 34 Gy limits severe acute esophagitis. Grade >= 2 esophagitis limits: V35 < 50%, V50 < 40%, V70 < 20% maintain risk < 30%.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "QUANTEC-THORAX-HEART-PERICARDIUM-DMEAN-26",
+          "source_id": "QUANTEC-THORAX-2010",
+          "anatomical_site": "Thorax",
+          "organ": "Heart",
+          "volume_spec": "Pericardium",
+          "fractionation_type": "conventional",
+          "fractions": "standard (1.8-2.0 Gy/fx)",
+          "endpoint": "Pericarditis",
+          "metric": "Mean dose",
+          "limit_value": 26.0,
+          "unit": "Gy",
+          "operator": "<",
+          "risk_rate_percent": "<15%",
+          "risk_level": "standard_safe",
+          "notes": "Pericardium mean dose < 26 Gy and V30 < 46% maintain pericarditis rate < 15%.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "QUANTEC-THORAX-HEART-MORTALITY-V25-10",
+          "source_id": "QUANTEC-THORAX-2010",
+          "anatomical_site": "Thorax",
+          "organ": "Heart",
+          "volume_spec": "Whole organ",
+          "fractionation_type": "conventional",
+          "fractions": "standard (1.8-2.0 Gy/fx)",
+          "endpoint": "Long-term cardiac mortality",
+          "metric": "V25",
+          "limit_value": 10.0,
+          "unit": "%",
+          "operator": "<",
+          "risk_rate_percent": "<1%",
+          "risk_level": "standard_safe",
+          "notes": "Whole organ V25 < 10% is associated with long-term cardiac mortality < 1%. In modern breast RT, mean heart dose < 2-4 Gy recommended (7.4% relative excess major coronary events per Gy mean dose).",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        }
+      ],
+      "key_passages": [
+        {
+          "section": "Lung Pneumonitis",
+          "text": "Bilateral lung V20 <= 30-35% and mean lung dose (MLD) <= 20 Gy keep symptomatic radiation pneumonitis risk to <= 20%. MLD dose-response: 7 Gy (5%), 13 Gy (10%), 20 Gy (20%), 24 Gy (30%)."
+        },
+        {
+          "section": "Esophagus",
+          "text": "Mean esophageal dose < 34 Gy limits acute Grade >= 3 esophagitis to 5-20%. Grade >= 2 esophagitis correlates with V35 < 50%, V50 < 40%, V70 < 20%."
+        },
+        {
+          "section": "Heart",
+          "text": "Pericardium mean dose < 26 Gy and V30 < 46% maintain pericarditis < 15%. Whole heart V25 < 10% is associated with long-term cardiac mortality < 1%."
+        }
+      ]
+    },
+    {
+      "source_id": "QUANTEC-GI-2010",
+      "title": "QUANTEC: Normal Tissue Effects in the Abdomen and GI (Liver, Stomach, Small Bowel, Kidneys)",
+      "organization": "AAPM / ASTRO",
+      "source_type": "consensus",
+      "disease_site": "GI",
+      "edition_or_version": "2010 Consensus",
+      "publication_date": "2010-03-01",
+      "doi_or_url": "https://doi.org/10.1016/j.ijrobp.2009.07.1754",
+      "jurisdiction": "International",
+      "specialties": [
+        "radiation_oncology",
+        "medical_physics"
+      ],
+      "organ_constraints": [
+        {
+          "id": "QUANTEC-GI-LIVER-NONCIRRHOTIC-DMEAN-30",
+          "source_id": "QUANTEC-GI-2010",
+          "anatomical_site": "Abdomen",
+          "organ": "Liver",
+          "volume_spec": "Whole liver minus GTV",
+          "fractionation_type": "conventional",
+          "fractions": "standard (1.8-2.0 Gy/fx)",
+          "endpoint": "Classic radiation-induced liver disease (RILD)",
+          "metric": "Mean dose",
+          "limit_value": 30.0,
+          "unit": "Gy",
+          "operator": "<",
+          "risk_rate_percent": "<5%",
+          "risk_level": "standard_safe",
+          "notes": "In patients without pre-existing liver disease. Mean dose < 30-32 Gy gives < 5% RILD. Mean dose 42 Gy gives 50% RILD.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "QUANTEC-GI-LIVER-CIRRHOTIC-DMEAN-28",
+          "source_id": "QUANTEC-GI-2010",
+          "anatomical_site": "Abdomen",
+          "organ": "Liver",
+          "volume_spec": "Whole liver minus GTV",
+          "fractionation_type": "conventional",
+          "fractions": "standard (1.8-2.0 Gy/fx)",
+          "endpoint": "Classic radiation-induced liver disease (RILD)",
+          "metric": "Mean dose",
+          "limit_value": 28.0,
+          "unit": "Gy",
+          "operator": "<",
+          "risk_rate_percent": "<5%",
+          "risk_level": "standard_safe",
+          "notes": "In patients with Child-Pugh A cirrhotic liver disease or HCC. Tolerance is significantly lower: Mean dose < 28 Gy gives < 5% RILD; Mean dose 36 Gy gives 50% RILD.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "QUANTEC-GI-LIVER-SBRT-CRITICAL-VOL",
+          "source_id": "QUANTEC-GI-2010",
+          "anatomical_site": "Abdomen",
+          "organ": "Liver",
+          "volume_spec": "Normal liver reserve",
+          "fractionation_type": "hypofractionated_sbrt",
+          "fractions": "3-5 fx",
+          "endpoint": "Classic radiation-induced liver disease (RILD)",
+          "metric": "Reserve volume receiving < 15 Gy",
+          "limit_value": 700.0,
+          "unit": "cc",
+          "operator": ">",
+          "risk_rate_percent": "<5%",
+          "risk_level": "standard_safe",
+          "notes": "Critical normal tissue volume: at least 700 cc of normal liver must receive a total dose < 15 Gy in 3-5 fractions.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "QUANTEC-GI-KIDNEY-BILATERAL-DMEAN-18",
+          "source_id": "QUANTEC-GI-2010",
+          "anatomical_site": "Abdomen",
+          "organ": "Kidneys (Bilateral)",
+          "volume_spec": "Bilateral whole kidneys",
+          "fractionation_type": "conventional",
+          "fractions": "standard (1.8-2.0 Gy/fx)",
+          "endpoint": "Clinically relevant renal dysfunction / nephropathy",
+          "metric": "Mean dose",
+          "limit_value": 18.0,
+          "unit": "Gy",
+          "operator": "<",
+          "risk_rate_percent": "<5%",
+          "risk_level": "standard_safe",
+          "notes": "Bilateral kidneys mean dose < 15-18 Gy gives < 5% chronic renal failure. Mean dose 28 Gy gives 50% risk. Partial volume constraints: V12 < 55%, V20 < 32%, V23 < 30%, V28 < 20% have < 5% risk.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "QUANTEC-GI-STOMACH-D100-45",
+          "source_id": "QUANTEC-GI-2010",
+          "anatomical_site": "Abdomen",
+          "organ": "Stomach",
+          "volume_spec": "Whole organ",
+          "fractionation_type": "conventional",
+          "fractions": "standard (1.8-2.0 Gy/fx)",
+          "endpoint": "Ulceration / perforation",
+          "metric": "D100%",
+          "limit_value": 45.0,
+          "unit": "Gy",
+          "operator": "<",
+          "risk_rate_percent": "<7%",
+          "risk_level": "standard_safe",
+          "notes": "Whole organ D100% < 45 Gy gives < 7% ulceration risk. Absolute Dmax should be kept < 50-54 Gy.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "QUANTEC-GI-SMALL-BOWEL-LOOPS-V15",
+          "source_id": "QUANTEC-GI-2010",
+          "anatomical_site": "Abdomen",
+          "organ": "Small Bowel",
+          "volume_spec": "Individual small bowel loops",
+          "fractionation_type": "conventional",
+          "fractions": "standard (1.8-2.0 Gy/fx)",
+          "endpoint": "Grade >= 3 acute small bowel toxicity",
+          "metric": "V15",
+          "limit_value": 120.0,
+          "unit": "cc",
+          "operator": "<",
+          "risk_rate_percent": "<10%",
+          "risk_level": "standard_safe",
+          "notes": "When individual bowel loops are contoured: V15 < 120 cc gives < 10% severe acute toxicity. If entire peritoneal cavity space is contoured: V45 < 195 cc gives < 10% severe acute toxicity.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        }
+      ],
+      "key_passages": [
+        {
+          "section": "Liver & RILD",
+          "text": "Classic RILD risk is < 5% when mean liver dose < 30-32 Gy in non-cirrhotic patients, and < 28 Gy in Child-Pugh A cirrhosis. In liver SBRT, at least 700 cc normal liver must receive < 15 Gy."
+        },
+        {
+          "section": "Kidneys",
+          "text": "Bilateral kidneys mean dose < 15-18 Gy maintains nephropathy risk < 5%. Partial volume thresholds: V12 < 55%, V20 < 32%, V28 < 20%."
+        },
+        {
+          "section": "Bowel & Stomach",
+          "text": "Individual small bowel loops V15 < 120 cc keeps acute Grade >= 3 toxicity < 10%. Whole stomach D100% < 45 Gy keeps ulceration < 7%."
+        }
+      ]
+    },
+    {
+      "source_id": "QUANTEC-PELVIS-2010",
+      "title": "QUANTEC: Normal Tissue Effects in the Pelvis (Rectum, Bladder, Penile Bulb, Femoral Heads)",
+      "organization": "AAPM / ASTRO",
+      "source_type": "consensus",
+      "disease_site": "Prostate",
+      "edition_or_version": "2010 Consensus",
+      "publication_date": "2010-03-01",
+      "doi_or_url": "https://doi.org/10.1016/j.ijrobp.2009.07.1754",
+      "jurisdiction": "International",
+      "specialties": [
+        "radiation_oncology",
+        "medical_physics"
+      ],
+      "organ_constraints": [
+        {
+          "id": "QUANTEC-PELVIS-RECTUM-V50-50",
+          "source_id": "QUANTEC-PELVIS-2010",
+          "anatomical_site": "Pelvis",
+          "organ": "Rectum",
+          "volume_spec": "Whole organ (outer wall)",
+          "fractionation_type": "conventional",
+          "fractions": "standard (1.8-2.0 Gy/fx)",
+          "endpoint": "Grade >= 2 / Grade >= 3 late rectal toxicity",
+          "metric": "V50",
+          "limit_value": 50.0,
+          "unit": "%",
+          "operator": "<",
+          "risk_rate_percent": "<15% (Gr2), <10% (Gr3)",
+          "risk_level": "standard_safe",
+          "notes": "Prostate radiotherapy dose-volume staircase: V50 < 50%, V60 < 35%, V65 < 25%, V70 < 20%, V75 < 15%. Enforcing this step-down maintains Grade >= 2 toxicity < 15% and Grade >= 3 toxicity < 10%.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "QUANTEC-PELVIS-BLADDER-V65-50",
+          "source_id": "QUANTEC-PELVIS-2010",
+          "anatomical_site": "Pelvis",
+          "organ": "Urinary Bladder",
+          "volume_spec": "Whole organ",
+          "fractionation_type": "conventional",
+          "fractions": "standard (1.8-2.0 Gy/fx)",
+          "endpoint": "Grade >= 3 late RTOG urinary toxicity",
+          "metric": "V65",
+          "limit_value": 50.0,
+          "unit": "%",
+          "operator": "<=",
+          "risk_rate_percent": "<6%",
+          "risk_level": "standard_safe",
+          "notes": "Prostate radiotherapy (RTOG 0415 / QUANTEC): V65 <= 50%, V70 <= 35%, V75 <= 25%, V80 <= 15%. Bladder cancer definitive RT: Dmax < 65 Gy gives < 6% late Gr >= 3 toxicity.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "QUANTEC-PELVIS-PENILE-BULB-DMEAN-50",
+          "source_id": "QUANTEC-PELVIS-2010",
+          "anatomical_site": "Pelvis",
+          "organ": "Penile Bulb",
+          "volume_spec": "Whole organ",
+          "fractionation_type": "conventional",
+          "fractions": "standard (1.8-2.0 Gy/fx)",
+          "endpoint": "Severe erectile dysfunction",
+          "metric": "D90% / Mean to 95%",
+          "limit_value": 50.0,
+          "unit": "Gy",
+          "operator": "<",
+          "risk_rate_percent": "<35%",
+          "risk_level": "standard_safe",
+          "notes": "Mean dose to 95% of penile bulb < 50 Gy or D90 < 50 Gy keeps severe erectile dysfunction < 35%. D60-70 < 70 Gy gives < 55% risk.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "QUANTEC-PELVIS-FEMORAL-HEAD-V50-10",
+          "source_id": "QUANTEC-PELVIS-2010",
+          "anatomical_site": "Pelvis",
+          "organ": "Femoral Heads (Bilateral)",
+          "volume_spec": "Bilateral femoral heads",
+          "fractionation_type": "conventional",
+          "fractions": "standard (1.8-2.0 Gy/fx)",
+          "endpoint": "Avascular necrosis / subcapital fracture",
+          "metric": "V50",
+          "limit_value": 10.0,
+          "unit": "%",
+          "operator": "<",
+          "risk_rate_percent": "<5%",
+          "risk_level": "standard_safe",
+          "notes": "Keep V50 < 5-10% and Dmax < 52 Gy to prevent avascular necrosis and femoral neck fracture.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        }
+      ],
+      "key_passages": [
+        {
+          "section": "Rectum",
+          "text": "Prostate radiotherapy rectal dose-volume staircase: V50 < 50%, V60 < 35%, V65 < 25%, V70 < 20%, V75 < 15% maintains late Grade >= 2 toxicity < 15% and Grade >= 3 < 10%."
+        },
+        {
+          "section": "Bladder & Penile Bulb",
+          "text": "Prostate radiotherapy bladder limits: V65 <= 50%, V70 <= 35%, V75 <= 25%, V80 <= 15%. Penile bulb mean dose to 95% of gland < 50 Gy preserves potency."
+        }
+      ]
+    },
+    {
+      "source_id": "PENTEC-CNS-2024",
+      "title": "PENTEC: Pediatric Normal Tissue Effects in the Brain, Cerebrovasculature, Optic Apparatus, Endocrine, and Cochlea",
+      "organization": "PENTEC Taskforce / AAPM / ASTRO",
+      "source_type": "consensus",
+      "disease_site": "CNS",
+      "edition_or_version": "2024 Consensus",
+      "publication_date": "2024-02-01",
+      "doi_or_url": "https://doi.org/10.1016/j.ijrobp.2024.01.002",
+      "jurisdiction": "International",
+      "specialties": [
+        "pediatric_radiation_oncology",
+        "medical_physics"
+      ],
+      "organ_constraints": [
+        {
+          "id": "PENTEC-CNS-BRAIN-NECROSIS-59",
+          "source_id": "PENTEC-CNS-2024",
+          "anatomical_site": "CNS",
+          "organ": "Brain (Pediatric)",
+          "volume_spec": "Whole brain including brainstem",
+          "fractionation_type": "pediatric",
+          "fractions": "standard pediatric (1.5-1.8 Gy/fx)",
+          "endpoint": "Symptomatic radiation necrosis",
+          "metric": "Dmax to any part",
+          "limit_value": 59.0,
+          "unit": "Gy",
+          "operator": "<=",
+          "risk_rate_percent": "5%",
+          "risk_level": "standard_safe",
+          "pediatric_age_group": "all_children",
+          "notes": "59 Gy to any part carries 5% necrosis risk; 67 Gy carries 10% risk. Reirradiation composite EQD2/2 = 112 Gy carries 5% risk.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "PENTEC-CNS-BRAIN-IQ-V100-18",
+          "source_id": "PENTEC-CNS-2024",
+          "anatomical_site": "CNS",
+          "organ": "Brain (Pediatric)",
+          "volume_spec": "Whole brain",
+          "fractionation_type": "pediatric",
+          "fractions": "standard pediatric (1.5-1.8 Gy/fx)",
+          "endpoint": "Neurocognitive decline (IQ < 85)",
+          "metric": "D100%",
+          "limit_value": 18.0,
+          "unit": "Gy",
+          "operator": "<=",
+          "risk_rate_percent": "5%",
+          "risk_level": "standard_safe",
+          "pediatric_age_group": "younger_children_higher_vulnerability",
+          "notes": "18 Gy to 100% brain has 5% risk of IQ < 85; 26 Gy to 100% brain has 20% risk. 36 Gy to 10% brain has 5% risk; 51 Gy to 10% brain has 20% risk. Methotrexate adds ~6 Gy whole-brain uniform dose equivalent.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "PENTEC-CNS-CEREBROVASCULAR-D100-30",
+          "source_id": "PENTEC-CNS-2024",
+          "anatomical_site": "CNS",
+          "organ": "Circle of Willis / Suprasellar Cistern",
+          "volume_spec": "Major cerebral arterial axis",
+          "fractionation_type": "pediatric",
+          "fractions": "standard pediatric (1.5-1.8 Gy/fx)",
+          "endpoint": "Stroke / cerebral vasculopathy (Moyamoya) by attained age 35y",
+          "metric": "D100%",
+          "limit_value": 30.0,
+          "unit": "Gy",
+          "operator": "<=",
+          "risk_rate_percent": "~1%",
+          "risk_level": "standard_safe",
+          "pediatric_age_group": "all_children",
+          "notes": "D100% 30 Gy: ~1% stroke risk at age 35y (2-4% at 45y); D100% 45 Gy: 2-3% at 35y (4-9% at 45y); D100% 54 Gy: 3-4% at 35y (7-13% at 45y).",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "PENTEC-CNS-OPTIC-RETINA-DMAX-42",
+          "source_id": "PENTEC-CNS-2024",
+          "anatomical_site": "CNS",
+          "organ": "Retina (Pediatric)",
+          "volume_spec": "Retina",
+          "fractionation_type": "pediatric",
+          "fractions": "standard pediatric (1.5-1.8 Gy/fx)",
+          "endpoint": "Radiation retinopathy",
+          "metric": "Dmax",
+          "limit_value": 42.0,
+          "unit": "Gy",
+          "operator": "<=",
+          "risk_rate_percent": "5%",
+          "risk_level": "standard_safe",
+          "pediatric_age_group": "all_children",
+          "notes": "Retina Dmax 42 Gy has 5% risk of retinopathy; Dmax 62 Gy has 50% risk. Optic nerve/chiasm Dmax 57 Gy has 5% neuropathy; 64 Gy has 50%. Lens mean dose 9 Gy has 50% cataract risk.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "PENTEC-CNS-ENDOCRINE-GH-D100-15",
+          "source_id": "PENTEC-CNS-2024",
+          "anatomical_site": "CNS",
+          "organ": "Hypothalamus / Pituitary Gland",
+          "volume_spec": "Hypothalamic-pituitary axis",
+          "fractionation_type": "pediatric",
+          "fractions": "standard pediatric (1.5-1.8 Gy/fx)",
+          "endpoint": "Growth hormone deficiency",
+          "metric": "D100%",
+          "limit_value": 15.0,
+          "unit": "Gy",
+          "operator": "<=",
+          "risk_rate_percent": "5%",
+          "risk_level": "standard_safe",
+          "pediatric_age_group": "younger_children_higher_vulnerability",
+          "notes": "GH axis is exquisitely radiosensitive. D100% 15 Gy gives 5% GH deficiency. Central hypothyroidism occurs at D100% 22 Gy (20% risk); ACTH deficiency occurs at D100% 34 Gy (20% risk).",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "PENTEC-CNS-SPINAL-CORD-NOCHEMO-50",
+          "source_id": "PENTEC-CNS-2024",
+          "anatomical_site": "CNS",
+          "organ": "Spinal Cord (Pediatric)",
+          "volume_spec": "D1cc / D0.03cc",
+          "fractionation_type": "pediatric",
+          "fractions": "standard pediatric (1.5-1.8 Gy/fx)",
+          "endpoint": "Myelopathy",
+          "metric": "D1cc",
+          "limit_value": 50.4,
+          "unit": "Gy",
+          "operator": "<=",
+          "risk_rate_percent": "Rare",
+          "risk_level": "standard_safe",
+          "pediatric_age_group": "all_children",
+          "notes": "Without concurrent/intrathecal chemo: D0.03cc < 54 Gy, D1cc < 50.4 Gy is safe. WITH CHEMOTHERAPY (especially intrathecal): threshold is lower: D0.03cc < 50.4 Gy, D1cc < 45 Gy.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "PENTEC-CNS-COCHLEA-DMEAN-35",
+          "source_id": "PENTEC-CNS-2024",
+          "anatomical_site": "CNS",
+          "organ": "Cochlea (Pediatric)",
+          "volume_spec": "Cochlea",
+          "fractionation_type": "pediatric",
+          "fractions": "standard pediatric (1.5-1.8 Gy/fx)",
+          "endpoint": "Sensorineural hearing loss (>20 dB threshold shift)",
+          "metric": "Mean dose",
+          "limit_value": 35.0,
+          "unit": "Gy",
+          "operator": "<",
+          "risk_rate_percent": "<5%",
+          "risk_level": "standard_safe",
+          "pediatric_age_group": "children_under_5y_greatest_risk",
+          "notes": "Without chemo: Mean < 35 Gy gives < 5% risk, Mean 50 Gy gives 30% risk. Concurrent/cumulative cisplatin >= 300 mg/m2 shifts dose-response curve lower by ~7 Gy.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "PENTEC-HN-THYROID-DMEAN-20",
+          "source_id": "PENTEC-CNS-2024",
+          "anatomical_site": "Head and Neck",
+          "organ": "Thyroid Gland (Pediatric)",
+          "volume_spec": "Whole gland",
+          "fractionation_type": "pediatric",
+          "fractions": "standard pediatric (1.5-1.8 Gy/fx)",
+          "endpoint": "Hypothyroidism (Compensated vs Clinical)",
+          "metric": "Mean dose",
+          "limit_value": 20.0,
+          "unit": "Gy",
+          "operator": "<=",
+          "risk_rate_percent": "25% (compensated), 7% (clinical)",
+          "risk_level": "standard_safe",
+          "pediatric_age_group": "adolescents_and_females_higher_risk",
+          "notes": "Mean 10 Gy gives 12% subclinical and 4% clinical hypothyroidism. Mean 20 Gy gives 25% subclinical and 7% clinical. Mean 30 Gy gives 44% subclinical and 13% clinical. Females have 1.7-fold higher risk than males.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        }
+      ],
+      "key_passages": [
+        {
+          "section": "Pediatric Brain Necrosis & Cognition",
+          "text": "59 Gy to any part of brain yields 5% necrosis risk. IQ < 85 risk is 5% at 18 Gy to 100% brain and 20% at 26 Gy. Methotrexate adds ~6 Gy whole-brain dose equivalent."
+        },
+        {
+          "section": "Cerebrovasculature",
+          "text": "D100% 30 Gy to Circle of Willis carries ~1% stroke risk at age 35y; 45 Gy carries 2-3%; 54 Gy carries 3-4%."
+        },
+        {
+          "section": "Endocrine & Hearing",
+          "text": "Growth hormone deficiency threshold is D100% 15 Gy (5% risk). Cochlea mean dose < 35 Gy keeps hearing loss < 5%; cisplatin >= 300 mg/m2 lowers tolerance by ~7 Gy."
+        }
+      ]
+    },
+    {
+      "source_id": "PENTEC-THORAX-ABDOMEN-PELVIS-2024",
+      "title": "PENTEC: Pediatric Normal Tissue Effects in Thorax, Abdomen, Pelvis, and Musculoskeletal System",
+      "organization": "PENTEC Taskforce / AAPM / ASTRO",
+      "source_type": "consensus",
+      "disease_site": "General",
+      "edition_or_version": "2024 Consensus",
+      "publication_date": "2024-02-01",
+      "doi_or_url": "https://doi.org/10.1016/j.ijrobp.2024.01.002",
+      "jurisdiction": "International",
+      "specialties": [
+        "pediatric_radiation_oncology",
+        "medical_physics"
+      ],
+      "organ_constraints": [
+        {
+          "id": "PENTEC-THORAX-LUNG-V20-30",
+          "source_id": "PENTEC-THORAX-ABDOMEN-PELVIS-2024",
+          "anatomical_site": "Thorax",
+          "organ": "Lungs (Pediatric)",
+          "volume_spec": "Whole lungs",
+          "fractionation_type": "pediatric",
+          "fractions": "standard pediatric (1.5-1.8 Gy/fx)",
+          "endpoint": "Symptomatic Grade 2 radiation pneumonitis",
+          "metric": "V20",
+          "limit_value": 30.0,
+          "unit": "%",
+          "operator": "<",
+          "risk_rate_percent": "<5%",
+          "risk_level": "standard_safe",
+          "pediatric_age_group": "all_children",
+          "notes": "V20 < 30% and Mean lung dose < 12 Gy give < 5% symptomatic pneumonitis. Late pneumonitis: V27 < 20% gives < 5% risk. In TBI: prescribed 11 Gy EQD2 has 3.6% idiopathic pneumonitis syndrome (IPS); 12 Gy EQD2 has 47.5% IPS.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "PENTEC-THORAX-HEART-DMEAN-20",
+          "source_id": "PENTEC-THORAX-ABDOMEN-PELVIS-2024",
+          "anatomical_site": "Thorax",
+          "organ": "Heart (Pediatric)",
+          "volume_spec": "Whole heart",
+          "fractionation_type": "pediatric",
+          "fractions": "standard pediatric (1.5-1.8 Gy/fx)",
+          "endpoint": "Late cardiac disease at 30y post-RT",
+          "metric": "Mean dose",
+          "limit_value": 20.0,
+          "unit": "Gy",
+          "operator": "<=",
+          "risk_rate_percent": "3.8% any cardiac disease (1.1% HF, 2.1% CAD)",
+          "risk_level": "standard_safe",
+          "pediatric_age_group": "all_children",
+          "notes": "Mean 20 Gy at 30y post-RT carries 1.1% HF, 2.1% CAD, 0.5% valvular disease. Anthracycline synergy: Mean 10 Gy + <250 mg/m2 cumulative anthracycline = 3.4% cardiac disease; Mean 10 Gy + >250 mg/m2 anthracycline = 4.8%.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "PENTEC-ABDOMEN-LIVER-SOS-D100-10",
+          "source_id": "PENTEC-THORAX-ABDOMEN-PELVIS-2024",
+          "anatomical_site": "Abdomen",
+          "organ": "Liver (Pediatric)",
+          "volume_spec": "Whole liver",
+          "fractionation_type": "pediatric",
+          "fractions": "standard pediatric (1.5-1.8 Gy/fx)",
+          "endpoint": "Hepatic sinusoidal obstruction syndrome (SOS / VOD)",
+          "metric": "D100%",
+          "limit_value": 10.0,
+          "unit": "Gy",
+          "operator": "<=",
+          "risk_rate_percent": "6.1%",
+          "risk_level": "standard_safe",
+          "pediatric_age_group": "children_under_20y_more_susceptible",
+          "notes": "D100% 10 Gy carries 6.1% risk of SOS; D100% 20 Gy carries 14.5% risk. Non-alkylating chemotherapy after whole-liver RT significantly increases toxicity.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "PENTEC-ABDOMEN-KIDNEY-CKD-WHOLE-10",
+          "source_id": "PENTEC-THORAX-ABDOMEN-PELVIS-2024",
+          "anatomical_site": "Abdomen",
+          "organ": "Kidneys (Pediatric)",
+          "volume_spec": "Whole kidneys (both kidneys in TBI/WAI, or solitary post-nephrectomy)",
+          "fractionation_type": "pediatric",
+          "fractions": "standard pediatric (1.5-1.8 Gy/fx)",
+          "endpoint": "Chronic kidney disease (CKD Grade 2)",
+          "metric": "Whole kidney dose",
+          "limit_value": 10.2,
+          "unit": "Gy",
+          "operator": "<=",
+          "risk_rate_percent": "5%",
+          "risk_level": "standard_safe",
+          "pediatric_age_group": "all_children",
+          "notes": "Hypertension: 9.6 Gy = 5% risk. Grade 2 CKD: 10.2 Gy = 5% risk. Grades 3-5 CKD: 14.5 Gy = 5% risk. Cisplatin synergy: RT + cisplatin V10 > 25% gives 5% risk. Ifosfamide synergy: RT + ifosfamide V10 > 40% gives 10% risk.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "PENTEC-MSK-VERTEBRA-GROWTH-STUNTING",
+          "source_id": "PENTEC-THORAX-ABDOMEN-PELVIS-2024",
+          "anatomical_site": "Musculoskeletal",
+          "organ": "Vertebral Bodies (Pediatric)",
+          "volume_spec": "Vertebral growth plates",
+          "fractionation_type": "pediatric",
+          "fractions": "standard pediatric (1.5-1.8 Gy/fx)",
+          "endpoint": "Clinically significant scoliosis and growth stunting",
+          "metric": "Threshold dose",
+          "limit_value": 10.0,
+          "unit": "Gy",
+          "operator": "<=",
+          "risk_rate_percent": "At risk above threshold",
+          "risk_level": "standard_safe",
+          "pediatric_age_group": "age_dependent_thresholds",
+          "notes": "Age < 2y: > 10 Gy at risk. Age 2-6y: > 20 Gy at risk. Age > 6y: > 30 Gy at risk. Crucial: always irradiate entire vertebral body width uniformly to avoid asymmetric growth causing severe scoliosis.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "PENTEC-BREAST-BUD-HYPOPLASIA",
+          "source_id": "PENTEC-THORAX-ABDOMEN-PELVIS-2024",
+          "anatomical_site": "Thorax",
+          "organ": "Breast Bud (Pediatric Female)",
+          "volume_spec": "Breast bud tissue",
+          "fractionation_type": "pediatric",
+          "fractions": "standard pediatric (1.5-1.8 Gy/fx)",
+          "endpoint": "Perceived breast hypoplasia",
+          "metric": "Absorbed dose",
+          "limit_value": 0.34,
+          "unit": "Gy",
+          "operator": "<",
+          "risk_rate_percent": "38% (0-<0.34 Gy), 97% (>=0.97 Gy)",
+          "risk_level": "standard_safe",
+          "pediatric_age_group": "girls_under_4y",
+          "notes": "Extremely vulnerable in young girls < 4y. Even 0.34-0.97 Gy carries 61% risk of severe hypoplasia; >= 0.97 Gy carries 97% risk. Block breast bud rigorously.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "PENTEC-GONAD-TESTES-OLIGOSPERMIA",
+          "source_id": "PENTEC-THORAX-ABDOMEN-PELVIS-2024",
+          "anatomical_site": "Pelvis",
+          "organ": "Testes (Pediatric)",
+          "volume_spec": "Both testicles",
+          "fractionation_type": "pediatric",
+          "fractions": "scatter / low dose",
+          "endpoint": "Oligospermia / azoospermia at 1y post-RT",
+          "metric": "Mean dose",
+          "limit_value": 1.0,
+          "unit": "Gy",
+          "operator": "<",
+          "risk_rate_percent": ">90% if > 1 Gy",
+          "risk_level": "standard_safe",
+          "pediatric_age_group": "all_boys",
+          "notes": "Germ cell epithelium is exceptionally sensitive: Mean > 1 Gy causes > 90% oligospermia. Leydig cells: Mean 0.2-12 Gy gives 25% low testosterone; Mean > 20 Gy gives 68% low testosterone.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        },
+        {
+          "id": "PENTEC-GONAD-OVARY-POI-10",
+          "source_id": "PENTEC-THORAX-ABDOMEN-PELVIS-2024",
+          "anatomical_site": "Pelvis",
+          "organ": "Ovaries (Pediatric Female)",
+          "volume_spec": "Least affected ovary",
+          "fractionation_type": "pediatric",
+          "fractions": "standard pediatric (1.5-1.8 Gy/fx)",
+          "endpoint": "Premature ovarian insufficiency (POI)",
+          "metric": "Absorbed dose",
+          "limit_value": 10.0,
+          "unit": "Gy",
+          "operator": "<",
+          "risk_rate_percent": "12% at 20y, 50% at 40y",
+          "risk_level": "standard_safe",
+          "pediatric_age_group": "all_girls",
+          "notes": "Without chemo: < 10 Gy carries 12% POI by age 20y, 50% by age 40y. > 10 Gy carries 71% POI by age 20y, 100% by age 40y. Alkylator chemotherapy drastically worsens POI risk. Oophoropexy recommended if pelvis irradiated.",
+          "target_specialists": [
+            "Radiation Oncologist",
+            "Dosimetrist",
+            "Medical Physicist"
+          ]
+        }
+      ],
+      "key_passages": [
+        {
+          "section": "Pediatric Heart & Lung",
+          "text": "Pediatric heart mean dose 20 Gy carries 3.8% risk of cardiac disease at 30y post-RT; anthracyclines synergize significantly. Lung V20 < 30% and mean < 12 Gy keep pneumonitis < 5%."
+        },
+        {
+          "section": "Pediatric Musculoskeletal & Breast Bud",
+          "text": "Vertebral bodies: threshold for scoliosis/growth stunting is > 10 Gy (age < 2y), > 20 Gy (2-6y), > 30 Gy (>6y). Asymmetric irradiation must be avoided. Breast bud in girls < 4y suffers 38% hypoplasia even at 0.34 Gy."
+        },
+        {
+          "section": "Gonads",
+          "text": "Testes mean dose > 1 Gy causes > 90% oligospermia. Ovaries: < 10 Gy carries 12% POI by age 20y and 50% by 40y; > 10 Gy carries 71% by 20y and 100% by 40y."
+        }
+      ]
+    },
+    {
+      "source_id": "RTOG-EORTC-MORBIDITY-1995",
+      "title": "Toxicity Criteria of the Radiation Therapy Oncology Group (RTOG) and European Organization for Research and Treatment of Cancer (EORTC)",
+      "organization": "RTOG / EORTC",
+      "source_type": "consensus",
+      "disease_site": "General",
+      "edition_or_version": "1995 Scoring Scheme",
+      "publication_date": "1995-03-30",
+      "doi_or_url": "https://doi.org/10.1016/0360-3016(95)00060-7",
+      "jurisdiction": "International",
+      "specialties": [
+        "radiation_oncology",
+        "medical_oncology"
+      ],
+      "threshold_criteria": {
+        "acute_timeframe": "<= 90 days from RT start",
+        "late_timeframe": "> 90 days from RT start",
+        "grades": {
+          "Grade_1": "Mild symptoms; minor intervention",
+          "Grade_2": "Moderate symptoms; outpatient management",
+          "Grade_3": "Severe symptoms; inpatient admission or urgent intervention",
+          "Grade_4": "Life-threatening complication; emergency intervention required",
+          "Grade_5": "Death attributable to radiation toxicity"
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Temporal Distinction",
+          "text": "Acute radiation morbidity occurs within 90 days from the start of radiotherapy; late radiation morbidity occurs greater than 90 days from start of radiotherapy."
+        }
+      ]
+    }
+  ]
+}

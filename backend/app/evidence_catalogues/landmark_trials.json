@@ -1,0 +1,3514 @@
+{
+  "catalog_type": "landmark_clinical_trials",
+  "version": "1.0",
+  "generated_by": "trials-systemic-indexer",
+  "total_trials": 28,
+  "disease_sites": [
+    "Bladder",
+    "Breast",
+    "CNS",
+    "GI",
+    "GYN",
+    "Head & Neck",
+    "Lung",
+    "Prostate"
+  ],
+  "entries": [
+    {
+      "source_id": "RTOG-9111",
+      "title": "Concurrent Chemotherapy and Radiotherapy for Organ Preservation in Advanced Laryngeal Cancer",
+      "organization": "Radiation Therapy Oncology Group (RTOG) / NRG Oncology",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Final 10-Year Follow-up",
+      "publication_date": "2013-03-01",
+      "jurisdiction": "International",
+      "disease_site": "Head & Neck",
+      "specialties": [
+        "radiation_oncology",
+        "medical_oncology",
+        "otolaryngology"
+      ],
+      "topics": [
+        "larynx",
+        "organ_preservation",
+        "chemoradiation",
+        "cisplatin",
+        "locoregional_control"
+      ],
+      "doi_or_url": "https://doi.org/10.1200/JCO.2012.43.6097",
+      "stage_criteria": "Stage III or IV nonmetastatic squamous cell carcinoma of glottic or supraglottic larynx requiring total laryngectomy (T2-T4, N0-N3, M0; excluding T1 and T4 with extensive cartilage invasion)",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Concurrent Chemoradiation (CRT)",
+          "intervention": "Definitive RT 70 Gy in 35 daily fractions (2.0 Gy/fx) with concurrent Cisplatin 100 mg/m2 IV on days 1, 22, and 43",
+          "sample_size": 174
+        },
+        {
+          "arm_name": "Induction Chemotherapy followed by RT",
+          "intervention": "Induction Cisplatin 100 mg/m2 + 5-FU 1000 mg/m2/day continuous infusion d1-5 x 3 cycles followed by definitive RT 70 Gy",
+          "sample_size": 173
+        },
+        {
+          "arm_name": "Radiotherapy Alone",
+          "intervention": "Definitive RT 70 Gy in 35 daily fractions (2.0 Gy/fx)",
+          "sample_size": 171
+        }
+      ],
+      "endpoints": {
+        "primary_endpoint": "Laryngeal preservation / laryngectomy-free survival",
+        "10_year_intact_larynx_rate": {
+          "concurrent_crt": "67.4%",
+          "induction_pf": "44.8%",
+          "rt_alone": "39.5%"
+        },
+        "locoregional_control_hr": {
+          "concurrent_vs_rt_alone": {
+            "hr": 0.58,
+            "ci_95": "0.43-0.82",
+            "p_value": 0.0015
+          },
+          "concurrent_vs_induction": {
+            "hr": 0.66,
+            "ci_95": "0.48-0.92",
+            "p_value": 0.0037
+          }
+        },
+        "10_year_overall_survival": {
+          "concurrent_crt": "27.5%",
+          "induction_pf": "28.9%",
+          "rt_alone": "31.8%",
+          "p_value": 0.58
+        },
+        "grade_3_5_late_toxicity": {
+          "concurrent_crt": "33.3%",
+          "induction_pf": "30.6%",
+          "rt_alone": "38.0%",
+          "p_value": "not significant"
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "Concurrent cisplatin and radiotherapy provides superior locoregional control and larynx preservation compared with induction chemotherapy followed by radiation or radiation alone. Long-term overall survival did not differ significantly between arms."
+        },
+        {
+          "section": "Locoregional Control",
+          "text": "Concurrent chemoradiotherapy was associated with a relative risk reduction of locoregional failure of 42% compared with RT alone (HR 0.58, p=0.0015) and 34% compared with induction chemotherapy (HR 0.66, p=0.0037)."
+        }
+      ],
+      "clinical_recommendation": "Concurrent high-dose cisplatin (100 mg/m2 q3w) with definitive radiation (70 Gy) is the standard nonsurgical organ preservation strategy for locally advanced laryngeal cancer."
+    },
+    {
+      "source_id": "EORTC-22931",
+      "title": "Postoperative Concurrent Chemotherapy and Radiotherapy for High-Risk Squamous-Cell Carcinoma of the Head and Neck",
+      "organization": "European Organisation for Research and Treatment of Cancer (EORTC)",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Final Report",
+      "publication_date": "2004-05-06",
+      "jurisdiction": "International",
+      "disease_site": "Head & Neck",
+      "specialties": [
+        "radiation_oncology",
+        "medical_oncology",
+        "surgical_oncology"
+      ],
+      "topics": [
+        "head_and_neck",
+        "postoperative_radiotherapy",
+        "chemoradiation",
+        "cisplatin",
+        "extranodal_extension",
+        "positive_margins"
+      ],
+      "doi_or_url": "https://doi.org/10.1056/NEJMoa032646",
+      "stage_criteria": "Resected stage III-IV squamous-cell carcinoma of oral cavity, oropharynx, larynx, or hypopharynx with high-risk features (positive surgical margins, extranodal extension, pT3-T4, vascular/perineural invasion, or level IV/V nodal involvement)",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Adjuvant Chemoradiation",
+          "intervention": "Postoperative RT 66 Gy in 33 fractions (2.0 Gy/fx) with concurrent Cisplatin 100 mg/m2 IV on days 1, 22, and 43",
+          "sample_size": 167
+        },
+        {
+          "arm_name": "Adjuvant Radiotherapy Alone",
+          "intervention": "Postoperative RT 66 Gy in 33 fractions (2.0 Gy/fx)",
+          "sample_size": 167
+        }
+      ],
+      "endpoints": {
+        "primary_endpoint": "Progression-free survival (PFS)",
+        "5_year_pfs": {
+          "adjuvant_crt": "47%",
+          "adjuvant_rt": "36%",
+          "hr": 0.75,
+          "ci_95": "0.56-0.99",
+          "p_value": 0.04
+        },
+        "5_year_overall_survival": {
+          "adjuvant_crt": "53%",
+          "adjuvant_rt": "40%",
+          "hr": 0.7,
+          "ci_95": "0.52-0.95",
+          "p_value": 0.02
+        },
+        "5_year_locoregional_control": {
+          "adjuvant_crt": "82%",
+          "adjuvant_rt": "69%",
+          "hr": 0.57,
+          "p_value": 0.007
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Results",
+          "text": "Postoperative concurrent administration of cisplatin with radiotherapy resulted in significant improvements in progression-free survival (HR 0.75, p=0.04), overall survival (HR 0.70, p=0.02), and locoregional control (HR 0.57, p=0.007) compared with radiotherapy alone in high-risk head and neck cancer."
+        }
+      ],
+      "clinical_recommendation": "Postoperative concurrent cisplatin (100 mg/m2 q3w x 3 cycles) plus 66 Gy radiation is standard for resected head and neck cancer with positive margins or extranodal nodal extension."
+    },
+    {
+      "source_id": "RTOG-9501",
+      "title": "Postoperative Concurrent Radiotherapy and Chemotherapy for High-Risk Squamous-Cell Carcinoma of the Head and Neck",
+      "organization": "Radiation Therapy Oncology Group (RTOG)",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Final Report",
+      "publication_date": "2004-05-06",
+      "jurisdiction": "USA/International",
+      "disease_site": "Head & Neck",
+      "specialties": [
+        "radiation_oncology",
+        "medical_oncology",
+        "surgical_oncology"
+      ],
+      "topics": [
+        "head_and_neck",
+        "postoperative_radiotherapy",
+        "chemoradiation",
+        "cisplatin",
+        "extranodal_extension"
+      ],
+      "doi_or_url": "https://doi.org/10.1056/NEJMoa040266",
+      "stage_criteria": "Resected stage III-IV squamous-cell carcinoma of oral cavity, oropharynx, larynx, or hypopharynx with >=2 involved regional lymph nodes, extracapsular extension (ENE), or microscopically positive surgical margins",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Adjuvant Chemoradiation",
+          "intervention": "Postoperative RT 60-66 Gy in 30-33 fractions + concurrent Cisplatin 100 mg/m2 IV on days 1, 22, and 43",
+          "sample_size": 231
+        },
+        {
+          "arm_name": "Adjuvant Radiotherapy Alone",
+          "intervention": "Postoperative RT 60-66 Gy in 30-33 fractions",
+          "sample_size": 228
+        }
+      ],
+      "endpoints": {
+        "primary_endpoint": "Locoregional control",
+        "2_year_locoregional_recurrence": {
+          "adjuvant_crt": "18%",
+          "adjuvant_rt": "28%",
+          "hr": 0.61,
+          "ci_95": "0.41-0.91",
+          "p_value": 0.01
+        },
+        "2_year_disease_free_survival": {
+          "adjuvant_crt": "54%",
+          "adjuvant_rt": "43%",
+          "hr": 0.78,
+          "p_value": 0.04
+        },
+        "2_year_overall_survival": {
+          "adjuvant_crt": "63%",
+          "adjuvant_rt": "57%",
+          "hr": 0.84,
+          "p_value": 0.19
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Results",
+          "text": "Concurrent postoperative radiotherapy and cisplatin significantly improved locoregional control (HR 0.61, p=0.01) and disease-free survival (HR 0.78, p=0.04) among high-risk patients with resected head and neck cancer."
+        }
+      ],
+      "clinical_recommendation": "Adjuvant cisplatin-based chemoradiotherapy significantly reduces locoregional failure in surgically resected HNSCC harboring positive margins or extracapsular nodal spread."
+    },
+    {
+      "source_id": "BERNIER-COOPER-2005",
+      "title": "Defining Risk Levels in Locally Advanced Head and Neck Cancers: A Comparative Analysis of Concurrent Postoperative Radiation Plus Chemotherapy Trials of the EORTC (#22931) and RTOG (#9501)",
+      "organization": "EORTC / RTOG Collaborative Group",
+      "source_type": "review",
+      "edition_or_version": "Pooled Comparative Analysis",
+      "publication_date": "2005-10-01",
+      "jurisdiction": "International",
+      "disease_site": "Head & Neck",
+      "specialties": [
+        "radiation_oncology",
+        "medical_oncology",
+        "surgical_oncology"
+      ],
+      "topics": [
+        "head_and_neck",
+        "risk_stratification",
+        "extranodal_extension",
+        "positive_margins",
+        "cisplatin"
+      ],
+      "doi_or_url": "https://doi.org/10.1002/hed.20279",
+      "stage_criteria": "Pooled patient-level data from 792 patients enrolled in EORTC 22931 and RTOG 9501",
+      "level_of_evidence": "Level 1 (Pooled Phase III Analysis)",
+      "trial_arms": [
+        {
+          "arm_name": "Pooled CRT",
+          "sample_size": 398
+        },
+        {
+          "arm_name": "Pooled RT alone",
+          "sample_size": 394
+        }
+      ],
+      "endpoints": {
+        "margin_positive_and_or_ece": {
+          "overall_survival_hr": 0.7,
+          "ci_95": "0.54-0.90",
+          "p_value": 0.005
+        },
+        "multiple_nodes_without_ece_or_positive_margins": {
+          "overall_survival_hr": 0.98,
+          "ci_95": "0.64-1.50",
+          "p_value": 0.92
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Clinical Takeaway",
+          "text": "Definitive benefit of postoperative concurrent cisplatin and RT is restricted to patients with microscopically positive surgical margins and/or extracapsular extension (ECE/ENE). Patients with multiple involved nodes without ECE did not demonstrate an overall survival benefit from adding chemotherapy."
+        }
+      ],
+      "clinical_recommendation": "Microscopically positive surgical margins and extranodal nodal extension are the absolute standard indications for adjuvant concurrent chemoradiation; patients with other intermediate features (T3-4, multiple nodes without ENE) may receive RT alone."
+    },
+    {
+      "source_id": "RTOG-0522",
+      "title": "Randomized Phase III Trial of Concurrent Accelerated Radiation Plus Cisplatin With or Without Cetuximab for Stage III to IV Head and Neck Carcinoma",
+      "organization": "Radiation Therapy Oncology Group (RTOG) / NRG Oncology",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Final Report",
+      "publication_date": "2014-12-01",
+      "jurisdiction": "USA/International",
+      "disease_site": "Head & Neck",
+      "specialties": [
+        "radiation_oncology",
+        "medical_oncology"
+      ],
+      "topics": [
+        "head_and_neck",
+        "chemoradiation",
+        "cetuximab",
+        "cisplatin",
+        "accelerated_radiotherapy"
+      ],
+      "doi_or_url": "https://doi.org/10.1200/JCO.2014.57.7528",
+      "stage_criteria": "Nonmetastatic stage III/IV squamous cell carcinoma of oropharynx, larynx, or hypopharynx",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Chemoradiation (Accelerated RT + Cisplatin)",
+          "intervention": "Accelerated RT (72 Gy in 42 fractions over 6 weeks) + Cisplatin 100 mg/m2 IV d1, 22",
+          "sample_size": 447
+        },
+        {
+          "arm_name": "Chemoradiation + Cetuximab",
+          "intervention": "Accelerated RT + Cisplatin + Cetuximab (400 mg/m2 loading, then 250 mg/m2 weekly)",
+          "sample_size": 444
+        }
+      ],
+      "endpoints": {
+        "progression_free_survival": {
+          "hr": 1.05,
+          "ci_95": "0.82-1.34",
+          "p_value": 0.66
+        },
+        "overall_survival": {
+          "hr": 0.87,
+          "ci_95": "0.66-1.15",
+          "p_value": 0.32
+        },
+        "grade_3_4_adverse_events": "Significantly higher mucositis and radiation dermatitis in cetuximab arm"
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "The addition of cetuximab to cisplatin-based concurrent accelerated radiation therapy failed to improve progression-free survival or overall survival and resulted in more frequent interruptions in radiation therapy and worse acute toxic effects. Cisplatin + RT remains standard."
+        }
+      ],
+      "clinical_recommendation": "Cetuximab should not be added to standard concurrent cisplatin-radiotherapy in locally advanced head and neck squamous cell carcinoma."
+    },
+    {
+      "source_id": "BONNER-2006",
+      "title": "Radiotherapy with or without Cetuximab in the Treatment of Locoregionally Advanced Squamous Cell Carcinoma of the Head and Neck",
+      "organization": "Bonner Cetuximab Study Group",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Final 5-Year Report",
+      "publication_date": "2010-01-01",
+      "jurisdiction": "International",
+      "disease_site": "Head & Neck",
+      "specialties": [
+        "radiation_oncology",
+        "medical_oncology"
+      ],
+      "topics": [
+        "head_and_neck",
+        "cetuximab",
+        "radiotherapy",
+        "cisplatin_ineligible",
+        "overall_survival"
+      ],
+      "doi_or_url": "https://doi.org/10.1016/S1470-2045(09)70311-0",
+      "stage_criteria": "Locoregionally advanced Stage III-IV squamous cell carcinoma of oropharynx, hypopharynx, or larynx",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "RT + Cetuximab",
+          "intervention": "Definitive RT (70 Gy) + Cetuximab (400 mg/m2 load then 250 mg/m2 weekly)",
+          "sample_size": 211
+        },
+        {
+          "arm_name": "RT alone",
+          "intervention": "Definitive RT alone (70 Gy)",
+          "sample_size": 213
+        }
+      ],
+      "endpoints": {
+        "5_year_overall_survival": {
+          "rt_cetuximab": "45.6%",
+          "rt_alone": "36.4%",
+          "hr": 0.73,
+          "ci_95": "0.56-0.95",
+          "p_value": 0.018
+        },
+        "median_overall_survival": {
+          "rt_cetuximab": "49.0 months",
+          "rt_alone": "29.3 months"
+        },
+        "locoregional_control_hr": {
+          "hr": 0.68,
+          "p_value": 0.005
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "Definitive radiotherapy plus cetuximab significantly improves locoregional control and overall survival compared with radiotherapy alone in locoregionally advanced head and neck cancer, without exacerbating common radiation-related mucositis."
+        }
+      ],
+      "clinical_recommendation": "Cetuximab + definitive RT is a Category 1 alternative for patients with locally advanced HNSCC who are medically unfit for cisplatin (e.g. renal failure, pre-existing neuropathy, severe hearing loss)."
+    },
+    {
+      "source_id": "RTOG-1016",
+      "title": "Radiotherapy plus Cetuximab or Cisplatin in Human Papillomavirus-Positive Oropharyngeal Cancer: A Randomised, Multicentre, Non-Inferiority Trial",
+      "organization": "NRG Oncology / RTOG",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Non-Inferiority Trial",
+      "publication_date": "2019-01-05",
+      "jurisdiction": "USA/International",
+      "disease_site": "Head & Neck",
+      "specialties": [
+        "radiation_oncology",
+        "medical_oncology"
+      ],
+      "topics": [
+        "oropharynx",
+        "hpv_positive",
+        "cisplatin",
+        "cetuximab",
+        "de_escalation"
+      ],
+      "doi_or_url": "https://doi.org/10.1016/S0140-6736(18)32778-4",
+      "stage_criteria": "Locally advanced HPV/p16-positive squamous cell carcinoma of oropharynx (T1-T2 N2a-N3 or T3-T4 N0-N3, AJCC 7th)",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Accelerated RT + Cisplatin",
+          "intervention": "Accelerated IMRT 70 Gy in 35 fx / 6 wks + Cisplatin 100 mg/m2 d1, 22",
+          "sample_size": 423
+        },
+        {
+          "arm_name": "Accelerated RT + Cetuximab",
+          "intervention": "Accelerated IMRT 70 Gy in 35 fx / 6 wks + Cetuximab loading and weekly",
+          "sample_size": 426
+        }
+      ],
+      "endpoints": {
+        "5_year_overall_survival": {
+          "cisplatin": "84.6%",
+          "cetuximab": "77.9%",
+          "hr": 1.45,
+          "ci_95": "1.03-2.05",
+          "p_value": 0.0507
+        },
+        "5_year_progression_free_survival": {
+          "cisplatin": "78.4%",
+          "cetuximab": "67.3%",
+          "hr": 1.72,
+          "ci_95": "1.29-2.29",
+          "p_value": 0.0001
+        },
+        "5_year_locoregional_failure": {
+          "cisplatin": "9.9%",
+          "cetuximab": "17.3%",
+          "hr": 2.05,
+          "p_value": 0.0005
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "For patients with HPV-positive oropharyngeal carcinoma, radiotherapy plus cetuximab showed inferior overall survival and progression-free survival compared with radiotherapy plus cisplatin, with similar rates of overall acute and late toxicity. Radiotherapy plus cisplatin remains the standard of care."
+        }
+      ],
+      "clinical_recommendation": "Cisplatin concurrent with definitive radiotherapy remains the non-negotiable standard of care for HPV-positive oropharynx cancer; cetuximab de-intensification is inferior and not guideline concordant."
+    },
+    {
+      "source_id": "PACIFIC",
+      "title": "Durvalumab after Chemoradiotherapy in Stage III Non\u2013Small-Cell Lung Cancer",
+      "organization": "PACIFIC Clinical Trial Investigators / AstraZeneca",
+      "source_type": "trial",
+      "edition_or_version": "Phase III 5-Year Final Follow-up",
+      "publication_date": "2022-04-01",
+      "jurisdiction": "International",
+      "disease_site": "Lung",
+      "specialties": [
+        "radiation_oncology",
+        "medical_oncology",
+        "pulmonology"
+      ],
+      "topics": [
+        "nsclc",
+        "unresectable_stage_iii",
+        "chemoradiation",
+        "durvalumab",
+        "consolidation_immunotherapy"
+      ],
+      "doi_or_url": "https://doi.org/10.1056/NEJMoa1809697",
+      "stage_criteria": "Unresectable stage III non-small cell lung cancer with no progression after definitive concurrent platinum-based chemoradiotherapy (minimum RT dose 54-66 Gy)",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Consolidation Durvalumab",
+          "intervention": "Durvalumab 10 mg/kg IV every 2 weeks for up to 12 months",
+          "sample_size": 473
+        },
+        {
+          "arm_name": "Placebo",
+          "intervention": "Placebo every 2 weeks for up to 12 months",
+          "sample_size": 237
+        }
+      ],
+      "endpoints": {
+        "5_year_overall_survival": {
+          "durvalumab": "42.9%",
+          "placebo": "33.4%",
+          "hr": 0.72,
+          "ci_95": "0.59-0.89",
+          "p_value": 0.0025
+        },
+        "median_overall_survival": {
+          "durvalumab": "47.5 months",
+          "placebo": "29.1 months"
+        },
+        "progression_free_survival_hr": {
+          "hr": 0.55,
+          "ci_95": "0.45-0.68",
+          "p_value": "<0.001"
+        },
+        "median_pfs": {
+          "durvalumab": "16.9 months",
+          "placebo": "5.6 months"
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "Consolidation durvalumab significantly prolonged progression-free survival and overall survival compared with placebo in patients with unresectable stage III NSCLC who did not have disease progression after concurrent chemoradiotherapy, with manageable safety profile."
+        }
+      ],
+      "clinical_recommendation": "Durvalumab consolidation (10 mg/kg q2w or 1500 mg q4w x 12 months) is Category 1 standard of care following definitive concurrent chemoradiotherapy in non-progressing unresectable stage III NSCLC."
+    },
+    {
+      "source_id": "RTOG-0617",
+      "title": "High-Dose Radiotherapy with or without Cetuximab for Patients with Inoperable Stage III Non-Small-Cell Lung Cancer: A Multicentre, Randomised, Open-Label Phase 3 Study",
+      "organization": "Radiation Therapy Oncology Group (RTOG) / NRG Oncology",
+      "source_type": "trial",
+      "edition_or_version": "Phase III 5-Year Update",
+      "publication_date": "2020-03-01",
+      "jurisdiction": "USA/International",
+      "disease_site": "Lung",
+      "specialties": [
+        "radiation_oncology",
+        "medical_oncology"
+      ],
+      "topics": [
+        "nsclc",
+        "stage_iii",
+        "dose_escalation",
+        "heart_dose",
+        "chemoradiation"
+      ],
+      "doi_or_url": "https://doi.org/10.1016/S1470-2045(14)71207-0",
+      "stage_criteria": "Inoperable stage III non-small cell lung cancer, ECOG 0-1, FEV1 >= 1.2 L or >= 50% predicted",
+      "level_of_evidence": "Level 1 (Phase III 2x2 Factorial RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Standard Dose (60 Gy)",
+          "intervention": "60 Gy in 30 daily fractions + concurrent carboplatin/paclitaxel +/- cetuximab",
+          "sample_size": 257
+        },
+        {
+          "arm_name": "High Dose (74 Gy)",
+          "intervention": "74 Gy in 37 daily fractions + concurrent carboplatin/paclitaxel +/- cetuximab",
+          "sample_size": 287
+        }
+      ],
+      "endpoints": {
+        "median_overall_survival": {
+          "standard_60_gy": "28.7 months",
+          "high_dose_74_gy": "20.3 months",
+          "hr": 1.38,
+          "ci_95": "1.09-1.76",
+          "p_value": 0.004
+        },
+        "5_year_overall_survival": {
+          "standard_60_gy": "32.1%",
+          "high_dose_74_gy": "23.0%"
+        },
+        "multivariate_predictors_of_death": "High-dose radiation arm (HR 1.35) and heart V40/V5/V30 dose volume parameters"
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "74 Gy radiation dose escalation was harmful compared with standard-dose 60 Gy thoracic radiotherapy in stage III NSCLC. Excess mortality was strongly correlated with cardiac radiation exposure. Standard 60 Gy in 30 fractions remains the definitive standard."
+        }
+      ],
+      "clinical_recommendation": "Definitive radiation prescription for stage III NSCLC must not exceed 60-66 Gy in standard 2 Gy fractions; strict cardiac sparing (mean heart dose, V30, V5) is essential."
+    },
+    {
+      "source_id": "CONVERT",
+      "title": "Concurrent Once-Daily versus Twice-Daily Chemoradiotherapy in Patients with Limited-Stage Small-Cell Lung Cancer",
+      "organization": "CONVERT Study Team / Cancer Research UK",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Final Report",
+      "publication_date": "2017-08-01",
+      "jurisdiction": "International",
+      "disease_site": "Lung",
+      "specialties": [
+        "radiation_oncology",
+        "medical_oncology"
+      ],
+      "topics": [
+        "sclc",
+        "limited_stage",
+        "hyperfractionation",
+        "chemoradiation",
+        "twice_daily"
+      ],
+      "doi_or_url": "https://doi.org/10.1016/S1470-2045(17)30318-2",
+      "stage_criteria": "Limited-stage small cell lung cancer (LS-SCLC), ECOG performance status 0-1, normal organ function",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Twice-Daily (BID) RT",
+          "intervention": "45 Gy in 30 fractions (1.5 Gy bid over 3 weeks) + concurrent cisplatin/etoposide",
+          "sample_size": 274
+        },
+        {
+          "arm_name": "Once-Daily (QD) RT",
+          "intervention": "66 Gy in 33 fractions (2.0 Gy qd over 6.5 weeks) + concurrent cisplatin/etoposide",
+          "sample_size": 273
+        }
+      ],
+      "endpoints": {
+        "median_overall_survival": {
+          "bid_45_gy": "30.0 months",
+          "qd_66_gy": "25.0 months",
+          "hr": 1.18,
+          "ci_95": "0.95-1.45",
+          "p_value": 0.14
+        },
+        "5_year_overall_survival": {
+          "bid_45_gy": "34%",
+          "qd_66_gy": "31%"
+        },
+        "grade_3_4_esophagitis": {
+          "bid_45_gy": "19%",
+          "qd_66_gy": "19%"
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "Survival outcomes and toxicity were similar between twice-daily 45 Gy and once-daily 66 Gy chemoradiotherapy. Twice-daily 45 Gy in 3 weeks remains the standard international benchmark, with once-daily 66 Gy offering a safe and valid alternative."
+        }
+      ],
+      "clinical_recommendation": "Accelerated twice-daily thoracic radiotherapy (45 Gy in 30 fx bid over 3 weeks) starting with Cycle 1-2 of cisplatin/etoposide is standard for limited-stage SCLC."
+    },
+    {
+      "source_id": "STAMPEDE-RT",
+      "title": "Radiotherapy to the Primary Tumour for Newly Diagnosed, Metastatic Prostate Cancer (STAMPEDE): A Randomised Controlled Phase 3 Trial",
+      "organization": "MRC Clinical Trials Unit / STAMPEDE Investigators",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Multi-Arm Multi-Stage",
+      "publication_date": "2018-12-01",
+      "jurisdiction": "UK/International",
+      "disease_site": "Prostate",
+      "specialties": [
+        "radiation_oncology",
+        "urology",
+        "medical_oncology"
+      ],
+      "topics": [
+        "prostate_cancer",
+        "metastatic",
+        "oligometastatic",
+        "prostate_radiotherapy",
+        "overall_survival"
+      ],
+      "doi_or_url": "https://doi.org/10.1016/S0140-6736(18)32486-3",
+      "stage_criteria": "Newly diagnosed metastatic hormone-sensitive prostate cancer (mHSPC / mCSPC)",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Standard Systemic Therapy",
+          "intervention": "Lifelong ADT +/- early Docetaxel",
+          "sample_size": 1032
+        },
+        {
+          "arm_name": "Standard Systemic Therapy + Prostate RT",
+          "intervention": "Standard systemic therapy + Prostate RT (55 Gy / 20 fx daily over 4 weeks or 36 Gy / 6 fx weekly over 6 weeks)",
+          "sample_size": 1029
+        }
+      ],
+      "endpoints": {
+        "low_burden_subgroup_overall_survival": {
+          "3_year_os": {
+            "rt_arm": "81%",
+            "control_arm": "73%"
+          },
+          "hr": 0.68,
+          "ci_95": "0.52-0.90",
+          "p_value": 0.007
+        },
+        "low_burden_failure_free_survival": {
+          "hr": 0.59,
+          "ci_95": "0.49-0.72",
+          "p_value": "<0.001"
+        },
+        "overall_cohort_survival": {
+          "hr": 0.92,
+          "ci_95": "0.80-1.04",
+          "p_value": 0.266
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "Prostate radiotherapy improved overall survival in men with newly diagnosed metastatic prostate cancer who had low metastatic burden (CHAARTED criteria: <4 bone metastases and no visceral metastases). Primary prostate RT should be recommended for low-volume mHSPC."
+        }
+      ],
+      "clinical_recommendation": "Prostate-directed external beam radiotherapy (55 Gy / 20 fx or 36 Gy / 6 fx) is standard Category 1 therapy for men with newly diagnosed low-volume metastatic castration-sensitive prostate cancer."
+    },
+    {
+      "source_id": "RTOG-9408",
+      "title": "Radiotherapy with or without Short-Term Androgen Deprivation for Localized Prostate Cancer",
+      "organization": "Radiation Therapy Oncology Group (RTOG)",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Final 10-Year Report",
+      "publication_date": "2011-07-14",
+      "jurisdiction": "USA/International",
+      "disease_site": "Prostate",
+      "specialties": [
+        "radiation_oncology",
+        "urology"
+      ],
+      "topics": [
+        "prostate_cancer",
+        "intermediate_risk",
+        "short_term_adt",
+        "radiotherapy",
+        "overall_survival"
+      ],
+      "doi_or_url": "https://doi.org/10.1056/NEJMoa1011148",
+      "stage_criteria": "Localized adenocarcinoma of the prostate (T1b-T2b, PSA <= 20 ng/mL, Gleason score <= 7)",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Radiotherapy Alone",
+          "intervention": "Definitive RT 66.6 Gy",
+          "sample_size": 992
+        },
+        {
+          "arm_name": "Radiotherapy + Short-Term ADT",
+          "intervention": "Definitive RT 66.6 Gy + 4 months of ADT (Flutamide + Goserelin starting 2 months prior to RT)",
+          "sample_size": 987
+        }
+      ],
+      "endpoints": {
+        "10_year_overall_survival": {
+          "rt_adt": "62%",
+          "rt_alone": "54%",
+          "hr": 0.76,
+          "ci_95": "0.60-0.96",
+          "p_value": 0.03
+        },
+        "10_year_prostate_cancer_mortality": {
+          "rt_adt": "4%",
+          "rt_alone": "8%",
+          "p_value": 0.001
+        },
+        "subgroup_benefit": "Benefit concentrated entirely in intermediate-risk disease; low-risk patients showed no OS improvement (p=0.48)"
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "The addition of 4 months of short-term androgen-deprivation therapy to radiotherapy significantly improved overall survival and decreased disease-specific mortality for men with intermediate-risk localized prostate cancer."
+        }
+      ],
+      "clinical_recommendation": "Short-term androgen deprivation therapy (4 to 6 months) combined with definitive radiation therapy is Category 1 standard for intermediate-risk prostate cancer."
+    },
+    {
+      "source_id": "EORTC-22961",
+      "title": "Duration of Androgen Suppression in the Treatment of Locally Advanced Prostate Cancer",
+      "organization": "European Organisation for Research and Treatment of Cancer (EORTC)",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Final Report",
+      "publication_date": "2009-06-11",
+      "jurisdiction": "International",
+      "disease_site": "Prostate",
+      "specialties": [
+        "radiation_oncology",
+        "urology"
+      ],
+      "topics": [
+        "prostate_cancer",
+        "high_risk",
+        "long_term_adt",
+        "duration_adt"
+      ],
+      "doi_or_url": "https://doi.org/10.1056/NEJMoa0810095",
+      "stage_criteria": "Locally advanced / high-risk localized prostate cancer (T1c-T2b N0 with PSA >= 3x ULN or Gleason >= 8, or T3-T4 N0-N1)",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Short-Term ADT (6 Months)",
+          "intervention": "External beam RT (70 Gy) + 6 months LHRH agonist",
+          "sample_size": 483
+        },
+        {
+          "arm_name": "Long-Term ADT (36 Months)",
+          "intervention": "External beam RT (70 Gy) + 36 months LHRH agonist",
+          "sample_size": 487
+        }
+      ],
+      "endpoints": {
+        "5_year_overall_mortality": {
+          "short_term_adt": "19.0%",
+          "long_term_adt": "15.2%",
+          "hr": 1.42,
+          "ci_95": "1.09-1.85",
+          "p_value_superiority": 0.001
+        },
+        "5_year_prostate_cancer_mortality": {
+          "short_term_adt": "4.7%",
+          "long_term_adt": "3.2%",
+          "hr": 1.71,
+          "p_value": 0.002
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "The combination of radiotherapy plus 6 months of androgen suppression provides inferior overall survival compared with radiotherapy plus 3 years of androgen suppression in locally advanced and high-risk prostate cancer."
+        }
+      ],
+      "clinical_recommendation": "Long-term androgen deprivation therapy (24-36 months) in combination with high-dose definitive radiotherapy is the established standard for high-risk and very high-risk localized prostate cancer."
+    },
+    {
+      "source_id": "BC2001",
+      "title": "Radiotherapy with or without Chemotherapy in Muscle-Invasive Bladder Cancer",
+      "organization": "BC2001 Trial Investigators / Cancer Research UK",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Final 10-Year Follow-up",
+      "publication_date": "2022-11-01",
+      "jurisdiction": "UK/International",
+      "disease_site": "Bladder",
+      "specialties": [
+        "radiation_oncology",
+        "urology",
+        "medical_oncology"
+      ],
+      "topics": [
+        "bladder_cancer",
+        "muscle_invasive",
+        "bladder_preservation",
+        "chemoradiation",
+        "5fu_mitomycin"
+      ],
+      "doi_or_url": "https://doi.org/10.1056/NEJMoa1106106",
+      "stage_criteria": "Muscle-invasive adenocarcinoma or urothelial carcinoma of the urinary bladder (T2-T4a N0 M0)",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Radiotherapy Alone",
+          "intervention": "Definitive pelvic RT (55 Gy / 20 fx or 64 Gy / 32 fx)",
+          "sample_size": 178
+        },
+        {
+          "arm_name": "Chemoradiotherapy",
+          "intervention": "Definitive pelvic RT + 5-FU (500 mg/m2/d d1-5 & d16-20) + Mitomycin C (12 mg/m2 d1)",
+          "sample_size": 182
+        }
+      ],
+      "endpoints": {
+        "2_year_locoregional_disease_free_survival": {
+          "crt": "67%",
+          "rt_alone": "54%",
+          "hr": 0.68,
+          "ci_95": "0.48-0.96",
+          "p_value": 0.03
+        },
+        "5_year_locoregional_control": {
+          "crt": "82%",
+          "rt_alone": "68%",
+          "hr": 0.61,
+          "p_value": 0.027
+        },
+        "salvage_cystectomy_rate": "Significantly reduced with CRT without increased late toxic effects"
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "Synchronous chemotherapy with fluorouracil and mitomycin C during definitive radiotherapy significantly improved locoregional disease-free survival and reduced cystectomy rates without increasing late grade 3 or 4 adverse events."
+        }
+      ],
+      "clinical_recommendation": "Concurrent 5-FU and Mitomycin C with definitive radiotherapy is the Category 1 standard regimen for trimodality bladder-preserving therapy in muscle-invasive bladder cancer."
+    },
+    {
+      "source_id": "CROSS",
+      "title": "Preoperative Chemoradiotherapy for Esophageal or Junctional Cancer",
+      "organization": "CROSS Study Group",
+      "source_type": "trial",
+      "edition_or_version": "Phase III 10-Year Follow-up",
+      "publication_date": "2015-09-01",
+      "jurisdiction": "International",
+      "disease_site": "GI",
+      "specialties": [
+        "radiation_oncology",
+        "surgical_oncology",
+        "medical_oncology"
+      ],
+      "topics": [
+        "esophageal_cancer",
+        "gej_cancer",
+        "neoadjuvant_crt",
+        "carboplatin_paclitaxel",
+        "overall_survival"
+      ],
+      "doi_or_url": "https://doi.org/10.1056/NEJMoa1112088",
+      "stage_criteria": "Resectable esophageal or gastroesophageal junction adenocarcinoma, squamous cell carcinoma, or large-cell carcinoma (cT1N1 or cT2-3N0-1, M0)",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Surgery Alone",
+          "intervention": "Transthoracic or transhiatal esophagectomy with lymphadenectomy",
+          "sample_size": 188
+        },
+        {
+          "arm_name": "Neoadjuvant Chemoradiation + Surgery",
+          "intervention": "Weekly Paclitaxel 50 mg/m2 + Carboplatin AUC 2 for 5 weeks with concurrent RT 41.4 Gy (23 fx of 1.8 Gy) followed by surgery",
+          "sample_size": 178
+        }
+      ],
+      "endpoints": {
+        "median_overall_survival": {
+          "crt_surgery": "49.4 months",
+          "surgery_alone": "24.0 months",
+          "hr": 0.657,
+          "ci_95": "0.495-0.871",
+          "p_value": 0.003
+        },
+        "squamous_cell_carcinoma_median_os": {
+          "crt_surgery": "81.6 months",
+          "surgery_alone": "21.1 months",
+          "hr": 0.48,
+          "ci_95": "0.28-0.83",
+          "p_value": 0.008
+        },
+        "pathological_complete_response": {
+          "overall": "29%",
+          "squamous_histology": "49%",
+          "adenocarcinoma": "23%"
+        },
+        "r0_resection_rate": {
+          "crt_surgery": "92%",
+          "surgery_alone": "69%",
+          "p_value": "<0.001"
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "Preoperative chemoradiotherapy with weekly carboplatin and paclitaxel combined with 41.4 Gy radiation significantly improved overall survival compared with surgery alone in patients with resectable esophageal or GEJ cancer."
+        }
+      ],
+      "clinical_recommendation": "Neoadjuvant chemoradiotherapy using the CROSS regimen (weekly carboplatin AUC 2 + paclitaxel 50 mg/m2 with 41.4 Gy RT) is a standard Category 1 trimodality approach for resectable esophageal and GEJ cancers."
+    },
+    {
+      "source_id": "CHECKMATE-577",
+      "title": "Adjuvant Nivolumab in Resected Esophageal or Gastroesophageal Junction Cancer",
+      "organization": "CheckMate 577 Investigators / Bristol Myers Squibb",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Double-Blind RCT",
+      "publication_date": "2021-04-01",
+      "jurisdiction": "International",
+      "disease_site": "GI",
+      "specialties": [
+        "medical_oncology",
+        "radiation_oncology",
+        "surgical_oncology"
+      ],
+      "topics": [
+        "esophageal_cancer",
+        "adjuvant_immunotherapy",
+        "nivolumab",
+        "residual_disease",
+        "disease_free_survival"
+      ],
+      "doi_or_url": "https://doi.org/10.1056/NEJMoa2034481",
+      "stage_criteria": "Resected stage II or III esophageal or gastroesophageal junction cancer with residual pathologic disease (>= ypT1 or ypN+) after neoadjuvant chemoradiotherapy and R0 surgical resection",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Adjuvant Nivolumab",
+          "intervention": "Nivolumab 240 mg IV q2w for 16 weeks, then 480 mg q4w up to total 1 year",
+          "sample_size": 532
+        },
+        {
+          "arm_name": "Placebo",
+          "intervention": "Placebo for up to total 1 year",
+          "sample_size": 262
+        }
+      ],
+      "endpoints": {
+        "median_disease_free_survival": {
+          "nivolumab": "22.4 months",
+          "placebo": "11.0 months",
+          "hr": 0.69,
+          "ci_95": "0.56-0.86",
+          "p_value": "<0.001"
+        },
+        "distant_metastasis_free_survival_hr": {
+          "hr": 0.74,
+          "ci_95": "0.60-0.92"
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "Among patients with resected esophageal or GE junction cancer who had received neoadjuvant chemoradiotherapy and had residual pathologic disease, disease-free survival was significantly doubled with adjuvant nivolumab compared with placebo."
+        }
+      ],
+      "clinical_recommendation": "Adjuvant Nivolumab for 1 year is Category 1 standard for patients with residual pathologic disease (non-pCR) following neoadjuvant chemoradiation and complete resection."
+    },
+    {
+      "source_id": "RAPIDO",
+      "title": "Short-Course Radiotherapy Followed by Chemotherapy before Total Mesorectal Excision (TME) versus Preoperative Chemoradiotherapy, TME, and Optional Adjuvant Chemotherapy in Locally Advanced Rectal Cancer (RAPIDO): A Randomised, Open-Label, Phase 3 Trial",
+      "organization": "RAPIDO Collaborative Group",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Final Report",
+      "publication_date": "2021-01-01",
+      "jurisdiction": "International",
+      "disease_site": "GI",
+      "specialties": [
+        "radiation_oncology",
+        "colorectal_surgery",
+        "medical_oncology"
+      ],
+      "topics": [
+        "rectal_cancer",
+        "total_neoadjuvant_therapy",
+        "short_course_rt",
+        "capox",
+        "folfox",
+        "metastasis_free_survival"
+      ],
+      "doi_or_url": "https://doi.org/10.1016/S1470-2045(20)30555-6",
+      "stage_criteria": "Locally advanced rectal adenocarcinoma with high-risk features on pelvic MRI: cT4a/b, extramural venous invasion (EMVI+), cN2, involved mesorectal fascia (MRF+), or enlarged lateral lymph nodes",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Experimental TNT Arm",
+          "intervention": "Short-course RT (5 x 5 Gy = 25 Gy in 1 week) -> 6 cycles CAPOX or 9 cycles FOLFOX4 consolidation chemotherapy -> TME surgery",
+          "sample_size": 462
+        },
+        {
+          "arm_name": "Standard Preoperative CRT Arm",
+          "intervention": "Long-course CRT (50-50.4 Gy in 25-28 fx + Capecitabine) -> TME surgery -> optional adjuvant CAPOX/FOLFOX",
+          "sample_size": 450
+        }
+      ],
+      "endpoints": {
+        "3_year_disease_related_treatment_failure": {
+          "tnt_arm": "23.7%",
+          "standard_arm": "30.4%",
+          "hr": 0.75,
+          "ci_95": "0.60-0.95",
+          "p_value": 0.019
+        },
+        "pathological_complete_response_pcr": {
+          "tnt_arm": "28%",
+          "standard_arm": "14%",
+          "p_value": "<0.0001"
+        },
+        "distant_metastases_at_3_years": {
+          "tnt_arm": "20.0%",
+          "standard_arm": "26.8%",
+          "hr": 0.74,
+          "p_value": 0.0048
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "Total neoadjuvant therapy with short-course radiotherapy followed by consolidation chemotherapy before TME significantly reduced the probability of disease-related treatment failure and distant metastasis and doubled the pathological complete response rate compared with standard chemoradiotherapy."
+        }
+      ],
+      "clinical_recommendation": "Total Neoadjuvant Therapy (TNT) using short-course RT (5x5 Gy) followed by consolidation CAPOX/FOLFOX is Category 1 standard for MRI-defined high-risk locally advanced rectal cancer."
+    },
+    {
+      "source_id": "PRODIGE-23",
+      "title": "Neoadjuvant Chemotherapy with FOLFIRINOX and Preoperative Chemoradiotherapy for Patients with Locally Advanced Rectal Cancer (UNICANCER-PRODIGE 23): A Multicentre, Randomised, Open-Label, Phase 3 Trial",
+      "organization": "UNICANCER / PRODIGE Group",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Final Report",
+      "publication_date": "2021-06-01",
+      "jurisdiction": "France/International",
+      "disease_site": "GI",
+      "specialties": [
+        "colorectal_surgery",
+        "radiation_oncology",
+        "medical_oncology"
+      ],
+      "topics": [
+        "rectal_cancer",
+        "total_neoadjuvant_therapy",
+        "folfirinox",
+        "chemoradiation",
+        "disease_free_survival"
+      ],
+      "doi_or_url": "https://doi.org/10.1016/S1470-2045(21)00079-6",
+      "stage_criteria": "Locally advanced rectal cancer (cT3 or cT4, M0)",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "TNT Arm",
+          "intervention": "6 cycles mFOLFIRINOX induction -> Preoperative CRT (50 Gy + Capecitabine) -> TME surgery -> 3 months adjuvant mFOLFOX6",
+          "sample_size": 231
+        },
+        {
+          "arm_name": "Standard CRT Arm",
+          "intervention": "Preoperative CRT (50 Gy + Capecitabine) -> TME surgery -> 6 months adjuvant mFOLFOX6",
+          "sample_size": 230
+        }
+      ],
+      "endpoints": {
+        "3_year_disease_free_survival": {
+          "tnt_arm": "76%",
+          "standard_arm": "69%",
+          "hr": 0.69,
+          "ci_95": "0.49-0.97",
+          "p_value": 0.034
+        },
+        "3_year_metastasis_free_survival": {
+          "tnt_arm": "79%",
+          "standard_arm": "72%",
+          "hr": 0.64,
+          "p_value": 0.017
+        },
+        "pathological_complete_response": {
+          "tnt_arm": "28%",
+          "standard_arm": "12%",
+          "p_value": "<0.0001"
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "Neoadjuvant chemotherapy with mFOLFIRINOX before preoperative chemoradiotherapy significantly improved disease-free survival, metastasis-free survival, and pathological complete response rate compared with standard preoperative chemoradiotherapy in locally advanced rectal cancer."
+        }
+      ],
+      "clinical_recommendation": "Induction mFOLFIRINOX followed by preoperative chemoradiotherapy is a Category 1 TNT regimen for fit patients with locally advanced rectal cancer."
+    },
+    {
+      "source_id": "ACT-II",
+      "title": "Chemoradiation with or without Maintenance Chemotherapy for Anal Cancer (ACT II): A Randomised, Factorial, Phase 3 Trial",
+      "organization": "UK NCRI Anal Cancer Sub-Group / ACT II",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Factorial RCT",
+      "publication_date": "2013-06-01",
+      "jurisdiction": "UK/International",
+      "disease_site": "GI",
+      "specialties": [
+        "radiation_oncology",
+        "colorectal_surgery",
+        "medical_oncology"
+      ],
+      "topics": [
+        "anal_cancer",
+        "mitomycin_c",
+        "cisplatin",
+        "5fu",
+        "maintenance_chemotherapy"
+      ],
+      "doi_or_url": "https://doi.org/10.1016/S1470-2045(13)70138-0",
+      "stage_criteria": "Epidermoid anal canal carcinoma (any stage without distant metastasis)",
+      "level_of_evidence": "Level 1 (Phase III 2x2 Factorial RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "RT + 5-FU + Mitomycin C",
+          "intervention": "RT 50.4 Gy + 5-FU 1000 mg/m2/d d1-4 & d29-32 + Mitomycin C 12 mg/m2 d1",
+          "sample_size": 472
+        },
+        {
+          "arm_name": "RT + 5-FU + Cisplatin",
+          "intervention": "RT 50.4 Gy + 5-FU 1000 mg/m2/d d1-4 & d29-32 + Cisplatin 60 mg/m2 d1, 29",
+          "sample_size": 468
+        }
+      ],
+      "endpoints": {
+        "complete_response_at_26_weeks": {
+          "mitomycin_arm": "90.5%",
+          "cisplatin_arm": "89.6%",
+          "p_value": "not significant"
+        },
+        "3_year_progression_free_survival": {
+          "mitomycin_arm": "73%",
+          "cisplatin_arm": "72%"
+        },
+        "maintenance_chemotherapy_effect": "No benefit in PFS (HR 0.95, p=0.70) or OS (HR 0.86, p=0.37); caused added toxicity"
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "Mitomycin C and Cisplatin produced equivalent response rates and progression-free survival, but Cisplatin caused higher hematologic toxicity. Maintenance chemotherapy provided no clinical benefit. 5-FU and Mitomycin C concurrent with radiotherapy remains the definitive standard of care."
+        }
+      ],
+      "clinical_recommendation": "Definitive chemoradiation with 5-FU and Mitomycin C is the standard of care for epidermoid anal cancer; maintenance chemotherapy should not be administered."
+    },
+    {
+      "source_id": "PRODIGE-24",
+      "title": "FOLFIRINOX or Gemcitabine as Adjuvant Therapy for Pancreatic Cancer",
+      "organization": "PRODIGE / ACCORD / CCTG",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Final Report",
+      "publication_date": "2018-12-20",
+      "jurisdiction": "France/Canada/International",
+      "disease_site": "GI",
+      "specialties": [
+        "surgical_oncology",
+        "medical_oncology"
+      ],
+      "topics": [
+        "pancreatic_cancer",
+        "adjuvant_chemotherapy",
+        "folfirinox",
+        "gemcitabine",
+        "overall_survival"
+      ],
+      "doi_or_url": "https://doi.org/10.1056/NEJMoa1809770",
+      "stage_criteria": "Completely resected pancreatic ductal adenocarcinoma (R0 or R1 resection), ECOG performance status 0-1, postoperative CA19-9 < 180 U/mL",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Modified FOLFIRINOX",
+          "intervention": "Oxaliplatin 85 mg/m2, Leucovorin 400 mg/m2, Irinotecan 180 or 150 mg/m2, 5-FU continuous 2400 mg/m2 over 46h q2w for 24 weeks (12 cycles)",
+          "sample_size": 247
+        },
+        {
+          "arm_name": "Gemcitabine",
+          "intervention": "Gemcitabine 1000 mg/m2 on days 1, 8, 15 q28d for 6 cycles",
+          "sample_size": 246
+        }
+      ],
+      "endpoints": {
+        "median_overall_survival": {
+          "mfolfirinox": "54.4 months",
+          "gemcitabine": "35.0 months",
+          "hr": 0.64,
+          "ci_95": "0.48-0.86",
+          "p_value": 0.003
+        },
+        "3_year_disease_free_survival": {
+          "mfolfirinox": "39.7%",
+          "gemcitabine": "21.4%",
+          "hr": 0.58,
+          "p_value": "<0.001"
+        },
+        "5_year_overall_survival": {
+          "mfolfirinox": "43.2%",
+          "gemcitabine": "31.4%"
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "Adjuvant therapy with a modified FOLFIRINOX regimen led to significantly longer overall survival and disease-free survival than gemcitabine among patients with resected pancreatic cancer."
+        }
+      ],
+      "clinical_recommendation": "Modified FOLFIRINOX is the Category 1 standard adjuvant chemotherapy for fit patients (ECOG 0-1, preserved organ function) following resection of pancreatic ductal adenocarcinoma."
+    },
+    {
+      "source_id": "GOG-123",
+      "title": "Cisplatin, Radiation, and Adjuvant Hysterectomy for Bulky Stage IB Cervical Carcinoma",
+      "organization": "Gynecologic Oncology Group (GOG)",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Landmark Study",
+      "publication_date": "1999-04-15",
+      "jurisdiction": "USA/International",
+      "disease_site": "GYN",
+      "specialties": [
+        "gynecologic_oncology",
+        "radiation_oncology"
+      ],
+      "topics": [
+        "cervical_cancer",
+        "chemoradiation",
+        "weekly_cisplatin",
+        "stage_ib2",
+        "recurrence_reduction"
+      ],
+      "doi_or_url": "https://doi.org/10.1056/NEJM199904153401503",
+      "stage_criteria": "Bulky stage IB carcinoma of the cervix (tumor diameter >= 4 cm)",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "RT alone + Hysterectomy",
+          "intervention": "Preoperative external beam RT + intracavitary brachytherapy followed by extrafascial hysterectomy",
+          "sample_size": 186
+        },
+        {
+          "arm_name": "CRT + Hysterectomy",
+          "intervention": "Preoperative RT + concurrent Cisplatin 40 mg/m2 weekly x 6 followed by extrafascial hysterectomy",
+          "sample_size": 183
+        }
+      ],
+      "endpoints": {
+        "recurrence_or_death_hr": {
+          "hr": 0.51,
+          "ci_95": "0.34-0.75",
+          "p_value": "<0.001"
+        },
+        "3_year_overall_survival": {
+          "crt": "83%",
+          "rt_alone": "74%",
+          "p_value": 0.008
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "The addition of concurrent weekly cisplatin chemotherapy to radiotherapy significantly reduced the risk of recurrence and death in women with bulky stage IB cervical carcinoma."
+        }
+      ],
+      "clinical_recommendation": "Concurrent weekly cisplatin (40 mg/m2) with definitive pelvic radiation plus brachytherapy is the international standard of care for locally advanced cervical cancer."
+    },
+    {
+      "source_id": "OUTBACK",
+      "title": "Adjuvant Chemotherapy following Chemoradiation as Primary Treatment for Locally Advanced Cervical Cancer (OUTBACK): An International, Open-Label, Randomised, Phase 3 Trial",
+      "organization": "GOG / ANZCOG / OUTBACK Investigators",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Final Report",
+      "publication_date": "2023-05-01",
+      "jurisdiction": "International",
+      "disease_site": "GYN",
+      "specialties": [
+        "gynecologic_oncology",
+        "radiation_oncology",
+        "medical_oncology"
+      ],
+      "topics": [
+        "cervical_cancer",
+        "adjuvant_chemotherapy",
+        "cisplatin",
+        "carboplatin_paclitaxel",
+        "lack_of_benefit"
+      ],
+      "doi_or_url": "https://doi.org/10.1016/S1470-2045(23)00147-3",
+      "stage_criteria": "Locally advanced cervical cancer (FIGO 2008 IB2, II, IIIB, IVA, or node-positive IB1/IIA)",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Standard Chemoradiation",
+          "intervention": "Weekly Cisplatin 40 mg/m2 x 5 + pelvic RT (45-50.4 Gy) + image-guided brachytherapy",
+          "sample_size": 460
+        },
+        {
+          "arm_name": "Chemoradiation + Adjuvant Chemotherapy",
+          "intervention": "Standard CRT followed by 4 cycles of Carboplatin (AUC 5) + Paclitaxel (155 mg/m2 q3w)",
+          "sample_size": 461
+        }
+      ],
+      "endpoints": {
+        "5_year_overall_survival": {
+          "crt_alone": "71%",
+          "adjuvant_chemo": "72%",
+          "hr": 0.91,
+          "ci_95": "0.70-1.18",
+          "p_value": 0.6
+        },
+        "5_year_progression_free_survival": {
+          "crt_alone": "61%",
+          "adjuvant_chemo": "63%",
+          "hr": 0.87,
+          "ci_95": "0.70-1.08",
+          "p_value": 0.4
+        },
+        "grade_3_5_toxicities": {
+          "crt_alone": "62%",
+          "adjuvant_chemo": "81%",
+          "p_value": "<0.0001"
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "Adjuvant carboplatin and paclitaxel following standard chemoradiation did not improve progression-free or overall survival in women with locally advanced cervical cancer and resulted in substantially more toxic effects. Adjuvant chemotherapy should not be given."
+        }
+      ],
+      "clinical_recommendation": "Adjuvant chemotherapy after definitive chemoradiotherapy in locally advanced cervical cancer is not recommended and should be avoided."
+    },
+    {
+      "source_id": "PORTEC-3",
+      "title": "Adjuvant Chemoradiotherapy versus Radiotherapy Alone in Women with High-Risk Endometrial Cancer (PORTEC-3): Final Results of an International, Open-Label, Multicentre, Randomised, Phase 3 Trial",
+      "organization": "PORTEC Study Group",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Long-Term Follow-up",
+      "publication_date": "2019-09-01",
+      "jurisdiction": "International",
+      "disease_site": "GYN",
+      "specialties": [
+        "gynecologic_oncology",
+        "radiation_oncology",
+        "medical_oncology"
+      ],
+      "topics": [
+        "endometrial_cancer",
+        "high_risk",
+        "chemoradiation",
+        "stage_iii",
+        "carboplatin_paclitaxel"
+      ],
+      "doi_or_url": "https://doi.org/10.1016/S1470-2045(19)30395-X",
+      "stage_criteria": "High-risk endometrial carcinoma: FIGO 2009 stage I grade 3 with deep myometrial invasion and/or LVSI, stage II, stage III, or serous/clear-cell histology",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Radiotherapy Alone",
+          "intervention": "Pelvic RT 48.6 Gy in 27 fractions (1.8 Gy/fx)",
+          "sample_size": 330
+        },
+        {
+          "arm_name": "Chemoradiotherapy",
+          "intervention": "Pelvic RT 48.6 Gy + 2 concurrent cycles Cisplatin 50 mg/m2 d1, 28 -> 4 adjuvant cycles Carboplatin AUC 5 + Paclitaxel 175 mg/m2 q3w",
+          "sample_size": 330
+        }
+      ],
+      "endpoints": {
+        "5_year_overall_survival": {
+          "crt": "81.4%",
+          "rt_alone": "76.1%",
+          "hr": 0.7,
+          "ci_95": "0.51-0.97",
+          "p_value": 0.034
+        },
+        "5_year_failure_free_survival": {
+          "crt": "76.5%",
+          "rt_alone": "69.1%",
+          "hr": 0.7,
+          "ci_95": "0.52-0.94",
+          "p_value": 0.016
+        },
+        "stage_iii_subgroup_benefit": {
+          "overall_survival_hr": 0.64,
+          "ci_95": "0.43-0.96",
+          "p_value": 0.03
+        },
+        "serous_carcinoma_subgroup_benefit": {
+          "failure_free_survival_hr": 0.42,
+          "p_value": 0.008
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "Adjuvant chemoradiotherapy significantly improved overall survival and failure-free survival compared with radiotherapy alone for women with high-risk endometrial cancer, with the greatest benefit observed in women with stage III disease and serous histology."
+        }
+      ],
+      "clinical_recommendation": "Adjuvant chemoradiation (pelvic RT with concurrent cisplatin followed by carboplatin/paclitaxel) is the standard of care for high-risk and stage III endometrial cancer."
+    },
+    {
+      "source_id": "STUPP-EORTC-26981",
+      "title": "Radiotherapy plus Concomitant and Adjuvant Temozolomide for Glioblastoma",
+      "organization": "EORTC Brain Tumour and Radiotherapy Groups / NCIC Clinical Trials Group",
+      "source_type": "trial",
+      "edition_or_version": "Phase III 5-Year Final Follow-up",
+      "publication_date": "2009-05-01",
+      "jurisdiction": "International",
+      "disease_site": "CNS",
+      "specialties": [
+        "neuro_oncology",
+        "radiation_oncology",
+        "neurosurgery"
+      ],
+      "topics": [
+        "glioblastoma",
+        "temozolomide",
+        "mgmt_promoter_methylation",
+        "overall_survival",
+        "chemoradiation"
+      ],
+      "doi_or_url": "https://doi.org/10.1056/NEJMoa043330",
+      "stage_criteria": "Newly diagnosed glioblastoma (WHO grade 4), age 18-70 years, WHO performance status 0-2",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Radiotherapy Alone",
+          "intervention": "Focal RT 60 Gy in 30 fractions (2.0 Gy/fx)",
+          "sample_size": 286
+        },
+        {
+          "arm_name": "Radiotherapy + Temozolomide",
+          "intervention": "Focal RT 60 Gy + daily Temozolomide 75 mg/m2/day during RT -> 6 cycles adjuvant Temozolomide (150-200 mg/m2/day d1-5 q28d)",
+          "sample_size": 287
+        }
+      ],
+      "endpoints": {
+        "median_overall_survival": {
+          "rt_tmz": "14.6 months",
+          "rt_alone": "12.1 months",
+          "hr": 0.63,
+          "ci_95": "0.52-0.75",
+          "p_value": "<0.001"
+        },
+        "2_year_overall_survival": {
+          "rt_tmz": "27.2%",
+          "rt_alone": "10.9%"
+        },
+        "5_year_overall_survival": {
+          "rt_tmz": "9.8%",
+          "rt_alone": "1.9%"
+        },
+        "mgmt_methylated_median_os": {
+          "rt_tmz": "21.7 months",
+          "rt_alone": "15.3 months",
+          "p_value": 0.007
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "The addition of temozolomide to radiotherapy for newly diagnosed glioblastoma resulted in a clinically meaningful and statistically significant survival benefit with minimal additional toxicity. Epigenetic silencing of the MGMT gene promoter was the strongest predictor of benefit."
+        }
+      ],
+      "clinical_recommendation": "The Stupp protocol (60 Gy in 30 fx with concurrent temozolomide 75 mg/m2 followed by 6 cycles of adjuvant temozolomide) is the global standard of care for glioblastoma."
+    },
+    {
+      "source_id": "RTOG-9802",
+      "title": "Chemoradiotherapy for Subtotally Resected Low-Grade Glioma",
+      "organization": "RTOG / ECOG / SWOG / NCIC",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Final Long-Term Report",
+      "publication_date": "2016-04-07",
+      "jurisdiction": "USA/International",
+      "disease_site": "CNS",
+      "specialties": [
+        "neuro_oncology",
+        "radiation_oncology",
+        "neurosurgery"
+      ],
+      "topics": [
+        "low_grade_glioma",
+        "pcv_chemotherapy",
+        "radiotherapy",
+        "overall_survival",
+        "high_risk_lgg"
+      ],
+      "doi_or_url": "https://doi.org/10.1056/NEJMoa1500925",
+      "stage_criteria": "High-risk grade 2 astrocytoma, oligodendroglioma, or oligoastrocytoma (age >= 40 with any resection, or age < 40 with subtotal resection or biopsy)",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Radiotherapy Alone",
+          "intervention": "Focal RT 54 Gy in 30 fractions (1.8 Gy/fx)",
+          "sample_size": 126
+        },
+        {
+          "arm_name": "Radiotherapy + PCV Chemotherapy",
+          "intervention": "Focal RT 54 Gy followed by 6 cycles of PCV (Procarbazine, CCNU, Vincristine)",
+          "sample_size": 125
+        }
+      ],
+      "endpoints": {
+        "median_overall_survival": {
+          "rt_pcv": "13.3 years",
+          "rt_alone": "7.8 years",
+          "hr": 0.59,
+          "ci_95": "0.42-0.83",
+          "p_value": 0.003
+        },
+        "10_year_overall_survival": {
+          "rt_pcv": "60%",
+          "rt_alone": "40%"
+        },
+        "10_year_progression_free_survival": {
+          "rt_pcv": "51%",
+          "rt_alone": "21%",
+          "hr": 0.5,
+          "p_value": "<0.001"
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "In patients with high-risk low-grade glioma, the addition of six cycles of PCV chemotherapy to radiotherapy was associated with significantly longer progression-free survival and overall survival than radiotherapy alone."
+        }
+      ],
+      "clinical_recommendation": "Radiotherapy (54 Gy) followed by PCV (or temozolomide) chemotherapy is the standard of care for adults with high-risk grade 2 gliomas."
+    },
+    {
+      "source_id": "ACOSOG-Z0011",
+      "title": "Effect of Axillary Dissection vs No Axillary Dissection on 10-Year Overall Survival Among Women With Invasive Breast Cancer and Sentinel Node Metastases: The ACOSOG Z0011 (Alliance) Randomized Clinical Trial",
+      "organization": "ACOSOG / Alliance",
+      "source_type": "trial",
+      "edition_or_version": "Phase III 10-Year Follow-up",
+      "publication_date": "2017-09-12",
+      "jurisdiction": "USA/International",
+      "disease_site": "Breast",
+      "specialties": [
+        "surgical_oncology",
+        "radiation_oncology",
+        "medical_oncology"
+      ],
+      "topics": [
+        "breast_cancer",
+        "sentinel_lymph_node",
+        "axillary_dissection_omission",
+        "whole_breast_rt"
+      ],
+      "doi_or_url": "https://doi.org/10.1001/jama.2017.11470",
+      "stage_criteria": "Clinical T1-T2 N0 breast cancer with 1 to 2 sentinel lymph nodes containing metastases undergoing breast-conserving therapy and whole-breast irradiation",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Axillary Lymph Node Dissection (ALND)",
+          "intervention": "Complete level I and II axillary lymph node dissection",
+          "sample_size": 420
+        },
+        {
+          "arm_name": "Sentinel Lymph Node Biopsy (SLNB) Alone",
+          "intervention": "No further axillary dissection",
+          "sample_size": 436
+        }
+      ],
+      "endpoints": {
+        "10_year_overall_survival": {
+          "slnb_alone": "86.3%",
+          "alnd": "83.6%",
+          "hr": 0.85,
+          "ci_95": "0.64-1.12",
+          "p_value": 0.25
+        },
+        "10_year_regional_recurrence": {
+          "slnb_alone": "1.5%",
+          "alnd": "0.5%",
+          "p_value": 0.28
+        },
+        "lymphedema_and_morbidity": "Significantly lower wound infections, paresthesias, and lymphedema in SLNB-alone arm"
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "Among women with T1 or T2 invasive breast cancer, no palpable axillary adenopathy, and 1 or 2 sentinel lymph nodes containing metastases, 10-year overall survival and regional recurrence did not differ significantly between SLNB alone and completion ALND when treated with breast-conserving surgery and whole-breast irradiation."
+        }
+      ],
+      "clinical_recommendation": "Completion axillary lymph node dissection may be safely omitted in patients with cT1-2N0 breast cancer and 1-2 positive sentinel nodes treated with lumpectomy and whole-breast radiation."
+    },
+    {
+      "source_id": "CREATE-X",
+      "title": "Adjuvant Capecitabine for Breast Cancer after Preoperative Chemotherapy",
+      "organization": "Japan Breast Cancer Research Group (JBCRG)",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Final Report",
+      "publication_date": "2017-06-01",
+      "jurisdiction": "Japan/Korea/International",
+      "disease_site": "Breast",
+      "specialties": [
+        "medical_oncology",
+        "surgical_oncology"
+      ],
+      "topics": [
+        "breast_cancer",
+        "triple_negative",
+        "residual_disease",
+        "capecitabine",
+        "overall_survival"
+      ],
+      "doi_or_url": "https://doi.org/10.1056/NEJMoa1612645",
+      "stage_criteria": "HER2-negative breast cancer with pathologically confirmed residual invasive disease in breast or axilla after neoadjuvant anthracycline/taxane chemotherapy",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Standard Therapy",
+          "intervention": "Standard post-surgery therapy",
+          "sample_size": 445
+        },
+        {
+          "arm_name": "Adjuvant Capecitabine",
+          "intervention": "Capecitabine 1250 mg/m2 PO bid on days 1-14 every 21 days for 6-8 cycles",
+          "sample_size": 442
+        }
+      ],
+      "endpoints": {
+        "triple_negative_5_year_overall_survival": {
+          "capecitabine": "78.8%",
+          "control": "70.3%",
+          "hr": 0.52,
+          "ci_95": "0.30-0.90",
+          "p_value": 0.01
+        },
+        "triple_negative_5_year_dfs": {
+          "capecitabine": "69.8%",
+          "control": "56.1%",
+          "hr": 0.58,
+          "ci_95": "0.39-0.87"
+        },
+        "overall_cohort_5_year_os": {
+          "capecitabine": "89.2%",
+          "control": "83.6%",
+          "hr": 0.59,
+          "p_value": 0.01
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "Among patients with HER2-negative breast cancer who had residual invasive disease after neoadjuvant chemotherapy, the addition of adjuvant capecitabine therapy was safe and effective in prolonging disease-free and overall survival, particularly in triple-negative breast cancer."
+        }
+      ],
+      "clinical_recommendation": "Adjuvant Capecitabine (1250 mg/m2 PO bid d1-14 q3w for 6-8 cycles) is Category 1 standard of care for triple-negative breast cancer with residual invasive disease after neoadjuvant chemotherapy."
+    },
+    {
+      "source_id": "KATHERINE",
+      "title": "Trastuzumab Emtansine for Residual Invasive HER2-Positive Breast Cancer",
+      "organization": "KATHERINE Investigators / Roche",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Final Report",
+      "publication_date": "2019-02-14",
+      "jurisdiction": "International",
+      "disease_site": "Breast",
+      "specialties": [
+        "medical_oncology",
+        "surgical_oncology"
+      ],
+      "topics": [
+        "breast_cancer",
+        "her2_positive",
+        "residual_disease",
+        "t_dm1",
+        "invasive_disease_free_survival"
+      ],
+      "doi_or_url": "https://doi.org/10.1056/NEJMoa1814017",
+      "stage_criteria": "HER2-positive early breast cancer with residual invasive disease in breast or axilla after preoperative chemotherapy plus HER2-targeted therapy",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Adjuvant Trastuzumab",
+          "intervention": "Trastuzumab 6 mg/kg IV q3w for 14 cycles",
+          "sample_size": 743
+        },
+        {
+          "arm_name": "Adjuvant T-DM1",
+          "intervention": "Trastuzumab Emtansine 3.6 mg/kg IV q3w for 14 cycles (42 weeks)",
+          "sample_size": 743
+        }
+      ],
+      "endpoints": {
+        "3_year_invasive_disease_free_survival": {
+          "t_dm1": "88.3%",
+          "trastuzumab": "77.0%",
+          "hr": 0.5,
+          "ci_95": "0.39-0.64",
+          "p_value": "<0.001"
+        },
+        "distant_recurrence_hr": {
+          "hr": 0.6,
+          "ci_95": "0.45-0.79"
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "The risk of recurrence of invasive breast cancer or death was 50% lower with adjuvant T-DM1 than with trastuzumab alone in patients with HER2-positive early breast cancer who had residual invasive disease after neoadjuvant therapy."
+        }
+      ],
+      "clinical_recommendation": "Adjuvant Trastuzumab Emtansine (T-DM1, 3.6 mg/kg q3w for 14 cycles) is the Category 1 standard of care for HER2-positive breast cancer with residual disease after neoadjuvant taxane/trastuzumab therapy."
+    }
+  ],
+  "trials": [
+    {
+      "source_id": "RTOG-9111",
+      "title": "Concurrent Chemotherapy and Radiotherapy for Organ Preservation in Advanced Laryngeal Cancer",
+      "organization": "Radiation Therapy Oncology Group (RTOG) / NRG Oncology",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Final 10-Year Follow-up",
+      "publication_date": "2013-03-01",
+      "jurisdiction": "International",
+      "disease_site": "Head & Neck",
+      "specialties": [
+        "radiation_oncology",
+        "medical_oncology",
+        "otolaryngology"
+      ],
+      "topics": [
+        "larynx",
+        "organ_preservation",
+        "chemoradiation",
+        "cisplatin",
+        "locoregional_control"
+      ],
+      "doi_or_url": "https://doi.org/10.1200/JCO.2012.43.6097",
+      "stage_criteria": "Stage III or IV nonmetastatic squamous cell carcinoma of glottic or supraglottic larynx requiring total laryngectomy (T2-T4, N0-N3, M0; excluding T1 and T4 with extensive cartilage invasion)",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Concurrent Chemoradiation (CRT)",
+          "intervention": "Definitive RT 70 Gy in 35 daily fractions (2.0 Gy/fx) with concurrent Cisplatin 100 mg/m2 IV on days 1, 22, and 43",
+          "sample_size": 174
+        },
+        {
+          "arm_name": "Induction Chemotherapy followed by RT",
+          "intervention": "Induction Cisplatin 100 mg/m2 + 5-FU 1000 mg/m2/day continuous infusion d1-5 x 3 cycles followed by definitive RT 70 Gy",
+          "sample_size": 173
+        },
+        {
+          "arm_name": "Radiotherapy Alone",
+          "intervention": "Definitive RT 70 Gy in 35 daily fractions (2.0 Gy/fx)",
+          "sample_size": 171
+        }
+      ],
+      "endpoints": {
+        "primary_endpoint": "Laryngeal preservation / laryngectomy-free survival",
+        "10_year_intact_larynx_rate": {
+          "concurrent_crt": "67.4%",
+          "induction_pf": "44.8%",
+          "rt_alone": "39.5%"
+        },
+        "locoregional_control_hr": {
+          "concurrent_vs_rt_alone": {
+            "hr": 0.58,
+            "ci_95": "0.43-0.82",
+            "p_value": 0.0015
+          },
+          "concurrent_vs_induction": {
+            "hr": 0.66,
+            "ci_95": "0.48-0.92",
+            "p_value": 0.0037
+          }
+        },
+        "10_year_overall_survival": {
+          "concurrent_crt": "27.5%",
+          "induction_pf": "28.9%",
+          "rt_alone": "31.8%",
+          "p_value": 0.58
+        },
+        "grade_3_5_late_toxicity": {
+          "concurrent_crt": "33.3%",
+          "induction_pf": "30.6%",
+          "rt_alone": "38.0%",
+          "p_value": "not significant"
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "Concurrent cisplatin and radiotherapy provides superior locoregional control and larynx preservation compared with induction chemotherapy followed by radiation or radiation alone. Long-term overall survival did not differ significantly between arms."
+        },
+        {
+          "section": "Locoregional Control",
+          "text": "Concurrent chemoradiotherapy was associated with a relative risk reduction of locoregional failure of 42% compared with RT alone (HR 0.58, p=0.0015) and 34% compared with induction chemotherapy (HR 0.66, p=0.0037)."
+        }
+      ],
+      "clinical_recommendation": "Concurrent high-dose cisplatin (100 mg/m2 q3w) with definitive radiation (70 Gy) is the standard nonsurgical organ preservation strategy for locally advanced laryngeal cancer."
+    },
+    {
+      "source_id": "EORTC-22931",
+      "title": "Postoperative Concurrent Chemotherapy and Radiotherapy for High-Risk Squamous-Cell Carcinoma of the Head and Neck",
+      "organization": "European Organisation for Research and Treatment of Cancer (EORTC)",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Final Report",
+      "publication_date": "2004-05-06",
+      "jurisdiction": "International",
+      "disease_site": "Head & Neck",
+      "specialties": [
+        "radiation_oncology",
+        "medical_oncology",
+        "surgical_oncology"
+      ],
+      "topics": [
+        "head_and_neck",
+        "postoperative_radiotherapy",
+        "chemoradiation",
+        "cisplatin",
+        "extranodal_extension",
+        "positive_margins"
+      ],
+      "doi_or_url": "https://doi.org/10.1056/NEJMoa032646",
+      "stage_criteria": "Resected stage III-IV squamous-cell carcinoma of oral cavity, oropharynx, larynx, or hypopharynx with high-risk features (positive surgical margins, extranodal extension, pT3-T4, vascular/perineural invasion, or level IV/V nodal involvement)",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Adjuvant Chemoradiation",
+          "intervention": "Postoperative RT 66 Gy in 33 fractions (2.0 Gy/fx) with concurrent Cisplatin 100 mg/m2 IV on days 1, 22, and 43",
+          "sample_size": 167
+        },
+        {
+          "arm_name": "Adjuvant Radiotherapy Alone",
+          "intervention": "Postoperative RT 66 Gy in 33 fractions (2.0 Gy/fx)",
+          "sample_size": 167
+        }
+      ],
+      "endpoints": {
+        "primary_endpoint": "Progression-free survival (PFS)",
+        "5_year_pfs": {
+          "adjuvant_crt": "47%",
+          "adjuvant_rt": "36%",
+          "hr": 0.75,
+          "ci_95": "0.56-0.99",
+          "p_value": 0.04
+        },
+        "5_year_overall_survival": {
+          "adjuvant_crt": "53%",
+          "adjuvant_rt": "40%",
+          "hr": 0.7,
+          "ci_95": "0.52-0.95",
+          "p_value": 0.02
+        },
+        "5_year_locoregional_control": {
+          "adjuvant_crt": "82%",
+          "adjuvant_rt": "69%",
+          "hr": 0.57,
+          "p_value": 0.007
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Results",
+          "text": "Postoperative concurrent administration of cisplatin with radiotherapy resulted in significant improvements in progression-free survival (HR 0.75, p=0.04), overall survival (HR 0.70, p=0.02), and locoregional control (HR 0.57, p=0.007) compared with radiotherapy alone in high-risk head and neck cancer."
+        }
+      ],
+      "clinical_recommendation": "Postoperative concurrent cisplatin (100 mg/m2 q3w x 3 cycles) plus 66 Gy radiation is standard for resected head and neck cancer with positive margins or extranodal nodal extension."
+    },
+    {
+      "source_id": "RTOG-9501",
+      "title": "Postoperative Concurrent Radiotherapy and Chemotherapy for High-Risk Squamous-Cell Carcinoma of the Head and Neck",
+      "organization": "Radiation Therapy Oncology Group (RTOG)",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Final Report",
+      "publication_date": "2004-05-06",
+      "jurisdiction": "USA/International",
+      "disease_site": "Head & Neck",
+      "specialties": [
+        "radiation_oncology",
+        "medical_oncology",
+        "surgical_oncology"
+      ],
+      "topics": [
+        "head_and_neck",
+        "postoperative_radiotherapy",
+        "chemoradiation",
+        "cisplatin",
+        "extranodal_extension"
+      ],
+      "doi_or_url": "https://doi.org/10.1056/NEJMoa040266",
+      "stage_criteria": "Resected stage III-IV squamous-cell carcinoma of oral cavity, oropharynx, larynx, or hypopharynx with >=2 involved regional lymph nodes, extracapsular extension (ENE), or microscopically positive surgical margins",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Adjuvant Chemoradiation",
+          "intervention": "Postoperative RT 60-66 Gy in 30-33 fractions + concurrent Cisplatin 100 mg/m2 IV on days 1, 22, and 43",
+          "sample_size": 231
+        },
+        {
+          "arm_name": "Adjuvant Radiotherapy Alone",
+          "intervention": "Postoperative RT 60-66 Gy in 30-33 fractions",
+          "sample_size": 228
+        }
+      ],
+      "endpoints": {
+        "primary_endpoint": "Locoregional control",
+        "2_year_locoregional_recurrence": {
+          "adjuvant_crt": "18%",
+          "adjuvant_rt": "28%",
+          "hr": 0.61,
+          "ci_95": "0.41-0.91",
+          "p_value": 0.01
+        },
+        "2_year_disease_free_survival": {
+          "adjuvant_crt": "54%",
+          "adjuvant_rt": "43%",
+          "hr": 0.78,
+          "p_value": 0.04
+        },
+        "2_year_overall_survival": {
+          "adjuvant_crt": "63%",
+          "adjuvant_rt": "57%",
+          "hr": 0.84,
+          "p_value": 0.19
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Results",
+          "text": "Concurrent postoperative radiotherapy and cisplatin significantly improved locoregional control (HR 0.61, p=0.01) and disease-free survival (HR 0.78, p=0.04) among high-risk patients with resected head and neck cancer."
+        }
+      ],
+      "clinical_recommendation": "Adjuvant cisplatin-based chemoradiotherapy significantly reduces locoregional failure in surgically resected HNSCC harboring positive margins or extracapsular nodal spread."
+    },
+    {
+      "source_id": "BERNIER-COOPER-2005",
+      "title": "Defining Risk Levels in Locally Advanced Head and Neck Cancers: A Comparative Analysis of Concurrent Postoperative Radiation Plus Chemotherapy Trials of the EORTC (#22931) and RTOG (#9501)",
+      "organization": "EORTC / RTOG Collaborative Group",
+      "source_type": "review",
+      "edition_or_version": "Pooled Comparative Analysis",
+      "publication_date": "2005-10-01",
+      "jurisdiction": "International",
+      "disease_site": "Head & Neck",
+      "specialties": [
+        "radiation_oncology",
+        "medical_oncology",
+        "surgical_oncology"
+      ],
+      "topics": [
+        "head_and_neck",
+        "risk_stratification",
+        "extranodal_extension",
+        "positive_margins",
+        "cisplatin"
+      ],
+      "doi_or_url": "https://doi.org/10.1002/hed.20279",
+      "stage_criteria": "Pooled patient-level data from 792 patients enrolled in EORTC 22931 and RTOG 9501",
+      "level_of_evidence": "Level 1 (Pooled Phase III Analysis)",
+      "trial_arms": [
+        {
+          "arm_name": "Pooled CRT",
+          "sample_size": 398
+        },
+        {
+          "arm_name": "Pooled RT alone",
+          "sample_size": 394
+        }
+      ],
+      "endpoints": {
+        "margin_positive_and_or_ece": {
+          "overall_survival_hr": 0.7,
+          "ci_95": "0.54-0.90",
+          "p_value": 0.005
+        },
+        "multiple_nodes_without_ece_or_positive_margins": {
+          "overall_survival_hr": 0.98,
+          "ci_95": "0.64-1.50",
+          "p_value": 0.92
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Clinical Takeaway",
+          "text": "Definitive benefit of postoperative concurrent cisplatin and RT is restricted to patients with microscopically positive surgical margins and/or extracapsular extension (ECE/ENE). Patients with multiple involved nodes without ECE did not demonstrate an overall survival benefit from adding chemotherapy."
+        }
+      ],
+      "clinical_recommendation": "Microscopically positive surgical margins and extranodal nodal extension are the absolute standard indications for adjuvant concurrent chemoradiation; patients with other intermediate features (T3-4, multiple nodes without ENE) may receive RT alone."
+    },
+    {
+      "source_id": "RTOG-0522",
+      "title": "Randomized Phase III Trial of Concurrent Accelerated Radiation Plus Cisplatin With or Without Cetuximab for Stage III to IV Head and Neck Carcinoma",
+      "organization": "Radiation Therapy Oncology Group (RTOG) / NRG Oncology",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Final Report",
+      "publication_date": "2014-12-01",
+      "jurisdiction": "USA/International",
+      "disease_site": "Head & Neck",
+      "specialties": [
+        "radiation_oncology",
+        "medical_oncology"
+      ],
+      "topics": [
+        "head_and_neck",
+        "chemoradiation",
+        "cetuximab",
+        "cisplatin",
+        "accelerated_radiotherapy"
+      ],
+      "doi_or_url": "https://doi.org/10.1200/JCO.2014.57.7528",
+      "stage_criteria": "Nonmetastatic stage III/IV squamous cell carcinoma of oropharynx, larynx, or hypopharynx",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Chemoradiation (Accelerated RT + Cisplatin)",
+          "intervention": "Accelerated RT (72 Gy in 42 fractions over 6 weeks) + Cisplatin 100 mg/m2 IV d1, 22",
+          "sample_size": 447
+        },
+        {
+          "arm_name": "Chemoradiation + Cetuximab",
+          "intervention": "Accelerated RT + Cisplatin + Cetuximab (400 mg/m2 loading, then 250 mg/m2 weekly)",
+          "sample_size": 444
+        }
+      ],
+      "endpoints": {
+        "progression_free_survival": {
+          "hr": 1.05,
+          "ci_95": "0.82-1.34",
+          "p_value": 0.66
+        },
+        "overall_survival": {
+          "hr": 0.87,
+          "ci_95": "0.66-1.15",
+          "p_value": 0.32
+        },
+        "grade_3_4_adverse_events": "Significantly higher mucositis and radiation dermatitis in cetuximab arm"
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "The addition of cetuximab to cisplatin-based concurrent accelerated radiation therapy failed to improve progression-free survival or overall survival and resulted in more frequent interruptions in radiation therapy and worse acute toxic effects. Cisplatin + RT remains standard."
+        }
+      ],
+      "clinical_recommendation": "Cetuximab should not be added to standard concurrent cisplatin-radiotherapy in locally advanced head and neck squamous cell carcinoma."
+    },
+    {
+      "source_id": "BONNER-2006",
+      "title": "Radiotherapy with or without Cetuximab in the Treatment of Locoregionally Advanced Squamous Cell Carcinoma of the Head and Neck",
+      "organization": "Bonner Cetuximab Study Group",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Final 5-Year Report",
+      "publication_date": "2010-01-01",
+      "jurisdiction": "International",
+      "disease_site": "Head & Neck",
+      "specialties": [
+        "radiation_oncology",
+        "medical_oncology"
+      ],
+      "topics": [
+        "head_and_neck",
+        "cetuximab",
+        "radiotherapy",
+        "cisplatin_ineligible",
+        "overall_survival"
+      ],
+      "doi_or_url": "https://doi.org/10.1016/S1470-2045(09)70311-0",
+      "stage_criteria": "Locoregionally advanced Stage III-IV squamous cell carcinoma of oropharynx, hypopharynx, or larynx",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "RT + Cetuximab",
+          "intervention": "Definitive RT (70 Gy) + Cetuximab (400 mg/m2 load then 250 mg/m2 weekly)",
+          "sample_size": 211
+        },
+        {
+          "arm_name": "RT alone",
+          "intervention": "Definitive RT alone (70 Gy)",
+          "sample_size": 213
+        }
+      ],
+      "endpoints": {
+        "5_year_overall_survival": {
+          "rt_cetuximab": "45.6%",
+          "rt_alone": "36.4%",
+          "hr": 0.73,
+          "ci_95": "0.56-0.95",
+          "p_value": 0.018
+        },
+        "median_overall_survival": {
+          "rt_cetuximab": "49.0 months",
+          "rt_alone": "29.3 months"
+        },
+        "locoregional_control_hr": {
+          "hr": 0.68,
+          "p_value": 0.005
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "Definitive radiotherapy plus cetuximab significantly improves locoregional control and overall survival compared with radiotherapy alone in locoregionally advanced head and neck cancer, without exacerbating common radiation-related mucositis."
+        }
+      ],
+      "clinical_recommendation": "Cetuximab + definitive RT is a Category 1 alternative for patients with locally advanced HNSCC who are medically unfit for cisplatin (e.g. renal failure, pre-existing neuropathy, severe hearing loss)."
+    },
+    {
+      "source_id": "RTOG-1016",
+      "title": "Radiotherapy plus Cetuximab or Cisplatin in Human Papillomavirus-Positive Oropharyngeal Cancer: A Randomised, Multicentre, Non-Inferiority Trial",
+      "organization": "NRG Oncology / RTOG",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Non-Inferiority Trial",
+      "publication_date": "2019-01-05",
+      "jurisdiction": "USA/International",
+      "disease_site": "Head & Neck",
+      "specialties": [
+        "radiation_oncology",
+        "medical_oncology"
+      ],
+      "topics": [
+        "oropharynx",
+        "hpv_positive",
+        "cisplatin",
+        "cetuximab",
+        "de_escalation"
+      ],
+      "doi_or_url": "https://doi.org/10.1016/S0140-6736(18)32778-4",
+      "stage_criteria": "Locally advanced HPV/p16-positive squamous cell carcinoma of oropharynx (T1-T2 N2a-N3 or T3-T4 N0-N3, AJCC 7th)",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Accelerated RT + Cisplatin",
+          "intervention": "Accelerated IMRT 70 Gy in 35 fx / 6 wks + Cisplatin 100 mg/m2 d1, 22",
+          "sample_size": 423
+        },
+        {
+          "arm_name": "Accelerated RT + Cetuximab",
+          "intervention": "Accelerated IMRT 70 Gy in 35 fx / 6 wks + Cetuximab loading and weekly",
+          "sample_size": 426
+        }
+      ],
+      "endpoints": {
+        "5_year_overall_survival": {
+          "cisplatin": "84.6%",
+          "cetuximab": "77.9%",
+          "hr": 1.45,
+          "ci_95": "1.03-2.05",
+          "p_value": 0.0507
+        },
+        "5_year_progression_free_survival": {
+          "cisplatin": "78.4%",
+          "cetuximab": "67.3%",
+          "hr": 1.72,
+          "ci_95": "1.29-2.29",
+          "p_value": 0.0001
+        },
+        "5_year_locoregional_failure": {
+          "cisplatin": "9.9%",
+          "cetuximab": "17.3%",
+          "hr": 2.05,
+          "p_value": 0.0005
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "For patients with HPV-positive oropharyngeal carcinoma, radiotherapy plus cetuximab showed inferior overall survival and progression-free survival compared with radiotherapy plus cisplatin, with similar rates of overall acute and late toxicity. Radiotherapy plus cisplatin remains the standard of care."
+        }
+      ],
+      "clinical_recommendation": "Cisplatin concurrent with definitive radiotherapy remains the non-negotiable standard of care for HPV-positive oropharynx cancer; cetuximab de-intensification is inferior and not guideline concordant."
+    },
+    {
+      "source_id": "PACIFIC",
+      "title": "Durvalumab after Chemoradiotherapy in Stage III Non\u2013Small-Cell Lung Cancer",
+      "organization": "PACIFIC Clinical Trial Investigators / AstraZeneca",
+      "source_type": "trial",
+      "edition_or_version": "Phase III 5-Year Final Follow-up",
+      "publication_date": "2022-04-01",
+      "jurisdiction": "International",
+      "disease_site": "Lung",
+      "specialties": [
+        "radiation_oncology",
+        "medical_oncology",
+        "pulmonology"
+      ],
+      "topics": [
+        "nsclc",
+        "unresectable_stage_iii",
+        "chemoradiation",
+        "durvalumab",
+        "consolidation_immunotherapy"
+      ],
+      "doi_or_url": "https://doi.org/10.1056/NEJMoa1809697",
+      "stage_criteria": "Unresectable stage III non-small cell lung cancer with no progression after definitive concurrent platinum-based chemoradiotherapy (minimum RT dose 54-66 Gy)",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Consolidation Durvalumab",
+          "intervention": "Durvalumab 10 mg/kg IV every 2 weeks for up to 12 months",
+          "sample_size": 473
+        },
+        {
+          "arm_name": "Placebo",
+          "intervention": "Placebo every 2 weeks for up to 12 months",
+          "sample_size": 237
+        }
+      ],
+      "endpoints": {
+        "5_year_overall_survival": {
+          "durvalumab": "42.9%",
+          "placebo": "33.4%",
+          "hr": 0.72,
+          "ci_95": "0.59-0.89",
+          "p_value": 0.0025
+        },
+        "median_overall_survival": {
+          "durvalumab": "47.5 months",
+          "placebo": "29.1 months"
+        },
+        "progression_free_survival_hr": {
+          "hr": 0.55,
+          "ci_95": "0.45-0.68",
+          "p_value": "<0.001"
+        },
+        "median_pfs": {
+          "durvalumab": "16.9 months",
+          "placebo": "5.6 months"
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "Consolidation durvalumab significantly prolonged progression-free survival and overall survival compared with placebo in patients with unresectable stage III NSCLC who did not have disease progression after concurrent chemoradiotherapy, with manageable safety profile."
+        }
+      ],
+      "clinical_recommendation": "Durvalumab consolidation (10 mg/kg q2w or 1500 mg q4w x 12 months) is Category 1 standard of care following definitive concurrent chemoradiotherapy in non-progressing unresectable stage III NSCLC."
+    },
+    {
+      "source_id": "RTOG-0617",
+      "title": "High-Dose Radiotherapy with or without Cetuximab for Patients with Inoperable Stage III Non-Small-Cell Lung Cancer: A Multicentre, Randomised, Open-Label Phase 3 Study",
+      "organization": "Radiation Therapy Oncology Group (RTOG) / NRG Oncology",
+      "source_type": "trial",
+      "edition_or_version": "Phase III 5-Year Update",
+      "publication_date": "2020-03-01",
+      "jurisdiction": "USA/International",
+      "disease_site": "Lung",
+      "specialties": [
+        "radiation_oncology",
+        "medical_oncology"
+      ],
+      "topics": [
+        "nsclc",
+        "stage_iii",
+        "dose_escalation",
+        "heart_dose",
+        "chemoradiation"
+      ],
+      "doi_or_url": "https://doi.org/10.1016/S1470-2045(14)71207-0",
+      "stage_criteria": "Inoperable stage III non-small cell lung cancer, ECOG 0-1, FEV1 >= 1.2 L or >= 50% predicted",
+      "level_of_evidence": "Level 1 (Phase III 2x2 Factorial RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Standard Dose (60 Gy)",
+          "intervention": "60 Gy in 30 daily fractions + concurrent carboplatin/paclitaxel +/- cetuximab",
+          "sample_size": 257
+        },
+        {
+          "arm_name": "High Dose (74 Gy)",
+          "intervention": "74 Gy in 37 daily fractions + concurrent carboplatin/paclitaxel +/- cetuximab",
+          "sample_size": 287
+        }
+      ],
+      "endpoints": {
+        "median_overall_survival": {
+          "standard_60_gy": "28.7 months",
+          "high_dose_74_gy": "20.3 months",
+          "hr": 1.38,
+          "ci_95": "1.09-1.76",
+          "p_value": 0.004
+        },
+        "5_year_overall_survival": {
+          "standard_60_gy": "32.1%",
+          "high_dose_74_gy": "23.0%"
+        },
+        "multivariate_predictors_of_death": "High-dose radiation arm (HR 1.35) and heart V40/V5/V30 dose volume parameters"
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "74 Gy radiation dose escalation was harmful compared with standard-dose 60 Gy thoracic radiotherapy in stage III NSCLC. Excess mortality was strongly correlated with cardiac radiation exposure. Standard 60 Gy in 30 fractions remains the definitive standard."
+        }
+      ],
+      "clinical_recommendation": "Definitive radiation prescription for stage III NSCLC must not exceed 60-66 Gy in standard 2 Gy fractions; strict cardiac sparing (mean heart dose, V30, V5) is essential."
+    },
+    {
+      "source_id": "CONVERT",
+      "title": "Concurrent Once-Daily versus Twice-Daily Chemoradiotherapy in Patients with Limited-Stage Small-Cell Lung Cancer",
+      "organization": "CONVERT Study Team / Cancer Research UK",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Final Report",
+      "publication_date": "2017-08-01",
+      "jurisdiction": "International",
+      "disease_site": "Lung",
+      "specialties": [
+        "radiation_oncology",
+        "medical_oncology"
+      ],
+      "topics": [
+        "sclc",
+        "limited_stage",
+        "hyperfractionation",
+        "chemoradiation",
+        "twice_daily"
+      ],
+      "doi_or_url": "https://doi.org/10.1016/S1470-2045(17)30318-2",
+      "stage_criteria": "Limited-stage small cell lung cancer (LS-SCLC), ECOG performance status 0-1, normal organ function",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Twice-Daily (BID) RT",
+          "intervention": "45 Gy in 30 fractions (1.5 Gy bid over 3 weeks) + concurrent cisplatin/etoposide",
+          "sample_size": 274
+        },
+        {
+          "arm_name": "Once-Daily (QD) RT",
+          "intervention": "66 Gy in 33 fractions (2.0 Gy qd over 6.5 weeks) + concurrent cisplatin/etoposide",
+          "sample_size": 273
+        }
+      ],
+      "endpoints": {
+        "median_overall_survival": {
+          "bid_45_gy": "30.0 months",
+          "qd_66_gy": "25.0 months",
+          "hr": 1.18,
+          "ci_95": "0.95-1.45",
+          "p_value": 0.14
+        },
+        "5_year_overall_survival": {
+          "bid_45_gy": "34%",
+          "qd_66_gy": "31%"
+        },
+        "grade_3_4_esophagitis": {
+          "bid_45_gy": "19%",
+          "qd_66_gy": "19%"
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "Survival outcomes and toxicity were similar between twice-daily 45 Gy and once-daily 66 Gy chemoradiotherapy. Twice-daily 45 Gy in 3 weeks remains the standard international benchmark, with once-daily 66 Gy offering a safe and valid alternative."
+        }
+      ],
+      "clinical_recommendation": "Accelerated twice-daily thoracic radiotherapy (45 Gy in 30 fx bid over 3 weeks) starting with Cycle 1-2 of cisplatin/etoposide is standard for limited-stage SCLC."
+    },
+    {
+      "source_id": "STAMPEDE-RT",
+      "title": "Radiotherapy to the Primary Tumour for Newly Diagnosed, Metastatic Prostate Cancer (STAMPEDE): A Randomised Controlled Phase 3 Trial",
+      "organization": "MRC Clinical Trials Unit / STAMPEDE Investigators",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Multi-Arm Multi-Stage",
+      "publication_date": "2018-12-01",
+      "jurisdiction": "UK/International",
+      "disease_site": "Prostate",
+      "specialties": [
+        "radiation_oncology",
+        "urology",
+        "medical_oncology"
+      ],
+      "topics": [
+        "prostate_cancer",
+        "metastatic",
+        "oligometastatic",
+        "prostate_radiotherapy",
+        "overall_survival"
+      ],
+      "doi_or_url": "https://doi.org/10.1016/S0140-6736(18)32486-3",
+      "stage_criteria": "Newly diagnosed metastatic hormone-sensitive prostate cancer (mHSPC / mCSPC)",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Standard Systemic Therapy",
+          "intervention": "Lifelong ADT +/- early Docetaxel",
+          "sample_size": 1032
+        },
+        {
+          "arm_name": "Standard Systemic Therapy + Prostate RT",
+          "intervention": "Standard systemic therapy + Prostate RT (55 Gy / 20 fx daily over 4 weeks or 36 Gy / 6 fx weekly over 6 weeks)",
+          "sample_size": 1029
+        }
+      ],
+      "endpoints": {
+        "low_burden_subgroup_overall_survival": {
+          "3_year_os": {
+            "rt_arm": "81%",
+            "control_arm": "73%"
+          },
+          "hr": 0.68,
+          "ci_95": "0.52-0.90",
+          "p_value": 0.007
+        },
+        "low_burden_failure_free_survival": {
+          "hr": 0.59,
+          "ci_95": "0.49-0.72",
+          "p_value": "<0.001"
+        },
+        "overall_cohort_survival": {
+          "hr": 0.92,
+          "ci_95": "0.80-1.04",
+          "p_value": 0.266
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "Prostate radiotherapy improved overall survival in men with newly diagnosed metastatic prostate cancer who had low metastatic burden (CHAARTED criteria: <4 bone metastases and no visceral metastases). Primary prostate RT should be recommended for low-volume mHSPC."
+        }
+      ],
+      "clinical_recommendation": "Prostate-directed external beam radiotherapy (55 Gy / 20 fx or 36 Gy / 6 fx) is standard Category 1 therapy for men with newly diagnosed low-volume metastatic castration-sensitive prostate cancer."
+    },
+    {
+      "source_id": "RTOG-9408",
+      "title": "Radiotherapy with or without Short-Term Androgen Deprivation for Localized Prostate Cancer",
+      "organization": "Radiation Therapy Oncology Group (RTOG)",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Final 10-Year Report",
+      "publication_date": "2011-07-14",
+      "jurisdiction": "USA/International",
+      "disease_site": "Prostate",
+      "specialties": [
+        "radiation_oncology",
+        "urology"
+      ],
+      "topics": [
+        "prostate_cancer",
+        "intermediate_risk",
+        "short_term_adt",
+        "radiotherapy",
+        "overall_survival"
+      ],
+      "doi_or_url": "https://doi.org/10.1056/NEJMoa1011148",
+      "stage_criteria": "Localized adenocarcinoma of the prostate (T1b-T2b, PSA <= 20 ng/mL, Gleason score <= 7)",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Radiotherapy Alone",
+          "intervention": "Definitive RT 66.6 Gy",
+          "sample_size": 992
+        },
+        {
+          "arm_name": "Radiotherapy + Short-Term ADT",
+          "intervention": "Definitive RT 66.6 Gy + 4 months of ADT (Flutamide + Goserelin starting 2 months prior to RT)",
+          "sample_size": 987
+        }
+      ],
+      "endpoints": {
+        "10_year_overall_survival": {
+          "rt_adt": "62%",
+          "rt_alone": "54%",
+          "hr": 0.76,
+          "ci_95": "0.60-0.96",
+          "p_value": 0.03
+        },
+        "10_year_prostate_cancer_mortality": {
+          "rt_adt": "4%",
+          "rt_alone": "8%",
+          "p_value": 0.001
+        },
+        "subgroup_benefit": "Benefit concentrated entirely in intermediate-risk disease; low-risk patients showed no OS improvement (p=0.48)"
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "The addition of 4 months of short-term androgen-deprivation therapy to radiotherapy significantly improved overall survival and decreased disease-specific mortality for men with intermediate-risk localized prostate cancer."
+        }
+      ],
+      "clinical_recommendation": "Short-term androgen deprivation therapy (4 to 6 months) combined with definitive radiation therapy is Category 1 standard for intermediate-risk prostate cancer."
+    },
+    {
+      "source_id": "EORTC-22961",
+      "title": "Duration of Androgen Suppression in the Treatment of Locally Advanced Prostate Cancer",
+      "organization": "European Organisation for Research and Treatment of Cancer (EORTC)",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Final Report",
+      "publication_date": "2009-06-11",
+      "jurisdiction": "International",
+      "disease_site": "Prostate",
+      "specialties": [
+        "radiation_oncology",
+        "urology"
+      ],
+      "topics": [
+        "prostate_cancer",
+        "high_risk",
+        "long_term_adt",
+        "duration_adt"
+      ],
+      "doi_or_url": "https://doi.org/10.1056/NEJMoa0810095",
+      "stage_criteria": "Locally advanced / high-risk localized prostate cancer (T1c-T2b N0 with PSA >= 3x ULN or Gleason >= 8, or T3-T4 N0-N1)",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Short-Term ADT (6 Months)",
+          "intervention": "External beam RT (70 Gy) + 6 months LHRH agonist",
+          "sample_size": 483
+        },
+        {
+          "arm_name": "Long-Term ADT (36 Months)",
+          "intervention": "External beam RT (70 Gy) + 36 months LHRH agonist",
+          "sample_size": 487
+        }
+      ],
+      "endpoints": {
+        "5_year_overall_mortality": {
+          "short_term_adt": "19.0%",
+          "long_term_adt": "15.2%",
+          "hr": 1.42,
+          "ci_95": "1.09-1.85",
+          "p_value_superiority": 0.001
+        },
+        "5_year_prostate_cancer_mortality": {
+          "short_term_adt": "4.7%",
+          "long_term_adt": "3.2%",
+          "hr": 1.71,
+          "p_value": 0.002
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "The combination of radiotherapy plus 6 months of androgen suppression provides inferior overall survival compared with radiotherapy plus 3 years of androgen suppression in locally advanced and high-risk prostate cancer."
+        }
+      ],
+      "clinical_recommendation": "Long-term androgen deprivation therapy (24-36 months) in combination with high-dose definitive radiotherapy is the established standard for high-risk and very high-risk localized prostate cancer."
+    },
+    {
+      "source_id": "BC2001",
+      "title": "Radiotherapy with or without Chemotherapy in Muscle-Invasive Bladder Cancer",
+      "organization": "BC2001 Trial Investigators / Cancer Research UK",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Final 10-Year Follow-up",
+      "publication_date": "2022-11-01",
+      "jurisdiction": "UK/International",
+      "disease_site": "Bladder",
+      "specialties": [
+        "radiation_oncology",
+        "urology",
+        "medical_oncology"
+      ],
+      "topics": [
+        "bladder_cancer",
+        "muscle_invasive",
+        "bladder_preservation",
+        "chemoradiation",
+        "5fu_mitomycin"
+      ],
+      "doi_or_url": "https://doi.org/10.1056/NEJMoa1106106",
+      "stage_criteria": "Muscle-invasive adenocarcinoma or urothelial carcinoma of the urinary bladder (T2-T4a N0 M0)",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Radiotherapy Alone",
+          "intervention": "Definitive pelvic RT (55 Gy / 20 fx or 64 Gy / 32 fx)",
+          "sample_size": 178
+        },
+        {
+          "arm_name": "Chemoradiotherapy",
+          "intervention": "Definitive pelvic RT + 5-FU (500 mg/m2/d d1-5 & d16-20) + Mitomycin C (12 mg/m2 d1)",
+          "sample_size": 182
+        }
+      ],
+      "endpoints": {
+        "2_year_locoregional_disease_free_survival": {
+          "crt": "67%",
+          "rt_alone": "54%",
+          "hr": 0.68,
+          "ci_95": "0.48-0.96",
+          "p_value": 0.03
+        },
+        "5_year_locoregional_control": {
+          "crt": "82%",
+          "rt_alone": "68%",
+          "hr": 0.61,
+          "p_value": 0.027
+        },
+        "salvage_cystectomy_rate": "Significantly reduced with CRT without increased late toxic effects"
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "Synchronous chemotherapy with fluorouracil and mitomycin C during definitive radiotherapy significantly improved locoregional disease-free survival and reduced cystectomy rates without increasing late grade 3 or 4 adverse events."
+        }
+      ],
+      "clinical_recommendation": "Concurrent 5-FU and Mitomycin C with definitive radiotherapy is the Category 1 standard regimen for trimodality bladder-preserving therapy in muscle-invasive bladder cancer."
+    },
+    {
+      "source_id": "CROSS",
+      "title": "Preoperative Chemoradiotherapy for Esophageal or Junctional Cancer",
+      "organization": "CROSS Study Group",
+      "source_type": "trial",
+      "edition_or_version": "Phase III 10-Year Follow-up",
+      "publication_date": "2015-09-01",
+      "jurisdiction": "International",
+      "disease_site": "GI",
+      "specialties": [
+        "radiation_oncology",
+        "surgical_oncology",
+        "medical_oncology"
+      ],
+      "topics": [
+        "esophageal_cancer",
+        "gej_cancer",
+        "neoadjuvant_crt",
+        "carboplatin_paclitaxel",
+        "overall_survival"
+      ],
+      "doi_or_url": "https://doi.org/10.1056/NEJMoa1112088",
+      "stage_criteria": "Resectable esophageal or gastroesophageal junction adenocarcinoma, squamous cell carcinoma, or large-cell carcinoma (cT1N1 or cT2-3N0-1, M0)",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Surgery Alone",
+          "intervention": "Transthoracic or transhiatal esophagectomy with lymphadenectomy",
+          "sample_size": 188
+        },
+        {
+          "arm_name": "Neoadjuvant Chemoradiation + Surgery",
+          "intervention": "Weekly Paclitaxel 50 mg/m2 + Carboplatin AUC 2 for 5 weeks with concurrent RT 41.4 Gy (23 fx of 1.8 Gy) followed by surgery",
+          "sample_size": 178
+        }
+      ],
+      "endpoints": {
+        "median_overall_survival": {
+          "crt_surgery": "49.4 months",
+          "surgery_alone": "24.0 months",
+          "hr": 0.657,
+          "ci_95": "0.495-0.871",
+          "p_value": 0.003
+        },
+        "squamous_cell_carcinoma_median_os": {
+          "crt_surgery": "81.6 months",
+          "surgery_alone": "21.1 months",
+          "hr": 0.48,
+          "ci_95": "0.28-0.83",
+          "p_value": 0.008
+        },
+        "pathological_complete_response": {
+          "overall": "29%",
+          "squamous_histology": "49%",
+          "adenocarcinoma": "23%"
+        },
+        "r0_resection_rate": {
+          "crt_surgery": "92%",
+          "surgery_alone": "69%",
+          "p_value": "<0.001"
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "Preoperative chemoradiotherapy with weekly carboplatin and paclitaxel combined with 41.4 Gy radiation significantly improved overall survival compared with surgery alone in patients with resectable esophageal or GEJ cancer."
+        }
+      ],
+      "clinical_recommendation": "Neoadjuvant chemoradiotherapy using the CROSS regimen (weekly carboplatin AUC 2 + paclitaxel 50 mg/m2 with 41.4 Gy RT) is a standard Category 1 trimodality approach for resectable esophageal and GEJ cancers."
+    },
+    {
+      "source_id": "CHECKMATE-577",
+      "title": "Adjuvant Nivolumab in Resected Esophageal or Gastroesophageal Junction Cancer",
+      "organization": "CheckMate 577 Investigators / Bristol Myers Squibb",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Double-Blind RCT",
+      "publication_date": "2021-04-01",
+      "jurisdiction": "International",
+      "disease_site": "GI",
+      "specialties": [
+        "medical_oncology",
+        "radiation_oncology",
+        "surgical_oncology"
+      ],
+      "topics": [
+        "esophageal_cancer",
+        "adjuvant_immunotherapy",
+        "nivolumab",
+        "residual_disease",
+        "disease_free_survival"
+      ],
+      "doi_or_url": "https://doi.org/10.1056/NEJMoa2034481",
+      "stage_criteria": "Resected stage II or III esophageal or gastroesophageal junction cancer with residual pathologic disease (>= ypT1 or ypN+) after neoadjuvant chemoradiotherapy and R0 surgical resection",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Adjuvant Nivolumab",
+          "intervention": "Nivolumab 240 mg IV q2w for 16 weeks, then 480 mg q4w up to total 1 year",
+          "sample_size": 532
+        },
+        {
+          "arm_name": "Placebo",
+          "intervention": "Placebo for up to total 1 year",
+          "sample_size": 262
+        }
+      ],
+      "endpoints": {
+        "median_disease_free_survival": {
+          "nivolumab": "22.4 months",
+          "placebo": "11.0 months",
+          "hr": 0.69,
+          "ci_95": "0.56-0.86",
+          "p_value": "<0.001"
+        },
+        "distant_metastasis_free_survival_hr": {
+          "hr": 0.74,
+          "ci_95": "0.60-0.92"
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "Among patients with resected esophageal or GE junction cancer who had received neoadjuvant chemoradiotherapy and had residual pathologic disease, disease-free survival was significantly doubled with adjuvant nivolumab compared with placebo."
+        }
+      ],
+      "clinical_recommendation": "Adjuvant Nivolumab for 1 year is Category 1 standard for patients with residual pathologic disease (non-pCR) following neoadjuvant chemoradiation and complete resection."
+    },
+    {
+      "source_id": "RAPIDO",
+      "title": "Short-Course Radiotherapy Followed by Chemotherapy before Total Mesorectal Excision (TME) versus Preoperative Chemoradiotherapy, TME, and Optional Adjuvant Chemotherapy in Locally Advanced Rectal Cancer (RAPIDO): A Randomised, Open-Label, Phase 3 Trial",
+      "organization": "RAPIDO Collaborative Group",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Final Report",
+      "publication_date": "2021-01-01",
+      "jurisdiction": "International",
+      "disease_site": "GI",
+      "specialties": [
+        "radiation_oncology",
+        "colorectal_surgery",
+        "medical_oncology"
+      ],
+      "topics": [
+        "rectal_cancer",
+        "total_neoadjuvant_therapy",
+        "short_course_rt",
+        "capox",
+        "folfox",
+        "metastasis_free_survival"
+      ],
+      "doi_or_url": "https://doi.org/10.1016/S1470-2045(20)30555-6",
+      "stage_criteria": "Locally advanced rectal adenocarcinoma with high-risk features on pelvic MRI: cT4a/b, extramural venous invasion (EMVI+), cN2, involved mesorectal fascia (MRF+), or enlarged lateral lymph nodes",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Experimental TNT Arm",
+          "intervention": "Short-course RT (5 x 5 Gy = 25 Gy in 1 week) -> 6 cycles CAPOX or 9 cycles FOLFOX4 consolidation chemotherapy -> TME surgery",
+          "sample_size": 462
+        },
+        {
+          "arm_name": "Standard Preoperative CRT Arm",
+          "intervention": "Long-course CRT (50-50.4 Gy in 25-28 fx + Capecitabine) -> TME surgery -> optional adjuvant CAPOX/FOLFOX",
+          "sample_size": 450
+        }
+      ],
+      "endpoints": {
+        "3_year_disease_related_treatment_failure": {
+          "tnt_arm": "23.7%",
+          "standard_arm": "30.4%",
+          "hr": 0.75,
+          "ci_95": "0.60-0.95",
+          "p_value": 0.019
+        },
+        "pathological_complete_response_pcr": {
+          "tnt_arm": "28%",
+          "standard_arm": "14%",
+          "p_value": "<0.0001"
+        },
+        "distant_metastases_at_3_years": {
+          "tnt_arm": "20.0%",
+          "standard_arm": "26.8%",
+          "hr": 0.74,
+          "p_value": 0.0048
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "Total neoadjuvant therapy with short-course radiotherapy followed by consolidation chemotherapy before TME significantly reduced the probability of disease-related treatment failure and distant metastasis and doubled the pathological complete response rate compared with standard chemoradiotherapy."
+        }
+      ],
+      "clinical_recommendation": "Total Neoadjuvant Therapy (TNT) using short-course RT (5x5 Gy) followed by consolidation CAPOX/FOLFOX is Category 1 standard for MRI-defined high-risk locally advanced rectal cancer."
+    },
+    {
+      "source_id": "PRODIGE-23",
+      "title": "Neoadjuvant Chemotherapy with FOLFIRINOX and Preoperative Chemoradiotherapy for Patients with Locally Advanced Rectal Cancer (UNICANCER-PRODIGE 23): A Multicentre, Randomised, Open-Label, Phase 3 Trial",
+      "organization": "UNICANCER / PRODIGE Group",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Final Report",
+      "publication_date": "2021-06-01",
+      "jurisdiction": "France/International",
+      "disease_site": "GI",
+      "specialties": [
+        "colorectal_surgery",
+        "radiation_oncology",
+        "medical_oncology"
+      ],
+      "topics": [
+        "rectal_cancer",
+        "total_neoadjuvant_therapy",
+        "folfirinox",
+        "chemoradiation",
+        "disease_free_survival"
+      ],
+      "doi_or_url": "https://doi.org/10.1016/S1470-2045(21)00079-6",
+      "stage_criteria": "Locally advanced rectal cancer (cT3 or cT4, M0)",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "TNT Arm",
+          "intervention": "6 cycles mFOLFIRINOX induction -> Preoperative CRT (50 Gy + Capecitabine) -> TME surgery -> 3 months adjuvant mFOLFOX6",
+          "sample_size": 231
+        },
+        {
+          "arm_name": "Standard CRT Arm",
+          "intervention": "Preoperative CRT (50 Gy + Capecitabine) -> TME surgery -> 6 months adjuvant mFOLFOX6",
+          "sample_size": 230
+        }
+      ],
+      "endpoints": {
+        "3_year_disease_free_survival": {
+          "tnt_arm": "76%",
+          "standard_arm": "69%",
+          "hr": 0.69,
+          "ci_95": "0.49-0.97",
+          "p_value": 0.034
+        },
+        "3_year_metastasis_free_survival": {
+          "tnt_arm": "79%",
+          "standard_arm": "72%",
+          "hr": 0.64,
+          "p_value": 0.017
+        },
+        "pathological_complete_response": {
+          "tnt_arm": "28%",
+          "standard_arm": "12%",
+          "p_value": "<0.0001"
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "Neoadjuvant chemotherapy with mFOLFIRINOX before preoperative chemoradiotherapy significantly improved disease-free survival, metastasis-free survival, and pathological complete response rate compared with standard preoperative chemoradiotherapy in locally advanced rectal cancer."
+        }
+      ],
+      "clinical_recommendation": "Induction mFOLFIRINOX followed by preoperative chemoradiotherapy is a Category 1 TNT regimen for fit patients with locally advanced rectal cancer."
+    },
+    {
+      "source_id": "ACT-II",
+      "title": "Chemoradiation with or without Maintenance Chemotherapy for Anal Cancer (ACT II): A Randomised, Factorial, Phase 3 Trial",
+      "organization": "UK NCRI Anal Cancer Sub-Group / ACT II",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Factorial RCT",
+      "publication_date": "2013-06-01",
+      "jurisdiction": "UK/International",
+      "disease_site": "GI",
+      "specialties": [
+        "radiation_oncology",
+        "colorectal_surgery",
+        "medical_oncology"
+      ],
+      "topics": [
+        "anal_cancer",
+        "mitomycin_c",
+        "cisplatin",
+        "5fu",
+        "maintenance_chemotherapy"
+      ],
+      "doi_or_url": "https://doi.org/10.1016/S1470-2045(13)70138-0",
+      "stage_criteria": "Epidermoid anal canal carcinoma (any stage without distant metastasis)",
+      "level_of_evidence": "Level 1 (Phase III 2x2 Factorial RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "RT + 5-FU + Mitomycin C",
+          "intervention": "RT 50.4 Gy + 5-FU 1000 mg/m2/d d1-4 & d29-32 + Mitomycin C 12 mg/m2 d1",
+          "sample_size": 472
+        },
+        {
+          "arm_name": "RT + 5-FU + Cisplatin",
+          "intervention": "RT 50.4 Gy + 5-FU 1000 mg/m2/d d1-4 & d29-32 + Cisplatin 60 mg/m2 d1, 29",
+          "sample_size": 468
+        }
+      ],
+      "endpoints": {
+        "complete_response_at_26_weeks": {
+          "mitomycin_arm": "90.5%",
+          "cisplatin_arm": "89.6%",
+          "p_value": "not significant"
+        },
+        "3_year_progression_free_survival": {
+          "mitomycin_arm": "73%",
+          "cisplatin_arm": "72%"
+        },
+        "maintenance_chemotherapy_effect": "No benefit in PFS (HR 0.95, p=0.70) or OS (HR 0.86, p=0.37); caused added toxicity"
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "Mitomycin C and Cisplatin produced equivalent response rates and progression-free survival, but Cisplatin caused higher hematologic toxicity. Maintenance chemotherapy provided no clinical benefit. 5-FU and Mitomycin C concurrent with radiotherapy remains the definitive standard of care."
+        }
+      ],
+      "clinical_recommendation": "Definitive chemoradiation with 5-FU and Mitomycin C is the standard of care for epidermoid anal cancer; maintenance chemotherapy should not be administered."
+    },
+    {
+      "source_id": "PRODIGE-24",
+      "title": "FOLFIRINOX or Gemcitabine as Adjuvant Therapy for Pancreatic Cancer",
+      "organization": "PRODIGE / ACCORD / CCTG",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Final Report",
+      "publication_date": "2018-12-20",
+      "jurisdiction": "France/Canada/International",
+      "disease_site": "GI",
+      "specialties": [
+        "surgical_oncology",
+        "medical_oncology"
+      ],
+      "topics": [
+        "pancreatic_cancer",
+        "adjuvant_chemotherapy",
+        "folfirinox",
+        "gemcitabine",
+        "overall_survival"
+      ],
+      "doi_or_url": "https://doi.org/10.1056/NEJMoa1809770",
+      "stage_criteria": "Completely resected pancreatic ductal adenocarcinoma (R0 or R1 resection), ECOG performance status 0-1, postoperative CA19-9 < 180 U/mL",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Modified FOLFIRINOX",
+          "intervention": "Oxaliplatin 85 mg/m2, Leucovorin 400 mg/m2, Irinotecan 180 or 150 mg/m2, 5-FU continuous 2400 mg/m2 over 46h q2w for 24 weeks (12 cycles)",
+          "sample_size": 247
+        },
+        {
+          "arm_name": "Gemcitabine",
+          "intervention": "Gemcitabine 1000 mg/m2 on days 1, 8, 15 q28d for 6 cycles",
+          "sample_size": 246
+        }
+      ],
+      "endpoints": {
+        "median_overall_survival": {
+          "mfolfirinox": "54.4 months",
+          "gemcitabine": "35.0 months",
+          "hr": 0.64,
+          "ci_95": "0.48-0.86",
+          "p_value": 0.003
+        },
+        "3_year_disease_free_survival": {
+          "mfolfirinox": "39.7%",
+          "gemcitabine": "21.4%",
+          "hr": 0.58,
+          "p_value": "<0.001"
+        },
+        "5_year_overall_survival": {
+          "mfolfirinox": "43.2%",
+          "gemcitabine": "31.4%"
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "Adjuvant therapy with a modified FOLFIRINOX regimen led to significantly longer overall survival and disease-free survival than gemcitabine among patients with resected pancreatic cancer."
+        }
+      ],
+      "clinical_recommendation": "Modified FOLFIRINOX is the Category 1 standard adjuvant chemotherapy for fit patients (ECOG 0-1, preserved organ function) following resection of pancreatic ductal adenocarcinoma."
+    },
+    {
+      "source_id": "GOG-123",
+      "title": "Cisplatin, Radiation, and Adjuvant Hysterectomy for Bulky Stage IB Cervical Carcinoma",
+      "organization": "Gynecologic Oncology Group (GOG)",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Landmark Study",
+      "publication_date": "1999-04-15",
+      "jurisdiction": "USA/International",
+      "disease_site": "GYN",
+      "specialties": [
+        "gynecologic_oncology",
+        "radiation_oncology"
+      ],
+      "topics": [
+        "cervical_cancer",
+        "chemoradiation",
+        "weekly_cisplatin",
+        "stage_ib2",
+        "recurrence_reduction"
+      ],
+      "doi_or_url": "https://doi.org/10.1056/NEJM199904153401503",
+      "stage_criteria": "Bulky stage IB carcinoma of the cervix (tumor diameter >= 4 cm)",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "RT alone + Hysterectomy",
+          "intervention": "Preoperative external beam RT + intracavitary brachytherapy followed by extrafascial hysterectomy",
+          "sample_size": 186
+        },
+        {
+          "arm_name": "CRT + Hysterectomy",
+          "intervention": "Preoperative RT + concurrent Cisplatin 40 mg/m2 weekly x 6 followed by extrafascial hysterectomy",
+          "sample_size": 183
+        }
+      ],
+      "endpoints": {
+        "recurrence_or_death_hr": {
+          "hr": 0.51,
+          "ci_95": "0.34-0.75",
+          "p_value": "<0.001"
+        },
+        "3_year_overall_survival": {
+          "crt": "83%",
+          "rt_alone": "74%",
+          "p_value": 0.008
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "The addition of concurrent weekly cisplatin chemotherapy to radiotherapy significantly reduced the risk of recurrence and death in women with bulky stage IB cervical carcinoma."
+        }
+      ],
+      "clinical_recommendation": "Concurrent weekly cisplatin (40 mg/m2) with definitive pelvic radiation plus brachytherapy is the international standard of care for locally advanced cervical cancer."
+    },
+    {
+      "source_id": "OUTBACK",
+      "title": "Adjuvant Chemotherapy following Chemoradiation as Primary Treatment for Locally Advanced Cervical Cancer (OUTBACK): An International, Open-Label, Randomised, Phase 3 Trial",
+      "organization": "GOG / ANZCOG / OUTBACK Investigators",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Final Report",
+      "publication_date": "2023-05-01",
+      "jurisdiction": "International",
+      "disease_site": "GYN",
+      "specialties": [
+        "gynecologic_oncology",
+        "radiation_oncology",
+        "medical_oncology"
+      ],
+      "topics": [
+        "cervical_cancer",
+        "adjuvant_chemotherapy",
+        "cisplatin",
+        "carboplatin_paclitaxel",
+        "lack_of_benefit"
+      ],
+      "doi_or_url": "https://doi.org/10.1016/S1470-2045(23)00147-3",
+      "stage_criteria": "Locally advanced cervical cancer (FIGO 2008 IB2, II, IIIB, IVA, or node-positive IB1/IIA)",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Standard Chemoradiation",
+          "intervention": "Weekly Cisplatin 40 mg/m2 x 5 + pelvic RT (45-50.4 Gy) + image-guided brachytherapy",
+          "sample_size": 460
+        },
+        {
+          "arm_name": "Chemoradiation + Adjuvant Chemotherapy",
+          "intervention": "Standard CRT followed by 4 cycles of Carboplatin (AUC 5) + Paclitaxel (155 mg/m2 q3w)",
+          "sample_size": 461
+        }
+      ],
+      "endpoints": {
+        "5_year_overall_survival": {
+          "crt_alone": "71%",
+          "adjuvant_chemo": "72%",
+          "hr": 0.91,
+          "ci_95": "0.70-1.18",
+          "p_value": 0.6
+        },
+        "5_year_progression_free_survival": {
+          "crt_alone": "61%",
+          "adjuvant_chemo": "63%",
+          "hr": 0.87,
+          "ci_95": "0.70-1.08",
+          "p_value": 0.4
+        },
+        "grade_3_5_toxicities": {
+          "crt_alone": "62%",
+          "adjuvant_chemo": "81%",
+          "p_value": "<0.0001"
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "Adjuvant carboplatin and paclitaxel following standard chemoradiation did not improve progression-free or overall survival in women with locally advanced cervical cancer and resulted in substantially more toxic effects. Adjuvant chemotherapy should not be given."
+        }
+      ],
+      "clinical_recommendation": "Adjuvant chemotherapy after definitive chemoradiotherapy in locally advanced cervical cancer is not recommended and should be avoided."
+    },
+    {
+      "source_id": "PORTEC-3",
+      "title": "Adjuvant Chemoradiotherapy versus Radiotherapy Alone in Women with High-Risk Endometrial Cancer (PORTEC-3): Final Results of an International, Open-Label, Multicentre, Randomised, Phase 3 Trial",
+      "organization": "PORTEC Study Group",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Long-Term Follow-up",
+      "publication_date": "2019-09-01",
+      "jurisdiction": "International",
+      "disease_site": "GYN",
+      "specialties": [
+        "gynecologic_oncology",
+        "radiation_oncology",
+        "medical_oncology"
+      ],
+      "topics": [
+        "endometrial_cancer",
+        "high_risk",
+        "chemoradiation",
+        "stage_iii",
+        "carboplatin_paclitaxel"
+      ],
+      "doi_or_url": "https://doi.org/10.1016/S1470-2045(19)30395-X",
+      "stage_criteria": "High-risk endometrial carcinoma: FIGO 2009 stage I grade 3 with deep myometrial invasion and/or LVSI, stage II, stage III, or serous/clear-cell histology",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Radiotherapy Alone",
+          "intervention": "Pelvic RT 48.6 Gy in 27 fractions (1.8 Gy/fx)",
+          "sample_size": 330
+        },
+        {
+          "arm_name": "Chemoradiotherapy",
+          "intervention": "Pelvic RT 48.6 Gy + 2 concurrent cycles Cisplatin 50 mg/m2 d1, 28 -> 4 adjuvant cycles Carboplatin AUC 5 + Paclitaxel 175 mg/m2 q3w",
+          "sample_size": 330
+        }
+      ],
+      "endpoints": {
+        "5_year_overall_survival": {
+          "crt": "81.4%",
+          "rt_alone": "76.1%",
+          "hr": 0.7,
+          "ci_95": "0.51-0.97",
+          "p_value": 0.034
+        },
+        "5_year_failure_free_survival": {
+          "crt": "76.5%",
+          "rt_alone": "69.1%",
+          "hr": 0.7,
+          "ci_95": "0.52-0.94",
+          "p_value": 0.016
+        },
+        "stage_iii_subgroup_benefit": {
+          "overall_survival_hr": 0.64,
+          "ci_95": "0.43-0.96",
+          "p_value": 0.03
+        },
+        "serous_carcinoma_subgroup_benefit": {
+          "failure_free_survival_hr": 0.42,
+          "p_value": 0.008
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "Adjuvant chemoradiotherapy significantly improved overall survival and failure-free survival compared with radiotherapy alone for women with high-risk endometrial cancer, with the greatest benefit observed in women with stage III disease and serous histology."
+        }
+      ],
+      "clinical_recommendation": "Adjuvant chemoradiation (pelvic RT with concurrent cisplatin followed by carboplatin/paclitaxel) is the standard of care for high-risk and stage III endometrial cancer."
+    },
+    {
+      "source_id": "STUPP-EORTC-26981",
+      "title": "Radiotherapy plus Concomitant and Adjuvant Temozolomide for Glioblastoma",
+      "organization": "EORTC Brain Tumour and Radiotherapy Groups / NCIC Clinical Trials Group",
+      "source_type": "trial",
+      "edition_or_version": "Phase III 5-Year Final Follow-up",
+      "publication_date": "2009-05-01",
+      "jurisdiction": "International",
+      "disease_site": "CNS",
+      "specialties": [
+        "neuro_oncology",
+        "radiation_oncology",
+        "neurosurgery"
+      ],
+      "topics": [
+        "glioblastoma",
+        "temozolomide",
+        "mgmt_promoter_methylation",
+        "overall_survival",
+        "chemoradiation"
+      ],
+      "doi_or_url": "https://doi.org/10.1056/NEJMoa043330",
+      "stage_criteria": "Newly diagnosed glioblastoma (WHO grade 4), age 18-70 years, WHO performance status 0-2",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Radiotherapy Alone",
+          "intervention": "Focal RT 60 Gy in 30 fractions (2.0 Gy/fx)",
+          "sample_size": 286
+        },
+        {
+          "arm_name": "Radiotherapy + Temozolomide",
+          "intervention": "Focal RT 60 Gy + daily Temozolomide 75 mg/m2/day during RT -> 6 cycles adjuvant Temozolomide (150-200 mg/m2/day d1-5 q28d)",
+          "sample_size": 287
+        }
+      ],
+      "endpoints": {
+        "median_overall_survival": {
+          "rt_tmz": "14.6 months",
+          "rt_alone": "12.1 months",
+          "hr": 0.63,
+          "ci_95": "0.52-0.75",
+          "p_value": "<0.001"
+        },
+        "2_year_overall_survival": {
+          "rt_tmz": "27.2%",
+          "rt_alone": "10.9%"
+        },
+        "5_year_overall_survival": {
+          "rt_tmz": "9.8%",
+          "rt_alone": "1.9%"
+        },
+        "mgmt_methylated_median_os": {
+          "rt_tmz": "21.7 months",
+          "rt_alone": "15.3 months",
+          "p_value": 0.007
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "The addition of temozolomide to radiotherapy for newly diagnosed glioblastoma resulted in a clinically meaningful and statistically significant survival benefit with minimal additional toxicity. Epigenetic silencing of the MGMT gene promoter was the strongest predictor of benefit."
+        }
+      ],
+      "clinical_recommendation": "The Stupp protocol (60 Gy in 30 fx with concurrent temozolomide 75 mg/m2 followed by 6 cycles of adjuvant temozolomide) is the global standard of care for glioblastoma."
+    },
+    {
+      "source_id": "RTOG-9802",
+      "title": "Chemoradiotherapy for Subtotally Resected Low-Grade Glioma",
+      "organization": "RTOG / ECOG / SWOG / NCIC",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Final Long-Term Report",
+      "publication_date": "2016-04-07",
+      "jurisdiction": "USA/International",
+      "disease_site": "CNS",
+      "specialties": [
+        "neuro_oncology",
+        "radiation_oncology",
+        "neurosurgery"
+      ],
+      "topics": [
+        "low_grade_glioma",
+        "pcv_chemotherapy",
+        "radiotherapy",
+        "overall_survival",
+        "high_risk_lgg"
+      ],
+      "doi_or_url": "https://doi.org/10.1056/NEJMoa1500925",
+      "stage_criteria": "High-risk grade 2 astrocytoma, oligodendroglioma, or oligoastrocytoma (age >= 40 with any resection, or age < 40 with subtotal resection or biopsy)",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Radiotherapy Alone",
+          "intervention": "Focal RT 54 Gy in 30 fractions (1.8 Gy/fx)",
+          "sample_size": 126
+        },
+        {
+          "arm_name": "Radiotherapy + PCV Chemotherapy",
+          "intervention": "Focal RT 54 Gy followed by 6 cycles of PCV (Procarbazine, CCNU, Vincristine)",
+          "sample_size": 125
+        }
+      ],
+      "endpoints": {
+        "median_overall_survival": {
+          "rt_pcv": "13.3 years",
+          "rt_alone": "7.8 years",
+          "hr": 0.59,
+          "ci_95": "0.42-0.83",
+          "p_value": 0.003
+        },
+        "10_year_overall_survival": {
+          "rt_pcv": "60%",
+          "rt_alone": "40%"
+        },
+        "10_year_progression_free_survival": {
+          "rt_pcv": "51%",
+          "rt_alone": "21%",
+          "hr": 0.5,
+          "p_value": "<0.001"
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "In patients with high-risk low-grade glioma, the addition of six cycles of PCV chemotherapy to radiotherapy was associated with significantly longer progression-free survival and overall survival than radiotherapy alone."
+        }
+      ],
+      "clinical_recommendation": "Radiotherapy (54 Gy) followed by PCV (or temozolomide) chemotherapy is the standard of care for adults with high-risk grade 2 gliomas."
+    },
+    {
+      "source_id": "ACOSOG-Z0011",
+      "title": "Effect of Axillary Dissection vs No Axillary Dissection on 10-Year Overall Survival Among Women With Invasive Breast Cancer and Sentinel Node Metastases: The ACOSOG Z0011 (Alliance) Randomized Clinical Trial",
+      "organization": "ACOSOG / Alliance",
+      "source_type": "trial",
+      "edition_or_version": "Phase III 10-Year Follow-up",
+      "publication_date": "2017-09-12",
+      "jurisdiction": "USA/International",
+      "disease_site": "Breast",
+      "specialties": [
+        "surgical_oncology",
+        "radiation_oncology",
+        "medical_oncology"
+      ],
+      "topics": [
+        "breast_cancer",
+        "sentinel_lymph_node",
+        "axillary_dissection_omission",
+        "whole_breast_rt"
+      ],
+      "doi_or_url": "https://doi.org/10.1001/jama.2017.11470",
+      "stage_criteria": "Clinical T1-T2 N0 breast cancer with 1 to 2 sentinel lymph nodes containing metastases undergoing breast-conserving therapy and whole-breast irradiation",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Axillary Lymph Node Dissection (ALND)",
+          "intervention": "Complete level I and II axillary lymph node dissection",
+          "sample_size": 420
+        },
+        {
+          "arm_name": "Sentinel Lymph Node Biopsy (SLNB) Alone",
+          "intervention": "No further axillary dissection",
+          "sample_size": 436
+        }
+      ],
+      "endpoints": {
+        "10_year_overall_survival": {
+          "slnb_alone": "86.3%",
+          "alnd": "83.6%",
+          "hr": 0.85,
+          "ci_95": "0.64-1.12",
+          "p_value": 0.25
+        },
+        "10_year_regional_recurrence": {
+          "slnb_alone": "1.5%",
+          "alnd": "0.5%",
+          "p_value": 0.28
+        },
+        "lymphedema_and_morbidity": "Significantly lower wound infections, paresthesias, and lymphedema in SLNB-alone arm"
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "Among women with T1 or T2 invasive breast cancer, no palpable axillary adenopathy, and 1 or 2 sentinel lymph nodes containing metastases, 10-year overall survival and regional recurrence did not differ significantly between SLNB alone and completion ALND when treated with breast-conserving surgery and whole-breast irradiation."
+        }
+      ],
+      "clinical_recommendation": "Completion axillary lymph node dissection may be safely omitted in patients with cT1-2N0 breast cancer and 1-2 positive sentinel nodes treated with lumpectomy and whole-breast radiation."
+    },
+    {
+      "source_id": "CREATE-X",
+      "title": "Adjuvant Capecitabine for Breast Cancer after Preoperative Chemotherapy",
+      "organization": "Japan Breast Cancer Research Group (JBCRG)",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Final Report",
+      "publication_date": "2017-06-01",
+      "jurisdiction": "Japan/Korea/International",
+      "disease_site": "Breast",
+      "specialties": [
+        "medical_oncology",
+        "surgical_oncology"
+      ],
+      "topics": [
+        "breast_cancer",
+        "triple_negative",
+        "residual_disease",
+        "capecitabine",
+        "overall_survival"
+      ],
+      "doi_or_url": "https://doi.org/10.1056/NEJMoa1612645",
+      "stage_criteria": "HER2-negative breast cancer with pathologically confirmed residual invasive disease in breast or axilla after neoadjuvant anthracycline/taxane chemotherapy",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Standard Therapy",
+          "intervention": "Standard post-surgery therapy",
+          "sample_size": 445
+        },
+        {
+          "arm_name": "Adjuvant Capecitabine",
+          "intervention": "Capecitabine 1250 mg/m2 PO bid on days 1-14 every 21 days for 6-8 cycles",
+          "sample_size": 442
+        }
+      ],
+      "endpoints": {
+        "triple_negative_5_year_overall_survival": {
+          "capecitabine": "78.8%",
+          "control": "70.3%",
+          "hr": 0.52,
+          "ci_95": "0.30-0.90",
+          "p_value": 0.01
+        },
+        "triple_negative_5_year_dfs": {
+          "capecitabine": "69.8%",
+          "control": "56.1%",
+          "hr": 0.58,
+          "ci_95": "0.39-0.87"
+        },
+        "overall_cohort_5_year_os": {
+          "capecitabine": "89.2%",
+          "control": "83.6%",
+          "hr": 0.59,
+          "p_value": 0.01
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "Among patients with HER2-negative breast cancer who had residual invasive disease after neoadjuvant chemotherapy, the addition of adjuvant capecitabine therapy was safe and effective in prolonging disease-free and overall survival, particularly in triple-negative breast cancer."
+        }
+      ],
+      "clinical_recommendation": "Adjuvant Capecitabine (1250 mg/m2 PO bid d1-14 q3w for 6-8 cycles) is Category 1 standard of care for triple-negative breast cancer with residual invasive disease after neoadjuvant chemotherapy."
+    },
+    {
+      "source_id": "KATHERINE",
+      "title": "Trastuzumab Emtansine for Residual Invasive HER2-Positive Breast Cancer",
+      "organization": "KATHERINE Investigators / Roche",
+      "source_type": "trial",
+      "edition_or_version": "Phase III Final Report",
+      "publication_date": "2019-02-14",
+      "jurisdiction": "International",
+      "disease_site": "Breast",
+      "specialties": [
+        "medical_oncology",
+        "surgical_oncology"
+      ],
+      "topics": [
+        "breast_cancer",
+        "her2_positive",
+        "residual_disease",
+        "t_dm1",
+        "invasive_disease_free_survival"
+      ],
+      "doi_or_url": "https://doi.org/10.1056/NEJMoa1814017",
+      "stage_criteria": "HER2-positive early breast cancer with residual invasive disease in breast or axilla after preoperative chemotherapy plus HER2-targeted therapy",
+      "level_of_evidence": "Level 1 (Phase III RCT)",
+      "trial_arms": [
+        {
+          "arm_name": "Adjuvant Trastuzumab",
+          "intervention": "Trastuzumab 6 mg/kg IV q3w for 14 cycles",
+          "sample_size": 743
+        },
+        {
+          "arm_name": "Adjuvant T-DM1",
+          "intervention": "Trastuzumab Emtansine 3.6 mg/kg IV q3w for 14 cycles (42 weeks)",
+          "sample_size": 743
+        }
+      ],
+      "endpoints": {
+        "3_year_invasive_disease_free_survival": {
+          "t_dm1": "88.3%",
+          "trastuzumab": "77.0%",
+          "hr": 0.5,
+          "ci_95": "0.39-0.64",
+          "p_value": "<0.001"
+        },
+        "distant_recurrence_hr": {
+          "hr": 0.6,
+          "ci_95": "0.45-0.79"
+        }
+      },
+      "key_passages": [
+        {
+          "section": "Conclusion",
+          "text": "The risk of recurrence of invasive breast cancer or death was 50% lower with adjuvant T-DM1 than with trastuzumab alone in patients with HER2-positive early breast cancer who had residual invasive disease after neoadjuvant therapy."
+        }
+      ],
+      "clinical_recommendation": "Adjuvant Trastuzumab Emtansine (T-DM1, 3.6 mg/kg q3w for 14 cycles) is the Category 1 standard of care for HER2-positive breast cancer with residual disease after neoadjuvant taxane/trastuzumab therapy."
+    }
+  ]
+}

@@ -1,0 +1,674 @@
+"""TNM and Clinical Society Staging Derivation and Verification Engine.
+
+Performs deterministic correlation and derivation of TNM staging across major oncology systems:
+- AJCC Cancer Staging Manual (8th & 9th Editions)
+- UICC TNM Classification of Malignant Tumours (8th Edition)
+- FIGO Staging Classification
+- Specialized society guidelines (ASTRO, ESTRO, JASTRO, AROI, FARO, ABS, NCCN)
+
+Functions:
+1. derive_or_verify_staging(case: SyntheticCase) -> dict[str, Any]
+   - When staging IS provided: verifies if supplied T, N, M or stage group correlate with tumor size,
+     extension, lymph node characteristics, or clinical narrative.
+   - When staging is NOT provided or incomplete: derives clinical T, N, M and stage group based on
+     explicit anatomical and pathological details according to the latest staging standard.
+"""
+from __future__ import annotations
+
+import re
+from typing import Any
+from app.schemas import SyntheticCase
+
+
+def derive_or_verify_staging(case: SyntheticCase, role_id: str = "") -> dict[str, Any]:
+    """Correlate provided staging or derive latest AJCC/UICC/society stage from case details."""
+    site = (case.primary_site or "").strip().lower()
+    summary = (case.case_summary or "").strip().lower()
+    imaging = (case.imaging_summary or "").strip().lower()
+    pathology = (case.pathology_summary or "").strip().lower()
+    investigations_parts = [str(item) for item in (case.relevant_investigations or []) if item]
+    for rec in getattr(case, "investigation_records", None) or []:
+        if isinstance(rec, dict):
+            parts = [rec.get("test_name"), rec.get("title"), rec.get("summary"), rec.get("findings"), rec.get("result")]
+        else:
+            parts = [
+                getattr(rec, "test_name", None),
+                getattr(rec, "title", None),
+                getattr(rec, "summary", None),
+                getattr(rec, "findings", None),
+                getattr(rec, "result", None),
+            ]
+        joined = " ".join(str(p) for p in parts if p)
+        if joined:
+            investigations_parts.append(joined)
+    investigations = " ".join(investigations_parts).lower()
+    combined_text = f"{summary} {imaging} {pathology} {investigations}".strip()
+
+    # Determine laterality of primary tumor
+    primary_laterality = "right" if "right" in site or "right" in summary else ("left" if "left" in site or "left" in summary else "unspecified")
+
+    # Extract documented sizes
+    # e.g., "2x1 cm", "3.2 cm", "35 mm", "ulceroproliferative lesion 3.5 cm"
+    tumor_size_cm = _extract_tumor_size(f"{summary} {pathology}")
+    node_details = _extract_node_details(f"{imaging} {summary} {investigations}", primary_laterality)
+    metastasis_details = _extract_metastasis_details(combined_text)
+    hpv_p16_status = _extract_hpv_p16_status(combined_text)
+
+    # 1. Determine Appropriate Staging System
+    is_head_neck = any(k in site for k in ["tonsil", "oropharynx", "tongue", "larynx", "pharynx", "oral", "hypopharynx", "nasopharynx"])
+    is_cervix = "cervix" in site or "cervical" in site
+    is_lung = any(k in site for k in ["lung", "nsclc", "sclc", "bronch"])
+    is_rectum = any(k in site for k in ["rectum", "rectal", "colon", "colorectal"])
+
+    applicable_system = "AJCC 8th Edition / UICC 8th Edition"
+    if is_cervix:
+        applicable_system = "FIGO 2018 / AJCC 9th Edition"
+    elif is_lung:
+        applicable_system = "AJCC 8th Edition (Lung / Thoracic)"
+    elif is_rectum:
+        applicable_system = "AJCC 8th Edition (Colorectal)"
+    elif is_head_neck and ("oropharynx" in site or "tonsil" in site):
+        if hpv_p16_status == "positive":
+            applicable_system = "AJCC 8th Edition (HPV/p16-Positive Oropharynx)"
+        else:
+            applicable_system = "AJCC 8th Edition (Conventional / p16-Negative Oropharynx)"
+
+    # 2. Derive Stage Components
+    # Only derive N category if nodal status is actually examined/reported (and not merely stating missing/unreported notes)
+    unreported_node_tokens = [
+        "no node notes", "node notes available", "not reported", "not assessed",
+        "no node data", "node status unknown", "no pelvic nodal imaging",
+        "no nodal imaging", "no neck imaging", "no nodal exam",
+    ]
+    has_unreported_node_statement = any(u in combined_text for u in unreported_node_tokens)
+    has_node_examination = (
+        any(
+            k in combined_text
+            for k in [
+                "node", "nodal", "lymph", "jugular", "cervical adenopathy", "adenopathy",
+                "level 1", "level 2", "level 3", "level 4", "level 5", "neck",
+                "mediastin", "hilar", "pelvic", "inguinal", "para-aortic",
+                "perirectal", "retroperitoneal", "pet-negative", "pet negative"
+            ]
+        )
+        and not (has_unreported_node_statement and not node_details["involved"])
+    )
+    derived_t = _derive_t_stage(is_head_neck, tumor_size_cm, combined_text, is_cervix=is_cervix, is_lung=is_lung, is_rectum=is_rectum)
+    derived_n = _derive_n_stage(is_head_neck, hpv_p16_status, node_details, combined_text, is_cervix=is_cervix, is_lung=is_lung, is_rectum=is_rectum) if has_node_examination else None
+    
+    # Only derive M category if metastatic workup or explicit negative/positive finding is documented
+    unreported_mets_tokens = ["no metastatic workup", "no distant workup", "no imaging of distant"]
+    has_unreported_mets_statement = any(u in combined_text for u in unreported_mets_tokens)
+    has_mets_examination = (
+        any(
+            k in combined_text
+            for k in [
+                "distant metastasis", "distant metastases", "metastatic", "bone metastasis",
+                "lung metastasis", "liver metastasis", "hepatic metastasis", "pulmonary metastasis",
+                "brain metastasis", "chest xray", "chest x-ray", "ct chest", "chest ct",
+                "ct abdomen", "ct cap", "pet", "pet/ct", "pet-ct", "bone scan",
+                "m0", "m1", "non-metastatic", "without distant"
+            ]
+        )
+        and not (has_unreported_mets_statement and not metastasis_details.get("has_distant_mets"))
+    )
+    derived_m = ("M1" if metastasis_details.get("has_distant_mets") else "M0") if has_mets_examination else None
+    derived_stage_group = _derive_stage_group(applicable_system, derived_t, derived_n, derived_m or "M0", hpv_p16_status, is_cervix=is_cervix, is_lung=is_lung, is_rectum=is_rectum) if (derived_t and derived_n) else None
+
+    # 3. Verification & Correlation with Provided Structured Fields
+    provided_c_t = getattr(case, "clinical_t_stage", None)
+    provided_c_n = getattr(case, "clinical_n_stage", None)
+    provided_c_m = getattr(case, "clinical_m_stage", None)
+    provided_group = getattr(case, "stage_group", None) or getattr(case, "clinical_stage_group", None)
+
+    verification_status = "derived"
+    correlation_notes: list[str] = []
+    discrepancies: list[str] = []
+
+    if provided_c_t or provided_c_n or provided_c_m or provided_group:
+        verification_status = "verified_and_correlated"
+        if provided_c_t:
+            norm_prov_t = _normalize_t(str(provided_c_t))
+            if derived_t and norm_prov_t != derived_t:
+                basis = f"based on {tumor_size_cm} cm" if tumor_size_cm is not None else "based on documented anatomical extent"
+                discrepancies.append(f"Provided Clinical T ({provided_c_t}) differs from derived T category ({derived_t} {basis}).")
+            else:
+                correlation_notes.append(f"Clinical T ({provided_c_t}) is verified concordant with clinical tumor features ({tumor_size_cm or 'recorded'} cm).")
+
+        if provided_c_n:
+            norm_prov_n = _normalize_n(str(provided_c_n))
+            if derived_n and norm_prov_n != derived_n:
+                discrepancies.append(f"Provided Clinical N ({provided_c_n}) differs from derived nodal category ({derived_n}).")
+            else:
+                correlation_notes.append(f"Clinical N ({provided_c_n}) correlates with documented nodal examination ({node_details.get('description', 'clinical exam')}).")
+
+        if provided_c_m:
+            norm_prov_m = _normalize_m(str(provided_c_m))
+            if derived_m and norm_prov_m != derived_m:
+                discrepancies.append(f"Provided M stage ({provided_c_m}) differs from documented systemic status ({derived_m}).")
+            else:
+                correlation_notes.append(f"Clinical M ({provided_c_m}) is concordant with staging investigations.")
+
+        if provided_group and derived_stage_group:
+            norm_group = _normalize_group(str(provided_group))
+            if norm_group != derived_stage_group:
+                discrepancies.append(f"Provided Stage Group ({provided_group}) differs from AJCC 8th calculated Stage ({derived_stage_group}).")
+            else:
+                correlation_notes.append(f"Overall Stage Group ({provided_group}) is verified concordant with AJCC 8th TNM grouping.")
+    else:
+        correlation_notes.append(f"Staging was not supplied in structured fields; derived {derived_t or 'Tx'}{derived_n or 'Nx'}{derived_m or 'Mx'} ({derived_stage_group or 'Stage undetermined'}) according to latest {applicable_system} criteria.")
+        # Flag borderline T1 (exactly 2.0 cm) with soft palate / midline extension as uncertain T1 vs T2
+        if derived_t == "T1" and tumor_size_cm is not None and tumor_size_cm == 2.0:
+            if any(k in combined_text for k in ["soft palate", "uvula", "midline", "crossing"]):
+                discrepancies.append(
+                    "BORDERLINE T1 vs T2: Tumor measures exactly 2.0 cm (T1 by AJCC 8th strict criterion), "
+                    "but clinical extension into soft palate and/or crossing midline is documented. "
+                    "If the radiologically measured greatest dimension exceeds 2.0 cm on cross-sectional imaging "
+                    "(MRI/CT), this would be reclassified as T2. Recommend measurement confirmation on MRI."
+                )
+
+    return {
+        "applicable_system": applicable_system,
+        "verification_status": verification_status,
+        "derived_t_stage": derived_t,
+        "derived_n_stage": derived_n,
+        "derived_m_stage": derived_m,
+        "derived_stage_group": derived_stage_group,
+        "tumor_size_cm": tumor_size_cm,
+        "node_features": node_details,
+        "hpv_p16_status": hpv_p16_status,
+        "correlation_notes": correlation_notes,
+        "discrepancies": discrepancies,
+        "concordant": len(discrepancies) == 0,
+    }
+
+
+def _extract_tumor_size(text: str) -> float | None:
+    """Extract primary tumor size in cm from clinical description, handling 2D/3D dimensions."""
+    # Matches 2D or 3D dimension patterns like '2x1 cm', '2 x 1 cm', '2.5 x 3.0 cm', '20 x 15 mm'
+    m_dim = re.search(r'(\d+(?:\.\d+)?)\s*(?:x|\*|\sby\s)\s*(\d+(?:\.\d+)?)(?:\s*(?:x|\*|\sby\s)\s*(\d+(?:\.\d+)?))?\s*(?:cm|mm)\b', text, re.IGNORECASE)
+    if m_dim:
+        dims = [float(x) for x in m_dim.groups() if x is not None]
+        unit = 'mm' if 'mm' in m_dim.group(0).lower() else 'cm'
+        max_dim = max(dims)
+        return round(max_dim / 10.0, 1) if unit == 'mm' else max_dim
+
+    # Matches single dimension patterns like '3.2 cm', '3.5cm', '25 mm', '2 cm'
+    m_cm = re.search(r'(?:lesion|tumor|mass|ulceroproliferative|growth)?\s*(\d+(?:\.\d+)?)\s*(?:cm)\b', text, re.IGNORECASE)
+    if m_cm:
+        try:
+            return float(m_cm.group(1))
+        except ValueError:
+            pass
+
+    m_mm = re.search(r'(\d+(?:\.\d+)?)\s*(?:mm)\b', text, re.IGNORECASE)
+    if m_mm:
+        try:
+            return round(float(m_mm.group(1)) / 10.0, 1)
+        except ValueError:
+            pass
+    return None
+
+
+def _extract_node_details(text: str, primary_laterality: str = "unspecified") -> dict[str, Any]:
+    """Parse nodal status, size, laterality, and count from text."""
+    node_info: dict[str, Any] = {
+        "involved": False,
+        "size_cm": None,
+        "laterality": "none",
+        "description": "no documented lymphadenopathy"
+    }
+    lower_text = text.lower()
+    node_keywords = ["node", "lymph", "jugular", "cervical adenopathy", "adenopathy", "level 1", "level 2", "level 3", "level 4", "level 5"]
+    if any(k in lower_text for k in node_keywords):
+        negative_node_patterns = [
+            "no lymph node", "no suspicious lymph node", "no suspicious node",
+            "no enlarged node", "no pathologically enlarged", "no cervical adenopathy",
+            "no cervical lymphadenopathy", "no lymphadenopathy", "no adenopathy",
+            "nodes clinically negative", "node negative", "nodes negative",
+            "nodes are normal", "node is normal", "nodes normal", "normal nodes",
+            "no regional lymph node", "no nodal", "no node", "without lymphadenopathy",
+            "without nodal", "free of nodal", "no node notes", "not reported",
+            "not assessed", "no node data", "node negative on pet", "pet-negative",
+            "pet negative", "pet/ct negative", "pet negative lymph nodes",
+        ]
+        clauses = [c.strip() for c in re.split(r"(?<!\d)\.(?!\d)|[;\n]+", lower_text) if c.strip()]
+        positive_clauses: list[str] = []
+        for clause in clauses:
+            if not any(k in clause for k in node_keywords):
+                continue
+            if any(neg in clause for neg in negative_node_patterns):
+                continue
+            neg_prox_match = re.search(
+                r"\b(?:no|without|negative\s+for|free\s+of|no\s+evidence\s+of|no\s+fdg\s+uptake\s+in)\s+[^.;\n]{1,80}?\b(?:lymph\s*nodes?|nodes?|adenopathy|lymphadenopathy)\b",
+                clause,
+                re.IGNORECASE,
+            )
+            if neg_prox_match:
+                continue
+            positive_clauses.append(clause)
+
+        if not positive_clauses:
+            return node_info
+
+        pos_text = " ; ".join(positive_clauses)
+        node_info["involved"] = True
+        node_info["description"] = "documented nodal involvement"
+
+        count_m = re.search(r"\b(\d+)\s+(?:[\w-]+\s+){0,2}(?:lymph\s*nodes?|nodes?)\b", pos_text, re.IGNORECASE)
+        if count_m:
+            node_info["count"] = int(count_m.group(1))
+
+        # Size of lymph node: matches '1x1 cm lymph node' or '4.2 cm right level II lymph node'
+        size_m = re.search(r'(\d+(?:\.\d+)?)\s*(?:x\s*\d+(?:\.\d+)?\s*)?(?:cm|mm)\s+(?:[\w-]+\s+){0,4}?(?:lymph\s*nodes?|nodes?|cervical)', pos_text, re.IGNORECASE)
+        if not size_m:
+            size_m = re.search(r'(?:node|lymph node|adenopathy)[^\.\n,;]*?(\d+(?:\.\d+)?)\s*(?:cm|mm)', pos_text, re.IGNORECASE)
+        if size_m:
+            val = float(size_m.group(1))
+            node_info["size_cm"] = val if "cm" in size_m.group(0).lower() else round(val / 10.0, 1)
+
+        # Laterality
+        if "bilateral" in pos_text:
+            node_info["laterality"] = "bilateral"
+        elif "contralateral" in pos_text:
+            node_info["laterality"] = "contralateral"
+        elif "ipsilateral" in pos_text:
+            node_info["laterality"] = "ipsilateral"
+        elif "right" in pos_text and primary_laterality == "right":
+            node_info["laterality"] = "ipsilateral"
+        elif "left" in pos_text and primary_laterality == "left":
+            node_info["laterality"] = "ipsilateral"
+        elif "right" in pos_text and primary_laterality == "left":
+            node_info["laterality"] = "contralateral"
+        elif "left" in pos_text and primary_laterality == "right":
+            node_info["laterality"] = "contralateral"
+        else:
+            node_info["laterality"] = "ipsilateral"
+    return node_info
+
+
+def _extract_metastasis_details(text: str) -> dict[str, Any]:
+    """Check for distant metastatic disease, respecting explicit negative phrases and split proximity negations."""
+    lower_text = text.lower()
+    # Check negative/absence phrases first
+    negative_patterns = [
+        "no distant metastas",
+        "no metastas",
+        "no metastatic spread",
+        "m0",
+        "non-metastatic",
+        "negative for distant",
+        "without distant",
+        "no evidence of distant",
+        "without distant metastases",
+        "without distant metastasis",
+        "free of metastases",
+        "free of distant",
+        "no distant disease",
+    ]
+    for neg in negative_patterns:
+        if neg in lower_text:
+            return {"has_distant_mets": False}
+
+    # Proximity negation regex (e.g. "without para-aortic or distant metastases", "no evidence of visceral or distant metastases")
+    neg_prox_match = re.search(
+        r"\b(?:without|no|negative\s+for|free\s+of|no\s+evidence\s+of)\s+[^.;\n]{1,80}?\b(?:distant\s+metastas|metastas)",
+        lower_text,
+        re.IGNORECASE,
+    )
+    if neg_prox_match:
+        return {"has_distant_mets": False}
+
+    has_mets = any(k in lower_text for k in [
+        "distant metastasis", "distant metastases", "metastatic disease",
+        "pulmonary metastases", "pulmonary metastasis", "lung metastasis", "lung metastases",
+        "hepatic metastases", "hepatic metastasis", "liver metastasis", "liver metastases",
+        "bone metastases", "bone metastasis", "brain metastases", "brain metastasis",
+        "peritoneal carcinomatosis"
+    ])
+    return {"has_distant_mets": has_mets}
+
+
+
+def _extract_hpv_p16_status(text: str) -> str:
+    """Identify p16 / HPV status for oropharyngeal carcinomas."""
+    if any(k in text for k in ["p16 positive", "p16-positive", "p16+", "hpv positive", "hpv-positive", "hpv+", "p16 overexpression"]):
+        return "positive"
+    if any(k in text for k in ["p16 negative", "p16-negative", "p16-", "hpv negative", "hpv-negative", "hpv-"]):
+        return "negative"
+    return "unknown"
+
+
+def _derive_t_stage(
+    is_head_neck: bool,
+    size_cm: float | None,
+    text: str,
+    is_cervix: bool = False,
+    is_lung: bool = False,
+    is_rectum: bool = False,
+) -> str | None:
+    """Derive T category based on AJCC 8th/9th and FIGO 2018 criteria across sites."""
+    lower_text = text.lower()
+
+    # --- LUNG (AJCC 8th) ---
+    if is_lung:
+        if any(k in lower_text for k in [
+            "invades mediastinum", "invasion of mediastinum", "mediastinum invasion",
+            "invades heart", "invades great vessels", "invades trachea",
+            "recurrent laryngeal nerve", "invades esophagus", "vertebral body",
+            "invades carina", "involvement of carina", "carina involvement"
+        ]):
+            return "T4"
+        if any(k in lower_text for k in [
+            "chest wall invasion", "invades chest wall", "parietal pleura invasion", "phrenic nerve",
+            "parietal pericardium"
+        ]):
+            return "T3"
+        if size_cm is not None:
+            if size_cm > 7.0:
+                return "T4"
+            elif size_cm > 5.0:
+                return "T3"
+            elif size_cm > 4.0:
+                return "T2b"
+            elif size_cm > 3.0:
+                return "T2a"
+            elif size_cm > 2.0:
+                return "T1c"
+            elif size_cm > 1.0:
+                return "T1b"
+            else:
+                return "T1a"
+        if any(k in lower_text for k in ["visceral pleura", "main bronchus"]):
+            return "T2a"
+        return None
+
+    # --- CERVIX (FIGO 2018 / AJCC 9th) ---
+    if is_cervix:
+        if any(k in lower_text for k in ["bladder mucosa", "rectal mucosa", "bullous edema of bladder"]):
+            return "T4"
+        if any(k in lower_text for k in ["pelvic sidewall", "pelvic wall", "hydronephrosis", "non-functioning kidney", "sidewall extension"]):
+            return "T3b"
+        if any(k in lower_text for k in ["lower third of vagina", "lower 1/3 vagina", "lower third vagina"]):
+            return "T3a"
+        if any(k in lower_text for k in ["parametrial invasion", "parametrial extension", "parametrial involvement", "parametria"]):
+            return "T2b"
+        if any(k in lower_text for k in ["upper two thirds of vagina", "upper 2/3 vagina", "vaginal involvement"]):
+            return "T2a"
+        if size_cm is not None:
+            if size_cm > 4.0:
+                return "T1b3"
+            elif size_cm > 2.0:
+                return "T1b2"
+            else:
+                return "T1b1"
+        return None
+
+    # --- RECTUM (AJCC 8th) ---
+    if is_rectum:
+        if any(k in lower_text for k in ["invades adjacent organs", "prostate", "bladder", "vagina", "uterus", "sacrum"]):
+            return "T4b"
+        if any(k in lower_text for k in ["perforates visceral peritoneum", "peritoneal reflection"]):
+            return "T4a"
+        if any(k in lower_text for k in ["mesorectal fat", "mesorectum", "perirectal fat", "pericolic fat", "t3c", "t3b", "t3a", "t3d", "t3"]):
+            return "T3"
+        if any(k in lower_text for k in ["muscularis propria", "t2"]):
+            return "T2"
+        if any(k in lower_text for k in ["submucosa", "t1"]):
+            return "T1"
+        if size_cm is not None:
+            return "T3" if size_cm > 3.0 else "T2"
+        return "T3"
+
+    # --- HEAD & NECK / OROPHARYNX (AJCC 8th / UICC 8th) ---
+    if any(k in lower_text for k in [
+        "lateral pterygoid", "pterygoid plate", "pterygoid plates", "lateral nasopharynx",
+        "skull base", "carotid", "encases carotid"
+    ]):
+        return "T4b"
+    if any(k in lower_text for k in [
+        "invades larynx", "bone invasion", "pterygoid muscle", "medial pterygoid",
+        "hard palate invasion", "mandible", "extrinsic tongue muscle"
+    ]):
+        return "T4a"
+    if any(k in lower_text for k in ["lingual surface of epiglottis", "epiglottis"]):
+        return "T3"
+    if size_cm is not None:
+        if size_cm > 4.0:
+            return "T3"
+        elif size_cm > 2.0:
+            return "T2"
+        else:
+            return "T1"
+    return None
+
+
+def _derive_n_stage(
+    is_head_neck: bool,
+    hpv_p16: str,
+    node_details: dict[str, Any],
+    text: str,
+    is_cervix: bool = False,
+    is_lung: bool = False,
+    is_rectum: bool = False,
+) -> str | None:
+    """Derive clinical N category according to site-specific staging rules."""
+    if not node_details["involved"]:
+        return "N0"
+
+    lower_text = text.lower()
+    size = node_details.get("size_cm") or 2.5
+    lat = node_details.get("laterality", "ipsilateral")
+
+    # --- LUNG (AJCC 8th) ---
+    if is_lung:
+        if any(k in lower_text for k in ["contralateral mediastin", "supraclavicular", "scalene"]):
+            return "N3"
+        if any(k in lower_text for k in ["ipsilateral mediastin", "subcarinal", "carinal"]):
+            return "N2"
+        if any(k in lower_text for k in ["hilar", "peribronchial", "intrapulmonary"]):
+            return "N1"
+        return "N1"
+
+    # --- CERVIX (FIGO 2018 / AJCC 9th) ---
+    if is_cervix:
+        # Check for positive para-aortic lymph nodes (noting negative statements like "no para-aortic")
+        has_positive_para_aortic = any(
+            k in lower_text
+            for k in [
+                "para-aortic lymphadenopathy", "para-aortic lymph node", "paraaortic lymph",
+                "fdg-avid para-aortic", "positive para-aortic", "positive paraaortic",
+                "involved para-aortic"
+            ]
+        ) and not any(
+            neg in lower_text
+            for neg in ["no para-aortic", "no paraaortic", "free of para-aortic", "without para-aortic"]
+        )
+        if has_positive_para_aortic:
+            return "N2"  # FIGO IIIC2
+        return "N1"  # Pelvic lymph nodes -> FIGO IIIC1
+
+    # --- RECTUM (AJCC 8th) ---
+    if is_rectum:
+        node_count = node_details.get("count") or 1
+        if any(k in lower_text for k in ["4 nodes", "5 nodes", "6 nodes", "multiple nodes", "n2"]):
+            return "N2"
+        if node_count >= 4:
+            return "N2"
+        elif node_count >= 2 or "3 mesorectal nodes" in lower_text or "2-3 nodes" in lower_text:
+            return "N1b"
+        else:
+            return "N1a"
+
+    # --- HEAD & NECK (AJCC 8th) ---
+    if hpv_p16 == "positive":
+        if size > 6.0:
+            return "N3"
+        elif lat in ["contralateral", "bilateral"]:
+            return "N2"
+        else:
+            return "N1"
+    else:
+        if size > 6.0 or "extranodal" in lower_text or "ene" in lower_text:
+            return "N3"
+        elif lat in ["contralateral", "bilateral"]:
+            return "N2c"
+        elif size > 3.0:
+            return "N2a"
+        else:
+            return "N1"
+
+
+def _derive_stage_group(
+    system: str,
+    t: str | None,
+    n: str | None,
+    m: str,
+    hpv_p16: str,
+    is_cervix: bool = False,
+    is_lung: bool = False,
+    is_rectum: bool = False,
+) -> str | None:
+    """Compute overall stage grouping across major anatomical sites."""
+    if m == "M1":
+        return "Stage IV"
+    if not t or not n:
+        return None
+
+    # --- LUNG (AJCC 8th) ---
+    if is_lung:
+        if n == "N0":
+            if t in ["T1a", "T1b", "T1c", "T1"]:
+                return "Stage IA"
+            elif t == "T2a":
+                return "Stage IB"
+            elif t == "T2b":
+                return "Stage IIA"
+            elif t == "T3":
+                return "Stage IIB"
+            elif t == "T4":
+                return "Stage IIIA"
+        elif n == "N1":
+            if t in ["T1a", "T1b", "T1c", "T1", "T2a", "T2b", "T2"]:
+                return "Stage IIB"
+            elif t in ["T3", "T4"]:
+                return "Stage IIIA"
+        elif n == "N2":
+            if t in ["T1a", "T1b", "T1c", "T1", "T2a", "T2b", "T2"]:
+                return "Stage IIIA"
+            elif t in ["T3", "T4"]:
+                return "Stage IIIB"
+        elif n == "N3":
+            return "Stage IIIC" if t in ["T3", "T4"] else "Stage IIIB"
+
+    # --- CERVIX (FIGO 2018 / AJCC 9th) ---
+    if is_cervix:
+        if n == "N2":
+            return "Stage IIIC2"
+        elif n in ["N1", "N1a", "N1b"]:
+            return "Stage IIIC1"
+        # N0 Cervix
+        if t == "T4":
+            return "Stage IVA"
+        elif t in ["T3b", "T3"]:
+            return "Stage IIIB"
+        elif t == "T3a":
+            return "Stage IIIA"
+        elif t == "T2b":
+            return "Stage IIB"
+        elif t == "T2a":
+            return "Stage IIA"
+        elif t == "T1b3":
+            return "Stage IB3"
+        elif t == "T1b2":
+            return "Stage IB2"
+        elif t in ["T1b1", "T1b", "T1"]:
+            return "Stage IB1"
+
+    # --- RECTUM (AJCC 8th) ---
+    if is_rectum:
+        if n in ["N1", "N1a", "N1b", "N1c", "N2", "N2a", "N2b"]:
+            if t in ["T3", "T4a"]:
+                return "Stage IIIB"
+            elif t == "T4b":
+                return "Stage IIIC"
+            else:
+                return "Stage IIIA"
+        # N0 Rectum
+        if t in ["T1", "T2"]:
+            return "Stage I"
+        elif t == "T3":
+            return "Stage IIA"
+        elif t == "T4a":
+            return "Stage IIB"
+        elif t == "T4b":
+            return "Stage IIC"
+
+    # --- HEAD & NECK / OROPHARYNX ---
+    if "HPV/p16-Positive" in system or hpv_p16 == "positive":
+        if t in ["T0", "T1", "T2"] and n in ["N0", "N1"]:
+            return "Stage I"
+        elif (t in ["T0", "T1", "T2"] and n == "N2") or (t == "T3" and n in ["N0", "N1", "N2"]):
+            return "Stage II"
+        elif t == "T4" or n == "N3":
+            return "Stage III"
+    else:
+        if t == "T1" and n == "N0":
+            return "Stage I"
+        elif t == "T2" and n == "N0":
+            return "Stage II"
+        elif (t == "T3" and n == "N0") or (t in ["T1", "T2", "T3"] and n == "N1"):
+            return "Stage III"
+        elif n in ["N2", "N2a", "N2b", "N2c"] or t == "T4":
+            return "Stage IVA"
+        elif n == "N3":
+            return "Stage IVB"
+    return None
+
+
+def _normalize_t(val: str) -> str:
+    clean = val.strip()
+    m = re.search(r'[tT]([0-4](?:[a-dA-D][1-3]?)?)', clean)
+    if m:
+        num = m.group(1)[0]
+        suf = m.group(1)[1:].lower()
+        return f"T{num}{suf}"
+    if clean in ["0", "1", "2", "3", "4"]:
+        return f"T{clean}"
+    return clean.upper()
+
+
+def _normalize_n(val: str) -> str:
+    clean = val.strip()
+    m = re.search(r'[nN]([0-3][a-cA-C]?)', clean)
+    if m:
+        num = m.group(1)[0]
+        suf = m.group(1)[1:].lower()
+        return f"N{num}{suf}"
+    if clean in ["0", "1", "2", "3"]:
+        return f"N{clean}"
+    return clean.upper()
+
+
+def _normalize_m(val: str) -> str:
+    val = val.strip().upper()
+    m = re.search(r'M([0-1])', val)
+    if m:
+        return f"M{m.group(1)}"
+    if val in ["0", "1"]:
+        return f"M{val}"
+    return val
+
+
+
+def _normalize_group(val: str) -> str:
+    val = val.strip().upper()
+    if "IV" in val:
+        return "Stage IV"
+    if "III" in val:
+        return "Stage III"
+    if "II" in val:
+        return "Stage II"
+    if "I" in val:
+        return "Stage I"
+    return val

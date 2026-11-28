@@ -1,0 +1,849 @@
+{
+  "version": "1.0.0",
+  "domain": "Staging, Anatomy & Contouring Guidelines",
+  "compiled_by": "staging-anatomy-indexer",
+  "reference_standards": [
+    "AJCC Cancer Staging Manual 8th & 9th Editions",
+    "UICC TNM Classification of Malignant Tumours 8th Edition",
+    "DAHANCA / EORTC / HKNPCSG / NCIC CTG / NCRI / RTOG / TROG Neck Node Level Consensus Guidelines",
+    "IASLC / University of Michigan Thoracic Lymph Node Stations Atlas",
+    "RTOG / ESTRO Pelvic Lymph Node Delineation Consensus Atlas",
+    "RTOG / ESTRO Breast Cancer Atlas for Radiation Therapy Planning",
+    "ICRU Report 83 Prescribing, Recording, and Reporting Photon-Beam Intensity-Modulated Radiation Therapy",
+    "ESTRO-ACROP Consensus Guidelines on Target Volume Delineation"
+  ],
+  "entries": [
+    {
+      "source_id": "AJCC-8TH-ORAL-CAVITY",
+      "title": "AJCC Cancer Staging Manual: Oral Cavity Carcinoma (8th Edition)",
+      "organization": "American Joint Committee on Cancer (AJCC)",
+      "source_type": "consensus",
+      "disease_site": "Head & Neck",
+      "doi_or_url": "https://doi.org/10.1007/978-3-319-40618-3_7",
+      "edition_or_version": "8th Edition (2018)",
+      "key_innovations": [
+        "Incorporation of Depth of Invasion (DOI) into T category",
+        "Incorporation of Extranodal Extension (ENE) into N category (clinical ENEc and pathological ENEp)"
+      ],
+      "t_definitions": {
+        "TX": "Primary tumor cannot be assessed",
+        "Tis": "Carcinoma in situ",
+        "T1": "Tumor <= 2 cm in greatest dimension and <= 5 mm depth of invasion (DOI)",
+        "T2": "Tumor <= 2 cm with DOI > 5 mm and <= 10 mm; OR tumor > 2 cm and <= 4 cm with DOI <= 10 mm",
+        "T3": "Tumor > 4 cm in greatest dimension OR any tumor with DOI > 10 mm and <= 20 mm",
+        "T4a": "Moderately advanced local disease: tumor invades adjacent structures (cortical bone of mandible or maxilla, maxillary sinus, skin of face) OR DOI > 20 mm",
+        "T4b": "Very advanced local disease: tumor invades masticator space, pterygoid plates, or skull base, and/or encases internal carotid artery"
+      },
+      "n_definitions_clinical": {
+        "NX": "Regional lymph nodes cannot be assessed",
+        "N0": "No regional lymph node metastasis",
+        "N1": "Metastasis in a single ipsilateral lymph node, <= 3 cm in greatest dimension, ENE(-)",
+        "N2a": "Metastasis in a single ipsilateral lymph node, > 3 cm but <= 6 cm, ENE(-)",
+        "N2b": "Metastasis in multiple ipsilateral lymph nodes, none > 6 cm, ENE(-)",
+        "N2c": "Metastasis in bilateral or contralateral lymph nodes, none > 6 cm, ENE(-)",
+        "N3a": "Metastasis in a lymph node > 6 cm in greatest dimension, ENE(-)",
+        "N3b": "Metastasis in any lymph node(s) with clinically overt extranodal extension (ENE(+))"
+      },
+      "m_definitions": {
+        "M0": "No distant metastasis",
+        "M1": "Distant metastasis present"
+      },
+      "stage_groups": {
+        "Stage I": {
+          "T": [
+            "T1"
+          ],
+          "N": [
+            "N0"
+          ],
+          "M": "M0"
+        },
+        "Stage II": {
+          "T": [
+            "T2"
+          ],
+          "N": [
+            "N0"
+          ],
+          "M": "M0"
+        },
+        "Stage III": {
+          "T": [
+            "T3"
+          ],
+          "N": [
+            "N0"
+          ],
+          "M": "M0",
+          "alt": "T1-T3 with N1 M0"
+        },
+        "Stage IVA": {
+          "T": [
+            "T4a"
+          ],
+          "N": [
+            "N0",
+            "N1",
+            "N2"
+          ],
+          "M": "M0",
+          "alt": "T1-T3 with N2 M0"
+        },
+        "Stage IVB": {
+          "T": [
+            "T4b"
+          ],
+          "N": [
+            "any N"
+          ],
+          "M": "M0",
+          "alt": "Any T with N3 M0"
+        },
+        "Stage IVC": {
+          "T": [
+            "any T"
+          ],
+          "N": [
+            "any N"
+          ],
+          "M": "M1"
+        }
+      },
+      "key_passages": [
+        {
+          "topic": "Depth of Invasion Measurement",
+          "text": "Depth of invasion (DOI) is measured from the reconstructed mucosal basement membrane line to the deepest point of tumor invasion. It is distinct from total tumor thickness."
+        },
+        {
+          "topic": "Clinical Extranodal Extension (ENEc)",
+          "text": "Clinical ENE is defined by evidence of skin involvement, soft tissue fixation, or nerve invasion matching the location of regional lymph nodes."
+        }
+      ]
+    },
+    {
+      "source_id": "AJCC-8TH-HPV-OROPHARYNX",
+      "title": "AJCC Cancer Staging Manual: HPV-Mediated (p16-Positive) Oropharyngeal Cancer",
+      "organization": "American Joint Committee on Cancer (AJCC)",
+      "source_type": "consensus",
+      "disease_site": "Head & Neck",
+      "doi_or_url": "https://doi.org/10.1007/978-3-319-40618-3_10",
+      "edition_or_version": "8th Edition (2018)",
+      "key_innovations": [
+        "Separate staging system for p16-positive oropharyngeal squamous cell carcinoma",
+        "Dramatic stage down-classification reflecting superior overall survival with definitive chemoradiation",
+        "Clinical N (cN) distinct from pathological N (pN); ENE is omitted from HPV-positive N staging"
+      ],
+      "t_definitions": {
+        "T0": "No primary tumor identified (e.g. occult primary presenting with p16+ nodal metastasis)",
+        "T1": "Tumor <= 2 cm in greatest dimension",
+        "T2": "Tumor > 2 cm but <= 4 cm in greatest dimension",
+        "T3": "Tumor > 4 cm in greatest dimension or extension to lingual surface of epiglottis",
+        "T4": "Moderately advanced local disease: tumor invades larynx, deep/extrinsic muscle of tongue, medial pterygoid, hard palate, or mandible or beyond"
+      },
+      "n_definitions_clinical": {
+        "cN0": "No regional lymph node metastasis",
+        "cN1": "One or more ipsilateral lymph nodes, none > 6 cm in greatest dimension",
+        "cN2": "Contralateral or bilateral lymph nodes, none > 6 cm in greatest dimension",
+        "cN3": "Lymph node(s) > 6 cm in greatest dimension"
+      },
+      "n_definitions_pathological": {
+        "pN0": "No regional lymph node metastasis",
+        "pN1": "Metastasis in 1 to 4 lymph nodes",
+        "pN2": "Metastasis in 5 or more lymph nodes"
+      },
+      "m_definitions": {
+        "M0": "No distant metastasis",
+        "M1": "Distant metastasis"
+      },
+      "clinical_stage_groups": {
+        "Stage I": "T0-T2, cN0-cN1, M0",
+        "Stage II": "T0-T2, cN2, M0 OR T3, cN0-cN2, M0",
+        "Stage III": "T4, any cN, M0 OR any T, cN3, M0",
+        "Stage IV": "Any T, any cN, M1"
+      },
+      "key_passages": [
+        {
+          "topic": "p16 Immunohistochemistry Testing Requirement",
+          "text": "Staging under this chapter requires confirmed p16 overexpression (>= 70% strong diffuse nuclear and cytoplasmic staining). Non-HPV/p16-negative oropharyngeal tumors must be staged under the conventional H&N staging system."
+        }
+      ]
+    },
+    {
+      "source_id": "AJCC-8TH-NASOPHARYNX",
+      "title": "AJCC Cancer Staging Manual: Nasopharyngeal Carcinoma",
+      "organization": "American Joint Committee on Cancer (AJCC)",
+      "source_type": "consensus",
+      "disease_site": "Head & Neck",
+      "doi_or_url": "https://doi.org/10.1007/978-3-319-40618-3_9",
+      "edition_or_version": "8th Edition (2018)",
+      "t_definitions": {
+        "T1": "Tumor confined to nasopharynx, or extends to oropharynx and/or nasal cavity without parapharyngeal involvement",
+        "T2": "Tumor with extension to parapharyngeal space and/or infiltration of medial pterygoid, lateral pterygoid, and/or prevertebral muscles",
+        "T3": "Tumor invades bony structures of skull base, cervical vertebra, pterygoid structures, and/or paranasal sinuses",
+        "T4": "Tumor with intracranial extension, involvement of cranial nerves, hypopharynx, orbit, parotid gland, and/or extensive soft tissue infiltration beyond the lateral surface of the lateral pterygoid muscle"
+      },
+      "n_definitions": {
+        "N0": "No regional lymph node metastasis",
+        "N1": "Unilateral cervical lymph node(s) and/or unilateral or bilateral retropharyngeal lymph nodes, <= 6 cm, above the caudal border of the cricoid cartilage",
+        "N2": "Bilateral cervical lymph node(s), <= 6 cm, above the caudal border of the cricoid cartilage",
+        "N3": "Cervical lymph node(s) > 6 cm in greatest dimension and/or extension below the caudal border of the cricoid cartilage"
+      },
+      "m_definitions": {
+        "M0": "No distant metastasis",
+        "M1": "Distant metastasis present"
+      },
+      "stage_groups": {
+        "Stage I": "T1 N0 M0",
+        "Stage II": "T1 N1 M0, T2 N0-N1 M0",
+        "Stage III": "T1-T2 N2 M0, T3 N0-N2 M0",
+        "Stage IVA": "T4 any N M0, or any T N3 M0",
+        "Stage IVB": "Any T any N M1"
+      }
+    },
+    {
+      "source_id": "AJCC-8TH-LARYNX",
+      "title": "AJCC Cancer Staging Manual: Larynx (Glottis and Supraglottis)",
+      "organization": "American Joint Committee on Cancer (AJCC)",
+      "source_type": "consensus",
+      "disease_site": "Head & Neck",
+      "doi_or_url": "https://doi.org/10.1007/978-3-319-40618-3_13",
+      "edition_or_version": "8th Edition (2018)",
+      "glottic_t_definitions": {
+        "Tis": "Carcinoma in situ",
+        "T1": "Tumor limited to vocal cord(s) (may involve anterior or posterior commissure) with normal mobility; T1a: one vocal cord; T1b: both vocal cords",
+        "T2": "Tumor extends to supraglottis and/or subglottis, and/or with impaired vocal cord mobility",
+        "T3": "Tumor limited to larynx with vocal cord fixation and/or invasion of paraglottic space and/or inner cortex of thyroid cartilage",
+        "T4a": "Moderately advanced local disease: tumor invades through the thyroid cartilage and/or invades tissues beyond larynx (trachea, soft tissues of neck including deep extrinsic muscle of tongue, strap muscles, thyroid, or esophagus)",
+        "T4b": "Very advanced local disease: tumor invades prevertebral space, encases carotid artery, or invades mediastinal structures"
+      },
+      "supraglottic_t_definitions": {
+        "T1": "Tumor limited to one subsite of supraglottis with normal vocal cord mobility",
+        "T2": "Tumor invades mucosa of more than one adjacent subsite of supraglottis or glottis or region outside the supraglottis without fixation of the larynx",
+        "T3": "Tumor limited to larynx with vocal cord fixation and/or invades any of: paraglottic space, pre-epiglottic space, inner cortex of thyroid cartilage",
+        "T4a": "Invades through thyroid cartilage and/or extends into tissues beyond larynx",
+        "T4b": "Invades prevertebral space, encases carotid artery, or invades mediastinal structures"
+      }
+    },
+    {
+      "source_id": "AJCC-8TH-9TH-NSCLC",
+      "title": "AJCC Cancer Staging Manual / IASLC 8th & 9th Editions: Non-Small Cell Lung Cancer",
+      "organization": "AJCC / International Association for the Study of Lung Cancer (IASLC)",
+      "source_type": "consensus",
+      "disease_site": "Lung",
+      "doi_or_url": "https://doi.org/10.1007/978-3-319-40618-3_36",
+      "edition_or_version": "8th Edition (2018) / 9th Edition IASLC (2024)",
+      "t_definitions": {
+        "Tis": "Carcinoma in situ (AIS or SCIS)",
+        "T1mi": "Minimally invasive adenocarcinoma (<= 3 cm solitary, <= 5 mm invasive component)",
+        "T1a": "Tumor <= 1 cm in greatest dimension",
+        "T1b": "Tumor > 1 cm but <= 2 cm in greatest dimension",
+        "T1c": "Tumor > 2 cm but <= 3 cm in greatest dimension",
+        "T2a": "Tumor > 3 cm but <= 4 cm; OR involves main bronchus without carina, invades visceral pleura, atelectasis/obstructive pneumonitis extending to hilum",
+        "T2b": "Tumor > 4 cm but <= 5 cm in greatest dimension",
+        "T3": "Tumor > 5 cm but <= 7 cm; OR separate tumor nodule(s) in the same lobe; OR directly invades parietal pleura, chest wall, phrenic nerve, parietal pericardium",
+        "T4": "Tumor > 7 cm; OR separate tumor nodule(s) in a different ipsilateral lobe; OR invades diaphragm, mediastinum, heart, great vessels, trachea, recurrent laryngeal nerve, esophagus, vertebral body, carina"
+      },
+      "n_definitions": {
+        "N0": "No regional lymph node metastasis",
+        "N1": "Metastasis in ipsilateral peribronchial, hilar, or intrapulmonary nodes (stations 10-14)",
+        "N2": "Metastasis in ipsilateral mediastinal and/or subcarinal lymph nodes (stations 2, 4, 7). IASLC 9th subcategorizes into N2a (single station) and N2b (multiple stations)",
+        "N3": "Metastasis in contralateral mediastinal, contralateral hilar, or scalene/supraclavicular lymph nodes (stations 1, etc.)"
+      },
+      "m_definitions": {
+        "M0": "No distant metastasis",
+        "M1a": "Malignant pleural/pericardial effusion, pleural/pericardial nodules, or separate nodule in contralateral lobe",
+        "M1b": "Single extrathoracic metastasis in a single organ",
+        "M1c": "Multiple extrathoracic metastases in one or multiple organs. IASLC 9th: M1c1 (single organ multiple lesions), M1c2 (multiple organs)"
+      },
+      "stage_groups": {
+        "Stage IA1": "T1mi/T1a N0 M0",
+        "Stage IA2": "T1b N0 M0",
+        "Stage IA3": "T1c N0 M0",
+        "Stage IB": "T2a N0 M0",
+        "Stage IIA": "T2b N0 M0",
+        "Stage IIB": "T1a-c N1 M0, T2a-b N1 M0, T3 N0 M0",
+        "Stage IIIA": "T1a-c N2 M0, T2a-b N2 M0, T3 N1 M0, T4 N0-N1 M0",
+        "Stage IIIB": "T1a-c N3 M0, T2a-b N3 M0, T3 N2 M0, T4 N2 M0",
+        "Stage IIIC": "T3 N3 M0, T4 N3 M0",
+        "Stage IVA": "Any T any N M1a/M1b",
+        "Stage IVB": "Any T any N M1c"
+      }
+    },
+    {
+      "source_id": "AJCC-8TH-BREAST",
+      "title": "AJCC Cancer Staging Manual: Breast Cancer (Anatomic & Prognostic Staging)",
+      "organization": "American Joint Committee on Cancer (AJCC)",
+      "source_type": "consensus",
+      "disease_site": "Breast",
+      "doi_or_url": "https://doi.org/10.1007/978-3-319-40618-3_48",
+      "edition_or_version": "8th Edition (2018)",
+      "key_innovations": [
+        "Integration of Anatomic Stage (T, N, M) and Clinical/Pathological Prognostic Stage (incorporating ER, PR, HER2, Grade, and Oncotype DX)"
+      ],
+      "t_definitions": {
+        "Tis": "Carcinoma in situ (DCIS, LCIS removed as non-malignant, Paget disease of nipple with no tumor)",
+        "T1mi": "Tumor <= 1 mm in greatest dimension",
+        "T1a": "Tumor > 1 mm but <= 5 mm",
+        "T1b": "Tumor > 5 mm but <= 10 mm",
+        "T1c": "Tumor > 10 mm but <= 20 mm",
+        "T2": "Tumor > 20 mm but <= 50 mm",
+        "T3": "Tumor > 50 mm in greatest dimension",
+        "T4a": "Extension to chest wall (not including pectoralis muscle alone)",
+        "T4b": "Ulceration and/or ipsilateral satellite skin nodules and/or edema (including peau d'orange)",
+        "T4c": "Both T4a and T4b",
+        "T4d": "Inflammatory carcinoma"
+      },
+      "n_definitions_clinical": {
+        "cN0": "No regional lymph node metastases",
+        "cN1": "Metastases to movable ipsilateral level I, II axillary lymph node(s)",
+        "cN2a": "Metastases in ipsilateral level I, II axillary lymph nodes fixed to one another or other structures",
+        "cN2b": "Metastases in clinically detected ipsilateral internal mammary nodes with negative axillary nodes",
+        "cN3a": "Metastases in ipsilateral infraclavicular (level III axillary) lymph node(s)",
+        "cN3b": "Metastases in ipsilateral internal mammary and axillary lymph nodes",
+        "cN3c": "Metastases in ipsilateral supraclavicular lymph node(s)"
+      },
+      "n_definitions_pathological": {
+        "pN0": "No regional lymph node metastasis histologically (pN0(i+) if isolated tumor clusters <= 0.2 mm or < 200 cells)",
+        "pN1mi": "Micrometastases (> 0.2 mm to <= 2.0 mm and/or > 200 cells)",
+        "pN1a": "Metastases in 1-3 axillary lymph nodes, at least one > 2.0 mm",
+        "pN1b": "Internal mammary nodes with micrometastases or macrometastases detected by SLN biopsy",
+        "pN1c": "pN1a plus pN1b",
+        "pN2a": "Metastases in 4-9 axillary lymph nodes",
+        "pN2b": "Metastases in clinically detected internal mammary lymph nodes in the absence of axillary lymph node metastases",
+        "pN3a": "Metastases in 10 or more axillary lymph nodes, or in infraclavicular (level III) lymph nodes",
+        "pN3b": "Metastases in clinically detected internal mammary nodes with positive axillary nodes, or > 3 axillary nodes with microscopic IMN",
+        "pN3c": "Metastases in ipsilateral supraclavicular lymph nodes"
+      }
+    },
+    {
+      "source_id": "AJCC-8TH-PROSTATE",
+      "title": "AJCC Cancer Staging Manual: Prostate Cancer (8th Edition)",
+      "organization": "American Joint Committee on Cancer (AJCC)",
+      "source_type": "consensus",
+      "disease_site": "Prostate",
+      "doi_or_url": "https://doi.org/10.1007/978-3-319-40618-3_58",
+      "edition_or_version": "8th Edition (2018)",
+      "clinical_t_definitions": {
+        "cT1": "Clinically inapparent tumor not palpable (cT1a <= 5% resected, cT1b > 5% resected, cT1c needle biopsy identified)",
+        "cT2": "Palpable tumor confined within prostate (cT2a <= 1/2 of one side, cT2b > 1/2 of one side, cT2c bilateral)",
+        "cT3": "Extraprostatic extension (cT3a EPE unilateral/bilateral or bladder neck microscopic invasion, cT3b seminal vesicle invasion)",
+        "cT4": "Tumor fixed or invades adjacent structures other than seminal vesicles: external sphincter, rectum, bladder, levators, pelvic wall"
+      },
+      "pathological_t_definitions": {
+        "pT2": "Organ-confined prostate cancer (subcategories pT2a/b/c eliminated in 8th edition)",
+        "pT3a": "Extraprostatic extension (unilateral or bilateral) or microscopic invasion of bladder neck",
+        "pT3b": "Tumor invades seminal vesicle(s)",
+        "pT4": "Direct invasion of adjacent organs (bladder, rectum, external sphincter, levator muscles, and/or pelvic wall)"
+      },
+      "n_definitions": {
+        "N0": "No positive regional nodes (pelvic: internal iliac, external iliac, obturator, presacral)",
+        "N1": "Metastases in regional lymph node(s)"
+      },
+      "m_definitions": {
+        "M0": "No distant metastasis",
+        "M1a": "Non-regional lymph node metastasis",
+        "M1b": "Bone metastasis (with or without other non-visceral metastases)",
+        "M1c": "Other distant site(s) with or without bone disease"
+      },
+      "grade_groups": {
+        "Grade Group 1": "Gleason score <= 6 (Gleason 3+3)",
+        "Grade Group 2": "Gleason score 7 (Gleason 3+4)",
+        "Grade Group 3": "Gleason score 7 (Gleason 4+3)",
+        "Grade Group 4": "Gleason score 8 (Gleason 4+4, 3+5, 5+3)",
+        "Grade Group 5": "Gleason score 9-10 (Gleason 4+5, 5+4, 5+5)"
+      },
+      "prognostic_stage_groups": {
+        "Stage I": "cT1-2a, N0, M0, PSA < 10, Grade Group 1",
+        "Stage IIA": "cT1-cT2a, N0, M0, PSA 10 to < 20, Grade Group 1; OR cT2b-c, N0, M0, PSA < 20, Grade Group 1",
+        "Stage IIB": "cT1-cT2, N0, M0, PSA < 20, Grade Group 2",
+        "Stage IIC": "cT1-cT2, N0, M0, PSA < 20, Grade Group 3 or 4",
+        "Stage IIIA": "cT1-cT2, N0, M0, PSA >= 20, Grade Group 1-4",
+        "Stage IIIB": "cT3-cT4, N0, M0, any PSA, Grade Group 1-4",
+        "Stage IIIC": "Any cT, N0, M0, any PSA, Grade Group 5",
+        "Stage IV": "Any cT, N1, M0 OR Any cT, any N, M1"
+      }
+    },
+    {
+      "source_id": "FIGO-2018-AJCC-CERVIX",
+      "title": "FIGO 2018 / AJCC 9th Edition Cervical Cancer Staging Classification",
+      "organization": "International Federation of Gynecology and Obstetrics (FIGO) / AJCC",
+      "source_type": "consensus",
+      "disease_site": "GYN",
+      "doi_or_url": "https://doi.org/10.1002/ijgo.12749",
+      "edition_or_version": "FIGO 2018 / AJCC 9th Edition (2020)",
+      "key_innovations": [
+        "Allows clinical, radiological (r), and pathological (p) findings for stage assignment",
+        "Stage IIIC added for regional nodal involvement: IIIC1 (pelvic) vs IIIC2 (para-aortic)",
+        "Stage IB divided into IB1 (<= 2 cm), IB2 (> 2 to 4 cm), and IB3 (> 4 cm)"
+      ],
+      "t_definitions": {
+        "T1 / Stage I": "Cervical carcinoma confined to uterus (corpus extension disregarded)",
+        "T1a1 / IA1": "Measured stromal invasion <= 3.0 mm in depth",
+        "T1a2 / IA2": "Measured stromal invasion > 3.0 mm and <= 5.0 mm in depth",
+        "T1b1 / IB1": "Invasive carcinoma >= 5.0 mm depth of invasion and <= 2.0 cm in greatest dimension",
+        "T1b2 / IB2": "Invasive carcinoma > 2.0 cm and <= 4.0 cm in greatest dimension",
+        "T1b3 / IB3": "Invasive carcinoma > 4.0 cm in greatest dimension (formerly Stage IIA2 in FIGO 2014)",
+        "T2a1 / IIA1": "Involvement of upper 2/3 of vagina without parametrial invasion, <= 4.0 cm",
+        "T2a2 / IIA2": "Involvement of upper 2/3 of vagina without parametrial invasion, > 4.0 cm",
+        "T2b / IIB": "Carcinoma with parametrial invasion, not extending to pelvic sidewall",
+        "T3a / IIIA": "Carcinoma involves lower third of vagina, with no extension to pelvic sidewall",
+        "T3b / IIIB": "Extension to pelvic sidewall and/or causes hydronephrosis or non-functioning kidney",
+        "Stage IIIC1": "Pelvic lymph node metastasis (IIIC1r imaging, IIIC1p pathology)",
+        "Stage IIIC2": "Para-aortic lymph node metastasis (IIIC2r imaging, IIIC2p pathology)",
+        "T4 / Stage IVA": "Invasion of mucosa of bladder or rectum, or extends beyond true pelvis",
+        "Stage IVB": "Distant metastasis (including non-regional nodes, lung, liver, bone)"
+      }
+    },
+    {
+      "source_id": "AJCC-8TH-COLORECTAL",
+      "title": "AJCC Cancer Staging Manual: Colon and Rectum (8th Edition)",
+      "organization": "American Joint Committee on Cancer (AJCC)",
+      "source_type": "consensus",
+      "disease_site": "GI",
+      "doi_or_url": "https://doi.org/10.1007/978-3-319-40618-3_20",
+      "edition_or_version": "8th Edition (2018)",
+      "t_definitions": {
+        "Tis": "Carcinoma in situ: intramucosal carcinoma (involvement of lamina propria with no extension through muscularis mucosae)",
+        "T1": "Tumor invades submucosa",
+        "T2": "Tumor invades muscularis propria",
+        "T3": "Tumor invades through muscularis propria into pericolorectal tissues",
+        "T4a": "Tumor penetrates the visceral peritoneum",
+        "T4b": "Tumor directly invades or is adherent to other organs or structures"
+      },
+      "n_definitions": {
+        "N0": "No regional lymph node metastasis",
+        "N1a": "Metastasis in 1 regional lymph node",
+        "N1b": "Metastasis in 2-3 regional lymph nodes",
+        "N1c": "Tumor deposit(s) in subserosa, mesentery, or nonperitonealized pericolic/perirectal tissues without regional nodal metastasis",
+        "N2a": "Metastasis in 4-6 regional lymph nodes",
+        "N2b": "Metastasis in 7 or more regional lymph nodes"
+      },
+      "m_definitions": {
+        "M0": "No distant metastasis",
+        "M1a": "Metastasis to a single site or organ without peritoneal metastasis",
+        "M1b": "Metastasis to two or more sites or organs without peritoneal metastasis",
+        "M1c": "Metastasis to peritoneal surface alone or with other site/organ metastases"
+      },
+      "key_passages": [
+        {
+          "topic": "Circumferential Resection Margin (CRM) and EMVI",
+          "text": "For rectal cancer, pelvic MRI must report distance of tumor or lymph node to the mesorectal fascia (CRM positive if <= 1.0 mm) and extramural vascular invasion (mrEMVI), which dictate neoadjuvant chemoradiation or Total Neoadjuvant Therapy (TNT)."
+        }
+      ]
+    },
+    {
+      "source_id": "AJCC-8TH-ESOPHAGUS",
+      "title": "AJCC Cancer Staging Manual: Esophagus and Esophagogastric Junction",
+      "organization": "American Joint Committee on Cancer (AJCC)",
+      "source_type": "consensus",
+      "disease_site": "GI",
+      "doi_or_url": "https://doi.org/10.1007/978-3-319-40618-3_16",
+      "edition_or_version": "8th Edition (2018)",
+      "key_innovations": [
+        "Separate clinical (cTNM), pathological (pTNM), and post-neoadjuvant pathological (ypTNM) stage classifications",
+        "Distinct stage groupings for Squamous Cell Carcinoma (SCC) vs Adenocarcinoma"
+      ],
+      "t_definitions": {
+        "Tis": "High-grade dysplasia",
+        "T1a": "Invades lamina propria or muscularis mucosae",
+        "T1b": "Invades submucosa",
+        "T2": "Invades muscularis propria",
+        "T3": "Invades adventitia",
+        "T4a": "Resectable invasion of pleura, pericardium, azygos vein, diaphragm, or peritoneum",
+        "T4b": "Unresectable invasion of aorta, vertebral body, or trachea"
+      },
+      "n_definitions": {
+        "N0": "No regional lymph node metastasis",
+        "N1": "Metastasis in 1-2 regional lymph nodes",
+        "N2": "Metastasis in 3-6 regional lymph nodes",
+        "N3": "Metastasis in 7 or more regional lymph nodes"
+      }
+    },
+    {
+      "source_id": "DAHANCA-EORTC-NECK-2014",
+      "title": "Delineation of the Neck Node Levels for Head and Neck Tumors: A 2013 Update Consensus Guidelines",
+      "organization": "DAHANCA, EORTC, HKNPCSG, NCIC CTG, NCRI, RTOG, TROG",
+      "source_type": "consensus",
+      "disease_site": "Head & Neck",
+      "doi_or_url": "https://doi.org/10.1016/j.radonc.2013.10.010",
+      "edition_or_version": "2013 Update (Grégoire et al., Radiother Oncol 2014)",
+      "levels": {
+        "Level Ia (Submental)": {
+          "cranial": "Mylohyoid muscle",
+          "caudal": "Platysma / body of hyoid bone",
+          "anterior": "Symphysis menti / platysma",
+          "posterior": "Body of hyoid bone / mylohyoid muscle",
+          "lateral": "Medial edge of anterior belly of digastric muscle (bilateral)",
+          "drainage": "Floor of mouth, anterior oral tongue, anterior mandibular alveolar ridge, lower lip"
+        },
+        "Level Ib (Submandibular)": {
+          "cranial": "Cranial edge of submandibular gland / mylohyoid muscle",
+          "caudal": "Plane through caudal edge of hyoid bone and caudal edge of mandible",
+          "anterior": "Symphysis menti / anterior belly of digastric muscle",
+          "posterior": "Posterior edge of submandibular gland / posterior belly of digastric muscle",
+          "lateral": "Inner side of mandible / platysma muscle",
+          "medial": "Lateral edge of anterior belly of digastric / mylohyoid / hyoglossus",
+          "drainage": "Oral cavity, anterior nasal cavity, mid-face soft tissues, submandibular gland"
+        },
+        "Level II (Upper Jugular)": {
+          "subdivisions": "IIa (anterior to posterior border of IJV) and IIb (posterior to posterior border of IJV)",
+          "cranial": "Caudal edge of lateral process of C1 (atlas)",
+          "caudal": "Caudal edge of body of hyoid bone",
+          "anterior": "Posterior edge of submandibular gland / posterior belly of digastric muscle",
+          "posterior": "Posterior edge of sternocleidomastoid muscle (SCM)",
+          "lateral": "Deep surface of sternocleidomastoid muscle",
+          "medial": "Medial edge of internal carotid artery / scalene muscles",
+          "drainage": "Nasal cavity, oral cavity, nasopharynx, oropharynx, hypopharynx, larynx, parotid gland"
+        },
+        "Level III (Middle Jugular)": {
+          "cranial": "Caudal edge of body of hyoid bone",
+          "caudal": "Caudal edge of cricoid cartilage",
+          "anterior": "Anterior edge of SCM / posterior third of thyrohyoid muscle",
+          "posterior": "Posterior edge of SCM",
+          "lateral": "Deep surface of SCM",
+          "medial": "Medial edge of common carotid artery / scalene muscles",
+          "drainage": "Base of tongue, tonsils, larynx, hypopharynx, thyroid gland"
+        },
+        "Level IVa (Lower Jugular)": {
+          "cranial": "Caudal edge of cricoid cartilage",
+          "caudal": "2 cm cranial to sternal manubrium / sternoclavicular joint",
+          "anterior": "Anterior edge of SCM (cranially) / body of SCM (caudally)",
+          "posterior": "Posterior edge of SCM (cranially) / scalene muscles (caudally)",
+          "lateral": "Deep surface of SCM (cranially) / lateral edge of SCM (caudally)",
+          "medial": "Medial edge of common carotid artery / lateral edge of thyroid gland / scalene muscles",
+          "drainage": "Hypopharynx, larynx, thyroid, cervical esophagus"
+        },
+        "Level IVb (Medial Supraclavicular)": {
+          "cranial": "Caudal border of level IVa (2 cm cranial to sternal manubrium)",
+          "caudal": "Cranial edge of sternal manubrium",
+          "anterior": "Deep surface of SCM / clavicle",
+          "posterior": "Anterior edge of scalene muscles (cranially) / apex of lung, brachiocephalic vessels",
+          "lateral": "Lateral edge of scalene muscles",
+          "medial": "Common carotid artery / lateral border of level VI",
+          "drainage": "Subglottic larynx, trachea, thyroid, cervical esophagus"
+        },
+        "Level Va (Upper Posterior Triangle)": {
+          "cranial": "Cranial edge of body of hyoid bone",
+          "caudal": "Caudal edge of cricoid cartilage",
+          "anterior": "Posterior edge of SCM",
+          "posterior": "Anterior border of trapezius muscle",
+          "lateral": "Platysma / skin",
+          "medial": "Levator scapulae / splenius capitis muscles"
+        },
+        "Level Vb (Lower Posterior Triangle)": {
+          "cranial": "Caudal edge of cricoid cartilage",
+          "caudal": "Transverse cervical vessels plane",
+          "anterior": "Posterior edge of SCM",
+          "posterior": "Anterior border of trapezius muscle",
+          "lateral": "Platysma / skin",
+          "medial": "Scalene muscles / levator scapulae"
+        },
+        "Level Vc (Lateral Supraclavicular)": {
+          "cranial": "Transverse cervical vessels plane (caudal border of level V)",
+          "caudal": "2 cm cranial to sternal manubrium (caudal border of level IVa)",
+          "anterior": "Skin / clavicle",
+          "posterior": "Anterior border of trapezius (cranially) / serratus anterior (caudally)",
+          "lateral": "Trapezius (cranially) / clavicle (caudally)",
+          "medial": "Abuts level IVa / scalene muscles"
+        },
+        "Level VIa (Anterior Jugular)": {
+          "cranial": "Caudal edge of hyoid bone or submandibular gland",
+          "caudal": "Cranial edge of sternal manubrium",
+          "anterior": "Skin / platysma",
+          "posterior": "Anterior aspect of infrahyoid strap muscles",
+          "lateral": "Anterior edges of both SCM muscles"
+        },
+        "Level VIb (Prelaryngeal / Pretracheal / Paratracheal)": {
+          "cranial": "Caudal edge of thyroid cartilage (or hyoid for oral tongue/floor of mouth)",
+          "caudal": "Cranial edge of sternal manubrium",
+          "anterior": "Posterior aspect of infrahyoid strap muscles",
+          "posterior": "Anterior aspect of larynx, thyroid gland, trachea; prevertebral muscle (right) / esophagus (left)",
+          "lateral": "Common carotid arteries bilaterally",
+          "drainage": "Thyroid, glottic/subglottic larynx, piriform sinus apex, cervical esophagus"
+        },
+        "Level VIIa (Retropharyngeal)": {
+          "cranial": "Upper edge of C1 / hard palate",
+          "caudal": "Cranial edge of body of hyoid bone",
+          "anterior": "Posterior edge of pharyngeal constrictor muscles",
+          "posterior": "Longus capitis and longus colli muscles",
+          "lateral": "Medial edge of internal carotid artery",
+          "medial": "Midline / longus capiti muscle lateral border",
+          "drainage": "Nasopharynx, Eustachian tube, soft palate, posterior pharyngeal wall"
+        },
+        "Level VIIb (Retro-styloid)": {
+          "cranial": "Base of skull (jugular foramen)",
+          "caudal": "Caudal edge of lateral process of C1",
+          "anterior": "Posterior edge of prestyloid parapharyngeal space",
+          "posterior": "Vertebral body of C1, base of skull",
+          "lateral": "Styloid process / deep parotid lobe",
+          "medial": "Internal carotid artery"
+        },
+        "Level VIII (Parotid Group)": {
+          "boundaries": "Zygomatic arch down to mandible, from skin to styloid process, masseter anteriorly to SCM posteriorly",
+          "drainage": "Frontal/temporal scalp, eyelids, auricle, parotid gland, nasopharynx"
+        },
+        "Level IX (Bucco-facial)": {
+          "boundaries": "Facial vessels over buccinator muscle, caudal orbit down to mandible",
+          "drainage": "Facial skin, nose, buccal mucosa, cheek"
+        },
+        "Level Xa (Retroauricular / Mastoid)": {
+          "boundaries": "Mastoid process, external auditory canal to mastoid tip",
+          "drainage": "Posterior ear, external auditory canal, scalp"
+        },
+        "Level Xb (Occipital)": {
+          "boundaries": "Occipital bone protuberance down to upper level Va",
+          "drainage": "Posterior scalp"
+        }
+      }
+    },
+    {
+      "source_id": "IASLC-THORACIC-LN-2009",
+      "title": "IASLC / University of Michigan Thoracic Lymph Node Stations CT Atlas",
+      "organization": "IASLC / University of Michigan",
+      "source_type": "consensus",
+      "disease_site": "Lung",
+      "doi_or_url": "https://doi.org/10.1016/j.jtho.2009.04.023",
+      "edition_or_version": "Chapet et al. 2005 / Rusch et al. 2009",
+      "stations": {
+        "Station 1 (Highest Mediastinal)": "Above horizontal line at upper rim of brachiocephalic (left innominate) vein where it crosses trachea",
+        "Station 2R (Right Upper Paratracheal)": "Between upper rim of brachiocephalic vein and upper border of aortic arch, to the right of tracheal midline",
+        "Station 2L (Left Upper Paratracheal)": "Between apex of lung/upper rim of manubrium and upper border of aortic arch, to the left of tracheal midline",
+        "Station 3A (Prevascular)": "Anterior to great vessels / superior vena cava, posterior to sternum, from thoracic inlet to carina",
+        "Station 3P (Retrotracheal)": "Posterior to trachea and esophagus, anterior to vertebral body, from thoracic inlet to carina",
+        "Station 4R (Right Lower Paratracheal)": "From cephalic border of aortic arch down to lower border of azygos vein / tracheal bifurcation, to the right of tracheal midline",
+        "Station 4L (Left Lower Paratracheal)": "From upper margin of aortic arch down to upper margin of left main bronchus at level of left upper lobe bronchus carina",
+        "Station 5 (Subaortic / AP Window)": "Subaortic nodes lateral to ligamentum arteriosum, aorta, or left pulmonary artery, proximal to first branch of LPA",
+        "Station 6 (Para-aortic)": "Anterior and lateral to ascending aorta and aortic arch, beneath horizontal line at upper margin of arch",
+        "Station 7 (Subcarinal)": "Caudal to tracheal carina, between right and left main bronchi, down to origin of right middle lobe bronchus / inferior pulmonary veins",
+        "Station 8 (Paraesophageal)": "Nodes lying adjacent to wall of esophagus and to right or left of midline, from carina down to gastroesophageal junction",
+        "Station 9 (Pulmonary Ligament)": "Nodes lying within inferior pulmonary ligament on right (9R) or left (9L), caudal to inferior pulmonary veins",
+        "Station 10 (Hilar)": "Proximal lobar nodes immediately adjacent to mainstem bronchi and pulmonary vessels, distal to mediastinal pleural reflection",
+        "Station 11 (Interlobar)": "Nodes located between the origin of lobar bronchi",
+        "Stations 12-14 (Lobar, Segmental, Subsegmental)": "Intrapulmonary nodes adjacent to lobar, segmental, and subsegmental bronchi"
+      }
+    },
+    {
+      "source_id": "RTOG-PELVIC-LN-2007",
+      "title": "An Atlas of the Pelvic Lymph Node Regions to Aid Radiotherapy Target Volume Definition",
+      "organization": "RTOG / ESTRO Consensus Panel",
+      "source_type": "consensus",
+      "disease_site": "GYN",
+      "doi_or_url": "https://doi.org/10.1016/j.clon.2007.05.002",
+      "edition_or_version": "Taylor et al. (2007) / RTOG Consensus Atlas",
+      "nodal_groups": {
+        "Common Iliac": {
+          "cranial": "Aortic bifurcation (L4-L5 interspace)",
+          "caudal": "Bifurcation of common iliac vessels into external and internal iliacs (approx. level of sacral promontory)",
+          "vessel_margin": "7 mm expansion around common iliac vessels, extended 10 mm anteriorly over vertebral body, carved off bone and psoas"
+        },
+        "External Iliac": {
+          "cranial": "Bifurcation of common iliac vessels",
+          "caudal": "Top of femoral head / inguinal ligament (or level of internal obturator vessels)",
+          "vessel_margin": "7-8 mm margin around external iliac artery and vein, extended 10+ mm anterolaterally, carved off iliopsoas muscle and pelvic bone"
+        },
+        "Internal Iliac (Hypogastric)": {
+          "cranial": "Bifurcation of common iliac vessels",
+          "caudal": "Level of ischial spine / greater sciatic notch",
+          "vessel_margin": "7 mm margin around internal iliac vessels and visceral branches, bounded laterally by pelvic sidewall/obturator internus, medially by ureter/peritoneum"
+        },
+        "Obturator": {
+          "cranial": "Continuous with external and internal iliac chains",
+          "caudal": "Top of obturator foramen",
+          "boundaries": "Runs along medial border of obturator internus muscle and pelvic bone, connecting anterior external iliac with posterior internal iliac nodes"
+        },
+        "Presacral": {
+          "cranial": "Promontory of sacrum (S1)",
+          "caudal": "S3 vertebra",
+          "boundaries": "10-15 mm pre-vertebral strip anterior to anterior surface of sacrum, bounded anteriorly by posterior rectal wall / mesorectum"
+        },
+        "Inguino-Femoral": {
+          "cranial": "Inguinal ligament",
+          "caudal": "2 cm caudal to saphenofemoral junction",
+          "boundaries": "Encompasses superficial and deep femoral vessels, sartorius laterally, adductor longus medially, fascia lata anteriorly"
+        },
+        "Para-Aortic": {
+          "cranial": "Renal vessels / upper border of L2 (or L1 for high risk)",
+          "caudal": "Aortic bifurcation (promontory / L4-L5)",
+          "boundaries": "8-10 mm margin around aorta and inferior vena cava, connecting to common iliac nodal chains"
+        }
+      }
+    },
+    {
+      "source_id": "ESTRO-RTOG-BREAST-LN",
+      "title": "ESTRO / RTOG Consensus Guidelines on Regional Nodal Volume Delineation for Breast Cancer",
+      "organization": "ESTRO / RTOG",
+      "source_type": "consensus",
+      "disease_site": "Breast",
+      "doi_or_url": "https://doi.org/10.1016/j.radonc.2015.02.011",
+      "edition_or_version": "Offersen et al. (ESTRO 2015) / RTOG Breast Atlas",
+      "nodal_stations": {
+        "Axilla Level I (Low Axilla)": {
+          "boundaries": "Lateral to lateral border of pectoralis minor muscle, inferior to axillary vein down to 5th rib / latissimus dorsi",
+          "indication": "Elective nodal irradiation when axillary dissection omitted or >= 4 positive nodes"
+        },
+        "Axilla Level II (Mid Axilla)": {
+          "boundaries": "Posterior/deep to pectoralis minor muscle, medial to its lateral border and lateral to its medial border",
+          "indication": "Included in standard high axillary / supraclavicular field"
+        },
+        "Axilla Level III (Apical Axilla / Infraclavicular)": {
+          "boundaries": "Medial to medial border of pectoralis minor muscle, extending up to caudal margin of clavicle / apex of axilla",
+          "indication": "Standard component of supraclavicular nodal volume"
+        },
+        "Level IV / Supraclavicular Nodal Volume": {
+          "boundaries": "Cranial: cricoid cartilage; Caudal: caudal edge of clavicle / junction with level III; Medial: internal jugular vein / SCM; Lateral: junction of clavicle and 1st rib",
+          "dose": "46-50 Gy in 2 Gy fractions or 40 Gy in 15 fractions"
+        },
+        "Internal Mammary Nodes (IMN)": {
+          "boundaries": "Intercostal spaces 1 to 3 (or 1 to 4) adjacent to internal mammary vessels, anterior to endothoracic fascia/pleura, posterior to ribs/intercostal muscles",
+          "indication": "Medial or central tumors, positive axillary nodes, or high-risk features"
+        },
+        "Interpectoral (Rotter's) Nodes": {
+          "boundaries": "Space between deep surface of pectoralis major and superficial surface of pectoralis minor muscles"
+        }
+      }
+    },
+    {
+      "source_id": "ICRU-83-ASTRO-CONTOURING",
+      "title": "ICRU Report 83 / AAPM / ASTRO Standardized Target Volume and OAR Nomenclature",
+      "organization": "International Commission on Radiation Units and Measurements (ICRU)",
+      "source_type": "consensus",
+      "disease_site": "General",
+      "doi_or_url": "https://doi.org/10.1093/jicru/ndq001",
+      "edition_or_version": "ICRU 83 (2010)",
+      "volume_definitions": {
+        "GTV (Gross Tumor Volume)": "Demonstrable extent and location of malignant growth (GTV-P for primary, GTV-N for regional lymph nodes)",
+        "CTV (Clinical Target Volume)": "Tissue volume that contains GTV and/or subclinical microscopic malignant disease (CTV-P high dose, CTV-N elective nodal volume)",
+        "ITV (Internal Target Volume)": "Internal margin added to CTV to compensate for internal physiological movements and variation in size, shape, and position (e.g. 4D-CT respiratory motion in lung)",
+        "PTV (Planning Target Volume)": "Geometrical concept used for treatment planning, adding set-up margin to CTV/ITV to ensure prescribed dose is absorbed in CTV with high probability (usually 95% dose to 95-99% PTV)",
+        "OAR (Organ at Risk)": "Normal tissue whose radiation sensitivity significantly influences treatment planning and/or prescribed dose",
+        "PRV (Planning Organ at Risk Volume)": "Margin added around an OAR to account for internal motion and setup variations, critical for serial organs (spinal cord PRV = cord + 1.5-2 mm, brainstem PRV)"
+      },
+      "expansion_rules": {
+        "Head & Neck CTV-P": "GTV-P + 5 mm anatomically trimmed off bone, cartilage, and air; second intermediate elective margin 5+5 mm for CTV-P2",
+        "Thorax NSCLC CTV": "GTV + 5 to 7 mm expansion, edited off uninvolved vertebral body, trachea, and esophagus",
+        "Glioblastoma CTV": "GTV (contrast-enhancing cavity + rim on T1+Gd) + 15 to 20 mm expansion, constrained by bony skull, falx, and tentorium",
+        "Prostate PTV Margin": "5 mm radially and 3 mm posteriorly (toward rectum) with daily fiducial/CBCT guidance; 8-10 mm without daily online 3D guidance"
+      }
+    },
+    {
+      "source_id": "UICC-AJCC-TNM-GENERAL-RULES",
+      "title": "UICC TNM Classification of Malignant Tumours (8th Edition) & AJCC General Staging Rules",
+      "organization": "Union for International Cancer Control (UICC) / American Joint Committee on Cancer (AJCC)",
+      "source_type": "staging_atlas",
+      "disease_site": "General",
+      "doi_or_url": "https://www.uicc.org/resources/tnm",
+      "edition_or_version": "UICC 8th Edition / AJCC 8th-9th Edition General Rules",
+      "key_innovations": [
+        "Prefix rules: cTNM (clinical), pTNM (pathological), ycTNM/ypTNM (post-neoadjuvant), rTNM (recurrent), aTNM (autopsy).",
+        "X-category rule: Use TX, NX, or MX whenever the primary, regional nodes, or distant metastases cannot be assessed—never default to N0 or M0.",
+        "Uncertainty rule: If there is doubt concerning the correct T, N, or M category to assign, assign the lower (less advanced) category.",
+        "Simultaneous multiple tumors in one organ: Classify by the tumor with the highest T category and indicate multiplicity with (m) or number."
+      ],
+      "t_definitions": {
+        "TX": "Primary tumor cannot be assessed",
+        "T0": "No evidence of primary tumor",
+        "Tis": "Carcinoma in situ",
+        "T1-T4": "Increasing size and/or local extent of the primary tumor per site-specific AJCC/UICC criteria"
+      },
+      "n_definitions": {
+        "NX": "Regional lymph nodes cannot be assessed (never assume N0)",
+        "N0": "No regional lymph node metastasis on documented clinical/imaging or pathological assessment",
+        "N1-N3": "Increasing involvement of regional lymph nodes (size, number, laterality, extranodal extension)"
+      },
+      "m_definitions": {
+        "MX_cM0": "cM0 requires clinical/imaging evaluation; if unassessed, report Mx/unknown rather than assuming M0",
+        "M1": "Distant metastasis (including non-regional lymph nodes)"
+      },
+      "stage_groups": {
+        "Rule": "Clinical stage (cTNM) governs initial definitive non-surgical management; pathological stage (pTNM) requires resection and never retroactively alters cTNM."
+      },
+      "key_passages": [
+        {
+          "text": "UICC/AJCC General Rule: Unassessed nodal or metastatic status must remain NX/MX and must never be assumed N0 or M0. When uncertain between two categories, assign the lower category."
+        }
+      ]
+    },
+    {
+      "source_id": "AJCC-8TH-NONHPV-OROPHARYNX",
+      "title": "AJCC Cancer Staging Manual / UICC 8th Edition: p16-Negative (Non-HPV) Oropharyngeal & Hypopharyngeal Carcinoma",
+      "organization": "AJCC / UICC",
+      "source_type": "staging_atlas",
+      "disease_site": "Head & Neck",
+      "doi_or_url": "https://cancerstaging.org",
+      "edition_or_version": "8th Edition (2018)",
+      "key_innovations": [
+        "Separate staging from p16-positive oropharynx; retains N2a/N2b/N2c and ENE-driven N3b.",
+        "Clinical ENE (skin invasion, soft tissue infiltration, cranial nerve/brachial plexus fixation) upstages cN to cN3b."
+      ],
+      "t_definitions": {
+        "T1": "Tumor <= 2 cm in greatest dimension",
+        "T2": "Tumor > 2 cm but <= 4 cm in greatest dimension",
+        "T3": "Tumor > 4 cm in greatest dimension or extension to lingual surface of epiglottis",
+        "T4a": "Moderately advanced local disease: invades larynx, extrinsic muscle of tongue, medial pterygoid, hard palate, or mandible",
+        "T4b": "Very advanced local disease: invades lateral pterygoid muscle, pterygoid plates, lateral nasopharynx, skull base, or encases carotid artery"
+      },
+      "n_definitions": {
+        "NX": "Regional lymph nodes cannot be assessed",
+        "N0": "No regional lymph node metastasis",
+        "N1": "Single ipsilateral lymph node <= 3 cm and ENE(-)",
+        "N2a": "Single ipsilateral node > 3 cm but <= 6 cm and ENE(-)",
+        "N2b": "Multiple ipsilateral nodes, none > 6 cm and ENE(-)",
+        "N2c": "Bilateral or contralateral nodes, none > 6 cm and ENE(-)",
+        "N3a": "Metastasis in a lymph node > 6 cm and ENE(-)",
+        "N3b": "Metastasis in any node(s) with clinically overt ENE(+)"
+      },
+      "m_definitions": {
+        "M0": "No distant metastasis",
+        "M1": "Distant metastasis"
+      },
+      "stage_groups": {
+        "Stage I": "T1 N0 M0",
+        "Stage II": "T2 N0 M0",
+        "Stage III": "T3 N0 M0, or T1-T3 N1 M0",
+        "Stage IVA": "T4a N0-N1 M0, or T1-T4a N2 M0",
+        "Stage IVB": "Any T N3 M0, or T4b Any N M0",
+        "Stage IVC": "Any T Any N M1"
+      },
+      "key_passages": [
+        {
+          "text": "In p16-negative oropharyngeal SCC (AJCC/UICC 8th), T1 is <=2 cm, T2 is >2-4 cm, T3 is >4 cm or lingual epiglottis; any single ipsilateral node <=3 cm ENE(-) is cN1 (Stage III)."
+        }
+      ]
+    },
+    {
+      "source_id": "FIGO-2023-ENDOMETRIUM",
+      "title": "FIGO 2023 Staging of Endometrial Cancer (Anatomical & Molecular Integration)",
+      "organization": "International Federation of Gynecology and Obstetrics (FIGO)",
+      "source_type": "staging_atlas",
+      "disease_site": "GYN",
+      "doi_or_url": "https://www.figo.org",
+      "edition_or_version": "FIGO 2023",
+      "key_innovations": [
+        "Integrates histological type/grade, LVSI (substantial vs focal/none), and molecular classification (POLEmut, MMRd, NSMP, p53abn).",
+        "Distinguishes Stage IIIC1 (pelvic lymph node metastasis) and IIIC2 (para-aortic lymph node metastasis), with micrometastasis (i) vs macrometastasis (ii)."
+      ],
+      "t_definitions": {
+        "Stage I": "Confined to uterine corpus and ovary (IA: non-aggressive <50% myometrial invasion; IB: non-aggressive >=50%; IC: aggressive histological types limited to polyp/endometrium)",
+        "Stage II": "Invasion of cervical stroma without extrauterine extension, or substantial LVSI, or aggressive histological types with myometrial invasion (IIC)",
+        "Stage III": "Local and/or regional spread (IIIA adnexa/serosa, IIIB vagina/parametrium/pelvic peritoneum, IIIC1 pelvic LN, IIIC2 para-aortic LN)",
+        "Stage IV": "Invasion of bladder/intestinal mucosa (IVA), peritoneal metastasis beyond pelvis (IVB), distant metastasis (IVC)"
+      },
+      "n_definitions": {
+        "IIIC1": "Metastasis to pelvic lymph nodes (IIIC1i micrometastasis, IIIC1ii macrometastasis)",
+        "IIIC2": "Metastasis to para-aortic lymph nodes up to renal vessels (IIIC2i micrometastasis, IIIC2ii macrometastasis)"
+      },
+      "m_definitions": {
+        "IVB": "Abdominal peritoneal metastasis beyond pelvis",
+        "IVC": "Distant metastasis including extra-abdominal lymph nodes"
+      },
+      "stage_groups": {
+        "Molecular Shift": "POLEmut confined to uterus/cervix -> IAmPOLEmut; p53abn confined to uterus with any myometrial invasion -> IICmp53abn."
+      },
+      "key_passages": [
+        {
+          "text": "FIGO 2023 endometrial staging integrates histological aggressiveness, substantial LVSI, pelvic/para-aortic nodal status (IIIC1/IIIC2), and molecular subtype (POLEmut, p53abn)."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,3563 @@
+{
+  "version": "1.0",
+  "indexed_at": 1795288196.9325607,
+  "library_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books",
+  "total_files": 395,
+  "files": [
+    {
+      "name": "(Clinical Decision Making) Stuart B. Mushlin MD, Harry L. Greene II MD - Decision Making in Medicine_ An Algorithmic Approach (Clinical Decision Making)-Mosby (2009).pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\(Clinical Decision Making) Stuart B. Mushlin MD, Harry L. Greene II MD - Decision Making in Medicine_ An Algorithmic Approach (Clinical Decision Making)-Mosby (2009).pdf",
+      "relative_path": "(Clinical Decision Making) Stuart B. Mushlin MD, Harry L. Greene II MD - Decision Making in Medicine_ An Algorithmic Approach (Clinical Decision Making)-Mosby (2009).pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 22635873,
+      "modified_timestamp": 1700830556.0
+    },
+    {
+      "name": "alagappan-manual-of-practical-medicine-4th-edition.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\alagappan-manual-of-practical-medicine-4th-edition.pdf",
+      "relative_path": "alagappan-manual-of-practical-medicine-4th-edition.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 26084196,
+      "modified_timestamp": 1694023506.0
+    },
+    {
+      "name": "Color Atlas of Dermatology ( PDFDrive ).pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Color Atlas of Dermatology ( PDFDrive ).pdf",
+      "relative_path": "Color Atlas of Dermatology ( PDFDrive ).pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 178425490,
+      "modified_timestamp": 1682083656.0
+    },
+    {
+      "name": "Color atlas of forensic medicine and pathology ( PDFDrive ).pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Color atlas of forensic medicine and pathology ( PDFDrive ).pdf",
+      "relative_path": "Color atlas of forensic medicine and pathology ( PDFDrive ).pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 74970976,
+      "modified_timestamp": 1682631856.0
+    },
+    {
+      "name": "Differential diagnosis in internal medicine _ from symptom to diagnosis.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Differential diagnosis in internal medicine _ from symptom to diagnosis.pdf",
+      "relative_path": "Differential diagnosis in internal medicine _ from symptom to diagnosis.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 76225369,
+      "modified_timestamp": 1699294154.0
+    },
+    {
+      "name": "ferris-clinical-advisor-2021.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\ferris-clinical-advisor-2021.pdf",
+      "relative_path": "ferris-clinical-advisor-2021.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 258902962,
+      "modified_timestamp": 1703217824.0
+    },
+    {
+      "name": "Joseph Loscalzo, Anthony Fauci, Dennis Kasper, Stephen Hauser, Dan Longo, J. Larry Jameson - Harrison's Principles of Internal Medicine, Twenty-First Edition (Vol.1 & Vol.2)-McGraw Hill _ Medical (202.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Joseph Loscalzo, Anthony Fauci, Dennis Kasper, Stephen Hauser, Dan Longo, J. Larry Jameson - Harrison's Principles of Internal Medicine, Twenty-First Edition (Vol.1 & Vol.2)-McGraw Hill _ Medical (202.pdf",
+      "relative_path": "Joseph Loscalzo, Anthony Fauci, Dennis Kasper, Stephen Hauser, Dan Longo, J. Larry Jameson - Harrison's Principles of Internal Medicine, Twenty-First Edition (Vol.1 & Vol.2)-McGraw Hill _ Medical (202.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 546739720,
+      "modified_timestamp": 1682778498.0
+    },
+    {
+      "name": "Michael D. Willard DVM MS, Harold Tvedten DVM PhD - Small Animal Clinical Diagnosis by Laboratory Methods, 5th Edition  -Saunders (2011).pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Michael D. Willard DVM MS, Harold Tvedten DVM PhD - Small Animal Clinical Diagnosis by Laboratory Methods, 5th Edition  -Saunders (2011).pdf",
+      "relative_path": "Michael D. Willard DVM MS, Harold Tvedten DVM PhD - Small Animal Clinical Diagnosis by Laboratory Methods, 5th Edition  -Saunders (2011).pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 27810115,
+      "modified_timestamp": 1694023504.0
+    },
+    {
+      "name": "Washington Manual of Medical Therapeutics 36th edition.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Washington Manual of Medical Therapeutics 36th edition.pdf",
+      "relative_path": "Washington Manual of Medical Therapeutics 36th edition.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 18299026,
+      "modified_timestamp": 1702351416.0
+    },
+    {
+      "name": "1. Gynaec Casesheet.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Gynaecology\\1. Gynaec Casesheet.pdf",
+      "relative_path": "Cases\\Gynaecology\\1. Gynaec Casesheet.pdf",
+      "category": "clinical_cases",
+      "extension": ".pdf",
+      "size_bytes": 6096983,
+      "modified_timestamp": 1699644328.0
+    },
+    {
+      "name": "10.Ovarian Tumour.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Gynaecology\\10.Ovarian Tumour.pdf",
+      "relative_path": "Cases\\Gynaecology\\10.Ovarian Tumour.pdf",
+      "category": "clinical_cases",
+      "extension": ".pdf",
+      "size_bytes": 3379315,
+      "modified_timestamp": 1699644310.0
+    },
+    {
+      "name": "11.Post Menopausal Bleeding.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Gynaecology\\11.Post Menopausal Bleeding.pdf",
+      "relative_path": "Cases\\Gynaecology\\11.Post Menopausal Bleeding.pdf",
+      "category": "clinical_cases",
+      "extension": ".pdf",
+      "size_bytes": 2448954,
+      "modified_timestamp": 1699644302.0
+    },
+    {
+      "name": "2.VaginalDischarge.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Gynaecology\\2.VaginalDischarge.pdf",
+      "relative_path": "Cases\\Gynaecology\\2.VaginalDischarge.pdf",
+      "category": "clinical_cases",
+      "extension": ".pdf",
+      "size_bytes": 3097798,
+      "modified_timestamp": 1699644322.0
+    },
+    {
+      "name": "3.Abnormal Uterine Bleeding.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Gynaecology\\3.Abnormal Uterine Bleeding.pdf",
+      "relative_path": "Cases\\Gynaecology\\3.Abnormal Uterine Bleeding.pdf",
+      "category": "clinical_cases",
+      "extension": ".pdf",
+      "size_bytes": 4700623,
+      "modified_timestamp": 1699644310.0
+    },
+    {
+      "name": "4.Genital Prolapse.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Gynaecology\\4.Genital Prolapse.pdf",
+      "relative_path": "Cases\\Gynaecology\\4.Genital Prolapse.pdf",
+      "category": "clinical_cases",
+      "extension": ".pdf",
+      "size_bytes": 3950842,
+      "modified_timestamp": 1699644314.0
+    },
+    {
+      "name": "5.Fibroid Uterus.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Gynaecology\\5.Fibroid Uterus.pdf",
+      "relative_path": "Cases\\Gynaecology\\5.Fibroid Uterus.pdf",
+      "category": "clinical_cases",
+      "extension": ".pdf",
+      "size_bytes": 3838241,
+      "modified_timestamp": 1699644322.0
+    },
+    {
+      "name": "6.Cervix Cancer.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Gynaecology\\6.Cervix Cancer.pdf",
+      "relative_path": "Cases\\Gynaecology\\6.Cervix Cancer.pdf",
+      "category": "clinical_cases",
+      "extension": ".pdf",
+      "size_bytes": 4647953,
+      "modified_timestamp": 1699644318.0
+    },
+    {
+      "name": "7.Infertility.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Gynaecology\\7.Infertility.pdf",
+      "relative_path": "Cases\\Gynaecology\\7.Infertility.pdf",
+      "category": "clinical_cases",
+      "extension": ".pdf",
+      "size_bytes": 4054370,
+      "modified_timestamp": 1699644324.0
+    },
+    {
+      "name": "8.Primary Amenorrhoea.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Gynaecology\\8.Primary Amenorrhoea.pdf",
+      "relative_path": "Cases\\Gynaecology\\8.Primary Amenorrhoea.pdf",
+      "category": "clinical_cases",
+      "extension": ".pdf",
+      "size_bytes": 2500610,
+      "modified_timestamp": 1699644302.0
+    },
+    {
+      "name": "9.Secondary Amenorrhea.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Gynaecology\\9.Secondary Amenorrhea.pdf",
+      "relative_path": "Cases\\Gynaecology\\9.Secondary Amenorrhea.pdf",
+      "category": "clinical_cases",
+      "extension": ".pdf",
+      "size_bytes": 2178534,
+      "modified_timestamp": 1699644308.0
+    },
+    {
+      "name": "CNS case sheet.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Medicine\\CNS case sheet.pdf",
+      "relative_path": "Cases\\Medicine\\CNS case sheet.pdf",
+      "category": "clinical_cases",
+      "extension": ".pdf",
+      "size_bytes": 659643,
+      "modified_timestamp": 1699644250.0
+    },
+    {
+      "name": "localization-of-lesion-in-Stroke.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Medicine\\localization-of-lesion-in-Stroke.pdf",
+      "relative_path": "Cases\\Medicine\\localization-of-lesion-in-Stroke.pdf",
+      "category": "clinical_cases",
+      "extension": ".pdf",
+      "size_bytes": 1385350,
+      "modified_timestamp": 1699644254.0
+    },
+    {
+      "name": "PROFORMA (CNS&CVS).pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Medicine\\PROFORMA (CNS&CVS).pdf",
+      "relative_path": "Cases\\Medicine\\PROFORMA (CNS&CVS).pdf",
+      "category": "clinical_cases",
+      "extension": ".pdf",
+      "size_bytes": 283839,
+      "modified_timestamp": 1699644248.0
+    },
+    {
+      "name": "RS CASE.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Medicine\\RS CASE.pdf",
+      "relative_path": "Cases\\Medicine\\RS CASE.pdf",
+      "category": "clinical_cases",
+      "extension": ".pdf",
+      "size_bytes": 1677186,
+      "modified_timestamp": 1699644252.0
+    },
+    {
+      "name": "Down's syndrome.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Pediatrics\\Down's syndrome.pdf",
+      "relative_path": "Cases\\Pediatrics\\Down's syndrome.pdf",
+      "category": "clinical_cases",
+      "extension": ".pdf",
+      "size_bytes": 2095300,
+      "modified_timestamp": 1699644020.0
+    },
+    {
+      "name": "EHPO.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Pediatrics\\EHPO.pdf",
+      "relative_path": "Cases\\Pediatrics\\EHPO.pdf",
+      "category": "clinical_cases",
+      "extension": ".pdf",
+      "size_bytes": 1155956,
+      "modified_timestamp": 1699644018.0
+    },
+    {
+      "name": "Neonatal cholestasis.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Pediatrics\\Neonatal cholestasis.pdf",
+      "relative_path": "Cases\\Pediatrics\\Neonatal cholestasis.pdf",
+      "category": "clinical_cases",
+      "extension": ".pdf",
+      "size_bytes": 6444467,
+      "modified_timestamp": 1699644030.0
+    },
+    {
+      "name": "Nephritic\u00a0Syndrome_20181124033654.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Pediatrics\\Nephritic\u00a0Syndrome_20181124033654.pdf",
+      "relative_path": "Cases\\Pediatrics\\Nephritic\u00a0Syndrome_20181124033654.pdf",
+      "category": "clinical_cases",
+      "extension": ".pdf",
+      "size_bytes": 2791052,
+      "modified_timestamp": 1699644038.0
+    },
+    {
+      "name": "nephrotic syndrome.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Pediatrics\\nephrotic syndrome.pdf",
+      "relative_path": "Cases\\Pediatrics\\nephrotic syndrome.pdf",
+      "category": "clinical_cases",
+      "extension": ".pdf",
+      "size_bytes": 6487529,
+      "modified_timestamp": 1699644044.0
+    },
+    {
+      "name": "paeds newborn.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Pediatrics\\paeds newborn.pdf",
+      "relative_path": "Cases\\Pediatrics\\paeds newborn.pdf",
+      "category": "clinical_cases",
+      "extension": ".pdf",
+      "size_bytes": 1644865,
+      "modified_timestamp": 1699644024.0
+    },
+    {
+      "name": "Rheumatic heart disease.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Pediatrics\\Rheumatic heart disease.pdf",
+      "relative_path": "Cases\\Pediatrics\\Rheumatic heart disease.pdf",
+      "category": "clinical_cases",
+      "extension": ".pdf",
+      "size_bytes": 6177002,
+      "modified_timestamp": 1699644042.0
+    },
+    {
+      "name": "1.INDIRECT INGUINAL HERNIA.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\1.INDIRECT INGUINAL HERNIA.pptx",
+      "relative_path": "Cases\\Surgery\\1.INDIRECT INGUINAL HERNIA.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 224235,
+      "modified_timestamp": 1699644150.0
+    },
+    {
+      "name": "10.Carcinoma stomach.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\10.Carcinoma stomach.pptx",
+      "relative_path": "Cases\\Surgery\\10.Carcinoma stomach.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 91576,
+      "modified_timestamp": 1699644152.0
+    },
+    {
+      "name": "11.OBSTRUCTIVE JAUNDICE.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\11.OBSTRUCTIVE JAUNDICE.pptx",
+      "relative_path": "Cases\\Surgery\\11.OBSTRUCTIVE JAUNDICE.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 100654,
+      "modified_timestamp": 1699644154.0
+    },
+    {
+      "name": "12.Direct hernia case presentation.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\12.Direct hernia case presentation.pptx",
+      "relative_path": "Cases\\Surgery\\12.Direct hernia case presentation.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 540524,
+      "modified_timestamp": 1699644150.0
+    },
+    {
+      "name": "13.pseudocyst of pancreas.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\13.pseudocyst of pancreas.pptx",
+      "relative_path": "Cases\\Surgery\\13.pseudocyst of pancreas.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 81463,
+      "modified_timestamp": 1699644152.0
+    },
+    {
+      "name": "14.RIF_Mass_surgery.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\14.RIF_Mass_surgery.pptx",
+      "relative_path": "Cases\\Surgery\\14.RIF_Mass_surgery.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 76569,
+      "modified_timestamp": 1699644152.0
+    },
+    {
+      "name": "15.ulcer.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\15.ulcer.pptx",
+      "relative_path": "Cases\\Surgery\\15.ulcer.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 595102,
+      "modified_timestamp": 1699644152.0
+    },
+    {
+      "name": "16.SEBACEOUS CYST.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\16.SEBACEOUS CYST.pptx",
+      "relative_path": "Cases\\Surgery\\16.SEBACEOUS CYST.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 154006,
+      "modified_timestamp": 1699644150.0
+    },
+    {
+      "name": "17.Hydrocele.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\17.Hydrocele.pptx",
+      "relative_path": "Cases\\Surgery\\17.Hydrocele.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 48670,
+      "modified_timestamp": 1699644154.0
+    },
+    {
+      "name": "18.Parotid.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\18.Parotid.pptx",
+      "relative_path": "Cases\\Surgery\\18.Parotid.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 51254,
+      "modified_timestamp": 1699644154.0
+    },
+    {
+      "name": "19.A CASE OF CA TONGUE.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\19.A CASE OF CA TONGUE.pptx",
+      "relative_path": "Cases\\Surgery\\19.A CASE OF CA TONGUE.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 200677,
+      "modified_timestamp": 1699644152.0
+    },
+    {
+      "name": "2.BREAST CA.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\2.BREAST CA.pptx",
+      "relative_path": "Cases\\Surgery\\2.BREAST CA.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 126642,
+      "modified_timestamp": 1699644146.0
+    },
+    {
+      "name": "21.Carcinoma Penis.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\21.Carcinoma Penis.pptx",
+      "relative_path": "Cases\\Surgery\\21.Carcinoma Penis.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 297221,
+      "modified_timestamp": 1699644144.0
+    },
+    {
+      "name": "22.Malignant Melanoma.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\22.Malignant Melanoma.pptx",
+      "relative_path": "Cases\\Surgery\\22.Malignant Melanoma.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 484698,
+      "modified_timestamp": 1699644146.0
+    },
+    {
+      "name": "23.A CASE OF HODGKIN'S LYMPHOMA.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\23.A CASE OF HODGKIN'S LYMPHOMA.pptx",
+      "relative_path": "Cases\\Surgery\\23.A CASE OF HODGKIN'S LYMPHOMA.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 288169,
+      "modified_timestamp": 1699644146.0
+    },
+    {
+      "name": "3.LABC- THINA.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\3.LABC- THINA.pptx",
+      "relative_path": "Cases\\Surgery\\3.LABC- THINA.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 121193,
+      "modified_timestamp": 1699644138.0
+    },
+    {
+      "name": "4.Solitary nodule thyroid.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\4.Solitary nodule thyroid.pptx",
+      "relative_path": "Cases\\Surgery\\4.Solitary nodule thyroid.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 253951,
+      "modified_timestamp": 1699644146.0
+    },
+    {
+      "name": "5.MULTINODULAR GOITRE.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\5.MULTINODULAR GOITRE.pptx",
+      "relative_path": "Cases\\Surgery\\5.MULTINODULAR GOITRE.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 105145,
+      "modified_timestamp": 1699644142.0
+    },
+    {
+      "name": "6.Thyrotoxicosis.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\6.Thyrotoxicosis.pptx",
+      "relative_path": "Cases\\Surgery\\6.Thyrotoxicosis.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 105637,
+      "modified_timestamp": 1699644148.0
+    },
+    {
+      "name": "7 TUBERCULOUS LYMPHADENITIS.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\7 TUBERCULOUS LYMPHADENITIS.pptx",
+      "relative_path": "Cases\\Surgery\\7 TUBERCULOUS LYMPHADENITIS.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 85186,
+      "modified_timestamp": 1699644150.0
+    },
+    {
+      "name": "7.Varicose  vein.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\7.Varicose  vein.pptx",
+      "relative_path": "Cases\\Surgery\\7.Varicose  vein.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 111788,
+      "modified_timestamp": 1699644152.0
+    },
+    {
+      "name": "8 A CASE OF HODGKIN'S LYMPHOMA - Copy.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\8 A CASE OF HODGKIN'S LYMPHOMA - Copy.pptx",
+      "relative_path": "Cases\\Surgery\\8 A CASE OF HODGKIN'S LYMPHOMA - Copy.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 288169,
+      "modified_timestamp": 1699644146.0
+    },
+    {
+      "name": "8.TAO.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\8.TAO.pptx",
+      "relative_path": "Cases\\Surgery\\8.TAO.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 1552607,
+      "modified_timestamp": 1699644148.0
+    },
+    {
+      "name": "9.GASTRIC OUTLET OBSTRUCTION.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\9.GASTRIC OUTLET OBSTRUCTION.pptx",
+      "relative_path": "Cases\\Surgery\\9.GASTRIC OUTLET OBSTRUCTION.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 268678,
+      "modified_timestamp": 1699644150.0
+    },
+    {
+      "name": "Carcinoma Breast.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\Carcinoma Breast.pptx",
+      "relative_path": "Cases\\Surgery\\Carcinoma Breast.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 4334454,
+      "modified_timestamp": 1699644140.0
+    },
+    {
+      "name": "Dermoid Cyst.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\Dermoid Cyst.pptx",
+      "relative_path": "Cases\\Surgery\\Dermoid Cyst.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 89284,
+      "modified_timestamp": 1699644130.0
+    },
+    {
+      "name": "Diabetic Ulcer.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\Diabetic Ulcer.pptx",
+      "relative_path": "Cases\\Surgery\\Diabetic Ulcer.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 3935788,
+      "modified_timestamp": 1699644142.0
+    },
+    {
+      "name": "Fibroadenoma.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\Fibroadenoma.pptx",
+      "relative_path": "Cases\\Surgery\\Fibroadenoma.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 78776,
+      "modified_timestamp": 1699644130.0
+    },
+    {
+      "name": "Ganglion.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\Ganglion.pptx",
+      "relative_path": "Cases\\Surgery\\Ganglion.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 979782,
+      "modified_timestamp": 1699644140.0
+    },
+    {
+      "name": "GOO.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\GOO.pptx",
+      "relative_path": "Cases\\Surgery\\GOO.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 3175703,
+      "modified_timestamp": 1699644140.0
+    },
+    {
+      "name": "Hernia.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\Hernia.pptx",
+      "relative_path": "Cases\\Surgery\\Hernia.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 3486116,
+      "modified_timestamp": 1699644142.0
+    },
+    {
+      "name": "Hydrocele.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\Hydrocele.pptx",
+      "relative_path": "Cases\\Surgery\\Hydrocele.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 1384992,
+      "modified_timestamp": 1699644138.0
+    },
+    {
+      "name": "Lipoma-1.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\Lipoma-1.pptx",
+      "relative_path": "Cases\\Surgery\\Lipoma-1.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 146884,
+      "modified_timestamp": 1699644122.0
+    },
+    {
+      "name": "LIPOMA.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\LIPOMA.pptx",
+      "relative_path": "Cases\\Surgery\\LIPOMA.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 3793513,
+      "modified_timestamp": 1699644150.0
+    },
+    {
+      "name": "Neck Secondaries.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\Neck Secondaries.pptx",
+      "relative_path": "Cases\\Surgery\\Neck Secondaries.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 796950,
+      "modified_timestamp": 1699644124.0
+    },
+    {
+      "name": "Obstructive jaundice.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\Obstructive jaundice.pptx",
+      "relative_path": "Cases\\Surgery\\Obstructive jaundice.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 495892,
+      "modified_timestamp": 1699644120.0
+    },
+    {
+      "name": "Oral Cavity Malignancy.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\Oral Cavity Malignancy.pptx",
+      "relative_path": "Cases\\Surgery\\Oral Cavity Malignancy.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 699804,
+      "modified_timestamp": 1699644122.0
+    },
+    {
+      "name": "Peripheral Vascular Diseases.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\Peripheral Vascular Diseases.pptx",
+      "relative_path": "Cases\\Surgery\\Peripheral Vascular Diseases.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 2557271,
+      "modified_timestamp": 1699644126.0
+    },
+    {
+      "name": "Ranula.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\Ranula.pptx",
+      "relative_path": "Cases\\Surgery\\Ranula.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 88733,
+      "modified_timestamp": 1699644120.0
+    },
+    {
+      "name": "RIF Mass.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\RIF Mass.pptx",
+      "relative_path": "Cases\\Surgery\\RIF Mass.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 412161,
+      "modified_timestamp": 1699644120.0
+    },
+    {
+      "name": "Salivary Gland Tumour.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\Salivary Gland Tumour.pptx",
+      "relative_path": "Cases\\Surgery\\Salivary Gland Tumour.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 683535,
+      "modified_timestamp": 1699644122.0
+    },
+    {
+      "name": "Sebaceous Cyst.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\Sebaceous Cyst.pptx",
+      "relative_path": "Cases\\Surgery\\Sebaceous Cyst.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 270183,
+      "modified_timestamp": 1699644120.0
+    },
+    {
+      "name": "Skin Malignancy.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\Skin Malignancy.pptx",
+      "relative_path": "Cases\\Surgery\\Skin Malignancy.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 360580,
+      "modified_timestamp": 1699644126.0
+    },
+    {
+      "name": "Soft Tissue Sarcoma.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\Soft Tissue Sarcoma.pptx",
+      "relative_path": "Cases\\Surgery\\Soft Tissue Sarcoma.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 601397,
+      "modified_timestamp": 1699644130.0
+    },
+    {
+      "name": "Testicular Tumour.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\Testicular Tumour.pptx",
+      "relative_path": "Cases\\Surgery\\Testicular Tumour.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 988709,
+      "modified_timestamp": 1699644134.0
+    },
+    {
+      "name": "Thyroglossal Cyst.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\Thyroglossal Cyst.pptx",
+      "relative_path": "Cases\\Surgery\\Thyroglossal Cyst.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 100921,
+      "modified_timestamp": 1699644124.0
+    },
+    {
+      "name": "Thyroid.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\Thyroid.pptx",
+      "relative_path": "Cases\\Surgery\\Thyroid.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 739111,
+      "modified_timestamp": 1699644126.0
+    },
+    {
+      "name": "Undescended Testis.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\Undescended Testis.pptx",
+      "relative_path": "Cases\\Surgery\\Undescended Testis.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 534268,
+      "modified_timestamp": 1699644126.0
+    },
+    {
+      "name": "Varicose Vein.pptx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Cases\\Surgery\\Varicose Vein.pptx",
+      "relative_path": "Cases\\Surgery\\Varicose Vein.pptx",
+      "category": "clinical_cases",
+      "extension": ".pptx",
+      "size_bytes": 349585,
+      "modified_timestamp": 1699644122.0
+    },
+    {
+      "name": "02-Biochemistry 1 liner.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Last minute\\02-Biochemistry 1 liner.pdf",
+      "relative_path": "NEET MRB\\Last minute\\02-Biochemistry 1 liner.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 757209,
+      "modified_timestamp": 1668081834.0
+    },
+    {
+      "name": "03-Physiology 1 liner.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Last minute\\03-Physiology 1 liner.pdf",
+      "relative_path": "NEET MRB\\Last minute\\03-Physiology 1 liner.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 1635443,
+      "modified_timestamp": 1668081834.0
+    },
+    {
+      "name": "04-Pathology 1 liner.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Last minute\\04-Pathology 1 liner.pdf",
+      "relative_path": "NEET MRB\\Last minute\\04-Pathology 1 liner.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 806363,
+      "modified_timestamp": 1668081834.0
+    },
+    {
+      "name": "05-Pharma 1 liner.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Last minute\\05-Pharma 1 liner.pdf",
+      "relative_path": "NEET MRB\\Last minute\\05-Pharma 1 liner.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 640631,
+      "modified_timestamp": 1668081834.0
+    },
+    {
+      "name": "06-Micro 1 liner.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Last minute\\06-Micro 1 liner.pdf",
+      "relative_path": "NEET MRB\\Last minute\\06-Micro 1 liner.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 752379,
+      "modified_timestamp": 1668081834.0
+    },
+    {
+      "name": "07-FMT 1 liner.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Last minute\\07-FMT 1 liner.pdf",
+      "relative_path": "NEET MRB\\Last minute\\07-FMT 1 liner.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 573869,
+      "modified_timestamp": 1668081834.0
+    },
+    {
+      "name": "08-PSM 1 liner.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Last minute\\08-PSM 1 liner.pdf",
+      "relative_path": "NEET MRB\\Last minute\\08-PSM 1 liner.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 864604,
+      "modified_timestamp": 1668081834.0
+    },
+    {
+      "name": "09-ENT 1liner.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Last minute\\09-ENT 1liner.pdf",
+      "relative_path": "NEET MRB\\Last minute\\09-ENT 1liner.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 613731,
+      "modified_timestamp": 1668081834.0
+    },
+    {
+      "name": "11-Surgery 1 liner.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Last minute\\11-Surgery 1 liner.pdf",
+      "relative_path": "NEET MRB\\Last minute\\11-Surgery 1 liner.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 1360746,
+      "modified_timestamp": 1668081834.0
+    },
+    {
+      "name": "13-Paediatric 1 liner.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Last minute\\13-Paediatric 1 liner.pdf",
+      "relative_path": "NEET MRB\\Last minute\\13-Paediatric 1 liner.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 740806,
+      "modified_timestamp": 1668081834.0
+    },
+    {
+      "name": "14-Anasthesia 1 liner.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Last minute\\14-Anasthesia 1 liner.pdf",
+      "relative_path": "NEET MRB\\Last minute\\14-Anasthesia 1 liner.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 626663,
+      "modified_timestamp": 1668081834.0
+    },
+    {
+      "name": "15-Psychiatry 1 liner.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Last minute\\15-Psychiatry 1 liner.pdf",
+      "relative_path": "NEET MRB\\Last minute\\15-Psychiatry 1 liner.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 676232,
+      "modified_timestamp": 1668081834.0
+    },
+    {
+      "name": "16-Radio 1 liner.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Last minute\\16-Radio 1 liner.pdf",
+      "relative_path": "NEET MRB\\Last minute\\16-Radio 1 liner.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 510397,
+      "modified_timestamp": 1668081834.0
+    },
+    {
+      "name": "INICET.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Last minute\\INICET.pdf",
+      "relative_path": "NEET MRB\\Last minute\\INICET.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 17271598,
+      "modified_timestamp": 1668233952.0
+    },
+    {
+      "name": "LMRP All 19 Subjects .pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Last minute\\LMRP All 19 Subjects .pdf",
+      "relative_path": "NEET MRB\\Last minute\\LMRP All 19 Subjects .pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 777261882,
+      "modified_timestamp": 1668103530.0
+    },
+    {
+      "name": "Medinaz High-Yield Visual Immunology Q and A.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Last minute\\Medinaz High-Yield Visual Immunology Q and A.pdf",
+      "relative_path": "NEET MRB\\Last minute\\Medinaz High-Yield Visual Immunology Q and A.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 2308215,
+      "modified_timestamp": 1668082048.0
+    },
+    {
+      "name": "MRT.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Last minute\\MRT.pdf",
+      "relative_path": "NEET MRB\\Last minute\\MRT.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 4051088,
+      "modified_timestamp": 1668233952.0
+    },
+    {
+      "name": "100 one liners.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Last minute\\26-02-2023\\100 one liners.pdf",
+      "relative_path": "NEET MRB\\Last minute\\26-02-2023\\100 one liners.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 3043555,
+      "modified_timestamp": 1677418554.0
+    },
+    {
+      "name": "100 PSM POINTS 25-02-2023.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Last minute\\26-02-2023\\100 PSM POINTS 25-02-2023.pdf",
+      "relative_path": "NEET MRB\\Last minute\\26-02-2023\\100 PSM POINTS 25-02-2023.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 6219458,
+      "modified_timestamp": 1677418554.0
+    },
+    {
+      "name": "Anat ed6@yourwish12_bot.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Marrow\\Edition 6 notes\\Anat ed6@yourwish12_bot.pdf",
+      "relative_path": "NEET MRB\\Marrow\\Edition 6 notes\\Anat ed6@yourwish12_bot.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 265707777,
+      "modified_timestamp": 1668615392.0
+    },
+    {
+      "name": "Anesthesia @yourwish12_bot.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Marrow\\Edition 6 notes\\Anesthesia @yourwish12_bot.pdf",
+      "relative_path": "NEET MRB\\Marrow\\Edition 6 notes\\Anesthesia @yourwish12_bot.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 102405511,
+      "modified_timestamp": 1668615398.0
+    },
+    {
+      "name": "Derma ed6 @yourwish12_bot.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Marrow\\Edition 6 notes\\Derma ed6 @yourwish12_bot.pdf",
+      "relative_path": "NEET MRB\\Marrow\\Edition 6 notes\\Derma ed6 @yourwish12_bot.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 72160341,
+      "modified_timestamp": 1668615398.0
+    },
+    {
+      "name": "Ent ed6 marrow @yourwish12_bot.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Marrow\\Edition 6 notes\\Ent ed6 marrow @yourwish12_bot.pdf",
+      "relative_path": "NEET MRB\\Marrow\\Edition 6 notes\\Ent ed6 marrow @yourwish12_bot.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 201156000,
+      "modified_timestamp": 1668615396.0
+    },
+    {
+      "name": "Fmt ed6 @yourwish12_bot.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Marrow\\Edition 6 notes\\Fmt ed6 @yourwish12_bot.pdf",
+      "relative_path": "NEET MRB\\Marrow\\Edition 6 notes\\Fmt ed6 @yourwish12_bot.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 55138768,
+      "modified_timestamp": 1668615394.0
+    },
+    {
+      "name": "Gyne ed6 @yourwish12_bot.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Marrow\\Edition 6 notes\\Gyne ed6 @yourwish12_bot.pdf",
+      "relative_path": "NEET MRB\\Marrow\\Edition 6 notes\\Gyne ed6 @yourwish12_bot.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 132975433,
+      "modified_timestamp": 1668615400.0
+    },
+    {
+      "name": "marrow biochem ed6 @yourwish12_bot.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Marrow\\Edition 6 notes\\marrow biochem ed6 @yourwish12_bot.pdf",
+      "relative_path": "NEET MRB\\Marrow\\Edition 6 notes\\marrow biochem ed6 @yourwish12_bot.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 102347414,
+      "modified_timestamp": 1668615392.0
+    },
+    {
+      "name": "marrow micro ed6 @yourwish12_bot.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Marrow\\Edition 6 notes\\marrow micro ed6 @yourwish12_bot.pdf",
+      "relative_path": "NEET MRB\\Marrow\\Edition 6 notes\\marrow micro ed6 @yourwish12_bot.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 135171036,
+      "modified_timestamp": 1668615392.0
+    },
+    {
+      "name": "marrow physio ed6 @yourwish12_bot.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Marrow\\Edition 6 notes\\marrow physio ed6 @yourwish12_bot.pdf",
+      "relative_path": "NEET MRB\\Marrow\\Edition 6 notes\\marrow physio ed6 @yourwish12_bot.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 113549626,
+      "modified_timestamp": 1668615392.0
+    },
+    {
+      "name": "Obs ed6 @ypurwish12_bot.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Marrow\\Edition 6 notes\\Obs ed6 @ypurwish12_bot.pdf",
+      "relative_path": "NEET MRB\\Marrow\\Edition 6 notes\\Obs ed6 @ypurwish12_bot.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 152798079,
+      "modified_timestamp": 1668615398.0
+    },
+    {
+      "name": "Opthalmology ed6 @yourwish12_bot.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Marrow\\Edition 6 notes\\Opthalmology ed6 @yourwish12_bot.pdf",
+      "relative_path": "NEET MRB\\Marrow\\Edition 6 notes\\Opthalmology ed6 @yourwish12_bot.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 112882638,
+      "modified_timestamp": 1668615396.0
+    },
+    {
+      "name": "Orthopedic e6 @yourwish12_bot.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Marrow\\Edition 6 notes\\Orthopedic e6 @yourwish12_bot.pdf",
+      "relative_path": "NEET MRB\\Marrow\\Edition 6 notes\\Orthopedic e6 @yourwish12_bot.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 155854674,
+      "modified_timestamp": 1668615398.0
+    },
+    {
+      "name": "Patho ed6 @yourwish12_bot.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Marrow\\Edition 6 notes\\Patho ed6 @yourwish12_bot.pdf",
+      "relative_path": "NEET MRB\\Marrow\\Edition 6 notes\\Patho ed6 @yourwish12_bot.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 96365786,
+      "modified_timestamp": 1668615394.0
+    },
+    {
+      "name": "Pedia ed6 @yourwish12_bot.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Marrow\\Edition 6 notes\\Pedia ed6 @yourwish12_bot.pdf",
+      "relative_path": "NEET MRB\\Marrow\\Edition 6 notes\\Pedia ed6 @yourwish12_bot.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 115774392,
+      "modified_timestamp": 1668615396.0
+    },
+    {
+      "name": "Pharma ed6 @yourwish12_bot.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Marrow\\Edition 6 notes\\Pharma ed6 @yourwish12_bot.pdf",
+      "relative_path": "NEET MRB\\Marrow\\Edition 6 notes\\Pharma ed6 @yourwish12_bot.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 119497662,
+      "modified_timestamp": 1668615394.0
+    },
+    {
+      "name": "Pschy @yourwish12_bot.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Marrow\\Edition 6 notes\\Pschy @yourwish12_bot.pdf",
+      "relative_path": "NEET MRB\\Marrow\\Edition 6 notes\\Pschy @yourwish12_bot.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 58411129,
+      "modified_timestamp": 1668615398.0
+    },
+    {
+      "name": "Psm ed6 @yourwish12_bot.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Marrow\\Edition 6 notes\\Psm ed6 @yourwish12_bot.pdf",
+      "relative_path": "NEET MRB\\Marrow\\Edition 6 notes\\Psm ed6 @yourwish12_bot.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 180249847,
+      "modified_timestamp": 1668615394.0
+    },
+    {
+      "name": "Surgery ed6 @yourwish12_bot.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Marrow\\Edition 6 notes\\Surgery ed6 @yourwish12_bot.pdf",
+      "relative_path": "NEET MRB\\Marrow\\Edition 6 notes\\Surgery ed6 @yourwish12_bot.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 267878180,
+      "modified_timestamp": 1668615396.0
+    },
+    {
+      "name": "ENT.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\10_ ENT\\ENT.pdf",
+      "relative_path": "NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\10_ ENT\\ENT.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 64709696,
+      "modified_timestamp": 1667572502.0
+    },
+    {
+      "name": "Anaesthesia.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\11_ Anaesthesia\\Anaesthesia.pdf",
+      "relative_path": "NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\11_ Anaesthesia\\Anaesthesia.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 29983215,
+      "modified_timestamp": 1667572502.0
+    },
+    {
+      "name": "Dermatology.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\12_ Dermatology\\Dermatology.pdf",
+      "relative_path": "NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\12_ Dermatology\\Dermatology.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 55627767,
+      "modified_timestamp": 1667572498.0
+    },
+    {
+      "name": "Psychiatry.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\13_ Psychiatry\\Psychiatry.pdf",
+      "relative_path": "NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\13_ Psychiatry\\Psychiatry.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 19058721,
+      "modified_timestamp": 1667572500.0
+    },
+    {
+      "name": "Radiology.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\14_ Radiology\\Radiology.pdf",
+      "relative_path": "NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\14_ Radiology\\Radiology.pdf",
+      "category": "radiology_imaging",
+      "extension": ".pdf",
+      "size_bytes": 74440678,
+      "modified_timestamp": 1667572498.0
+    },
+    {
+      "name": "Medicine.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\15_ Medicine\\Medicine.pdf",
+      "relative_path": "NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\15_ Medicine\\Medicine.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 29568312,
+      "modified_timestamp": 1667572498.0
+    },
+    {
+      "name": "Surgery.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\16_ Surgery\\Surgery.pdf",
+      "relative_path": "NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\16_ Surgery\\Surgery.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 194160788,
+      "modified_timestamp": 1667572500.0
+    },
+    {
+      "name": "Orthopaedics.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\17_ Orthopaedics\\Orthopaedics.pdf",
+      "relative_path": "NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\17_ Orthopaedics\\Orthopaedics.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 103140623,
+      "modified_timestamp": 1667572498.0
+    },
+    {
+      "name": "Paediatrics.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\18_ Paediatrics\\Paediatrics.pdf",
+      "relative_path": "NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\18_ Paediatrics\\Paediatrics.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 17688337,
+      "modified_timestamp": 1667572498.0
+    },
+    {
+      "name": "Obstetrics & Gynaecology.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\19_ Obstetrics & Gynaecology\\Obstetrics & Gynaecology.pdf",
+      "relative_path": "NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\19_ Obstetrics & Gynaecology\\Obstetrics & Gynaecology.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 91061667,
+      "modified_timestamp": 1667572502.0
+    },
+    {
+      "name": "Anatomy.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\1_ Anatomy\\Anatomy.pdf",
+      "relative_path": "NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\1_ Anatomy\\Anatomy.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 89837592,
+      "modified_timestamp": 1667572500.0
+    },
+    {
+      "name": "Biochemistry.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\2_ Biochemistry\\Biochemistry.pdf",
+      "relative_path": "NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\2_ Biochemistry\\Biochemistry.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 50015252,
+      "modified_timestamp": 1667572500.0
+    },
+    {
+      "name": "Physiology.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\3_ Physiology\\Physiology.pdf",
+      "relative_path": "NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\3_ Physiology\\Physiology.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 49043493,
+      "modified_timestamp": 1667572498.0
+    },
+    {
+      "name": "Pharmacology.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\4_ Pharmacology\\Pharmacology.pdf",
+      "relative_path": "NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\4_ Pharmacology\\Pharmacology.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 33492791,
+      "modified_timestamp": 1667572500.0
+    },
+    {
+      "name": "Microbiology.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\5_ Microbiology\\Microbiology.pdf",
+      "relative_path": "NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\5_ Microbiology\\Microbiology.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 78565252,
+      "modified_timestamp": 1667572502.0
+    },
+    {
+      "name": "Pathology.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\6_ Pathology\\Pathology.pdf",
+      "relative_path": "NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\6_ Pathology\\Pathology.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 112867270,
+      "modified_timestamp": 1667572502.0
+    },
+    {
+      "name": "Community Medicine.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\7_ Community Medicine\\Community Medicine.pdf",
+      "relative_path": "NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\7_ Community Medicine\\Community Medicine.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 72374540,
+      "modified_timestamp": 1667572502.0
+    },
+    {
+      "name": "Forensic Medicine.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\8_ Forensic Medicine\\Forensic Medicine.pdf",
+      "relative_path": "NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\8_ Forensic Medicine\\Forensic Medicine.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 42820409,
+      "modified_timestamp": 1667572498.0
+    },
+    {
+      "name": "Ophthalmology.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\9_ Ophthalmology\\Ophthalmology.pdf",
+      "relative_path": "NEET MRB\\Marrow\\Revision Notes (Edition 6)\\Revision Notes (Edition 6)\\9_ Ophthalmology\\Ophthalmology.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 49512409,
+      "modified_timestamp": 1667572500.0
+    },
+    {
+      "name": "MRB E-book vishnu .pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\MRB\\MRB E-book vishnu .pdf",
+      "relative_path": "NEET MRB\\MRB\\MRB E-book vishnu .pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 6935323,
+      "modified_timestamp": 1667572500.0
+    },
+    {
+      "name": "MRB special - buzz words manual_protected (1).pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\MRB\\MRB special - buzz words manual_protected (1).pdf",
+      "relative_path": "NEET MRB\\MRB\\MRB special - buzz words manual_protected (1).pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 801718,
+      "modified_timestamp": 1668620816.0
+    },
+    {
+      "name": "One liners book.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\MRB\\One liners book.pdf",
+      "relative_path": "NEET MRB\\MRB\\One liners book.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 1024851,
+      "modified_timestamp": 1667572500.0
+    },
+    {
+      "name": "Test series 1 - medicinosis magnus.docx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\MRB\\Test series 1 - medicinosis magnus.docx",
+      "relative_path": "NEET MRB\\MRB\\Test series 1 - medicinosis magnus.docx",
+      "category": "general_medicine",
+      "extension": ".docx",
+      "size_bytes": 320569,
+      "modified_timestamp": 1667572500.0
+    },
+    {
+      "name": "Test series 10 - medicinosis magnus_protected.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\MRB\\Test series 10 - medicinosis magnus_protected.pdf",
+      "relative_path": "NEET MRB\\MRB\\Test series 10 - medicinosis magnus_protected.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 821751,
+      "modified_timestamp": 1668621568.0
+    },
+    {
+      "name": "TEST SERIES 2 by medicinosis magnus.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\MRB\\TEST SERIES 2 by medicinosis magnus.pdf",
+      "relative_path": "NEET MRB\\MRB\\TEST SERIES 2 by medicinosis magnus.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 729472,
+      "modified_timestamp": 1667572502.0
+    },
+    {
+      "name": "Test series 4 - medicinosis magnus.docx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\MRB\\Test series 4 - medicinosis magnus.docx",
+      "relative_path": "NEET MRB\\MRB\\Test series 4 - medicinosis magnus.docx",
+      "category": "general_medicine",
+      "extension": ".docx",
+      "size_bytes": 319773,
+      "modified_timestamp": 1667572502.0
+    },
+    {
+      "name": "Test series 5 - medicinosis magnus .docx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\MRB\\Test series 5 - medicinosis magnus .docx",
+      "relative_path": "NEET MRB\\MRB\\Test series 5 - medicinosis magnus .docx",
+      "category": "general_medicine",
+      "extension": ".docx",
+      "size_bytes": 323013,
+      "modified_timestamp": 1667572500.0
+    },
+    {
+      "name": "Test series 6 - medicinosis magnus _protected.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\MRB\\Test series 6 - medicinosis magnus _protected.pdf",
+      "relative_path": "NEET MRB\\MRB\\Test series 6 - medicinosis magnus _protected.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 2369307,
+      "modified_timestamp": 1668771432.0
+    },
+    {
+      "name": "Test series 7 - medicinosis magnus  _protected.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\MRB\\Test series 7 - medicinosis magnus  _protected.pdf",
+      "relative_path": "NEET MRB\\MRB\\Test series 7 - medicinosis magnus  _protected.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 951161,
+      "modified_timestamp": 1668771494.0
+    },
+    {
+      "name": "Test series 8 - medicinosis magnus _protected.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\MRB\\Test series 8 - medicinosis magnus _protected.pdf",
+      "relative_path": "NEET MRB\\MRB\\Test series 8 - medicinosis magnus _protected.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 896736,
+      "modified_timestamp": 1668771596.0
+    },
+    {
+      "name": "Test series 9 - medicinosis magnus_protected.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\MRB\\Test series 9 - medicinosis magnus_protected.pdf",
+      "relative_path": "NEET MRB\\MRB\\Test series 9 - medicinosis magnus_protected.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 1557475,
+      "modified_timestamp": 1668620664.0
+    },
+    {
+      "name": "TEST SERIES WEEK 3.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\MRB\\TEST SERIES WEEK 3.pdf",
+      "relative_path": "NEET MRB\\MRB\\TEST SERIES WEEK 3.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 818624,
+      "modified_timestamp": 1667572500.0
+    },
+    {
+      "name": "TNPSC General Tamil Notes by Lotus Academy.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\MRB\\TNPSC General Tamil Notes by Lotus Academy.pdf",
+      "relative_path": "NEET MRB\\MRB\\TNPSC General Tamil Notes by Lotus Academy.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 22455518,
+      "modified_timestamp": 1667572500.0
+    },
+    {
+      "name": "01_Anatomy.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\PDF\\01_Anatomy.pdf",
+      "relative_path": "NEET MRB\\VSV\\PDF\\01_Anatomy.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 28652657,
+      "modified_timestamp": 1675783276.0
+    },
+    {
+      "name": "02_Physiology (1).pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\PDF\\02_Physiology (1).pdf",
+      "relative_path": "NEET MRB\\VSV\\PDF\\02_Physiology (1).pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 6184253,
+      "modified_timestamp": 1675783276.0
+    },
+    {
+      "name": "03_Biochemistry (1).pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\PDF\\03_Biochemistry (1).pdf",
+      "relative_path": "NEET MRB\\VSV\\PDF\\03_Biochemistry (1).pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 5731783,
+      "modified_timestamp": 1675783276.0
+    },
+    {
+      "name": "04_Pharmacology.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\PDF\\04_Pharmacology.pdf",
+      "relative_path": "NEET MRB\\VSV\\PDF\\04_Pharmacology.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 5637811,
+      "modified_timestamp": 1675783276.0
+    },
+    {
+      "name": "05 Pathology.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\PDF\\05 Pathology.pdf",
+      "relative_path": "NEET MRB\\VSV\\PDF\\05 Pathology.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 4616169,
+      "modified_timestamp": 1675783276.0
+    },
+    {
+      "name": "09-OPHTHALMOLOGY IMAGES 45 NOTES TO PG  (1).pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\PDF\\09-OPHTHALMOLOGY IMAGES 45 NOTES TO PG  (1).pdf",
+      "relative_path": "NEET MRB\\VSV\\PDF\\09-OPHTHALMOLOGY IMAGES 45 NOTES TO PG  (1).pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 28201799,
+      "modified_timestamp": 1675783262.0
+    },
+    {
+      "name": "09_Medicine (1).pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\PDF\\09_Medicine (1).pdf",
+      "relative_path": "NEET MRB\\VSV\\PDF\\09_Medicine (1).pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 16457525,
+      "modified_timestamp": 1675783272.0
+    },
+    {
+      "name": "10_Surgery.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\PDF\\10_Surgery.pdf",
+      "relative_path": "NEET MRB\\VSV\\PDF\\10_Surgery.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 9550920,
+      "modified_timestamp": 1675783272.0
+    },
+    {
+      "name": "11_Pediatrics (2).pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\PDF\\11_Pediatrics (2).pdf",
+      "relative_path": "NEET MRB\\VSV\\PDF\\11_Pediatrics (2).pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 2657935,
+      "modified_timestamp": 1675783268.0
+    },
+    {
+      "name": "12_Obstetrics.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\PDF\\12_Obstetrics.pdf",
+      "relative_path": "NEET MRB\\VSV\\PDF\\12_Obstetrics.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 9358060,
+      "modified_timestamp": 1675783262.0
+    },
+    {
+      "name": "13_Gyne.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\PDF\\13_Gyne.pdf",
+      "relative_path": "NEET MRB\\VSV\\PDF\\13_Gyne.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 3763287,
+      "modified_timestamp": 1675783272.0
+    },
+    {
+      "name": "14_ENT.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\PDF\\14_ENT.pdf",
+      "relative_path": "NEET MRB\\VSV\\PDF\\14_ENT.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 8713706,
+      "modified_timestamp": 1675783262.0
+    },
+    {
+      "name": "16_DERMATOLOGY EDITED.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\PDF\\16_DERMATOLOGY EDITED.pdf",
+      "relative_path": "NEET MRB\\VSV\\PDF\\16_DERMATOLOGY EDITED.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 8036627,
+      "modified_timestamp": 1675783272.0
+    },
+    {
+      "name": "16_DERMATOLOGY.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\PDF\\16_DERMATOLOGY.pdf",
+      "relative_path": "NEET MRB\\VSV\\PDF\\16_DERMATOLOGY.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 8159080,
+      "modified_timestamp": 1675783268.0
+    },
+    {
+      "name": "16_Ophthalmology.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\PDF\\16_Ophthalmology.pdf",
+      "relative_path": "NEET MRB\\VSV\\PDF\\16_Ophthalmology.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 11012863,
+      "modified_timestamp": 1675783262.0
+    },
+    {
+      "name": "18_ANESTHESIA.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\PDF\\18_ANESTHESIA.pdf",
+      "relative_path": "NEET MRB\\VSV\\PDF\\18_ANESTHESIA.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 2993332,
+      "modified_timestamp": 1675783268.0
+    },
+    {
+      "name": "19_RADIOLOGY.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\PDF\\19_RADIOLOGY.pdf",
+      "relative_path": "NEET MRB\\VSV\\PDF\\19_RADIOLOGY.pdf",
+      "category": "radiology_imaging",
+      "extension": ".pdf",
+      "size_bytes": 10434618,
+      "modified_timestamp": 1675783268.0
+    },
+    {
+      "name": "1. DAY 1 Pathology -100.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\VSV notes\\UNWRITTEN\\1. DAY 1 Pathology -100.pdf",
+      "relative_path": "NEET MRB\\VSV\\VSV notes\\UNWRITTEN\\1. DAY 1 Pathology -100.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 9735056,
+      "modified_timestamp": 1673288804.0
+    },
+    {
+      "name": "ANATOMY - VSV .pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\VSV notes\\UNWRITTEN\\ANATOMY - VSV .pdf",
+      "relative_path": "NEET MRB\\VSV\\VSV notes\\UNWRITTEN\\ANATOMY - VSV .pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 1446850,
+      "modified_timestamp": 1673288804.0
+    },
+    {
+      "name": "DERMATOLOGY - VSV.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\VSV notes\\UNWRITTEN\\DERMATOLOGY - VSV.pdf",
+      "relative_path": "NEET MRB\\VSV\\VSV notes\\UNWRITTEN\\DERMATOLOGY - VSV.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 6625982,
+      "modified_timestamp": 1673289054.0
+    },
+    {
+      "name": "Medicine VSV - New.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\VSV notes\\UNWRITTEN\\Medicine VSV - New.pdf",
+      "relative_path": "NEET MRB\\VSV\\VSV notes\\UNWRITTEN\\Medicine VSV - New.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 7963091,
+      "modified_timestamp": 1673288804.0
+    },
+    {
+      "name": "OBS VSV NEW.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\VSV notes\\UNWRITTEN\\OBS VSV NEW.pdf",
+      "relative_path": "NEET MRB\\VSV\\VSV notes\\UNWRITTEN\\OBS VSV NEW.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 4174812,
+      "modified_timestamp": 1673288804.0
+    },
+    {
+      "name": "ORTHO - VSV.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\VSV notes\\UNWRITTEN\\ORTHO - VSV.pdf",
+      "relative_path": "NEET MRB\\VSV\\VSV notes\\UNWRITTEN\\ORTHO - VSV.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 2113504,
+      "modified_timestamp": 1673288804.0
+    },
+    {
+      "name": "Radiology VSV.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\VSV notes\\UNWRITTEN\\Radiology VSV.pdf",
+      "relative_path": "NEET MRB\\VSV\\VSV notes\\UNWRITTEN\\Radiology VSV.pdf",
+      "category": "radiology_imaging",
+      "extension": ".pdf",
+      "size_bytes": 4599983,
+      "modified_timestamp": 1673288728.0
+    },
+    {
+      "name": "VSV-ANAESTHESIA - New.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\VSV notes\\UNWRITTEN\\VSV-ANAESTHESIA - New.pdf",
+      "relative_path": "NEET MRB\\VSV\\VSV notes\\UNWRITTEN\\VSV-ANAESTHESIA - New.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 2106215,
+      "modified_timestamp": 1673288938.0
+    },
+    {
+      "name": "ANAESTHESIA_VSV.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\VSV notes\\Written\\ANAESTHESIA_VSV.pdf",
+      "relative_path": "NEET MRB\\VSV\\VSV notes\\Written\\ANAESTHESIA_VSV.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 29759702,
+      "modified_timestamp": 1676571344.0
+    },
+    {
+      "name": "ANATOMY-VSV.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\VSV notes\\Written\\ANATOMY-VSV.pdf",
+      "relative_path": "NEET MRB\\VSV\\VSV notes\\Written\\ANATOMY-VSV.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 89254242,
+      "modified_timestamp": 1676571350.0
+    },
+    {
+      "name": "Biochemistry - VSV.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\VSV notes\\Written\\Biochemistry - VSV.pdf",
+      "relative_path": "NEET MRB\\VSV\\VSV notes\\Written\\Biochemistry - VSV.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 616857,
+      "modified_timestamp": 1676571344.0
+    },
+    {
+      "name": "Dermatology_VSV_23_com.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\VSV notes\\Written\\Dermatology_VSV_23_com.pdf",
+      "relative_path": "NEET MRB\\VSV\\VSV notes\\Written\\Dermatology_VSV_23_com.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 74667887,
+      "modified_timestamp": 1676571350.0
+    },
+    {
+      "name": "ENT - VSV Final.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\VSV notes\\Written\\ENT - VSV Final.pdf",
+      "relative_path": "NEET MRB\\VSV\\VSV notes\\Written\\ENT - VSV Final.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 5428192,
+      "modified_timestamp": 1676571344.0
+    },
+    {
+      "name": "MEDICINE_ECG_VSV.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\VSV notes\\Written\\MEDICINE_ECG_VSV.pdf",
+      "relative_path": "NEET MRB\\VSV\\VSV notes\\Written\\MEDICINE_ECG_VSV.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 17519353,
+      "modified_timestamp": 1676571370.0
+    },
+    {
+      "name": "Medicine_VSV.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\VSV notes\\Written\\Medicine_VSV.pdf",
+      "relative_path": "NEET MRB\\VSV\\VSV notes\\Written\\Medicine_VSV.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 22277640,
+      "modified_timestamp": 1676571372.0
+    },
+    {
+      "name": "OBG_VSV_23.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\VSV notes\\Written\\OBG_VSV_23.pdf",
+      "relative_path": "NEET MRB\\VSV\\VSV notes\\Written\\OBG_VSV_23.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 16774012,
+      "modified_timestamp": 1676571374.0
+    },
+    {
+      "name": "OPHTHALMOLOGY_VSV.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\VSV notes\\Written\\OPHTHALMOLOGY_VSV.pdf",
+      "relative_path": "NEET MRB\\VSV\\VSV notes\\Written\\OPHTHALMOLOGY_VSV.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 51786970,
+      "modified_timestamp": 1676571362.0
+    },
+    {
+      "name": "ORTHO_VSV_23.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\VSV notes\\Written\\ORTHO_VSV_23.pdf",
+      "relative_path": "NEET MRB\\VSV\\VSV notes\\Written\\ORTHO_VSV_23.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 43820667,
+      "modified_timestamp": 1676571368.0
+    },
+    {
+      "name": "PSM_VSV_.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\VSV notes\\Written\\PSM_VSV_.pdf",
+      "relative_path": "NEET MRB\\VSV\\VSV notes\\Written\\PSM_VSV_.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 29879402,
+      "modified_timestamp": 1676571374.0
+    },
+    {
+      "name": "Psychiatry vsv.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\VSV notes\\Written\\Psychiatry vsv.pdf",
+      "relative_path": "NEET MRB\\VSV\\VSV notes\\Written\\Psychiatry vsv.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 575008,
+      "modified_timestamp": 1676571344.0
+    },
+    {
+      "name": "Radiology_VSV_23.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\VSV notes\\Written\\Radiology_VSV_23.pdf",
+      "relative_path": "NEET MRB\\VSV\\VSV notes\\Written\\Radiology_VSV_23.pdf",
+      "category": "radiology_imaging",
+      "extension": ".pdf",
+      "size_bytes": 77554909,
+      "modified_timestamp": 1676571360.0
+    },
+    {
+      "name": "Surgery_VSV.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\VSV notes\\Written\\Surgery_VSV.pdf",
+      "relative_path": "NEET MRB\\VSV\\VSV notes\\Written\\Surgery_VSV.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 60029417,
+      "modified_timestamp": 1676571366.0
+    },
+    {
+      "name": "VSV_Pathology.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\VSV notes\\Written\\VSV_Pathology.pdf",
+      "relative_path": "NEET MRB\\VSV\\VSV notes\\Written\\VSV_Pathology.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 24244150,
+      "modified_timestamp": 1676571370.0
+    },
+    {
+      "name": "VSV_PHYSIOLOGY.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\NEET MRB\\VSV\\VSV notes\\Written\\VSV_PHYSIOLOGY.pdf",
+      "relative_path": "NEET MRB\\VSV\\VSV notes\\Written\\VSV_PHYSIOLOGY.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 8414998,
+      "modified_timestamp": 1676571374.0
+    },
+    {
+      "name": "Haaga - CT and MRI of the Whole Body, 2-Volume Set, 6e, Volume II II (2016).pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radiology\\Haaga - CT and MRI of the Whole Body, 2-Volume Set, 6e, Volume II II (2016).pdf",
+      "relative_path": "Radiology\\Haaga - CT and MRI of the Whole Body, 2-Volume Set, 6e, Volume II II (2016).pdf",
+      "category": "radiology_imaging",
+      "extension": ".pdf",
+      "size_bytes": 577576498,
+      "modified_timestamp": 1699939070.0
+    },
+    {
+      "name": "John R. Haaga MD FACR FSIR FSCBT FSRS, Daniel Boll MD FSCBT - CT and MRI of the Whole Body, 2-Volume Set, 6e, Volume I I (2016, Elsevier) - libgen.li.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radiology\\John R. Haaga MD FACR FSIR FSCBT FSRS, Daniel Boll MD FSCBT - CT and MRI of the Whole Body, 2-Volume Set, 6e, Volume I I (2016, Elsevier) - libgen.li.pdf",
+      "relative_path": "Radiology\\John R. Haaga MD FACR FSIR FSCBT FSRS, Daniel Boll MD FSCBT - CT and MRI of the Whole Body, 2-Volume Set, 6e, Volume I I (2016, Elsevier) - libgen.li.pdf",
+      "category": "radiology_imaging",
+      "extension": ".pdf",
+      "size_bytes": 384122391,
+      "modified_timestamp": 1699938974.0
+    },
+    {
+      "name": "Radiology books.docx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radiology\\Radiology books.docx",
+      "relative_path": "Radiology\\Radiology books.docx",
+      "category": "radiology_imaging",
+      "extension": ".docx",
+      "size_bytes": 9087,
+      "modified_timestamp": 1694023506.0
+    },
+    {
+      "name": "[Eisenberg] Ronald L. Eisenberg - Clinical Imaging_ An Atlas of Differential Diagnosis (2010, LWW) - libgen.li.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radiology\\[Eisenberg] Ronald L. Eisenberg - Clinical Imaging_ An Atlas of Differential Diagnosis (2010, LWW) - libgen.li.pdf",
+      "relative_path": "Radiology\\[Eisenberg] Ronald L. Eisenberg - Clinical Imaging_ An Atlas of Differential Diagnosis (2010, LWW) - libgen.li.pdf",
+      "category": "radiology_imaging",
+      "extension": ".pdf",
+      "size_bytes": 73981399,
+      "modified_timestamp": 1698377336.0
+    },
+    {
+      "name": "AIIMS MAMC_ PGI\u2019s Comprehensive Textbook of Diagnostic Radiology 1-3 (2017.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radiology\\AIIMS-MAMC\\AIIMS MAMC_ PGI\u2019s Comprehensive Textbook of Diagnostic Radiology 1-3 (2017.pdf",
+      "relative_path": "Radiology\\AIIMS-MAMC\\AIIMS MAMC_ PGI\u2019s Comprehensive Textbook of Diagnostic Radiology 1-3 (2017.pdf",
+      "category": "radiology_imaging",
+      "extension": ".pdf",
+      "size_bytes": 443010712,
+      "modified_timestamp": 1699939376.0
+    },
+    {
+      "name": "Felson\u2019s Principles of Chest Roentgenology_ A Programmed Text (2020, Elsevier) - libgen.li.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radiology\\Chest X-Ray\\Felson\u2019s Principles of Chest Roentgenology_ A Programmed Text (2020, Elsevier) - libgen.li.pdf",
+      "relative_path": "Radiology\\Chest X-Ray\\Felson\u2019s Principles of Chest Roentgenology_ A Programmed Text (2020, Elsevier) - libgen.li.pdf",
+      "category": "radiology_imaging",
+      "extension": ".pdf",
+      "size_bytes": 114536536,
+      "modified_timestamp": 1694023534.0
+    },
+    {
+      "name": "The Chest X-Ray_ A Survival Guide (2008, Saunders Ltd.) - libgen.li.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radiology\\Chest X-Ray\\The Chest X-Ray_ A Survival Guide (2008, Saunders Ltd.) - libgen.li.pdf",
+      "relative_path": "Radiology\\Chest X-Ray\\The Chest X-Ray_ A Survival Guide (2008, Saunders Ltd.) - libgen.li.pdf",
+      "category": "radiology_imaging",
+      "extension": ".pdf",
+      "size_bytes": 35366836,
+      "modified_timestamp": 1694023540.0
+    },
+    {
+      "name": "The Unofficial Guide to Radiology_ 100 Practice Chest X-Rays.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radiology\\Chest X-Ray\\The Unofficial Guide to Radiology_ 100 Practice Chest X-Rays.pdf",
+      "relative_path": "Radiology\\Chest X-Ray\\The Unofficial Guide to Radiology_ 100 Practice Chest X-Rays.pdf",
+      "category": "radiology_imaging",
+      "extension": ".pdf",
+      "size_bytes": 43698811,
+      "modified_timestamp": 1694023548.0
+    },
+    {
+      "name": "Abdominal X-rays for Medical Students (2015, Wiley-Blackwell) - libgen.li.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radiology\\Clarke and Dux xrays\\Abdominal X-rays for Medical Students (2015, Wiley-Blackwell) - libgen.li.pdf",
+      "relative_path": "Radiology\\Clarke and Dux xrays\\Abdominal X-rays for Medical Students (2015, Wiley-Blackwell) - libgen.li.pdf",
+      "category": "radiology_imaging",
+      "extension": ".pdf",
+      "size_bytes": 30397800,
+      "modified_timestamp": 1694023546.0
+    },
+    {
+      "name": "Chest X-rays for Medical Students (2020) - libgen.li.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radiology\\Clarke and Dux xrays\\Chest X-rays for Medical Students (2020) - libgen.li.pdf",
+      "relative_path": "Radiology\\Clarke and Dux xrays\\Chest X-rays for Medical Students (2020) - libgen.li.pdf",
+      "category": "radiology_imaging",
+      "extension": ".pdf",
+      "size_bytes": 34496076,
+      "modified_timestamp": 1694023550.0
+    },
+    {
+      "name": "MRI Made Easy (2013).pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radiology\\MRI\\MRI Made Easy (2013).pdf",
+      "relative_path": "Radiology\\MRI\\MRI Made Easy (2013).pdf",
+      "category": "radiology_imaging",
+      "extension": ".pdf",
+      "size_bytes": 28723730,
+      "modified_timestamp": 1694023552.0
+    },
+    {
+      "name": "Musculoskeletal MRI (2019, Elsevier) - libgen.li.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radiology\\MRI\\Musculoskeletal MRI (2019, Elsevier) - libgen.li.pdf",
+      "relative_path": "Radiology\\MRI\\Musculoskeletal MRI (2019, Elsevier) - libgen.li.pdf",
+      "category": "radiology_imaging",
+      "extension": ".pdf",
+      "size_bytes": 318173197,
+      "modified_timestamp": 1694581148.0
+    },
+    {
+      "name": "Greenspan - Orthopedic Imaging_ A Practical Approach (2014, Lippincott Williams & Wilkins) - libgen.l.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radiology\\Musculo Skeletal\\Greenspan - Orthopedic Imaging_ A Practical Approach (2014, Lippincott Williams & Wilkins) - libgen.l.pdf",
+      "relative_path": "Radiology\\Musculo Skeletal\\Greenspan - Orthopedic Imaging_ A Practical Approach (2014, Lippincott Williams & Wilkins) - libgen.l.pdf",
+      "category": "radiology_imaging",
+      "extension": ".pdf",
+      "size_bytes": 75255112,
+      "modified_timestamp": 1694023564.0
+    },
+    {
+      "name": "[2 Vol. Set] Terry R. Yochum, Lindsay J. Rowe M App Sc (Chiropractic) - Essentials of Skeletal Radiology (2004, LWW) - libgen.li.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radiology\\Musculo Skeletal\\[2 Vol. Set] Terry R. Yochum, Lindsay J. Rowe M App Sc (Chiropractic) - Essentials of Skeletal Radiology (2004, LWW) - libgen.li.pdf",
+      "relative_path": "Radiology\\Musculo Skeletal\\[2 Vol. Set] Terry R. Yochum, Lindsay J. Rowe M App Sc (Chiropractic) - Essentials of Skeletal Radiology (2004, LWW) - libgen.li.pdf",
+      "category": "radiology_imaging",
+      "extension": ".pdf",
+      "size_bytes": 77951281,
+      "modified_timestamp": 1694023578.0
+    },
+    {
+      "name": "Osborn\u2019s Brain_ imaging, pathology, and anatomy (2018, Elsevier) - libgen.li.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radiology\\Must Have n To read from cover to cover\\Osborn\u2019s Brain_ imaging, pathology, and anatomy (2018, Elsevier) - libgen.li.pdf",
+      "relative_path": "Radiology\\Must Have n To read from cover to cover\\Osborn\u2019s Brain_ imaging, pathology, and anatomy (2018, Elsevier) - libgen.li.pdf",
+      "category": "radiology_imaging",
+      "extension": ".pdf",
+      "size_bytes": 149013140,
+      "modified_timestamp": 1698415576.0
+    },
+    {
+      "name": "Webb - Thoracic Imaging_ Pulmonary and Cardiovascular Radiology (2016, LWW) - libgen.li.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radiology\\Must Have n To read from cover to cover\\Webb - Thoracic Imaging_ Pulmonary and Cardiovascular Radiology (2016, LWW) - libgen.li.pdf",
+      "relative_path": "Radiology\\Must Have n To read from cover to cover\\Webb - Thoracic Imaging_ Pulmonary and Cardiovascular Radiology (2016, LWW) - libgen.li.pdf",
+      "category": "radiology_imaging",
+      "extension": ".pdf",
+      "size_bytes": 332750744,
+      "modified_timestamp": 1694023632.0
+    },
+    {
+      "name": "Bhushan N. Lakhkar - Radiological Procedures - A Guideline (2017) - libgen.li.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radiology\\Radiological Procedures\\Bhushan N. Lakhkar - Radiological Procedures - A Guideline (2017) - libgen.li.pdf",
+      "relative_path": "Radiology\\Radiological Procedures\\Bhushan N. Lakhkar - Radiological Procedures - A Guideline (2017) - libgen.li.pdf",
+      "category": "radiology_imaging",
+      "extension": ".pdf",
+      "size_bytes": 14718005,
+      "modified_timestamp": 1694023592.0
+    },
+    {
+      "name": "Chapman & Nakielny\u2019s Guide to Radiological Procedures (2017, Elsevier) - libgen.li.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radiology\\Radiological Procedures\\Chapman & Nakielny\u2019s Guide to Radiological Procedures (2017, Elsevier) - libgen.li.pdf",
+      "relative_path": "Radiology\\Radiological Procedures\\Chapman & Nakielny\u2019s Guide to Radiological Procedures (2017, Elsevier) - libgen.li.pdf",
+      "category": "radiology_imaging",
+      "extension": ".pdf",
+      "size_bytes": 4205047,
+      "modified_timestamp": 1699939292.0
+    },
+    {
+      "name": "David Sutton - Textbook of Radiology & Imaging (Vol. 2).pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radiology\\Sutton & Grainger\\David Sutton - Textbook of Radiology & Imaging (Vol. 2).pdf",
+      "relative_path": "Radiology\\Sutton & Grainger\\David Sutton - Textbook of Radiology & Imaging (Vol. 2).pdf",
+      "category": "radiology_imaging",
+      "extension": ".pdf",
+      "size_bytes": 79749232,
+      "modified_timestamp": 1694023604.0
+    },
+    {
+      "name": "David Sutton - Textbook of Radiology and Imaging (Vol. 1) .pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radiology\\Sutton & Grainger\\David Sutton - Textbook of Radiology and Imaging (Vol. 1) .pdf",
+      "relative_path": "Radiology\\Sutton & Grainger\\David Sutton - Textbook of Radiology and Imaging (Vol. 1) .pdf",
+      "category": "radiology_imaging",
+      "extension": ".pdf",
+      "size_bytes": 70694604,
+      "modified_timestamp": 1694023602.0
+    },
+    {
+      "name": "Grainger & Allison\u2019s Diagnostic Radiology. A Textbook of Medical Imaging Volume 1 (2021, Elsevier) - libgen.li.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radiology\\Sutton & Grainger\\Grainger & Allison\u2019s Diagnostic Radiology. A Textbook of Medical Imaging Volume 1 (2021, Elsevier) - libgen.li.pdf",
+      "relative_path": "Radiology\\Sutton & Grainger\\Grainger & Allison\u2019s Diagnostic Radiology. A Textbook of Medical Imaging Volume 1 (2021, Elsevier) - libgen.li.pdf",
+      "category": "radiology_imaging",
+      "extension": ".pdf",
+      "size_bytes": 1083040033,
+      "modified_timestamp": 1699939106.0
+    },
+    {
+      "name": "Diagnostic Ultrasound (2018, Elsevier_Mosby) - libgen.li.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radiology\\USG\\Diagnostic Ultrasound (2018, Elsevier_Mosby) - libgen.li.pdf",
+      "relative_path": "Radiology\\USG\\Diagnostic Ultrasound (2018, Elsevier_Mosby) - libgen.li.pdf",
+      "category": "radiology_imaging",
+      "extension": ".pdf",
+      "size_bytes": 238095637,
+      "modified_timestamp": 1694023640.0
+    },
+    {
+      "name": "Diagnostic Ultrasound, 2-Volume Set (2017_2018, Elsevier Canada) - libgen.li-Copy.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radiology\\USG\\Diagnostic Ultrasound, 2-Volume Set (2017_2018, Elsevier Canada) - libgen.li-Copy.pdf",
+      "relative_path": "Radiology\\USG\\Diagnostic Ultrasound, 2-Volume Set (2017_2018, Elsevier Canada) - libgen.li-Copy.pdf",
+      "category": "radiology_imaging",
+      "extension": ".pdf",
+      "size_bytes": 200963667,
+      "modified_timestamp": 1698485638.0
+    },
+    {
+      "name": "Diagnostic Ultrasound, 2-Volume Set (2017_2018, Elsevier Canada) - libgen.li.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radiology\\USG\\Diagnostic Ultrasound, 2-Volume Set (2017_2018, Elsevier Canada) - libgen.li.pdf",
+      "relative_path": "Radiology\\USG\\Diagnostic Ultrasound, 2-Volume Set (2017_2018, Elsevier Canada) - libgen.li.pdf",
+      "category": "radiology_imaging",
+      "extension": ".pdf",
+      "size_bytes": 208582236,
+      "modified_timestamp": 1694023636.0
+    },
+    {
+      "name": "Introduction to Vascular Ultrasonography (2019, Elsevier) - libgen.li.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radiology\\USG\\Introduction to Vascular Ultrasonography (2019, Elsevier) - libgen.li.pdf",
+      "relative_path": "Radiology\\USG\\Introduction to Vascular Ultrasonography (2019, Elsevier) - libgen.li.pdf",
+      "category": "radiology_imaging",
+      "extension": ".pdf",
+      "size_bytes": 138640900,
+      "modified_timestamp": 1694023652.0
+    },
+    {
+      "name": "P Palmer (editor) - Manual of Diagnostic Ultrasound-World Health Organisation (1995).pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radiology\\USG\\P Palmer (editor) - Manual of Diagnostic Ultrasound-World Health Organisation (1995).pdf",
+      "relative_path": "Radiology\\USG\\P Palmer (editor) - Manual of Diagnostic Ultrasound-World Health Organisation (1995).pdf",
+      "category": "radiology_imaging",
+      "extension": ".pdf",
+      "size_bytes": 17642985,
+      "modified_timestamp": 1694023640.0
+    },
+    {
+      "name": "Essentials of Clinical Radiation Oncology.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Essentials of Clinical Radiation Oncology.pdf",
+      "relative_path": "Radonc\\Essentials of Clinical Radiation Oncology.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 8920092,
+      "modified_timestamp": 1699291158.0
+    },
+    {
+      "name": "Anju Sahdev, Sarah J. Vinnicombe - Husband & Reznek's Imaging in Oncology (2020, CRC Press) - libgen.li.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\Anju Sahdev, Sarah J. Vinnicombe - Husband & Reznek's Imaging in Oncology (2020, CRC Press) - libgen.li.pdf",
+      "relative_path": "Radonc\\Books\\Anju Sahdev, Sarah J. Vinnicombe - Husband & Reznek's Imaging in Oncology (2020, CRC Press) - libgen.li.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 88585892,
+      "modified_timestamp": 1698587920.0
+    },
+    {
+      "name": "Frederick L Greene_ Stephen Edge_ Richard L Schilsky_ Lauri E Ga - Ajcc Cancer Staging Manual (2018, Springer) - libgen.li.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\AJCC\\Frederick L Greene_ Stephen Edge_ Richard L Schilsky_ Lauri E Ga - Ajcc Cancer Staging Manual (2018, Springer) - libgen.li.pdf",
+      "relative_path": "Radonc\\Books\\AJCC\\Frederick L Greene_ Stephen Edge_ Richard L Schilsky_ Lauri E Ga - Ajcc Cancer Staging Manual (2018, Springer) - libgen.li.pdf",
+      "category": "staging_ajcc",
+      "extension": ".pdf",
+      "size_bytes": 210177440,
+      "modified_timestamp": 1708932838.0
+    },
+    {
+      "name": "TNM classification .pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\AJCC\\TNM classification .pdf",
+      "relative_path": "Radonc\\Books\\AJCC\\TNM classification .pdf",
+      "category": "staging_ajcc",
+      "extension": ".pdf",
+      "size_bytes": 2066674,
+      "modified_timestamp": 1761670355.4575315
+    },
+    {
+      "name": "BD-Chaurasias-Human-Anatomy-Volume-3-4.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\Anatomy\\BD-Chaurasias-Human-Anatomy-Volume-3-4.pdf",
+      "relative_path": "Radonc\\Books\\Anatomy\\BD-Chaurasias-Human-Anatomy-Volume-3-4.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 224848212,
+      "modified_timestamp": 1699292006.0
+    },
+    {
+      "name": "Gray's Anatomy_ The Anatomical Basis of Clinical Practice (c2016).pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\Anatomy\\Gray's Anatomy_ The Anatomical Basis of Clinical Practice (c2016).pdf",
+      "relative_path": "Radonc\\Books\\Anatomy\\Gray's Anatomy_ The Anatomical Basis of Clinical Practice (c2016).pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 236959019,
+      "modified_timestamp": 1699292124.0
+    },
+    {
+      "name": "John S. P. Lumley - Surface Anatomy_ The Anatomical Basis of Clinical Examination-Churchill Livingstone (2008).pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\Anatomy\\John S. P. Lumley - Surface Anatomy_ The Anatomical Basis of Clinical Examination-Churchill Livingstone (2008).pdf",
+      "relative_path": "Radonc\\Books\\Anatomy\\John S. P. Lumley - Surface Anatomy_ The Anatomical Basis of Clinical Examination-Churchill Livingstone (2008).pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 51293186,
+      "modified_timestamp": 1700639182.0
+    },
+    {
+      "name": "Netter Atlas of Human Anatomy_ A Systems Approach_ paperback + e - Netter Atlas of Human Anatomy_ 8th edition A Systems Approach_ paperback + eBook Frank H. Netter MD (2022, Elsevier) - libgen.li.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\Anatomy\\Netter Atlas of Human Anatomy_ A Systems Approach_ paperback + e - Netter Atlas of Human Anatomy_ 8th edition A Systems Approach_ paperback + eBook Frank H. Netter MD (2022, Elsevier) - libgen.li.pdf",
+      "relative_path": "Radonc\\Books\\Anatomy\\Netter Atlas of Human Anatomy_ A Systems Approach_ paperback + e - Netter Atlas of Human Anatomy_ 8th edition A Systems Approach_ paperback + eBook Frank H. Netter MD (2022, Elsevier) - libgen.li.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 97404828,
+      "modified_timestamp": 1700637652.0
+    },
+    {
+      "name": "Edward Chu. DeVita Jr. - Physicians' Cancer Chemotherapy Drug Manual 2021.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\Chemotherapy\\Edward Chu. DeVita Jr. - Physicians' Cancer Chemotherapy Drug Manual 2021.pdf",
+      "relative_path": "Radonc\\Books\\Chemotherapy\\Edward Chu. DeVita Jr. - Physicians' Cancer Chemotherapy Drug Manual 2021.pdf",
+      "category": "systemic_therapy",
+      "extension": ".pdf",
+      "size_bytes": 32678695,
+      "modified_timestamp": 1694023716.0
+    },
+    {
+      "name": "Physicians Cancer Chemotherapy Drug Manual 2024.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\Chemotherapy\\Physicians Cancer Chemotherapy Drug Manual 2024.pdf",
+      "relative_path": "Radonc\\Books\\Chemotherapy\\Physicians Cancer Chemotherapy Drug Manual 2024.pdf",
+      "category": "systemic_therapy",
+      "extension": ".pdf",
+      "size_bytes": 13895337,
+      "modified_timestamp": 1739392641.8111558
+    },
+    {
+      "name": "The Bethesda Handbook of Clinical Oncology (2018).pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\Chemotherapy\\The Bethesda Handbook of Clinical Oncology (2018).pdf",
+      "relative_path": "Radonc\\Books\\Chemotherapy\\The Bethesda Handbook of Clinical Oncology (2018).pdf",
+      "category": "systemic_therapy",
+      "extension": ".pdf",
+      "size_bytes": 16748193,
+      "modified_timestamp": 1694023716.0
+    },
+    {
+      "name": "(E\u011fitim Tanr\u0131s\u0131) John E. Niederhuber, James O. Armitage, Michael B. Kastan, James H. Doroshow, Joel E. Tepper - Abeloff\u2019s Clinical Oncology (2020).pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\Clinical Oncology\\(E\u011fitim Tanr\u0131s\u0131) John E. Niederhuber, James O. Armitage, Michael B. Kastan, James H. Doroshow, Joel E. Tepper - Abeloff\u2019s Clinical Oncology (2020).pdf",
+      "relative_path": "Radonc\\Books\\Clinical Oncology\\(E\u011fitim Tanr\u0131s\u0131) John E. Niederhuber, James O. Armitage, Michael B. Kastan, James H. Doroshow, Joel E. Tepper - Abeloff\u2019s Clinical Oncology (2020).pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 140933243,
+      "modified_timestamp": 1702448284.0
+    },
+    {
+      "name": "DeVita, Hellman and Rosenberg's Cancer_ Principles and Practice of Oncology, 12th Edition (HQ PDF) - Vi.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\Clinical Oncology\\DeVita, Hellman and Rosenberg's Cancer_ Principles and Practice of Oncology, 12th Edition (HQ PDF) - Vi.pdf",
+      "relative_path": "Radonc\\Books\\Clinical Oncology\\DeVita, Hellman and Rosenberg's Cancer_ Principles and Practice of Oncology, 12th Edition (HQ PDF) - Vi.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 270752612,
+      "modified_timestamp": 1705030866.0
+    },
+    {
+      "name": "Manual of Clinical Oncology (2017).pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\Clinical Oncology\\Manual of Clinical Oncology (2017).pdf",
+      "relative_path": "Radonc\\Books\\Clinical Oncology\\Manual of Clinical Oncology (2017).pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 20842486,
+      "modified_timestamp": 1699291016.0
+    },
+    {
+      "name": "CONTOURING GUIDELINES FOR ALL SITES BOOK.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\Contouring guidelines\\CONTOURING GUIDELINES FOR ALL SITES BOOK.pdf",
+      "relative_path": "Radonc\\Books\\Contouring guidelines\\CONTOURING GUIDELINES FOR ALL SITES BOOK.pdf",
+      "category": "contouring_guidelines",
+      "extension": ".pdf",
+      "size_bytes": 213607544,
+      "modified_timestamp": 1752858212.3729868
+    },
+    {
+      "name": "Core radiology _ a visual approach to diagnostic imaging.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\CT Anatomy\\Core radiology _ a visual approach to diagnostic imaging.pdf",
+      "relative_path": "Radonc\\Books\\CT Anatomy\\Core radiology _ a visual approach to diagnostic imaging.pdf",
+      "category": "radiology_imaging",
+      "extension": ".pdf",
+      "size_bytes": 444059902,
+      "modified_timestamp": 1697392580.0
+    },
+    {
+      "name": "CT Anatomy for Radiotherapy (2017).pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\CT Anatomy\\CT Anatomy for Radiotherapy (2017).pdf",
+      "relative_path": "Radonc\\Books\\CT Anatomy\\CT Anatomy for Radiotherapy (2017).pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 230136678,
+      "modified_timestamp": 1694023752.0
+    },
+    {
+      "name": "Ellis, Harold - Human sectional anatomy _ atlas of body sections, CT and MRI images (2015, CRC Press) - libgen.li.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\CT Anatomy\\Ellis, Harold - Human sectional anatomy _ atlas of body sections, CT and MRI images (2015, CRC Press) - libgen.li.pdf",
+      "relative_path": "Radonc\\Books\\CT Anatomy\\Ellis, Harold - Human sectional anatomy _ atlas of body sections, CT and MRI images (2015, CRC Press) - libgen.li.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 65807959,
+      "modified_timestamp": 1697392522.0
+    },
+    {
+      "name": "Human Sectional Anatomy_ Pocket Atlas of Body Sections, CT, and MRI Images, 4th Edition.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\CT Anatomy\\Human Sectional Anatomy_ Pocket Atlas of Body Sections, CT, and MRI Images, 4th Edition.pdf",
+      "relative_path": "Radonc\\Books\\CT Anatomy\\Human Sectional Anatomy_ Pocket Atlas of Body Sections, CT, and MRI Images, 4th Edition.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 125200447,
+      "modified_timestamp": 1697392580.0
+    },
+    {
+      "name": "Imaging Atlas of Human Anatomy (2020, Elsevier) - libgen.li.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\CT Anatomy\\Imaging Atlas of Human Anatomy (2020, Elsevier) - libgen.li.pdf",
+      "relative_path": "Radonc\\Books\\CT Anatomy\\Imaging Atlas of Human Anatomy (2020, Elsevier) - libgen.li.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 147027017,
+      "modified_timestamp": 1697392580.0
+    },
+    {
+      "name": "S. Das - A Manual On Clinical Surgery (2018, S Das Publication) - libgen.li.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\Examination\\S. Das - A Manual On Clinical Surgery (2018, S Das Publication) - libgen.li.pdf",
+      "relative_path": "Radonc\\Books\\Examination\\S. Das - A Manual On Clinical Surgery (2018, S Das Publication) - libgen.li.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 211813312,
+      "modified_timestamp": 1698847948.0
+    },
+    {
+      "name": "Sunesh Kumar - Shaw's Textbook of Gynaecology-Elsevier (2018).pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\Examination\\Sunesh Kumar - Shaw's Textbook of Gynaecology-Elsevier (2018).pdf",
+      "relative_path": "Radonc\\Books\\Examination\\Sunesh Kumar - Shaw's Textbook of Gynaecology-Elsevier (2018).pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 239121655,
+      "modified_timestamp": 1697864628.0
+    },
+    {
+      "name": "[Part 1] Arup Kumar Kundu - Bedside Clinics In Medicine Part 1 (2014) - libgen.li.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\Examination\\[Part 1] Arup Kumar Kundu - Bedside Clinics In Medicine Part 1 (2014) - libgen.li.pdf",
+      "relative_path": "Radonc\\Books\\Examination\\[Part 1] Arup Kumar Kundu - Bedside Clinics In Medicine Part 1 (2014) - libgen.li.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 140539810,
+      "modified_timestamp": 1694023752.0
+    },
+    {
+      "name": "Wintrobe's Clinical Hematology, 15E.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\Hematology\\Wintrobe's Clinical Hematology, 15E.pdf",
+      "relative_path": "Radonc\\Books\\Hematology\\Wintrobe's Clinical Hematology, 15E.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 132898307,
+      "modified_timestamp": 1774888150.1742167
+    },
+    {
+      "name": "Atlas of Lymph Node Anatomy.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\Lymph nodes\\Atlas of Lymph Node Anatomy.pdf",
+      "relative_path": "Radonc\\Books\\Lymph nodes\\Atlas of Lymph Node Anatomy.pdf",
+      "category": "lymph_node_anatomy",
+      "extension": ".pdf",
+      "size_bytes": 14147972,
+      "modified_timestamp": 1703222240.0
+    },
+    {
+      "name": "ESOPHAGUS - LYM-WPS Of.docx",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\Lymph nodes\\ESOPHAGUS - LYM-WPS Of.docx",
+      "relative_path": "Radonc\\Books\\Lymph nodes\\ESOPHAGUS - LYM-WPS Of.docx",
+      "category": "lymph_node_anatomy",
+      "extension": ".docx",
+      "size_bytes": 8444,
+      "modified_timestamp": 1703222208.0
+    },
+    {
+      "name": "2026 Essentials of Clinical Rad Onco.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\MAIN\\2026 Essentials of Clinical Rad Onco.pdf",
+      "relative_path": "Radonc\\Books\\MAIN\\2026 Essentials of Clinical Rad Onco.pdf",
+      "category": "textbooks_core",
+      "extension": ".pdf",
+      "size_bytes": 16180618,
+      "modified_timestamp": 1761467782.23797
+    },
+    {
+      "name": "2026_Edward_C_Halperin,_David_E_Wazer_Perez,_Brady,_Halperin,_and.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\MAIN\\2026_Edward_C_Halperin,_David_E_Wazer_Perez,_Brady,_Halperin,_and.pdf",
+      "relative_path": "Radonc\\Books\\MAIN\\2026_Edward_C_Halperin,_David_E_Wazer_Perez,_Brady,_Halperin,_and.pdf",
+      "category": "textbooks_core",
+      "extension": ".pdf",
+      "size_bytes": 437190396,
+      "modified_timestamp": 1774547552.9341471
+    },
+    {
+      "name": "gun-tep-cli-rad-onc-5th.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\MAIN\\gun-tep-cli-rad-onc-5th.pdf",
+      "relative_path": "Radonc\\Books\\MAIN\\gun-tep-cli-rad-onc-5th.pdf",
+      "category": "textbooks_core",
+      "extension": ".pdf",
+      "size_bytes": 310028269,
+      "modified_timestamp": 1708933020.0
+    },
+    {
+      "name": "Perez_and_Brady_Principles_and_Practice.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\MAIN\\Perez_and_Brady_Principles_and_Practice.pdf",
+      "relative_path": "Radonc\\Books\\MAIN\\Perez_and_Brady_Principles_and_Practice.pdf",
+      "category": "textbooks_core",
+      "extension": ".pdf",
+      "size_bytes": 80946244,
+      "modified_timestamp": 1750612495.3982646
+    },
+    {
+      "name": "[Robbins Pathology] Vinay Kumar MBBS MD FRCPath, Abul K. Abbas MBBS, Jon C. Aster MD - Robbins & Cotran Pathologic Basis of Disease (Robbins Pathology) (2020, Elsevier) - libgen.li.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\Pathology\\[Robbins Pathology] Vinay Kumar MBBS MD FRCPath, Abul K. Abbas MBBS, Jon C. Aster MD - Robbins & Cotran Pathologic Basis of Disease (Robbins Pathology) (2020, Elsevier) - libgen.li.pdf",
+      "relative_path": "Radonc\\Books\\Pathology\\[Robbins Pathology] Vinay Kumar MBBS MD FRCPath, Abul K. Abbas MBBS, Jon C. Aster MD - Robbins & Cotran Pathologic Basis of Disease (Robbins Pathology) (2020, Elsevier) - libgen.li.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 203648698,
+      "modified_timestamp": 1705510816.0
+    },
+    {
+      "name": "A-User's-Guide-and-Summary-of-Pediatric-Normal-Tis.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\PENTEC\\A-User's-Guide-and-Summary-of-Pediatric-Normal-Tis.pdf",
+      "relative_path": "Radonc\\Books\\PENTEC\\A-User's-Guide-and-Summary-of-Pediatric-Normal-Tis.pdf",
+      "category": "organ_tolerance_pentec",
+      "extension": ".pdf",
+      "size_bytes": 531963,
+      "modified_timestamp": 1766163728.5108495
+    },
+    {
+      "name": "Acute-and-Late-Pulmonary-Effects-After-Radiation-T.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\PENTEC\\Acute-and-Late-Pulmonary-Effects-After-Radiation-T.pdf",
+      "relative_path": "Radonc\\Books\\PENTEC\\Acute-and-Late-Pulmonary-Effects-After-Radiation-T.pdf",
+      "category": "organ_tolerance_pentec",
+      "extension": ".pdf",
+      "size_bytes": 766213,
+      "modified_timestamp": 1766163728.4618556
+    },
+    {
+      "name": "Biodevelopmental-Considerations-in-Pediatric-Patie.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\PENTEC\\Biodevelopmental-Considerations-in-Pediatric-Patie.pdf",
+      "relative_path": "Radonc\\Books\\PENTEC\\Biodevelopmental-Considerations-in-Pediatric-Patie.pdf",
+      "category": "organ_tolerance_pentec",
+      "extension": ".pdf",
+      "size_bytes": 702446,
+      "modified_timestamp": 1766163728.4958482
+    },
+    {
+      "name": "Breast-Hypoplasia-and-Decreased-Lactation-From-Rad.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\PENTEC\\Breast-Hypoplasia-and-Decreased-Lactation-From-Rad.pdf",
+      "relative_path": "Radonc\\Books\\PENTEC\\Breast-Hypoplasia-and-Decreased-Lactation-From-Rad.pdf",
+      "category": "organ_tolerance_pentec",
+      "extension": ".pdf",
+      "size_bytes": 817993,
+      "modified_timestamp": 1766163728.398339
+    },
+    {
+      "name": "Cardiac-Disease-in-Childhood-Cancer-Survivors-Trea.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\PENTEC\\Cardiac-Disease-in-Childhood-Cancer-Survivors-Trea.pdf",
+      "relative_path": "Radonc\\Books\\PENTEC\\Cardiac-Disease-in-Childhood-Cancer-Survivors-Trea.pdf",
+      "category": "organ_tolerance_pentec",
+      "extension": ".pdf",
+      "size_bytes": 766552,
+      "modified_timestamp": 1766163728.4548478
+    },
+    {
+      "name": "Central-Endocrine-Complications-Among-Childhood-Ca.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\PENTEC\\Central-Endocrine-Complications-Among-Childhood-Ca.pdf",
+      "relative_path": "Radonc\\Books\\PENTEC\\Central-Endocrine-Complications-Among-Childhood-Ca.pdf",
+      "category": "organ_tolerance_pentec",
+      "extension": ".pdf",
+      "size_bytes": 1081063,
+      "modified_timestamp": 1766163728.3483388
+    },
+    {
+      "name": "Comparison-of-Risks-of-Late-Effects-From-Radiation.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\PENTEC\\Comparison-of-Risks-of-Late-Effects-From-Radiation.pdf",
+      "relative_path": "Radonc\\Books\\PENTEC\\Comparison-of-Risks-of-Late-Effects-From-Radiation.pdf",
+      "category": "organ_tolerance_pentec",
+      "extension": ".pdf",
+      "size_bytes": 332352,
+      "modified_timestamp": 1766163728.3643415
+    },
+    {
+      "name": "Effects-of-Radiation-Therapy-on-the-Female-Reprodu.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\PENTEC\\Effects-of-Radiation-Therapy-on-the-Female-Reprodu.pdf",
+      "relative_path": "Radonc\\Books\\PENTEC\\Effects-of-Radiation-Therapy-on-the-Female-Reprodu.pdf",
+      "category": "organ_tolerance_pentec",
+      "extension": ".pdf",
+      "size_bytes": 2651293,
+      "modified_timestamp": 1766163728.4348483
+    },
+    {
+      "name": "Idiopathic-Pneumonitis-Syndrome-After-Total-Body-I.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\PENTEC\\Idiopathic-Pneumonitis-Syndrome-After-Total-Body-I.pdf",
+      "relative_path": "Radonc\\Books\\PENTEC\\Idiopathic-Pneumonitis-Syndrome-After-Total-Body-I.pdf",
+      "category": "organ_tolerance_pentec",
+      "extension": ".pdf",
+      "size_bytes": 620098,
+      "modified_timestamp": 1766163728.4748483
+    },
+    {
+      "name": "Kidney-Disease-in-Childhood-Cancer-Survivors-Treat.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\PENTEC\\Kidney-Disease-in-Childhood-Cancer-Survivors-Treat.pdf",
+      "relative_path": "Radonc\\Books\\PENTEC\\Kidney-Disease-in-Childhood-Cancer-Survivors-Treat.pdf",
+      "category": "organ_tolerance_pentec",
+      "extension": ".pdf",
+      "size_bytes": 953240,
+      "modified_timestamp": 1766163728.4063427
+    },
+    {
+      "name": "Liver-Late-Effects-in-Childhood-Cancer-Survivors-T.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\PENTEC\\Liver-Late-Effects-in-Childhood-Cancer-Survivors-T.pdf",
+      "relative_path": "Radonc\\Books\\PENTEC\\Liver-Late-Effects-in-Childhood-Cancer-Survivors-T.pdf",
+      "category": "organ_tolerance_pentec",
+      "extension": ".pdf",
+      "size_bytes": 1925316,
+      "modified_timestamp": 1766163728.418848
+    },
+    {
+      "name": "Modeling-the-Risk-of-Hearing-Loss-From-Radiation-T.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\PENTEC\\Modeling-the-Risk-of-Hearing-Loss-From-Radiation-T.pdf",
+      "relative_path": "Radonc\\Books\\PENTEC\\Modeling-the-Risk-of-Hearing-Loss-From-Radiation-T.pdf",
+      "category": "organ_tolerance_pentec",
+      "extension": ".pdf",
+      "size_bytes": 1672045,
+      "modified_timestamp": 1766163728.3307989
+    },
+    {
+      "name": "Neurocognitive-Effects-and-Necrosis-in-Childhood-C.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\PENTEC\\Neurocognitive-Effects-and-Necrosis-in-Childhood-C.pdf",
+      "relative_path": "Radonc\\Books\\PENTEC\\Neurocognitive-Effects-and-Necrosis-in-Childhood-C.pdf",
+      "category": "organ_tolerance_pentec",
+      "extension": ".pdf",
+      "size_bytes": 1280134,
+      "modified_timestamp": 1766163728.3733387
+    },
+    {
+      "name": "Pediatric-Normal-Tissue-Effects-in-the-Clinic-(PEN.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\PENTEC\\Pediatric-Normal-Tissue-Effects-in-the-Clinic-(PEN.pdf",
+      "relative_path": "Radonc\\Books\\PENTEC\\Pediatric-Normal-Tissue-Effects-in-the-Clinic-(PEN.pdf",
+      "category": "organ_tolerance_pentec",
+      "extension": ".pdf",
+      "size_bytes": 380720,
+      "modified_timestamp": 1766163728.505872
+    },
+    {
+      "name": "Physics-Considerations-for-Evaluation-of-Dose-for-.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\PENTEC\\Physics-Considerations-for-Evaluation-of-Dose-for-.pdf",
+      "relative_path": "Radonc\\Books\\PENTEC\\Physics-Considerations-for-Evaluation-of-Dose-for-.pdf",
+      "category": "organ_tolerance_pentec",
+      "extension": ".pdf",
+      "size_bytes": 444399,
+      "modified_timestamp": 1766163728.5008485
+    },
+    {
+      "name": "Primary-Hypothyroidism-in-Childhood-Cancer-Survivo.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\PENTEC\\Primary-Hypothyroidism-in-Childhood-Cancer-Survivo.pdf",
+      "relative_path": "Radonc\\Books\\PENTEC\\Primary-Hypothyroidism-in-Childhood-Cancer-Survivo.pdf",
+      "category": "organ_tolerance_pentec",
+      "extension": ".pdf",
+      "size_bytes": 505606,
+      "modified_timestamp": 1766163728.3593402
+    },
+    {
+      "name": "Retinopathy,-Optic-Neuropathy,-and-Cataract-in-Chi.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\PENTEC\\Retinopathy,-Optic-Neuropathy,-and-Cataract-in-Chi.pdf",
+      "relative_path": "Radonc\\Books\\PENTEC\\Retinopathy,-Optic-Neuropathy,-and-Cataract-in-Chi.pdf",
+      "category": "organ_tolerance_pentec",
+      "extension": ".pdf",
+      "size_bytes": 1189305,
+      "modified_timestamp": 1766163728.3913386
+    },
+    {
+      "name": "Risk-of-Cerebrovascular-Events-Among-Childhood-and.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\PENTEC\\Risk-of-Cerebrovascular-Events-Among-Childhood-and.pdf",
+      "relative_path": "Radonc\\Books\\PENTEC\\Risk-of-Cerebrovascular-Events-Among-Childhood-and.pdf",
+      "category": "organ_tolerance_pentec",
+      "extension": ".pdf",
+      "size_bytes": 1254999,
+      "modified_timestamp": 1766163728.3833594
+    },
+    {
+      "name": "Risk-of-Subsequent-Neoplasms-in-Childhood-Cancer-S.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\PENTEC\\Risk-of-Subsequent-Neoplasms-in-Childhood-Cancer-S.pdf",
+      "relative_path": "Radonc\\Books\\PENTEC\\Risk-of-Subsequent-Neoplasms-in-Childhood-Cancer-S.pdf",
+      "category": "organ_tolerance_pentec",
+      "extension": ".pdf",
+      "size_bytes": 2311637,
+      "modified_timestamp": 1766163728.4898486
+    },
+    {
+      "name": "Risks-of-Spinal-Abnormalities-and-Growth-Impairmen.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\PENTEC\\Risks-of-Spinal-Abnormalities-and-Growth-Impairmen.pdf",
+      "relative_path": "Radonc\\Books\\PENTEC\\Risks-of-Spinal-Abnormalities-and-Growth-Impairmen.pdf",
+      "category": "organ_tolerance_pentec",
+      "extension": ".pdf",
+      "size_bytes": 1921973,
+      "modified_timestamp": 1766163728.447848
+    },
+    {
+      "name": "Salivary-and-Dental-Complications-in-Childhood-Can.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\PENTEC\\Salivary-and-Dental-Complications-in-Childhood-Can.pdf",
+      "relative_path": "Radonc\\Books\\PENTEC\\Salivary-and-Dental-Complications-in-Childhood-Can.pdf",
+      "category": "organ_tolerance_pentec",
+      "extension": ".pdf",
+      "size_bytes": 639674,
+      "modified_timestamp": 1766163728.3543391
+    },
+    {
+      "name": "Testicular-Dysfunction-in-Male-Childhood-Cancer-Su.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\PENTEC\\Testicular-Dysfunction-in-Male-Childhood-Cancer-Su.pdf",
+      "relative_path": "Radonc\\Books\\PENTEC\\Testicular-Dysfunction-in-Male-Childhood-Cancer-Su.pdf",
+      "category": "organ_tolerance_pentec",
+      "extension": ".pdf",
+      "size_bytes": 868849,
+      "modified_timestamp": 1766163728.4688475
+    },
+    {
+      "name": "KD Tripathi - Essentials of Medical Pharmacology-Jp Medical Ltd (2018).pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\Pharmacology\\KD Tripathi - Essentials of Medical Pharmacology-Jp Medical Ltd (2018).pdf",
+      "relative_path": "Radonc\\Books\\Pharmacology\\KD Tripathi - Essentials of Medical Pharmacology-Jp Medical Ltd (2018).pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 23447853,
+      "modified_timestamp": 1699643466.0
+    },
+    {
+      "name": "Whalen - Lippincott Illustrated Reviews_ Pharmacology (Lippincott Illustrated Reviews Series) SEVENTH EDITION (2019, Wolterskluwer) - libgen.li.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\Pharmacology\\Whalen - Lippincott Illustrated Reviews_ Pharmacology (Lippincott Illustrated Reviews Series) SEVENTH EDITION (2019, Wolterskluwer) - libgen.li.pdf",
+      "relative_path": "Radonc\\Books\\Pharmacology\\Whalen - Lippincott Illustrated Reviews_ Pharmacology (Lippincott Illustrated Reviews Series) SEVENTH EDITION (2019, Wolterskluwer) - libgen.li.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 64487342,
+      "modified_timestamp": 1702693654.0
+    },
+    {
+      "name": "Khan\u2019s The Physics of Radiation Therapy.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\Physics\\Khan\u2019s The Physics of Radiation Therapy.pdf",
+      "relative_path": "Radonc\\Books\\Physics\\Khan\u2019s The Physics of Radiation Therapy.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 32845897,
+      "modified_timestamp": 1700824862.0
+    },
+    {
+      "name": "physics handbook.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\Physics\\physics handbook.pdf",
+      "relative_path": "Radonc\\Books\\Physics\\physics handbook.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 7211436,
+      "modified_timestamp": 1761670593.342917
+    },
+    {
+      "name": "Thayalan K. - The Physics of Radiology and Imaging - libgen.li.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\Physics\\Thayalan K. - The Physics of Radiology and Imaging - libgen.li.pdf",
+      "relative_path": "Radonc\\Books\\Physics\\Thayalan K. - The Physics of Radiology and Imaging - libgen.li.pdf",
+      "category": "radiology_imaging",
+      "extension": ".pdf",
+      "size_bytes": 18449600,
+      "modified_timestamp": 1697392204.0
+    },
+    {
+      "name": "2D_PLANNING.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\Planning\\2D_PLANNING.pdf",
+      "relative_path": "Radonc\\Books\\Planning\\2D_PLANNING.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 55683512,
+      "modified_timestamp": 1756742970.2587414
+    },
+    {
+      "name": "Dobbs - Practical Radiotherapy Planning, Fourth Edition (2009).pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\Planning\\Dobbs - Practical Radiotherapy Planning, Fourth Edition (2009).pdf",
+      "relative_path": "Radonc\\Books\\Planning\\Dobbs - Practical Radiotherapy Planning, Fourth Edition (2009).pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 23697544,
+      "modified_timestamp": 1695803960.0
+    },
+    {
+      "name": "Khan's Treatment Planning in Radiation Oncology.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\Planning\\Khan's Treatment Planning in Radiation Oncology.pdf",
+      "relative_path": "Radonc\\Books\\Planning\\Khan's Treatment Planning in Radiation Oncology.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 234087824,
+      "modified_timestamp": 1736519711.8612807
+    },
+    {
+      "name": "Nancy lee 2021_Book_IntracranialAndSpinalRadiother.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\Planning\\Nancy lee 2021_Book_IntracranialAndSpinalRadiother.pdf",
+      "relative_path": "Radonc\\Books\\Planning\\Nancy lee 2021_Book_IntracranialAndSpinalRadiother.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 15889587,
+      "modified_timestamp": 1771491511.0137568
+    },
+    {
+      "name": "Nancy Lee 2022 new.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\Planning\\Nancy Lee 2022 new.pdf",
+      "relative_path": "Radonc\\Books\\Planning\\Nancy Lee 2022 new.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 58644082,
+      "modified_timestamp": 1761671211.5522246
+    },
+    {
+      "name": "Nancy lee.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\Planning\\Nancy lee.pdf",
+      "relative_path": "Radonc\\Books\\Planning\\Nancy lee.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 111025613,
+      "modified_timestamp": 1705410318.0
+    },
+    {
+      "name": "Practical radiotherapy planning 2nd edition - Dobbs.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\Planning\\Practical radiotherapy planning 2nd edition - Dobbs.pdf",
+      "relative_path": "Radonc\\Books\\Planning\\Practical radiotherapy planning 2nd edition - Dobbs.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 14471489,
+      "modified_timestamp": 1699072096.0
+    },
+    {
+      "name": "Practical radiotherapy planning 3rd edition- Dobbs.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\Planning\\Practical radiotherapy planning 3rd edition- Dobbs.pdf",
+      "relative_path": "Radonc\\Books\\Planning\\Practical radiotherapy planning 3rd edition- Dobbs.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 20496033,
+      "modified_timestamp": 1699072132.0
+    },
+    {
+      "name": "Case taking proforma 2_075744.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\Proforma\\Case taking proforma 2_075744.pdf",
+      "relative_path": "Radonc\\Books\\Proforma\\Case taking proforma 2_075744.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 538462,
+      "modified_timestamp": 1694140206.0
+    },
+    {
+      "name": "Accurate-Accumulation-of-Dose-for-Improved-Underst.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\QUANTEC\\Accurate-Accumulation-of-Dose-for-Improved-Underst.pdf",
+      "relative_path": "Radonc\\Books\\QUANTEC\\Accurate-Accumulation-of-Dose-for-Improved-Underst.pdf",
+      "category": "organ_tolerance_quantec",
+      "extension": ".pdf",
+      "size_bytes": 97291,
+      "modified_timestamp": 1766168083.8548553
+    },
+    {
+      "name": "Biomarkers-and-Surrogate-Endpoints-for-Normal-Tiss.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\QUANTEC\\Biomarkers-and-Surrogate-Endpoints-for-Normal-Tiss.pdf",
+      "relative_path": "Radonc\\Books\\QUANTEC\\Biomarkers-and-Surrogate-Endpoints-for-Normal-Tiss.pdf",
+      "category": "organ_tolerance_quantec",
+      "extension": ".pdf",
+      "size_bytes": 112574,
+      "modified_timestamp": 1766168083.8478365
+    },
+    {
+      "name": "Guest-Editor's-Introduction-to-QUANTEC--A-Users-Gu.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\QUANTEC\\Guest-Editor's-Introduction-to-QUANTEC--A-Users-Gu.pdf",
+      "relative_path": "Radonc\\Books\\QUANTEC\\Guest-Editor's-Introduction-to-QUANTEC--A-Users-Gu.pdf",
+      "category": "organ_tolerance_quantec",
+      "extension": ".pdf",
+      "size_bytes": 807655,
+      "modified_timestamp": 1766168083.7629988
+    },
+    {
+      "name": "Imaging-for-Assessment-of-Radiation-Induced-Normal.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\QUANTEC\\Imaging-for-Assessment-of-Radiation-Induced-Normal.pdf",
+      "relative_path": "Radonc\\Books\\QUANTEC\\Imaging-for-Assessment-of-Radiation-Induced-Normal.pdf",
+      "category": "organ_tolerance_quantec",
+      "extension": ".pdf",
+      "size_bytes": 144076,
+      "modified_timestamp": 1766168083.8588555
+    },
+    {
+      "name": "Improving-Normal-Tissue-Complication-Probability-M.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\QUANTEC\\Improving-Normal-Tissue-Complication-Probability-M.pdf",
+      "relative_path": "Radonc\\Books\\QUANTEC\\Improving-Normal-Tissue-Complication-Probability-M.pdf",
+      "category": "organ_tolerance_quantec",
+      "extension": ".pdf",
+      "size_bytes": 197852,
+      "modified_timestamp": 1766168083.8518558
+    },
+    {
+      "name": "Quantitative-Analyses-of-Normal-Tissue-Effects-in-.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\QUANTEC\\Quantitative-Analyses-of-Normal-Tissue-Effects-in-.pdf",
+      "relative_path": "Radonc\\Books\\QUANTEC\\Quantitative-Analyses-of-Normal-Tissue-Effects-in-.pdf",
+      "category": "organ_tolerance_quantec",
+      "extension": ".pdf",
+      "size_bytes": 114567,
+      "modified_timestamp": 1766168083.7925296
+    },
+    {
+      "name": "Radiation-Associated-Brainstem-Injury_rob.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\QUANTEC\\Radiation-Associated-Brainstem-Injury_rob.pdf",
+      "relative_path": "Radonc\\Books\\QUANTEC\\Radiation-Associated-Brainstem-Injury_rob.pdf",
+      "category": "organ_tolerance_quantec",
+      "extension": ".pdf",
+      "size_bytes": 162409,
+      "modified_timestamp": 1766168083.8190575
+    },
+    {
+      "name": "Radiation-Associated-Kidney-Injury_rob.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\QUANTEC\\Radiation-Associated-Kidney-Injury_rob.pdf",
+      "relative_path": "Radonc\\Books\\QUANTEC\\Radiation-Associated-Kidney-Injury_rob.pdf",
+      "category": "organ_tolerance_quantec",
+      "extension": ".pdf",
+      "size_bytes": 316754,
+      "modified_timestamp": 1766168083.8398328
+    },
+    {
+      "name": "Radiation-Associated-Liver-Injury_rob.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\QUANTEC\\Radiation-Associated-Liver-Injury_rob.pdf",
+      "relative_path": "Radonc\\Books\\QUANTEC\\Radiation-Associated-Liver-Injury_rob.pdf",
+      "category": "organ_tolerance_quantec",
+      "extension": ".pdf",
+      "size_bytes": 325813,
+      "modified_timestamp": 1766168083.7850196
+    },
+    {
+      "name": "Radiation-Dose-Volume-Effects-in-the-Esophagus_rob.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\QUANTEC\\Radiation-Dose-Volume-Effects-in-the-Esophagus_rob.pdf",
+      "relative_path": "Radonc\\Books\\QUANTEC\\Radiation-Dose-Volume-Effects-in-the-Esophagus_rob.pdf",
+      "category": "organ_tolerance_quantec",
+      "extension": ".pdf",
+      "size_bytes": 221349,
+      "modified_timestamp": 1766168083.7715063
+    },
+    {
+      "name": "Radiation-Dose\u2013Volume-Effects-and-the-Penile-Bulb_.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\QUANTEC\\Radiation-Dose\u2013Volume-Effects-and-the-Penile-Bulb_.pdf",
+      "relative_path": "Radonc\\Books\\QUANTEC\\Radiation-Dose\u2013Volume-Effects-and-the-Penile-Bulb_.pdf",
+      "category": "organ_tolerance_quantec",
+      "extension": ".pdf",
+      "size_bytes": 974092,
+      "modified_timestamp": 1766168083.8345804
+    },
+    {
+      "name": "Radiation-Dose\u2013Volume-Effects-in-Radiation-Induced.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\QUANTEC\\Radiation-Dose\u2013Volume-Effects-in-Radiation-Induced.pdf",
+      "relative_path": "Radonc\\Books\\QUANTEC\\Radiation-Dose\u2013Volume-Effects-in-Radiation-Induced.pdf",
+      "category": "organ_tolerance_quantec",
+      "extension": ".pdf",
+      "size_bytes": 228804,
+      "modified_timestamp": 1766168083.8270676
+    },
+    {
+      "name": "Radiation-Dose\u2013Volume-Effects-in-the-Brain_rob.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\QUANTEC\\Radiation-Dose\u2013Volume-Effects-in-the-Brain_rob.pdf",
+      "relative_path": "Radonc\\Books\\QUANTEC\\Radiation-Dose\u2013Volume-Effects-in-the-Brain_rob.pdf",
+      "category": "organ_tolerance_quantec",
+      "extension": ".pdf",
+      "size_bytes": 410561,
+      "modified_timestamp": 1766168083.8050454
+    },
+    {
+      "name": "Radiation-Dose\u2013Volume-Effects-in-the-Heart_rob.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\QUANTEC\\Radiation-Dose\u2013Volume-Effects-in-the-Heart_rob.pdf",
+      "relative_path": "Radonc\\Books\\QUANTEC\\Radiation-Dose\u2013Volume-Effects-in-the-Heart_rob.pdf",
+      "category": "organ_tolerance_quantec",
+      "extension": ".pdf",
+      "size_bytes": 228574,
+      "modified_timestamp": 1766168083.7669985
+    },
+    {
+      "name": "Radiation-Dose\u2013Volume-Effects-in-the-Larynx-and-Ph.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\QUANTEC\\Radiation-Dose\u2013Volume-Effects-in-the-Larynx-and-Ph.pdf",
+      "relative_path": "Radonc\\Books\\QUANTEC\\Radiation-Dose\u2013Volume-Effects-in-the-Larynx-and-Ph.pdf",
+      "category": "organ_tolerance_quantec",
+      "extension": ".pdf",
+      "size_bytes": 150334,
+      "modified_timestamp": 1766168083.7755065
+    },
+    {
+      "name": "Radiation-Dose\u2013Volume-Effects-in-the-Lung_rob.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\QUANTEC\\Radiation-Dose\u2013Volume-Effects-in-the-Lung_rob.pdf",
+      "relative_path": "Radonc\\Books\\QUANTEC\\Radiation-Dose\u2013Volume-Effects-in-the-Lung_rob.pdf",
+      "category": "organ_tolerance_quantec",
+      "extension": ".pdf",
+      "size_bytes": 422965,
+      "modified_timestamp": 1766168083.781019
+    },
+    {
+      "name": "Radiation-Dose\u2013Volume-Effects-in-the-Spinal-Cord_r.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\QUANTEC\\Radiation-Dose\u2013Volume-Effects-in-the-Spinal-Cord_r.pdf",
+      "relative_path": "Radonc\\Books\\QUANTEC\\Radiation-Dose\u2013Volume-Effects-in-the-Spinal-Cord_r.pdf",
+      "category": "organ_tolerance_quantec",
+      "extension": ".pdf",
+      "size_bytes": 192414,
+      "modified_timestamp": 1766168083.8230672
+    },
+    {
+      "name": "Radiation-Dose\u2013Volume-Effects-in-the-Stomach-and-S.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\QUANTEC\\Radiation-Dose\u2013Volume-Effects-in-the-Stomach-and-S.pdf",
+      "relative_path": "Radonc\\Books\\QUANTEC\\Radiation-Dose\u2013Volume-Effects-in-the-Stomach-and-S.pdf",
+      "category": "organ_tolerance_quantec",
+      "extension": ".pdf",
+      "size_bytes": 177386,
+      "modified_timestamp": 1766168083.755486
+    },
+    {
+      "name": "Radiation-Dose\u2013Volume-Effects-of-Optic-Nerves-and-.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\QUANTEC\\Radiation-Dose\u2013Volume-Effects-of-Optic-Nerves-and-.pdf",
+      "relative_path": "Radonc\\Books\\QUANTEC\\Radiation-Dose\u2013Volume-Effects-of-Optic-Nerves-and-.pdf",
+      "category": "organ_tolerance_quantec",
+      "extension": ".pdf",
+      "size_bytes": 200507,
+      "modified_timestamp": 1766168083.7895293
+    },
+    {
+      "name": "Radiation-Dose\u2013Volume-Effects-of-the-Urinary-Bladd.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\QUANTEC\\Radiation-Dose\u2013Volume-Effects-of-the-Urinary-Bladd.pdf",
+      "relative_path": "Radonc\\Books\\QUANTEC\\Radiation-Dose\u2013Volume-Effects-of-the-Urinary-Bladd.pdf",
+      "category": "organ_tolerance_quantec",
+      "extension": ".pdf",
+      "size_bytes": 163465,
+      "modified_timestamp": 1766168083.8438373
+    },
+    {
+      "name": "Radiation-Therapy-and-Hearing-Loss_rob.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\QUANTEC\\Radiation-Therapy-and-Hearing-Loss_rob.pdf",
+      "relative_path": "Radonc\\Books\\QUANTEC\\Radiation-Therapy-and-Hearing-Loss_rob.pdf",
+      "category": "organ_tolerance_quantec",
+      "extension": ".pdf",
+      "size_bytes": 428955,
+      "modified_timestamp": 1766168083.8105528
+    },
+    {
+      "name": "Radiotherapy-Dose\u2013Volume-Effects-on-Salivary-Gland.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\QUANTEC\\Radiotherapy-Dose\u2013Volume-Effects-on-Salivary-Gland.pdf",
+      "relative_path": "Radonc\\Books\\QUANTEC\\Radiotherapy-Dose\u2013Volume-Effects-on-Salivary-Gland.pdf",
+      "category": "organ_tolerance_quantec",
+      "extension": ".pdf",
+      "size_bytes": 286623,
+      "modified_timestamp": 1766168083.8155546
+    },
+    {
+      "name": "The-Lessons-of-QUANTEC--Recommendations-for-Report.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\QUANTEC\\The-Lessons-of-QUANTEC--Recommendations-for-Report.pdf",
+      "relative_path": "Radonc\\Books\\QUANTEC\\The-Lessons-of-QUANTEC--Recommendations-for-Report.pdf",
+      "category": "organ_tolerance_quantec",
+      "extension": ".pdf",
+      "size_bytes": 107512,
+      "modified_timestamp": 1766168083.7965283
+    },
+    {
+      "name": "Use-of-Normal-Tissue-Complication-Probability-Mode.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\QUANTEC\\Use-of-Normal-Tissue-Complication-Probability-Mode.pdf",
+      "relative_path": "Radonc\\Books\\QUANTEC\\Use-of-Normal-Tissue-Complication-Probability-Mode.pdf",
+      "category": "organ_tolerance_quantec",
+      "extension": ".pdf",
+      "size_bytes": 495172,
+      "modified_timestamp": 1766168083.7444613
+    },
+    {
+      "name": "Kogel - Basic clinical radiobiology (2019).pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\RadioBiology\\Kogel - Basic clinical radiobiology (2019).pdf",
+      "relative_path": "Radonc\\Books\\RadioBiology\\Kogel - Basic clinical radiobiology (2019).pdf",
+      "category": "radiobiology",
+      "extension": ".pdf",
+      "size_bytes": 52922755,
+      "modified_timestamp": 1694023774.0
+    },
+    {
+      "name": "Radiobiology for the Radiologist.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\RadioBiology\\Radiobiology for the Radiologist.pdf",
+      "relative_path": "Radonc\\Books\\RadioBiology\\Radiobiology for the Radiologist.pdf",
+      "category": "radiobiology",
+      "extension": ".pdf",
+      "size_bytes": 17542483,
+      "modified_timestamp": 1732212760.650642
+    },
+    {
+      "name": "cox1995.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\Toxicity\\cox1995.pdf",
+      "relative_path": "Radonc\\Books\\Toxicity\\cox1995.pdf",
+      "category": "toxicity_management",
+      "extension": ".pdf",
+      "size_bytes": 455442,
+      "modified_timestamp": 1694140274.0
+    },
+    {
+      "name": "CTCAE_v5_Quick_Reference_8.5x11.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\Toxicity\\CTCAE_v5_Quick_Reference_8.5x11.pdf",
+      "relative_path": "Radonc\\Books\\Toxicity\\CTCAE_v5_Quick_Reference_8.5x11.pdf",
+      "category": "toxicity_management",
+      "extension": ".pdf",
+      "size_bytes": 2632082,
+      "modified_timestamp": 1697392490.0
+    },
+    {
+      "name": "Gokhan Ozyigit, Ugur Selek - Prevention and Management of Acute and Late Toxicities in Radiation Oncology_ Management of Toxicities in Radiation Oncology (2020, Springer) [10.1007_978-3-030-37798-4] - libgen.li.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\Toxicity\\Gokhan Ozyigit, Ugur Selek - Prevention and Management of Acute and Late Toxicities in Radiation Oncology_ Management of Toxicities in Radiation Oncology (2020, Springer) [10.1007_978-3-030-37798-4] - libgen.li.pdf",
+      "relative_path": "Radonc\\Books\\Toxicity\\Gokhan Ozyigit, Ugur Selek - Prevention and Management of Acute and Late Toxicities in Radiation Oncology_ Management of Toxicities in Radiation Oncology (2020, Springer) [10.1007_978-3-030-37798-4] - libgen.li.pdf",
+      "category": "toxicity_management",
+      "extension": ".pdf",
+      "size_bytes": 14366843,
+      "modified_timestamp": 1705418288.0
+    },
+    {
+      "name": "side effects (1).pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\Toxicity\\side effects (1).pdf",
+      "relative_path": "Radonc\\Books\\Toxicity\\side effects (1).pdf",
+      "category": "toxicity_management",
+      "extension": ".pdf",
+      "size_bytes": 4083186,
+      "modified_timestamp": 1705417454.0
+    },
+    {
+      "name": "Yajnik. - Landmark Trials in Oncology-Springer (2019).pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\TRIALS\\Yajnik. - Landmark Trials in Oncology-Springer (2019).pdf",
+      "relative_path": "Radonc\\Books\\TRIALS\\Yajnik. - Landmark Trials in Oncology-Springer (2019).pdf",
+      "category": "landmark_trials",
+      "extension": ".pdf",
+      "size_bytes": 9808381,
+      "modified_timestamp": 1704646212.0
+    },
+    {
+      "name": "Basic Radiation Oncology.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\VCR\\Basic Radiation Oncology.pdf",
+      "relative_path": "Radonc\\Books\\VCR\\Basic Radiation Oncology.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 39961471,
+      "modified_timestamp": 1705893412.0
+    },
+    {
+      "name": "Courtney M. Townsend Jr., R. Daniel Beauchamp, B. Mark Evers, Ke - Sabiston Textbook of Surgery_ The Biological Basis of Modern Surgical Practice (2021, Elsevier) - libgen.li.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\VCR\\Courtney M. Townsend Jr., R. Daniel Beauchamp, B. Mark Evers, Ke - Sabiston Textbook of Surgery_ The Biological Basis of Modern Surgical Practice (2021, Elsevier) - libgen.li.pdf",
+      "relative_path": "Radonc\\Books\\VCR\\Courtney M. Townsend Jr., R. Daniel Beauchamp, B. Mark Evers, Ke - Sabiston Textbook of Surgery_ The Biological Basis of Modern Surgical Practice (2021, Elsevier) - libgen.li.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 258163731,
+      "modified_timestamp": 1699643348.0
+    },
+    {
+      "name": "Decision Making in Radiation Oncology.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\VCR\\Decision Making in Radiation Oncology.pdf",
+      "relative_path": "Radonc\\Books\\VCR\\Decision Making in Radiation Oncology.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 19386390,
+      "modified_timestamp": 1703574494.0
+    },
+    {
+      "name": "Decision Making in Radiation Oncology_ Volume 2.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\VCR\\Decision Making in Radiation Oncology_ Volume 2.pdf",
+      "relative_path": "Radonc\\Books\\VCR\\Decision Making in Radiation Oncology_ Volume 2.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 16887060,
+      "modified_timestamp": 1702445664.0
+    },
+    {
+      "name": "Handbook of Evidence-Based Radiation Oncology.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\VCR\\Handbook of Evidence-Based Radiation Oncology.pdf",
+      "relative_path": "Radonc\\Books\\VCR\\Handbook of Evidence-Based Radiation Oncology.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 13062429,
+      "modified_timestamp": 1703187374.0
+    },
+    {
+      "name": "mri for rt.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\VCR\\mri for rt.pdf",
+      "relative_path": "Radonc\\Books\\VCR\\mri for rt.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 12495613,
+      "modified_timestamp": 1695787876.0
+    },
+    {
+      "name": "Notes - Dulasi 2-1.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\VCR\\Notes - Dulasi 2-1.pdf",
+      "relative_path": "Radonc\\Books\\VCR\\Notes - Dulasi 2-1.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 24668814,
+      "modified_timestamp": 1735326799.5317347
+    },
+    {
+      "name": "Notes - Dulasi-1.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\VCR\\Notes - Dulasi-1.pdf",
+      "relative_path": "Radonc\\Books\\VCR\\Notes - Dulasi-1.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 15044213,
+      "modified_timestamp": 1735326775.6318865
+    },
+    {
+      "name": "Radiation Oncology A Question-Based Review.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\VCR\\Radiation Oncology A Question-Based Review.pdf",
+      "relative_path": "Radonc\\Books\\VCR\\Radiation Oncology A Question-Based Review.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 4637414,
+      "modified_timestamp": 1703187666.0
+    },
+    {
+      "name": "Rajendra A. Badwe, Sudeep Gupta, Shailesh V. Shrikhande, Siddhar - Tata Memorial Centre Textbook of Oncology (2024, Springer) - libgen.li.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\VCR\\Rajendra A. Badwe, Sudeep Gupta, Shailesh V. Shrikhande, Siddhar - Tata Memorial Centre Textbook of Oncology (2024, Springer) - libgen.li.pdf",
+      "relative_path": "Radonc\\Books\\VCR\\Rajendra A. Badwe, Sudeep Gupta, Shailesh V. Shrikhande, Siddhar - Tata Memorial Centre Textbook of Oncology (2024, Springer) - libgen.li.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 44618255,
+      "modified_timestamp": 1739387246.4010684
+    },
+    {
+      "name": "Ravi A. Chandra, Celine B. Ord, Shushan Rana, Eric K. Hansen, Ch - Radiation Oncology Study Guide (2021, Springer) - libgen.li.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\VCR\\Ravi A. Chandra, Celine B. Ord, Shushan Rana, Eric K. Hansen, Ch - Radiation Oncology Study Guide (2021, Springer) - libgen.li.pdf",
+      "relative_path": "Radonc\\Books\\VCR\\Ravi A. Chandra, Celine B. Ord, Shushan Rana, Eric K. Hansen, Ch - Radiation Oncology Study Guide (2021, Springer) - libgen.li.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 4365608,
+      "modified_timestamp": 1702172866.0
+    },
+    {
+      "name": "recist_guideline (1).pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\VCR\\recist_guideline (1).pdf",
+      "relative_path": "Radonc\\Books\\VCR\\recist_guideline (1).pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 845431,
+      "modified_timestamp": 1696474348.0
+    },
+    {
+      "name": "RT Question Based Review.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\Books\\VCR\\RT Question Based Review.pdf",
+      "relative_path": "Radonc\\Books\\VCR\\RT Question Based Review.pdf",
+      "category": "general_medicine",
+      "extension": ".pdf",
+      "size_bytes": 2016056,
+      "modified_timestamp": 1695875288.0
+    },
+    {
+      "name": "all_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\all_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\all_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 4815336,
+      "modified_timestamp": 1761679165.8726141
+    },
+    {
+      "name": "aml_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\aml_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\aml_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 2907610,
+      "modified_timestamp": 1761679192.4217906
+    },
+    {
+      "name": "ampullary_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\ampullary_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\ampullary_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 1445145,
+      "modified_timestamp": 1761679210.6629708
+    },
+    {
+      "name": "amyloidosis_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\amyloidosis_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\amyloidosis_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 1623132,
+      "modified_timestamp": 1761680353.296471
+    },
+    {
+      "name": "anal_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\anal_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\anal_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 2015828,
+      "modified_timestamp": 1761679226.4537017
+    },
+    {
+      "name": "b-cell_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\b-cell_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\b-cell_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 4750204,
+      "modified_timestamp": 1761679282.3075714
+    },
+    {
+      "name": "bladder_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\bladder_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\bladder_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 3217953,
+      "modified_timestamp": 1761679428.02116
+    },
+    {
+      "name": "bone_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\bone_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\bone_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 2060681,
+      "modified_timestamp": 1761679599.8149633
+    },
+    {
+      "name": "breast_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\breast_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\breast_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 11243668,
+      "modified_timestamp": 1761679631.1868272
+    },
+    {
+      "name": "btc_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\btc_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\btc_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 1981552,
+      "modified_timestamp": 1761679348.6612988
+    },
+    {
+      "name": "castleman_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\castleman_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\castleman_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 1579910,
+      "modified_timestamp": 1761679648.7455447
+    },
+    {
+      "name": "cervical_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\cervical_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\cervical_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 2093764,
+      "modified_timestamp": 1761679700.484893
+    },
+    {
+      "name": "cll_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\cll_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\cll_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 2029757,
+      "modified_timestamp": 1761679726.6542475
+    },
+    {
+      "name": "cml_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\cml_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\cml_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 2739223,
+      "modified_timestamp": 1761679744.582894
+    },
+    {
+      "name": "cns_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\cns_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\cns_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 11868032,
+      "modified_timestamp": 1761679678.9323783
+    },
+    {
+      "name": "colon_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\colon_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\colon_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 9261799,
+      "modified_timestamp": 1761679768.1932795
+    },
+    {
+      "name": "cutaneous_melanoma_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\cutaneous_melanoma_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\cutaneous_melanoma_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 3878164,
+      "modified_timestamp": 1761680011.367249
+    },
+    {
+      "name": "dfsp_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\dfsp_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\dfsp_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 878500,
+      "modified_timestamp": 1761679788.0702617
+    },
+    {
+      "name": "esophageal_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\esophageal_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\esophageal_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 2775198,
+      "modified_timestamp": 1761679807.949156
+    },
+    {
+      "name": "gastric_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\gastric_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\gastric_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 2281770,
+      "modified_timestamp": 1761679824.9336374
+    },
+    {
+      "name": "gist_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\gist_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\gist_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 2074351,
+      "modified_timestamp": 1761679841.5989635
+    },
+    {
+      "name": "gtn_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\gtn_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\gtn_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 1122410,
+      "modified_timestamp": 1761679858.482615
+    },
+    {
+      "name": "hairy_cell_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\hairy_cell_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\hairy_cell_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 1322538,
+      "modified_timestamp": 1761679876.2313623
+    },
+    {
+      "name": "hcc_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\hcc_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\hcc_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 2064841,
+      "modified_timestamp": 1761679943.64355
+    },
+    {
+      "name": "head-and-neck_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\head-and-neck_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\head-and-neck_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 3606547,
+      "modified_timestamp": 1761679902.0599332
+    },
+    {
+      "name": "hepatobiliary.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\hepatobiliary.pdf",
+      "relative_path": "Radonc\\NCCN\\hepatobiliary.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 81323,
+      "modified_timestamp": 1761679932.6720085
+    },
+    {
+      "name": "histiocytic_neoplasms_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\histiocytic_neoplasms_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\histiocytic_neoplasms_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 1348098,
+      "modified_timestamp": 1761679950.9333756
+    },
+    {
+      "name": "hodgkins.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\hodgkins.pdf",
+      "relative_path": "Radonc\\NCCN\\hodgkins.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 1951673,
+      "modified_timestamp": 1761679963.5919428
+    },
+    {
+      "name": "kaposi_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\kaposi_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\kaposi_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 1217948,
+      "modified_timestamp": 1761679994.3121984
+    },
+    {
+      "name": "kidney_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\kidney_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\kidney_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 2911629,
+      "modified_timestamp": 1761680004.1233106
+    },
+    {
+      "name": "mastocytosis_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\mastocytosis_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\mastocytosis_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 1646772,
+      "modified_timestamp": 1761680361.1718714
+    },
+    {
+      "name": "mcc_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\mcc_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\mcc_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 2213535,
+      "modified_timestamp": 1761680027.0857775
+    },
+    {
+      "name": "mds.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\mds.pdf",
+      "relative_path": "Radonc\\NCCN\\mds.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 1902938,
+      "modified_timestamp": 1761680089.0700748
+    },
+    {
+      "name": "meso_peritoneal_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\meso_peritoneal_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\meso_peritoneal_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 1081848,
+      "modified_timestamp": 1761680032.938795
+    },
+    {
+      "name": "meso_pleural_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\meso_pleural_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\meso_pleural_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 1433675,
+      "modified_timestamp": 1761680040.775453
+    },
+    {
+      "name": "mlne_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\mlne_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\mlne_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 1376929,
+      "modified_timestamp": 1761680096.1686227
+    },
+    {
+      "name": "mpn_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\mpn_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\mpn_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 1943768,
+      "modified_timestamp": 1761680108.3909674
+    },
+    {
+      "name": "myeloma_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\myeloma_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\myeloma_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 3953816,
+      "modified_timestamp": 1761680076.9662952
+    },
+    {
+      "name": "neuroblastoma.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\neuroblastoma.pdf",
+      "relative_path": "Radonc\\NCCN\\neuroblastoma.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 1404352,
+      "modified_timestamp": 1761680117.5540788
+    },
+    {
+      "name": "neuroendocrine_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\neuroendocrine_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\neuroendocrine_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 3019482,
+      "modified_timestamp": 1761680131.0903313
+    },
+    {
+      "name": "nmsc_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\nmsc_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\nmsc_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 1842857,
+      "modified_timestamp": 1761679260.3301349
+    },
+    {
+      "name": "nscl_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\nscl_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\nscl_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 4232685,
+      "modified_timestamp": 1761680180.254266
+    },
+    {
+      "name": "occult.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\occult.pdf",
+      "relative_path": "Radonc\\NCCN\\occult.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 1424497,
+      "modified_timestamp": 1761680188.3365574
+    },
+    {
+      "name": "ovarian_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\ovarian_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\ovarian_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 7829871,
+      "modified_timestamp": 1761680205.2884572
+    },
+    {
+      "name": "pancreatic_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\pancreatic_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\pancreatic_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 2714413,
+      "modified_timestamp": 1761680214.4751713
+    },
+    {
+      "name": "ped_all_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\ped_all_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\ped_all_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 5382301,
+      "modified_timestamp": 1761680224.4129634
+    },
+    {
+      "name": "ped_b-cell_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\ped_b-cell_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\ped_b-cell_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 1566656,
+      "modified_timestamp": 1761680231.022056
+    },
+    {
+      "name": "ped_cns_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\ped_cns_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\ped_cns_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 1619429,
+      "modified_timestamp": 1761680239.3833086
+    },
+    {
+      "name": "ped_hodgkin_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\ped_hodgkin_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\ped_hodgkin_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 2911292,
+      "modified_timestamp": 1761680263.441588
+    },
+    {
+      "name": "penile_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\penile_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\penile_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 1383227,
+      "modified_timestamp": 1761680269.2841685
+    },
+    {
+      "name": "primary_cutaneous_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\primary_cutaneous_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\primary_cutaneous_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 5035353,
+      "modified_timestamp": 1761680279.7494705
+    },
+    {
+      "name": "prostate_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\prostate_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\prostate_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 3401721,
+      "modified_timestamp": 1761680286.993367
+    },
+    {
+      "name": "rectal_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\rectal_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\rectal_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 5262292,
+      "modified_timestamp": 1761680292.0889063
+    },
+    {
+      "name": "sarcoma_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\sarcoma_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\sarcoma_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 5398756,
+      "modified_timestamp": 1761680333.4152927
+    },
+    {
+      "name": "sclc_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\sclc_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\sclc_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 1607625,
+      "modified_timestamp": 1761680304.791456
+    },
+    {
+      "name": "small_bowel_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\small_bowel_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\small_bowel_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 1302918,
+      "modified_timestamp": 1761680297.6202636
+    },
+    {
+      "name": "squamous.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\squamous.pdf",
+      "relative_path": "Radonc\\NCCN\\squamous.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 2094704,
+      "modified_timestamp": 1761680339.0172088
+    },
+    {
+      "name": "t-cell_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\t-cell_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\t-cell_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 7367726,
+      "modified_timestamp": 1761680373.9186313
+    },
+    {
+      "name": "testicular.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\testicular.pdf",
+      "relative_path": "Radonc\\NCCN\\testicular.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 1633683,
+      "modified_timestamp": 1761680374.750986
+    },
+    {
+      "name": "thymic.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\thymic.pdf",
+      "relative_path": "Radonc\\NCCN\\thymic.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 1037677,
+      "modified_timestamp": 1761680381.949948
+    },
+    {
+      "name": "thyroid_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\thyroid_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\thyroid_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 5306662,
+      "modified_timestamp": 1761680394.1242988
+    },
+    {
+      "name": "uterine_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\uterine_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\uterine_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 2334599,
+      "modified_timestamp": 1761680409.2565684
+    },
+    {
+      "name": "uveal_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\uveal_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\uveal_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 2142221,
+      "modified_timestamp": 1761680017.3279715
+    },
+    {
+      "name": "vaginal_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\vaginal_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\vaginal_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 1311877,
+      "modified_timestamp": 1761680414.4198909
+    },
+    {
+      "name": "vulvar_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\vulvar_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\vulvar_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 1570409,
+      "modified_timestamp": 1761680421.9752584
+    },
+    {
+      "name": "waldenstroms_blocks.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\waldenstroms_blocks.pdf",
+      "relative_path": "Radonc\\NCCN\\waldenstroms_blocks.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 1634047,
+      "modified_timestamp": 1761680426.6531007
+    },
+    {
+      "name": "wilms_tumor.pdf",
+      "file_path": "C:\\Users\\VISHNU A\\Documents\\VCR\\RadOnc\\Medical books\\Radonc\\NCCN\\wilms_tumor.pdf",
+      "relative_path": "Radonc\\NCCN\\wilms_tumor.pdf",
+      "category": "guidelines_nccn",
+      "extension": ".pdf",
+      "size_bytes": 1321246,
+      "modified_timestamp": 1761680434.2960281
+    }
+  ]
+}

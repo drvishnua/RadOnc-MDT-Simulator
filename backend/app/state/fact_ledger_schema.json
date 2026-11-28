@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Fact Ledger Schema",
+  "type": "object",
+  "patternProperties": {
+    "^[a-zA-Z0-9_]+$": {
+      "type": "object",
+      "properties": {
+        "field_id": {"type": "string"},
+        "value": {},
+        "state": {
+          "enum": [
+            "PRESENT",
+            "CONFIRMED_ABSENT",
+            "UNKNOWN",
+            "NOT_REPORTED",
+            "NOT_ASSESSED",
+            "PENDING",
+            "DECLINED",
+            "NOT_APPLICABLE",
+            "CONFLICTING",
+            "INVALID",
+            "present",
+            "confirmed_absent",
+            "unknown",
+            "not_reported",
+            "conflicting"
+          ]
+        },
+        "source": {"type": "string"},
+        "timestamp": {"type": "string", "format": "date-time"},
+        "provenance_hash": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{64}$"
+        },
+        "validation_status": {
+          "enum": ["validated", "failed", "pending", "VALIDATED", "FAILED", "PENDING"]
+        },
+        "registry_version": {"type": "string"}
+      },
+      "required": [
+        "field_id",
+        "value",
+        "state",
+        "source",
+        "timestamp",
+        "provenance_hash",
+        "registry_version"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
