@@ -57,14 +57,82 @@ export function createContactShadowTexture(): THREE.CanvasTexture {
 
 export function createStageFloorTexture(): THREE.CanvasTexture {
   const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext("2d");
+  if (ctx) {
+    const grad = ctx.createRadialGradient(256, 256, 30, 256, 256, 360);
+    grad.addColorStop(0, "#f8fafc");
+    grad.addColorStop(0.6, "#e2e8f0");
+    grad.addColorStop(1, "#cbd5e1");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 512, 512);
+
+    // Subtle brushed architectural grain + tile seams
+    for (let y = 0; y < 512; y += 4) {
+      ctx.fillStyle = y % 8 === 0 ? "rgba(255,255,255,0.045)" : "rgba(15,23,42,0.035)";
+      ctx.fillRect(0, y, 512, 2);
+    }
+    ctx.strokeStyle = "rgba(51, 65, 85, 0.16)";
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i <= 512; i += 128) {
+      ctx.beginPath();
+      ctx.moveTo(i, 0);
+      ctx.lineTo(i, 512);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, i);
+      ctx.lineTo(512, i);
+      ctx.stroke();
+    }
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(8, 8);
+  return tex;
+}
+
+export function createFlutedWallTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 256;
+  const ctx = canvas.getContext("2d");
+  if (ctx) {
+    const vGrad = ctx.createLinearGradient(0, 0, 0, 256);
+    vGrad.addColorStop(0, "#94a3b8");
+    vGrad.addColorStop(0.45, "#e2e8f0");
+    vGrad.addColorStop(1, "#64748b");
+    ctx.fillStyle = vGrad;
+    ctx.fillRect(0, 0, 512, 256);
+
+    for (let x = 0; x < 512; x += 20) {
+      const slat = ctx.createLinearGradient(x, 0, x + 20, 0);
+      slat.addColorStop(0, "rgba(15, 23, 42, 0.34)");
+      slat.addColorStop(0.35, "rgba(255, 255, 255, 0.18)");
+      slat.addColorStop(0.7, "rgba(15, 23, 42, 0.12)");
+      slat.addColorStop(1, "rgba(15, 23, 42, 0.36)");
+      ctx.fillStyle = slat;
+      ctx.fillRect(x, 0, 20, 256);
+    }
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.repeat.set(6, 1);
+  return tex;
+}
+
+export function createSurfaceBumpTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement("canvas");
   canvas.width = 256;
   canvas.height = 256;
   const ctx = canvas.getContext("2d");
   if (ctx) {
-    ctx.fillStyle = "#e2e8f0";
+    ctx.fillStyle = "#808080";
     ctx.fillRect(0, 0, 256, 256);
-    ctx.strokeStyle = "rgba(100, 116, 139, 0.14)";
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = "#404040";
+    ctx.lineWidth = 2;
     for (let i = 0; i <= 256; i += 64) {
       ctx.beginPath();
       ctx.moveTo(i, 0);
@@ -79,31 +147,7 @@ export function createStageFloorTexture(): THREE.CanvasTexture {
   const tex = new THREE.CanvasTexture(canvas);
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(16, 16);
-  return tex;
-}
-
-export function createFlutedWallTexture(): THREE.CanvasTexture {
-  const canvas = document.createElement("canvas");
-  canvas.width = 256;
-  canvas.height = 128;
-  const ctx = canvas.getContext("2d");
-  if (ctx) {
-    ctx.fillStyle = "#cbd5e1";
-    ctx.fillRect(0, 0, 256, 128);
-    for (let x = 0; x < 256; x += 16) {
-      const grad = ctx.createLinearGradient(x, 0, x + 16, 0);
-      grad.addColorStop(0, "rgba(15, 23, 42, 0.22)");
-      grad.addColorStop(0.5, "rgba(255, 255, 255, 0.12)");
-      grad.addColorStop(1, "rgba(15, 23, 42, 0.22)");
-      ctx.fillStyle = grad;
-      ctx.fillRect(x, 0, 16, 128);
-    }
-  }
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.wrapS = THREE.RepeatWrapping;
-  tex.wrapT = THREE.ClampToEdgeWrapping;
-  tex.repeat.set(8, 1);
+  tex.repeat.set(10, 10);
   return tex;
 }
 

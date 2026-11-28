@@ -10,6 +10,7 @@ import {
   createFlutedWallTexture,
   createSpotAlphaTexture,
   createStageFloorTexture,
+  createSurfaceBumpTexture,
 } from "./auditorium3dBuilders.js";
 import { TEAM_DEFINITIONS } from "../../utils/vmdtRoster.js";
 import {
@@ -292,17 +293,42 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
     const stageFloorTex = createStageFloorTexture();
     const flutedWallTex = createFlutedWallTexture();
     const contactShadowTex = createContactShadowTexture();
+    const surfaceBumpTex = createSurfaceBumpTexture();
 
     // Theme-aware materials
     const isDarkNow = () => document.documentElement.classList.contains("dark");
-    const sceneBgDark = new THREE.Color(0x070b14);
-    const sceneBgLight = new THREE.Color(0xeef3f9);
+    const sceneBgDark = new THREE.Color(0x060a13);
+    const sceneBgLight = new THREE.Color(0xe6edf5);
 
     const floorMat = new THREE.MeshStandardMaterial({ roughness: 0.78, metalness: 0.12 });
-    const tierEvenMat = new THREE.MeshStandardMaterial({ map: stageFloorTex, roughness: 0.65, metalness: 0.2 });
-    const tierOddMat = new THREE.MeshStandardMaterial({ map: stageFloorTex, roughness: 0.65, metalness: 0.2 });
-    const stageMat = new THREE.MeshStandardMaterial({ map: stageFloorTex, roughness: 0.38, metalness: 0.28 });
-    const backdropMat = new THREE.MeshStandardMaterial({ map: flutedWallTex, roughness: 0.58, metalness: 0.16 });
+    const tierEvenMat = new THREE.MeshStandardMaterial({
+      map: stageFloorTex,
+      bumpMap: surfaceBumpTex,
+      bumpScale: 0.015,
+      roughness: 0.62,
+      metalness: 0.22,
+    });
+    const tierOddMat = new THREE.MeshStandardMaterial({
+      map: stageFloorTex,
+      bumpMap: surfaceBumpTex,
+      bumpScale: 0.015,
+      roughness: 0.62,
+      metalness: 0.22,
+    });
+    const stageMat = new THREE.MeshStandardMaterial({
+      map: stageFloorTex,
+      bumpMap: surfaceBumpTex,
+      bumpScale: 0.012,
+      roughness: 0.36,
+      metalness: 0.3,
+    });
+    const backdropMat = new THREE.MeshStandardMaterial({
+      map: flutedWallTex,
+      bumpMap: flutedWallTex,
+      bumpScale: 0.04,
+      roughness: 0.56,
+      metalness: 0.18,
+    });
     const stageRimMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
     const dividerStripMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.85 });
     const tierTrimMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.5 });
@@ -338,24 +364,26 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
       const bg = dark ? sceneBgDark : sceneBgLight;
       scene.background = bg;
       scene.fog = new THREE.FogExp2(bg.getHex(), dark ? 0.02 : 0.012);
-      floorMat.color.setHex(dark ? 0x090f1d : 0xe2e9f2);
-      tierEvenMat.color.setHex(dark ? 0x10192e : 0xd6e0ec);
-      tierOddMat.color.setHex(dark ? 0x142038 : 0xcbd7e6);
-      stageMat.color.setHex(dark ? 0x16223b : 0xf8fafc);
-      backdropMat.color.setHex(dark ? 0x0d1527 : 0xf1f5f9);
+      floorMat.color.setHex(dark ? 0x090f1d : 0xd2dce8);
+      tierEvenMat.color.setHex(dark ? 0x111c33 : 0xe2e8f0);
+      tierOddMat.color.setHex(dark ? 0x182744 : 0xcbd7e6);
+      stageMat.color.setHex(dark ? 0x1c2d4d : 0xb8c7da);
+      backdropMat.color.setHex(dark ? 0x121e36 : 0xa5b6cc);
       stageRimMat.color.setHex(dark ? 0x38bdf8 : 0x2563eb);
-      dividerStripMat.color.setHex(dark ? 0x818cf8 : 0x64748b);
-      dividerStripMat.opacity = dark ? 0.82 : 0.65;
-      tierTrimMat.color.setHex(dark ? 0x38bdf8 : 0x94a3b8);
-      tierTrimMat.opacity = dark ? 0.35 : 0.55;
-      pillarGlowMat.color.setHex(dark ? 0x38bdf8 : 0x60a5fa);
-      pillarGlowMat.opacity = dark ? 0.28 : 0.22;
-      spotlightMat.color.setHex(dark ? 0x38bdf8 : 0x60a5fa);
-      spotlightMat.opacity = dark ? 0.14 : 0.10;
-      ambientLight.intensity = dark ? 0.55 : 0.95;
+      dividerStripMat.color.setHex(dark ? 0x818cf8 : 0x475569);
+      dividerStripMat.opacity = dark ? 0.85 : 0.72;
+      tierTrimMat.color.setHex(dark ? 0x38bdf8 : 0x64748b);
+      tierTrimMat.opacity = dark ? 0.42 : 0.65;
+      pillarGlowMat.color.setHex(dark ? 0x38bdf8 : 0x3b82f6);
+      pillarGlowMat.opacity = dark ? 0.32 : 0.28;
+      spotlightMat.color.setHex(dark ? 0x38bdf8 : 0x3b82f6);
+      spotlightMat.blending = dark ? THREE.AdditiveBlending : THREE.NormalBlending;
+      spotlightMat.opacity = dark ? 0.14 : 0.075;
+      spotlightMat.needsUpdate = true;
+      ambientLight.intensity = dark ? 0.55 : 0.92;
       keyLight.intensity = dark ? 1.55 : 1.3;
-      stagePointLight.intensity = dark ? 2.6 : 1.0;
-      scene.environmentIntensity = dark ? 0.45 : 0.75;
+      stagePointLight.intensity = dark ? 2.6 : 0.9;
+      scene.environmentIntensity = dark ? 0.48 : 0.72;
     };
     applyThemeToScene(isDarkNow());
 
