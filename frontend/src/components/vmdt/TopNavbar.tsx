@@ -131,7 +131,9 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
               />
             </span>
             <span className="whitespace-nowrap">
-              {activeRunPaused ? `Paused Run • R${activeRunRound}` : `Active Run • R${activeRunRound}`}
+              {activeRunPaused
+                ? `Return to Paused Run (R${activeRunRound})`
+                : `Return to Active Run (R${activeRunRound})`}
             </span>
           </button>
         )}

@@ -6,12 +6,20 @@ import type { CameraPanMode, VmdtAgentConfig } from "../virtualMdtTypes.js";
 interface Page1HallProps {
   agents: VmdtAgentConfig[];
   cameraPanMode?: CameraPanMode;
+  hasActiveRun?: boolean;
+  activeRunRound?: number;
+  activeRunPaused?: boolean;
+  onReturnToActiveRun?: () => void;
   onSubmitCase: () => void;
 }
 
 export const Page1Hall: React.FC<Page1HallProps> = ({
   agents,
   cameraPanMode = "auto",
+  hasActiveRun = false,
+  activeRunRound = 1,
+  activeRunPaused = false,
+  onReturnToActiveRun,
   onSubmitCase,
 }) => {
   return (
@@ -48,8 +56,24 @@ export const Page1Hall: React.FC<Page1HallProps> = ({
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25, delay: 0.08 }}
-          className="pointer-events-auto mt-3.5"
+          className="pointer-events-auto mt-3.5 flex flex-wrap items-center justify-center gap-3"
         >
+          {hasActiveRun && onReturnToActiveRun && (
+            <button
+              type="button"
+              onClick={onReturnToActiveRun}
+              className={`inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-sky-300 active:translate-y-0 ${
+                activeRunPaused
+                  ? "bg-gradient-to-r from-amber-500 to-amber-600 shadow-[0_0_24px_rgba(245,158,11,0.5)] hover:from-amber-400 hover:to-amber-500"
+                  : "bg-gradient-to-r from-blue-600 to-sky-500 shadow-[0_0_24px_rgba(56,189,248,0.55)] hover:from-blue-500 hover:to-sky-400"
+              }`}
+            >
+              <span className="h-2 w-2 animate-pulse rounded-full bg-white" aria-hidden="true" />
+              {activeRunPaused
+                ? `Return to Paused Run (R${activeRunRound})`
+                : `Return to Active Run (R${activeRunRound})`}
+            </button>
+          )}
           <button
             type="button"
             onClick={onSubmitCase}

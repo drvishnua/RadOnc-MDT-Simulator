@@ -857,6 +857,10 @@ export function App() {
               <Page1Hall
                 agents={agents}
                 cameraPanMode={settings.cameraPanMode ?? "auto"}
+                hasActiveRun={simState === "running" || simState === "paused"}
+                activeRunRound={activeRound}
+                activeRunPaused={simState === "paused"}
+                onReturnToActiveRun={() => setCurrentPage("simulation")}
                 onSubmitCase={() => setCurrentPage("intake")}
               />
             )}
