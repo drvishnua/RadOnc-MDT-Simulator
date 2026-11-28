@@ -81,9 +81,9 @@ const STATUS_STYLE: Record<
 const SVG_W = 1200;
 const SVG_H = 440;
 const CX = 600;
-const CY = -40;
-const RX_MAX = 600;
-const RY_MAX = 415;
+const CY = 10;
+const RX_MAX = 590;
+const RY_MAX = 365;
 
 function degToRad(deg: number): number {
   return (deg * Math.PI) / 180;
@@ -95,6 +95,32 @@ function projectSvg(angleDeg: number, rNorm: number): { x: number; y: number } {
     x: CX + Math.sin(rad) * RX_MAX * rNorm,
     y: CY + Math.cos(rad) * RY_MAX * rNorm,
   };
+}
+
+function describeArc(a0: number, a1: number, rNorm: number): string {
+  const p0 = projectSvg(a0, rNorm);
+  const p1 = projectSvg(a1, rNorm);
+  const rx = RX_MAX * rNorm;
+  const ry = RY_MAX * rNorm;
+  return `M ${p0.x.toFixed(1)} ${p0.y.toFixed(1)} A ${rx.toFixed(1)} ${ry.toFixed(1)} 0 0 0 ${p1.x.toFixed(1)} ${p1.y.toFixed(1)}`;
+}
+
+function describeAnnularSector(a0: number, a1: number, rInner: number, rOuter: number): string {
+  const p0 = projectSvg(a0, rInner);
+  const p1 = projectSvg(a1, rInner);
+  const p2 = projectSvg(a1, rOuter);
+  const p3 = projectSvg(a0, rOuter);
+  const rxIn = RX_MAX * rInner;
+  const ryIn = RY_MAX * rInner;
+  const rxOut = RX_MAX * rOuter;
+  const ryOut = RY_MAX * rOuter;
+  return [
+    `M ${p0.x.toFixed(1)} ${p0.y.toFixed(1)}`,
+    `A ${rxIn.toFixed(1)} ${ryIn.toFixed(1)} 0 0 0 ${p1.x.toFixed(1)} ${p1.y.toFixed(1)}`,
+    `L ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`,
+    `A ${rxOut.toFixed(1)} ${ryOut.toFixed(1)} 0 0 1 ${p3.x.toFixed(1)} ${p3.y.toFixed(1)}`,
+    "Z",
+  ].join(" ");
 }
 
 function projectPercent(angleDeg: number, rNorm: number): { xPercent: number; yPercent: number } {
@@ -135,18 +161,18 @@ export const Auditorium25D: React.FC<Auditorium25DProps> = ({
 
   const activeAgents = useMemo(() => agents.filter((a) => a.active), [agents]);
 
-  const { seats, wedgeMeta, dividerAngles } = useMemo(() => {
+  const { seats, wedgeMeta, dividerAngles, minAngle, maxAngle } = useMemo(() => {
     const teams = DEFAULT_TEAMS;
-    const minAngle = -78;
-    const maxAngle = 78;
+    const minAngle = -66;
+    const maxAngle = 66;
     const totalSpan = maxAngle - minAngle;
 
-    // Proportional weights (minimum weight 4 so 3-agent DS/SV wedges still have comfortable width & label room)
+    // Proportional weights (minimum weight 4.5 so 3-agent DS/SV wedges still have comfortable width & label room)
     const teamGroups = teams.map((teamId) => ({
       teamId,
       members: activeAgents.filter((a) => a.teamId === teamId),
     }));
-    const weights = teamGroups.map((g) => Math.max(4, g.members.length + 1.5));
+    const weights = teamGroups.map((g) => Math.max(4.5, g.members.length + 1.8));
     const totalWeight = weights.reduce((acc, w) => acc + w, 0);
 
     const computedSeats: PositionedSeat[] = [];
@@ -162,22 +188,25 @@ export const Auditorium25D: React.FC<Auditorium25DProps> = ({
       angleCursor = a1;
       dividers.push(a1);
 
-      // Arrange seats strictly inside [a0 + margin, a1 - margin] and radii [0.36..0.77] (well above 0.94 label arc)
+      // Tapered amphitheater rows: fewer seats in narrower inner arc, more in wider outer arc
+      const len = members.length;
       const rowCaps =
-        members.length <= 3
-          ? [members.length]
-          : members.length <= 6
-            ? [3, members.length - 3]
-            : [3, 3, members.length - 6];
+        len <= 2
+          ? [len]
+          : len === 3
+            ? [1, 2]
+            : len <= 6
+              ? [2, len - 2]
+              : [2, 3, len - 5];
 
       let seatCursor = 0;
       rowCaps.forEach((cap, rowIndex) => {
         const countInRow = Math.min(cap, Math.max(0, members.length - seatCursor));
         if (countInRow === 0) return;
 
-        const depthT = rowCaps.length === 1 ? 0.45 : rowIndex / (rowCaps.length - 1);
-        const rNorm = 0.37 + depthT * 0.39; // 0.37..0.76 -> stays well above team labels at 0.94
-        const marginDeg = Math.min(wedgeSpan * 0.22, 3.8);
+        const depthT = rowCaps.length === 1 ? 0.5 : rowIndex / (rowCaps.length - 1);
+        const rNorm = rowCaps.length === 1 ? 0.56 : 0.36 + depthT * 0.42; // 0.36..0.78 -> well above 0.935 label arc
+        const marginDeg = Math.min(wedgeSpan * 0.16, 2.8);
         const usableSpan = Math.max(2, wedgeSpan - marginDeg * 2);
 
         for (let i = 0; i < countInRow; i += 1) {
@@ -190,7 +219,7 @@ export const Auditorium25D: React.FC<Auditorium25DProps> = ({
             agent,
             xPercent,
             yPercent,
-            scale: 0.72 + depthT * 0.18,
+            scale: 0.78 + depthT * 0.22,
           });
         }
       });
@@ -203,11 +232,11 @@ export const Auditorium25D: React.FC<Auditorium25DProps> = ({
         a1,
         aMid,
         labelX: labelPos.xPercent,
-        labelY: Math.min(94.5, labelPos.yPercent),
+        labelY: Math.min(95, labelPos.yPercent),
       });
     });
 
-    return { seats: computedSeats, wedgeMeta: meta, dividerAngles: dividers };
+    return { seats: computedSeats, wedgeMeta: meta, dividerAngles: dividers, minAngle, maxAngle };
   }, [activeAgents]);
 
   const activePopoverId = pinnedAgentId ?? hoveredAgentId;
@@ -239,28 +268,43 @@ export const Auditorium25D: React.FC<Auditorium25DProps> = ({
         </defs>
 
         <path
-          d="M 15 65 Q 600 175 1185 65 L 1195 365 Q 600 475 5 365 Z"
+          d={describeAnnularSector(minAngle, maxAngle, 0.24, 1.02)}
           className="fill-[url(#floorLight)] dark:fill-[url(#floorDark)] transition-colors duration-300"
         />
 
-        {/* Perspective Tier Rings */}
-        {[0.37, 0.56, 0.76, 0.96].map((r, idx) => (
-          <ellipse
+        {/* Alternating Wedge Shading & Hover Illumination */}
+        {wedgeMeta.map((w, idx) => {
+          const isHot = hoveredTeam === w.teamId;
+          return (
+            <path
+              key={w.teamId}
+              d={describeAnnularSector(w.a0, w.a1, 0.25, 1.0)}
+              className={
+                isHot
+                  ? "fill-blue-500/[0.08] dark:fill-sky-400/[0.10] transition-colors duration-200"
+                  : idx % 2 === 0
+                    ? "fill-slate-900/[0.025] dark:fill-white/[0.02] transition-colors duration-200"
+                    : "fill-transparent transition-colors duration-200"
+              }
+            />
+          );
+        })}
+
+        {/* Stepped Perspective Tier Arcs */}
+        {[0.30, 0.47, 0.67, 0.87, 1.0].map((r, idx) => (
+          <path
             key={r}
-            cx={CX}
-            cy={CY}
-            rx={RX_MAX * r}
-            ry={RY_MAX * r}
+            d={describeArc(minAngle, maxAngle, r)}
             fill="none"
-            className="stroke-slate-300/80 dark:stroke-indigo-400/20"
-            strokeWidth={idx === 3 ? "2" : "1.2"}
+            className="stroke-slate-300/85 dark:stroke-indigo-400/25"
+            strokeWidth={idx === 4 ? "2" : "1.2"}
           />
         ))}
 
         {/* Exact Proportional Radial Wedge Dividers */}
         {dividerAngles.map((angle, idx) => {
-          const p1 = projectSvg(angle, 0.28);
-          const p2 = projectSvg(angle, 0.98);
+          const p1 = projectSvg(angle, 0.25);
+          const p2 = projectSvg(angle, 1.0);
           const isHighlighted =
             hoveredTeam !== null &&
             ((idx > 0 && wedgeMeta[idx - 1]?.teamId === hoveredTeam) ||
@@ -318,7 +362,7 @@ export const Auditorium25D: React.FC<Auditorium25DProps> = ({
               : seatStatuses[agent.id] || "queued";
         const st = STATUS_STYLE[rawStatus];
         const isSelected = selectedAgentId === agent.id || pinnedAgentId === agent.id;
-        const seatPx = Math.round(38 * scale);
+        const seatPx = Math.round(44 * scale);
 
         return (
           <div

@@ -14,8 +14,8 @@ export const Page1Hall: React.FC<Page1HallProps> = ({ agents, onSubmitCase }) =>
       aria-label="Conference Hall Home"
       className="relative flex flex-1 flex-col overflow-hidden"
     >
-      {/* Upper-Center 2.5D Illuminated Stage (~38% height) */}
-      <div className="relative flex h-[38%] min-h-[215px] w-full shrink-0 flex-col items-center justify-center overflow-hidden px-6">
+      {/* Upper-Center 2.5D Illuminated Stage (~33% height) */}
+      <div className="relative flex h-[33%] min-h-[185px] w-full shrink-0 flex-col items-center justify-center overflow-hidden px-6">
         {/* Ambient clinical spotlights from above */}
         <div
           aria-hidden="true"
@@ -43,7 +43,7 @@ export const Page1Hall: React.FC<Page1HallProps> = ({ agents, onSubmitCase }) =>
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="relative z-10 -mt-3 text-center"
+          className="relative z-10 -mt-2 text-center"
         >
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-600 dark:text-sky-400 sm:text-sm">
             Welcome to
@@ -51,7 +51,7 @@ export const Page1Hall: React.FC<Page1HallProps> = ({ agents, onSubmitCase }) =>
           <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-50 sm:text-4xl lg:text-5xl">
             Virtual Multidisciplinary Tumor Board
           </h1>
-          <p className="mx-auto mt-2 max-w-2xl text-xs text-slate-600 dark:text-slate-400 sm:text-sm">
+          <p className="mx-auto mt-1.5 max-w-2xl text-xs text-slate-600 dark:text-slate-400 sm:text-sm">
             Collaborative AI-driven case review across specialized oncology disciplines
           </p>
         </motion.div>
@@ -61,7 +61,7 @@ export const Page1Hall: React.FC<Page1HallProps> = ({ agents, onSubmitCase }) =>
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25, delay: 0.08 }}
-          className="relative z-20 mt-4"
+          className="relative z-20 mt-2.5"
         >
           <button
             type="button"

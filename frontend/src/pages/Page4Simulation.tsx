@@ -92,8 +92,8 @@ export const Page4Simulation: React.FC<Page4SimulationProps> = ({
       aria-label="Live Tumor Board Simulation"
       className="relative flex flex-1 flex-col overflow-hidden"
     >
-      {/* Upper Stage Console (~38% height) */}
-      <div className="relative flex h-[38%] min-h-[215px] w-full shrink-0 flex-col justify-between border-b border-slate-200/80 bg-white/55 px-6 py-3 backdrop-blur-md dark:border-sky-400/20 dark:bg-slate-900/60">
+      {/* Upper Stage Console (~35% height) */}
+      <div className="relative flex h-[35%] min-h-[195px] w-full shrink-0 flex-col justify-between border-b border-slate-200/80 bg-white/55 px-6 py-3 backdrop-blur-md dark:border-sky-400/20 dark:bg-slate-900/60">
         {/* Top Row: Back Link + Round 1-4 Stepper + Playback Controls */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-4">
