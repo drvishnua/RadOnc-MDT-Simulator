@@ -9,7 +9,7 @@ import {
   RotateCcw,
   Square,
 } from "lucide-react";
-import Auditorium25D from "../components/vmdt/Auditorium25D.js";
+import Auditorium3D from "../components/vmdt/Auditorium3D.js";
 import ConfirmDialog from "../components/vmdt/ConfirmDialog.js";
 import DoctorAvatar from "../components/vmdt/DoctorAvatar.js";
 import type { PreMDTStagingAssessment } from "../types.js";
@@ -92,8 +92,25 @@ export const Page4Simulation: React.FC<Page4SimulationProps> = ({
       aria-label="Live Tumor Board Simulation"
       className="relative flex flex-1 flex-col overflow-hidden"
     >
-      {/* Upper Stage Console (~35% height) */}
-      <div className="relative flex h-[35%] min-h-[195px] w-full shrink-0 flex-col justify-between border-b border-slate-200/80 bg-white/55 px-6 py-3 backdrop-blur-md dark:border-sky-400/20 dark:bg-slate-900/60">
+      {/* Full-Viewport Seamless 3D Live Auditorium */}
+      <div className="absolute inset-0 z-0">
+        <Auditorium3D
+          mode="live"
+          agents={agents}
+          seatStatuses={seatStatuses}
+          seatConclusions={seatConclusions}
+          activeSpeakerId={activeSpeakerId}
+          selectedAgentId={selectedAgentId}
+          onSelectAgent={onSelectAgent}
+          onRunFirst={onRunFirst}
+          onRetryAgent={onRetryAgent}
+          onPauseAgent={onPauseAgent}
+          isSimulationRunning={simState === "running"}
+        />
+      </div>
+
+      {/* Upper Stage Console (~35% height, transparent over 3D stage) */}
+      <div className="pointer-events-none relative z-10 flex h-[35%] min-h-[195px] w-full shrink-0 flex-col justify-between px-6 py-3 [&_*]:pointer-events-auto">
         {/* Top Row: Back Link + Round 1-4 Stepper + Playback Controls */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-4">
@@ -287,21 +304,6 @@ export const Page4Simulation: React.FC<Page4SimulationProps> = ({
           </AnimatePresence>
         </div>
       </div>
-
-      {/* Lower Half: 2.5D Live Conference Hall Seating */}
-      <Auditorium25D
-        mode="live"
-        agents={agents}
-        seatStatuses={seatStatuses}
-        seatConclusions={seatConclusions}
-        activeSpeakerId={activeSpeakerId}
-        selectedAgentId={selectedAgentId}
-        onSelectAgent={onSelectAgent}
-        onRunFirst={onRunFirst}
-        onRetryAgent={onRetryAgent}
-        onPauseAgent={onPauseAgent}
-        isSimulationRunning={simState === "running"}
-      />
 
       {/* Native <dialog> Confirmation Modals */}
       <ConfirmDialog

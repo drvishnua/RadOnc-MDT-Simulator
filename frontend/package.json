@@ -11,11 +11,13 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.5",
+    "@types/three": "^0.187.0",
     "framer-motion": "^14.14.0",
     "lucide-react": "^1.83.0",
     "react": "19.1.1",
     "react-dom": "19.1.1",
-    "tailwindcss": "^4.3.5"
+    "tailwindcss": "^4.3.5",
+    "three": "^0.187.0"
   },
   "devDependencies": {
     "@types/react": "19.1.11",
