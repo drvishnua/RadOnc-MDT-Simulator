@@ -17,6 +17,7 @@ import { TEAM_DEFINITIONS } from "../../utils/vmdtRoster.js";
 import {
   DEFAULT_TEAMS,
   type AgentSeatStatus,
+  type CameraPanMode,
   type TeamId,
   type VmdtAgentConfig,
 } from "../../virtualMdtTypes.js";
@@ -24,6 +25,7 @@ import {
 export interface Auditorium3DProps {
   mode: "hall" | "live";
   agents: VmdtAgentConfig[];
+  cameraPanMode?: CameraPanMode;
   seatStatuses?: Record<string, AgentSeatStatus>;
   seatConclusions?: Record<string, string>;
   activeSpeakerId?: string | null;
@@ -133,6 +135,7 @@ function buildTierSectorGeometry(
 export const Auditorium3D: React.FC<Auditorium3DProps> = ({
   mode,
   agents,
+  cameraPanMode = "auto",
   seatStatuses = {},
   seatConclusions = {},
   activeSpeakerId = null,
@@ -150,6 +153,17 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
   const [pinnedAgentId, setPinnedAgentId] = useState<string | null>(null);
   const [seatCoords, setSeatCoords] = useState<Record<string, ScreenPoint>>({});
   const [labelCoords, setLabelCoords] = useState<Record<string, ScreenPoint>>({});
+  const [sliderPan, setSliderPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  const isTouchOrMobile = useMemo(() => {
+    if (typeof window === "undefined") return false;
+    const coarse = window.matchMedia?.("(pointer: coarse)")?.matches ?? false;
+    const mobileUa = /Android|iPhone|iPad|iPod|Tablet|Mobile/i.test(navigator.userAgent || "");
+    return coarse || mobileUa;
+  }, []);
+
+  const effectivePanMode: "mouse" | "slider" =
+    cameraPanMode === "auto" ? (isTouchOrMobile ? "slider" : "mouse") : cameraPanMode;
 
   // Keep latest props in refs for the animation/raycast loop
   const hoveredAgentRef = useRef<string | null>(null);
@@ -158,6 +172,8 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
   const activeSpeakerRef = useRef<string | null>(activeSpeakerId);
   const seatStatusesRef = useRef<Record<string, AgentSeatStatus>>(seatStatuses);
   const modeRef = useRef<"hall" | "live">(mode);
+  const effectivePanModeRef = useRef<"mouse" | "slider">(effectivePanMode);
+  const sliderPanRef = useRef<{ x: number; y: number }>(sliderPan);
 
   hoveredAgentRef.current = hoveredAgentId;
   pinnedAgentRef.current = pinnedAgentId;
@@ -165,6 +181,8 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
   activeSpeakerRef.current = activeSpeakerId;
   seatStatusesRef.current = seatStatuses;
   modeRef.current = mode;
+  effectivePanModeRef.current = effectivePanMode;
+  sliderPanRef.current = sliderPan;
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -643,9 +661,11 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
       const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       const ny = -((e.clientY - rect.top) / rect.height) * 2 + 1;
       pointerNdc.set(nx, ny);
-      targetNormX = nx;
-      targetParallaxX = nx * 16.0;
-      targetParallaxY = ny * 2.8;
+      if (effectivePanModeRef.current === "mouse") {
+        targetNormX = nx;
+        targetParallaxX = nx * 16.0;
+        targetParallaxY = ny * 2.8;
+      }
 
       raycaster.setFromCamera(pointerNdc, camera);
       const hits = raycaster.intersectObjects(hitboxes, false);
@@ -706,7 +726,12 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
       rafId = requestAnimationFrame(animate);
       const t = timeMs * 0.001;
 
-      // Full wing-to-center orbital pan: brings far-left/far-right teams near screen center
+      // Full wing-to-center orbital pan: driven by mouse hover OR touch/slider controls
+      if (effectivePanModeRef.current === "slider") {
+        targetNormX = sliderPanRef.current.x;
+        targetParallaxX = sliderPanRef.current.x * 16.0;
+        targetParallaxY = sliderPanRef.current.y * 2.8;
+      }
       const targetCamX = baseCamPos.x + targetParallaxX;
       const targetCamY = Math.max(4.6, baseCamPos.y + targetParallaxY);
       const targetCamZ = baseCamPos.z - Math.abs(targetNormX) * 4.5;
@@ -970,6 +995,51 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
           </div>
         );
       })}
+
+      {/* Compact Floating Camera Pan Sliders (Active on Mobile/Tablet Auto or Slider Mode) */}
+      {effectivePanMode === "slider" && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="pointer-events-auto absolute bottom-3 left-1/2 z-30 flex -translate-x-1/2 flex-wrap items-center gap-3 rounded-2xl border border-slate-200/90 bg-white/85 px-3.5 py-2 text-[11px] shadow-lg backdrop-blur-md dark:border-sky-400/25 dark:bg-slate-900/85"
+        >
+          <label className="flex items-center gap-2 font-medium text-slate-700 dark:text-slate-200">
+            <span>Pan</span>
+            <input
+              type="range"
+              aria-label="Horizontal camera pan"
+              min={-1}
+              max={1}
+              step={0.02}
+              value={sliderPan.x}
+              onChange={(e) => setSliderPan((p) => ({ ...p, x: Number(e.target.value) }))}
+              className="w-24 accent-blue-600 dark:accent-sky-400 sm:w-32"
+            />
+          </label>
+          <label className="flex items-center gap-2 font-medium text-slate-700 dark:text-slate-200">
+            <span>Tilt</span>
+            <input
+              type="range"
+              aria-label="Vertical camera tilt"
+              min={-1}
+              max={1}
+              step={0.02}
+              value={sliderPan.y}
+              onChange={(e) => setSliderPan((p) => ({ ...p, y: Number(e.target.value) }))}
+              className="w-20 accent-blue-600 dark:accent-sky-400 sm:w-24"
+            />
+          </label>
+          {(sliderPan.x !== 0 || sliderPan.y !== 0) && (
+            <button
+              type="button"
+              onClick={() => setSliderPan({ x: 0, y: 0 })}
+              className="inline-flex items-center gap-1 rounded-lg bg-slate-200/80 px-2 py-1 text-[10px] font-semibold text-slate-700 hover:bg-slate-300/80 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+            >
+              <RotateCcw className="h-3 w-3" />
+              Center
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Floating Glassmorphic Agent Popover Portaled to document.body at z-[9999] */}
       {typeof document !== "undefined" ? createPortal(popoverNode, document.body) : popoverNode}

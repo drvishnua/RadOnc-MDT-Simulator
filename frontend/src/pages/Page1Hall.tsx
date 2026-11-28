@@ -1,14 +1,19 @@
 import React from "react";
 import { motion } from "framer-motion";
 import Auditorium3D from "../components/vmdt/Auditorium3D.js";
-import type { VmdtAgentConfig } from "../virtualMdtTypes.js";
+import type { CameraPanMode, VmdtAgentConfig } from "../virtualMdtTypes.js";
 
 interface Page1HallProps {
   agents: VmdtAgentConfig[];
+  cameraPanMode?: CameraPanMode;
   onSubmitCase: () => void;
 }
 
-export const Page1Hall: React.FC<Page1HallProps> = ({ agents, onSubmitCase }) => {
+export const Page1Hall: React.FC<Page1HallProps> = ({
+  agents,
+  cameraPanMode = "auto",
+  onSubmitCase,
+}) => {
   return (
     <section
       aria-label="Conference Hall Home"
@@ -16,7 +21,7 @@ export const Page1Hall: React.FC<Page1HallProps> = ({ agents, onSubmitCase }) =>
     >
       {/* Full-Viewport Seamless 3D Auditorium (Curved Stage + Stepped Amphitheater + 49 Seated Clinicians) */}
       <div className="absolute inset-0 z-0">
-        <Auditorium3D mode="hall" agents={agents} />
+        <Auditorium3D mode="hall" agents={agents} cameraPanMode={cameraPanMode} />
       </div>
 
       {/* Upper-Center Hero Typography & Podium CTA Floating Over 3D Stage */}

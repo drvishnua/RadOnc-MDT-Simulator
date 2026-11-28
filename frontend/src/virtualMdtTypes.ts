@@ -1,6 +1,7 @@
 export type VmdtPageId = 'hall' | 'intake' | 'audit' | 'simulation' | 'decision' | 'past-cases' | 'agents' | 'settings';
 export type ThemeMode = 'light' | 'dark' | 'system';
 export type ResolvedTheme = 'light' | 'dark';
+export type CameraPanMode = 'auto' | 'mouse' | 'slider';
 export type TeamId =
   | 'radiation_oncology'
   | 'medical_oncology'
@@ -98,6 +99,7 @@ export interface VmdtSettings {
   voiceLanguage: string;
   defaultTheme: ThemeMode;
   pdfBranding: boolean;
+  cameraPanMode?: CameraPanMode;
 }
 
 export interface UserProfile {
@@ -157,6 +159,7 @@ export const DEFAULT_SETTINGS: VmdtSettings = {
   voiceLanguage: 'en-US',
   defaultTheme: 'dark',
   pdfBranding: true,
+  cameraPanMode: 'auto',
 };
 
 export const DEFAULT_PROFILE: UserProfile = {

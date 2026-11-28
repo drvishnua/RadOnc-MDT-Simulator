@@ -13,13 +13,14 @@ import Auditorium3D from "../components/vmdt/Auditorium3D.js";
 import ConfirmDialog from "../components/vmdt/ConfirmDialog.js";
 import DoctorAvatar from "../components/vmdt/DoctorAvatar.js";
 import type { PreMDTStagingAssessment } from "../types.js";
-import type { AgentSeatStatus, VmdtAgentConfig } from "../virtualMdtTypes.js";
+import type { AgentSeatStatus, CameraPanMode, VmdtAgentConfig } from "../virtualMdtTypes.js";
 
 interface Page4SimulationProps {
   preMdtStaging?: PreMDTStagingAssessment | null;
   simError?: string | null;
 
   agents: VmdtAgentConfig[];
+  cameraPanMode?: CameraPanMode;
   simState: "idle" | "running" | "paused" | "completed" | "stopped";
   activeRound: 1 | 2 | 3 | 4;
   maxRounds: number;
@@ -52,6 +53,7 @@ const ROUND_LABELS: Record<number, string> = {
 
 export const Page4Simulation: React.FC<Page4SimulationProps> = ({
   agents,
+  cameraPanMode = "auto",
   simState,
   activeRound,
   maxRounds,
@@ -97,6 +99,7 @@ export const Page4Simulation: React.FC<Page4SimulationProps> = ({
         <Auditorium3D
           mode="live"
           agents={agents}
+          cameraPanMode={cameraPanMode}
           seatStatuses={seatStatuses}
           seatConclusions={seatConclusions}
           activeSpeakerId={activeSpeakerId}

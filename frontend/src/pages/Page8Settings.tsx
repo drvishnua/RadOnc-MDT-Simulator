@@ -232,6 +232,39 @@ export const Page8Settings: React.FC<Page8SettingsProps> = ({
                   className="w-60 accent-blue-600 dark:accent-sky-400"
                 />
               </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200/70 pt-3 dark:border-slate-800">
+                <div>
+                  <span className="font-medium text-slate-700 dark:text-slate-300">
+                    3D Auditorium Camera Panning
+                  </span>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Auto uses Slider Pan on mobile/tablet and Mouse Pan on desktop/laptop.
+                  </p>
+                </div>
+                <div className="inline-flex rounded-xl border border-slate-200 bg-slate-100 p-1 dark:border-slate-700 dark:bg-slate-800">
+                  {(
+                    [
+                      { id: "auto", label: "Auto" },
+                      { id: "mouse", label: "Mouse" },
+                      { id: "slider", label: "Slider" },
+                    ] as const
+                  ).map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => updateWithFeedback({ cameraPanMode: opt.id })}
+                      className={`rounded-lg px-3 py-1 font-semibold transition-all ${
+                        (settings.cameraPanMode ?? "auto") === opt.id
+                          ? "bg-white text-blue-600 shadow dark:bg-sky-500 dark:text-white"
+                          : "text-slate-600 dark:text-slate-300"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 

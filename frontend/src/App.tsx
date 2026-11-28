@@ -836,7 +836,11 @@ export function App() {
             className="flex min-h-0 flex-1 flex-col overflow-hidden"
           >
             {currentPage === "hall" && (
-              <Page1Hall agents={agents} onSubmitCase={() => setCurrentPage("intake")} />
+              <Page1Hall
+                agents={agents}
+                cameraPanMode={settings.cameraPanMode ?? "auto"}
+                onSubmitCase={() => setCurrentPage("intake")}
+              />
             )}
 
             {currentPage === "intake" && (
@@ -873,6 +877,7 @@ export function App() {
             {currentPage === "simulation" && (
               <Page4Simulation
                 agents={agents}
+                cameraPanMode={settings.cameraPanMode ?? "auto"}
                 simState={simState}
                 activeRound={activeRound}
                 maxRounds={settings.rounds}
