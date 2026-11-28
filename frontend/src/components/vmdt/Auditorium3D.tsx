@@ -410,10 +410,15 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
     const sceneBgDark = new THREE.Color(0x070b14);
     const sceneBgLight = new THREE.Color(0xeef3f9);
 
-    const floorMat = new THREE.MeshStandardMaterial({ roughness: 0.72, metalness: 0.18 });
-    const stageMat = new THREE.MeshStandardMaterial({ roughness: 0.45, metalness: 0.25 });
+    const floorMat = new THREE.MeshStandardMaterial({ roughness: 0.78, metalness: 0.12 });
+    const tierEvenMat = new THREE.MeshStandardMaterial({ roughness: 0.68, metalness: 0.18 });
+    const tierOddMat = new THREE.MeshStandardMaterial({ roughness: 0.68, metalness: 0.18 });
+    const stageMat = new THREE.MeshStandardMaterial({ roughness: 0.42, metalness: 0.22 });
+    const backdropMat = new THREE.MeshStandardMaterial({ roughness: 0.55, metalness: 0.15 });
     const stageRimMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
-    const dividerMat = new THREE.LineBasicMaterial({ transparent: true, opacity: 0.55 });
+    const dividerStripMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.85 });
+    const tierTrimMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.5 });
+    const pillarGlowMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.35 });
     const spotlightMat = new THREE.MeshBasicMaterial({
       transparent: true,
       opacity: 0.16,
@@ -444,17 +449,24 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
     const applyThemeToScene = (dark: boolean) => {
       const bg = dark ? sceneBgDark : sceneBgLight;
       scene.background = bg;
-      scene.fog = new THREE.FogExp2(bg.getHex(), dark ? 0.022 : 0.015);
-      floorMat.color.setHex(dark ? 0x0f172a : 0xdbe4ef);
-      stageMat.color.setHex(dark ? 0x111c33 : 0xf8fafc);
+      scene.fog = new THREE.FogExp2(bg.getHex(), dark ? 0.02 : 0.012);
+      floorMat.color.setHex(dark ? 0x090f1d : 0xe2e9f2);
+      tierEvenMat.color.setHex(dark ? 0x10192e : 0xd6e0ec);
+      tierOddMat.color.setHex(dark ? 0x142038 : 0xcbd7e6);
+      stageMat.color.setHex(dark ? 0x16223b : 0xf8fafc);
+      backdropMat.color.setHex(dark ? 0x0d1527 : 0xf1f5f9);
       stageRimMat.color.setHex(dark ? 0x38bdf8 : 0x2563eb);
-      dividerMat.color.setHex(dark ? 0x818cf8 : 0x64748b);
-      dividerMat.opacity = dark ? 0.52 : 0.38;
+      dividerStripMat.color.setHex(dark ? 0x818cf8 : 0x64748b);
+      dividerStripMat.opacity = dark ? 0.82 : 0.65;
+      tierTrimMat.color.setHex(dark ? 0x38bdf8 : 0x94a3b8);
+      tierTrimMat.opacity = dark ? 0.35 : 0.55;
+      pillarGlowMat.color.setHex(dark ? 0x38bdf8 : 0x60a5fa);
+      pillarGlowMat.opacity = dark ? 0.28 : 0.22;
       spotlightMat.color.setHex(dark ? 0x38bdf8 : 0x60a5fa);
-      spotlightMat.opacity = dark ? 0.11 : 0.08;
-      ambientLight.intensity = dark ? 0.65 : 1.05;
-      keyLight.intensity = dark ? 1.45 : 1.25;
-      stagePointLight.intensity = dark ? 2.4 : 0.9;
+      spotlightMat.opacity = dark ? 0.14 : 0.10;
+      ambientLight.intensity = dark ? 0.72 : 1.1;
+      keyLight.intensity = dark ? 1.5 : 1.3;
+      stagePointLight.intensity = dark ? 2.5 : 1.0;
     };
     applyThemeToScene(isDarkNow());
 
@@ -463,61 +475,106 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
     });
     themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
 
-    // Base auditorium hall floor
-    const hallFloor = new THREE.Mesh(new THREE.CircleGeometry(24, 48), floorMat);
+    // Seamless auditorium hall floor (eliminates circular horizon cutoff)
+    const hallFloor = new THREE.Mesh(new THREE.PlaneGeometry(140, 140), floorMat);
     hallFloor.rotation.x = -Math.PI / 2;
     hallFloor.position.y = -0.02;
     hallFloor.receiveShadow = true;
     scene.add(hallFloor);
 
-    // 3 Stepped Semi-Circular Amphitheater Tiers
+    // 3 Stepped Semi-Circular Amphitheater Tiers per Team Wedge (alternating subtle contrast)
     const tierConfigs = [
       { rIn: 4.6, rOut: 6.55, h: 0.18 },
       { rIn: 6.55, rOut: 8.45, h: 0.55 },
       { rIn: 8.45, rOut: 10.4, h: 0.94 },
     ];
-    tierConfigs.forEach((tc) => {
-      const geom = buildTierSectorGeometry(tc.rIn, tc.rOut, MIN_ANGLE_DEG - 2, MAX_ANGLE_DEG + 2, tc.h, 44);
-      const mesh = new THREE.Mesh(geom, floorMat);
-      mesh.receiveShadow = true;
-      scene.add(mesh);
+    wedges.forEach((w, wIdx) => {
+      const mat = wIdx % 2 === 0 ? tierEvenMat : tierOddMat;
+      const aStart = wIdx === 0 ? w.a0 - 2 : w.a0;
+      const aEnd = wIdx === wedges.length - 1 ? w.a1 + 2 : w.a1;
+      tierConfigs.forEach((tc) => {
+        const geom = buildTierSectorGeometry(tc.rIn, tc.rOut, aStart, aEnd, tc.h, 14);
+        const mesh = new THREE.Mesh(geom, mat);
+        mesh.receiveShadow = true;
+        scene.add(mesh);
+      });
     });
 
-    // Radial Wedge Divider Lines
+    // Stepped Tier Edge Arc Trims
+    [
+      { r: 4.62, y: 0.19 },
+      { r: 6.55, y: 0.56 },
+      { r: 8.45, y: 0.95 },
+      { r: 10.38, y: 0.95 },
+    ].forEach((edge) => {
+      const trimGeom = buildTierSectorGeometry(edge.r - 0.025, edge.r + 0.025, MIN_ANGLE_DEG - 2, MAX_ANGLE_DEG + 2, 0.02, 48);
+      const trimMesh = new THREE.Mesh(trimGeom, tierTrimMat);
+      trimMesh.position.y = edge.y - 0.01;
+      scene.add(trimMesh);
+    });
+
+    // 3D Architectural Aisle Divider Strips Between Teams
+    const addAisleSegment = (p1: THREE.Vector3, p2: THREE.Vector3) => {
+      const len = p1.distanceTo(p2);
+      const strip = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.028, len), dividerStripMat);
+      strip.position.copy(p1).add(p2).multiplyScalar(0.5);
+      strip.lookAt(p2);
+      scene.add(strip);
+    };
     dividerAngles.forEach((ang) => {
-      const pts = [
-        polarToWorld(ang, 4.6, 0.2),
-        polarToWorld(ang, 6.55, 0.57),
-        polarToWorld(ang, 8.45, 0.96),
-        polarToWorld(ang, 10.4, 0.96),
-      ];
-      const lineGeom = new THREE.BufferGeometry().setFromPoints(pts);
-      const line = new THREE.Line(lineGeom, dividerMat);
-      scene.add(line);
+      const t1a = polarToWorld(ang, 4.6, 0.19);
+      const t1b = polarToWorld(ang, 6.55, 0.19);
+      const t2a = polarToWorld(ang, 6.55, 0.56);
+      const t2b = polarToWorld(ang, 8.45, 0.56);
+      const t3a = polarToWorld(ang, 8.45, 0.95);
+      const t3b = polarToWorld(ang, 10.4, 0.95);
+      addAisleSegment(t1a, t1b);
+      addAisleSegment(t1b, t2a);
+      addAisleSegment(t2a, t2b);
+      addAisleSegment(t2b, t3a);
+      addAisleSegment(t3a, t3b);
     });
 
-    // 3D Stage Platform + Curved Semi-Circular Stage Apron + Stepped Side Stairs
-    const stageMain = new THREE.Mesh(new THREE.BoxGeometry(14.6, 0.75, 4.4), stageMat);
-    stageMain.position.set(0, 0.375, -6.2);
+    // 3D Proscenium Stage Platform + Backstage Wall + Curved Apron + Stepped Side Stairs
+    const stageMain = new THREE.Mesh(new THREE.BoxGeometry(15.2, 0.78, 4.6), stageMat);
+    stageMain.position.set(0, 0.39, -6.2);
     stageMain.receiveShadow = true;
     scene.add(stageMain);
 
-    // Curved front stage lip
-    const apronGeom = new THREE.CylinderGeometry(3.8, 4.05, 0.65, 40, 1, false, -Math.PI / 2, Math.PI);
+    // Backstage Architectural Proscenium Wall & Side Wing Panels
+    const backWall = new THREE.Mesh(new THREE.BoxGeometry(13.6, 5.4, 0.35), backdropMat);
+    backWall.position.set(0, 3.1, -8.35);
+    backWall.receiveShadow = true;
+    scene.add(backWall);
+
+    [-1, 1].forEach((side) => {
+      const wingWall = new THREE.Mesh(new THREE.BoxGeometry(3.2, 5.2, 0.35), backdropMat);
+      wingWall.position.set(side * 7.8, 3.0, -7.4);
+      wingWall.rotation.y = side * -0.42;
+      scene.add(wingWall);
+
+      const pillarGlow = new THREE.Mesh(new THREE.BoxGeometry(0.08, 4.8, 0.12), pillarGlowMat);
+      pillarGlow.position.set(side * 6.55, 3.0, -8.1);
+      scene.add(pillarGlow);
+    });
+
+    // Curved front stage apron
+    const apronGeom = new THREE.CylinderGeometry(3.85, 4.1, 0.68, 44, 1, false, -Math.PI / 2, Math.PI);
     const apron = new THREE.Mesh(apronGeom, stageMat);
-    apron.position.set(0, 0.325, -4.1);
-    apron.scale.set(1.35, 1, 0.45);
+    apron.position.set(0, 0.34, -4.05);
+    apron.scale.set(1.42, 1, 0.46);
     apron.receiveShadow = true;
     scene.add(apron);
 
-    // Glowing stage edge rim
+    // 3D Glowing Tube Stage Edge Rim
     const rimArcPts: THREE.Vector3[] = [];
-    for (let i = 0; i <= 36; i += 1) {
-      const a = -Math.PI / 2 + (i / 36) * Math.PI;
-      rimArcPts.push(new THREE.Vector3(Math.sin(a) * 3.9 * 1.35, 0.66, -4.1 + Math.cos(a) * 3.9 * 0.45));
+    for (let i = 0; i <= 40; i += 1) {
+      const a = -Math.PI / 2 + (i / 40) * Math.PI;
+      rimArcPts.push(new THREE.Vector3(Math.sin(a) * 3.92 * 1.42, 0.68, -4.05 + Math.cos(a) * 3.92 * 0.46));
     }
-    const stageRimLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(rimArcPts), stageRimMat);
-    scene.add(stageRimLine);
+    const rimCurve = new THREE.CatmullRomCurve3(rimArcPts);
+    const stageRimMesh = new THREE.Mesh(new THREE.TubeGeometry(rimCurve, 44, 0.032, 8, false), stageRimMat);
+    scene.add(stageRimMesh);
 
     // Stepped side wings (left & right stairs)
     [-1, 1].forEach((side) => {
