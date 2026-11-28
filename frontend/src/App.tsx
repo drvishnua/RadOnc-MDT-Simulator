@@ -828,7 +828,7 @@ export function App() {
   const currentSeatArguments = roundSeatArguments[activeRound] ?? roundSeatArguments[1] ?? {};
 
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden bg-gradient-to-br from-[#F8FAFC] to-[#E2E8F0] text-[#0F172A] transition-colors duration-300 dark:from-[#070B14] dark:to-[#0D1526] dark:text-[#F8FAFC]">
+    <div className="flex h-dvh w-screen flex-col overflow-hidden bg-gradient-to-br from-[#F8FAFC] to-[#E2E8F0] text-[#0F172A] transition-colors duration-300 dark:from-[#070B14] dark:to-[#0D1526] dark:text-[#F8FAFC]">
       <TopNavbar
         currentPage={currentPage}
         onNavigate={(page) => setCurrentPage(page)}

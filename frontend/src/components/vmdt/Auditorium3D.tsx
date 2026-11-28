@@ -155,15 +155,24 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
   const [labelCoords, setLabelCoords] = useState<Record<string, ScreenPoint>>({});
   const [sliderPan, setSliderPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  const isTouchOrMobile = useMemo(() => {
+  const [touchDetected, setTouchDetected] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
+    const anyCoarse = window.matchMedia?.("(any-pointer: coarse)")?.matches ?? false;
     const coarse = window.matchMedia?.("(pointer: coarse)")?.matches ?? false;
+    const hasTouchPoints = (navigator.maxTouchPoints ?? 0) > 0 || "ontouchstart" in window;
     const mobileUa = /Android|iPhone|iPad|iPod|Tablet|Mobile/i.test(navigator.userAgent || "");
-    return coarse || mobileUa;
-  }, []);
+    return anyCoarse || coarse || hasTouchPoints || mobileUa;
+  });
+
+  useEffect(() => {
+    if (touchDetected) return;
+    const onFirstTouch = () => setTouchDetected(true);
+    window.addEventListener("touchstart", onFirstTouch, { passive: true, once: true });
+    return () => window.removeEventListener("touchstart", onFirstTouch);
+  }, [touchDetected]);
 
   const effectivePanMode: "mouse" | "slider" =
-    cameraPanMode === "auto" ? (isTouchOrMobile ? "slider" : "mouse") : cameraPanMode;
+    cameraPanMode === "auto" ? (touchDetected ? "slider" : "mouse") : cameraPanMode;
 
   // Keep latest props in refs for the animation/raycast loop
   const hoveredAgentRef = useRef<string | null>(null);
@@ -1000,7 +1009,8 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
       {effectivePanMode === "slider" && (
         <div
           onClick={(e) => e.stopPropagation()}
-          className="pointer-events-auto absolute bottom-3 left-1/2 z-30 flex -translate-x-1/2 flex-wrap items-center gap-3 rounded-2xl border border-slate-200/90 bg-white/85 px-3.5 py-2 text-[11px] shadow-lg backdrop-blur-md dark:border-sky-400/25 dark:bg-slate-900/85"
+          style={{ bottom: "max(1rem, env(safe-area-inset-bottom))" }}
+          className="pointer-events-auto absolute bottom-4 left-1/2 z-30 flex -translate-x-1/2 flex-wrap items-center gap-3 rounded-2xl border border-slate-200/90 bg-white/85 px-3.5 py-2 text-[11px] shadow-lg backdrop-blur-md dark:border-sky-400/25 dark:bg-slate-900/85"
         >
           <label className="flex items-center gap-2 font-medium text-slate-700 dark:text-slate-200">
             <span>Pan</span>
