@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { AnimatePresence, motion } from "framer-motion";
@@ -813,9 +814,126 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
   const activeAgent = activeAgents.find((a) => a.id === activePopoverId) || null;
   const activePoint = activeAgent ? seatCoords[activeAgent.id] : null;
 
-  const containerW = containerRef.current?.clientWidth || 1200;
-  const popoverLeft = activePoint ? Math.min(Math.max(activePoint.x, 155), containerW - 155) : 0;
-  const popoverTop = activePoint ? Math.max(activePoint.y - 16, 125) : 0;
+  const containerRect = containerRef.current?.getBoundingClientRect();
+  const winW = typeof window !== "undefined" ? window.innerWidth : 1280;
+  const absX = activePoint ? (containerRect?.left ?? 0) + activePoint.x : 0;
+  const absY = activePoint ? (containerRect?.top ?? 0) + activePoint.y : 0;
+  const popoverLeft = Math.min(Math.max(absX, 160), winW - 160);
+  const flipBelow = absY < 270;
+  const popoverTop = flipBelow ? Math.max(absY + 26, 68) : absY - 16;
+
+  const popoverNode = (
+    <AnimatePresence>
+      {activeAgent && activePoint && (
+        <motion.div
+          key={activeAgent.id}
+          initial={{ opacity: 0, y: flipBelow ? -6 : 6, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: flipBelow ? -4 : 4, scale: 0.96 }}
+          transition={{ duration: 0.14 }}
+          style={{
+            left: `${popoverLeft}px`,
+            top: `${popoverTop}px`,
+          }}
+          onClick={(e) => e.stopPropagation()}
+          className={`pointer-events-auto fixed z-[9999] w-[300px] -translate-x-1/2 ${
+            flipBelow ? "" : "-translate-y-full"
+          } rounded-xl border border-slate-200/95 bg-white/95 p-3 shadow-2xl backdrop-blur-md dark:border-sky-400/35 dark:bg-slate-900/95 dark:shadow-[0_12px_40px_rgba(2,6,23,0.9)]`}
+        >
+          <div className="flex items-start justify-between gap-2.5">
+            <div className="flex items-center gap-2.5">
+              <div className="h-10 w-10 shrink-0 rounded-lg bg-slate-100 p-0.5 dark:bg-slate-800">
+                <DoctorAvatar
+                  variant={activeAgent.avatarVariant}
+                  scrubColor={activeAgent.scrubColor}
+                  hasGlasses={activeAgent.hasGlasses}
+                  propType={activeAgent.propType}
+                  size={36}
+                />
+              </div>
+              <div>
+                <p className="text-xs font-bold leading-tight text-slate-900 dark:text-slate-50">
+                  {activeAgent.displayName}
+                </p>
+                <p className="text-[11px] font-medium text-blue-600 dark:text-sky-400">
+                  {activeAgent.specialty}
+                </p>
+              </div>
+            </div>
+            {pinnedAgentId === activeAgent.id && (
+              <button
+                type="button"
+                aria-label="Close agent card"
+                onClick={() => setPinnedAgentId(null)}
+                className="rounded p-0.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="mt-2 rounded-lg bg-slate-50 px-2.5 py-1.5 text-[11px] text-slate-600 dark:bg-slate-800/75 dark:text-slate-300">
+            <p className="line-clamp-3 leading-snug">
+              <span className="font-semibold text-slate-700 dark:text-slate-200">Stance: </span>
+              {activeAgent.personalitySummary}
+            </p>
+          </div>
+
+          {mode === "live" && (
+            <div className="mt-2 space-y-2 border-t border-slate-200/70 pt-2 dark:border-slate-700/70">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-slate-500 dark:text-slate-400">Live Status</span>
+                <span className="inline-flex items-center gap-1 font-semibold capitalize text-slate-800 dark:text-slate-100">
+                  {(activeSpeakerId === activeAgent.id ||
+                    seatStatuses[activeAgent.id] === "running") && (
+                    <Sparkles className="h-3 w-3 text-sky-400" />
+                  )}
+                  {seatStatuses[activeAgent.id] === "failed" && (
+                    <AlertCircle className="h-3 w-3 text-rose-500" />
+                  )}
+                  {activeSpeakerId === activeAgent.id
+                    ? "active speaker"
+                    : STATUS_LABEL[seatStatuses[activeAgent.id] || "queued"]}
+                </span>
+              </div>
+              {seatConclusions[activeAgent.id] && (
+                <p className="line-clamp-2 text-[11px] leading-snug text-slate-600 dark:text-slate-300">
+                  {seatConclusions[activeAgent.id]}
+                </p>
+              )}
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  disabled={!isSimulationRunning}
+                  onClick={() => onRunFirst?.(activeAgent.id)}
+                  className="inline-flex flex-1 items-center justify-center gap-1 rounded-md bg-emerald-500/15 px-2 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-500/25 disabled:opacity-45 dark:text-emerald-300"
+                >
+                  <Play className="h-3 w-3" />
+                  Run First
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onRetryAgent?.(activeAgent.id)}
+                  className="inline-flex flex-1 items-center justify-center gap-1 rounded-md bg-blue-500/15 px-2 py-1 text-[11px] font-semibold text-blue-700 hover:bg-blue-500/25 dark:text-sky-300"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                  Retry
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onPauseAgent?.(activeAgent.id)}
+                  className="inline-flex flex-1 items-center justify-center gap-1 rounded-md bg-slate-500/15 px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-500/25 dark:text-slate-300"
+                >
+                  <Pause className="h-3 w-3" />
+                  Pause
+                </button>
+              </div>
+            </div>
+          )}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
 
   return (
     <div className="relative h-full w-full overflow-hidden select-none isolate">
@@ -853,113 +971,8 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
         );
       })}
 
-      {/* Floating Glassmorphic Agent Popover (Always above all seats & stage overlays at z-[999]) */}
-      <AnimatePresence>
-        {activeAgent && activePoint && (
-          <motion.div
-            key={activeAgent.id}
-            initial={{ opacity: 0, y: 6, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 4, scale: 0.96 }}
-            transition={{ duration: 0.14 }}
-            style={{
-              left: `${popoverLeft}px`,
-              top: `${popoverTop}px`,
-            }}
-            onClick={(e) => e.stopPropagation()}
-            className="pointer-events-auto absolute z-[999] w-[290px] -translate-x-1/2 -translate-y-full rounded-xl border border-slate-200/95 bg-white/95 p-3 shadow-2xl backdrop-blur-md dark:border-sky-400/35 dark:bg-slate-900/95 dark:shadow-[0_12px_40px_rgba(2,6,23,0.9)]"
-          >
-            <div className="flex items-start justify-between gap-2.5">
-              <div className="flex items-center gap-2.5">
-                <div className="h-10 w-10 shrink-0 rounded-lg bg-slate-100 p-0.5 dark:bg-slate-800">
-                  <DoctorAvatar
-                    variant={activeAgent.avatarVariant}
-                    scrubColor={activeAgent.scrubColor}
-                    hasGlasses={activeAgent.hasGlasses}
-                    propType={activeAgent.propType}
-                    size={36}
-                  />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-900 dark:text-slate-50 leading-tight">
-                    {activeAgent.displayName}
-                  </p>
-                  <p className="text-[11px] font-medium text-blue-600 dark:text-sky-400">
-                    {activeAgent.specialty}
-                  </p>
-                </div>
-              </div>
-              {pinnedAgentId === activeAgent.id && (
-                <button
-                  type="button"
-                  aria-label="Close agent card"
-                  onClick={() => setPinnedAgentId(null)}
-                  className="rounded p-0.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
-
-            <div className="mt-2 rounded-lg bg-slate-50 px-2.5 py-1.5 text-[11px] text-slate-600 dark:bg-slate-800/75 dark:text-slate-300">
-              <span className="font-semibold text-slate-700 dark:text-slate-200">Stance: </span>
-              {activeAgent.personalitySummary}
-            </div>
-
-            {mode === "live" && (
-              <div className="mt-2 space-y-2 border-t border-slate-200/70 pt-2 dark:border-slate-700/70">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-slate-500 dark:text-slate-400">Live Status</span>
-                  <span className="inline-flex items-center gap-1 font-semibold capitalize text-slate-800 dark:text-slate-100">
-                    {(activeSpeakerId === activeAgent.id ||
-                      seatStatuses[activeAgent.id] === "running") && (
-                      <Sparkles className="h-3 w-3 text-sky-400" />
-                    )}
-                    {seatStatuses[activeAgent.id] === "failed" && (
-                      <AlertCircle className="h-3 w-3 text-rose-500" />
-                    )}
-                    {activeSpeakerId === activeAgent.id
-                      ? "active speaker"
-                      : STATUS_LABEL[seatStatuses[activeAgent.id] || "queued"]}
-                  </span>
-                </div>
-                {seatConclusions[activeAgent.id] && (
-                  <p className="line-clamp-2 text-[11px] leading-snug text-slate-600 dark:text-slate-300">
-                    {seatConclusions[activeAgent.id]}
-                  </p>
-                )}
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    disabled={!isSimulationRunning}
-                    onClick={() => onRunFirst?.(activeAgent.id)}
-                    className="inline-flex flex-1 items-center justify-center gap-1 rounded-md bg-emerald-500/15 px-2 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-500/25 disabled:opacity-45 dark:text-emerald-300"
-                  >
-                    <Play className="h-3 w-3" />
-                    Run First
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onRetryAgent?.(activeAgent.id)}
-                    className="inline-flex flex-1 items-center justify-center gap-1 rounded-md bg-blue-500/15 px-2 py-1 text-[11px] font-semibold text-blue-700 hover:bg-blue-500/25 dark:text-sky-300"
-                  >
-                    <RotateCcw className="h-3 w-3" />
-                    Retry
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onPauseAgent?.(activeAgent.id)}
-                    className="inline-flex flex-1 items-center justify-center gap-1 rounded-md bg-slate-500/15 px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-500/25 dark:text-slate-300"
-                  >
-                    <Pause className="h-3 w-3" />
-                    Pause
-                  </button>
-                </div>
-              </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Floating Glassmorphic Agent Popover Portaled to document.body at z-[9999] */}
+      {typeof document !== "undefined" ? createPortal(popoverNode, document.body) : popoverNode}
     </div>
   );
 };

@@ -69,8 +69,27 @@ function loadJson<T>(key: string, fallback: T): T {
 
 async function readApiError(res: Response, fallback: string): Promise<string> {
   try {
-    const body = (await res.json()) as { detail?: string };
-    return body.detail || fallback;
+    const body = (await res.json()) as { detail?: unknown; message?: string };
+    const detail = body.detail;
+    if (typeof detail === "string" && detail.trim()) return detail;
+    if (Array.isArray(detail) && detail.length > 0) {
+      return detail
+        .map((item) => {
+          if (typeof item === "string") return item;
+          if (item && typeof item === "object") {
+            const rec = item as { loc?: unknown[]; msg?: string };
+            const loc = Array.isArray(rec.loc) ? rec.loc.filter((p) => p !== "body").join(".") : "";
+            return loc && rec.msg ? `${loc}: ${rec.msg}` : rec.msg || JSON.stringify(item);
+          }
+          return String(item);
+        })
+        .join("; ");
+    }
+    if (detail && typeof detail === "object") {
+      const rec = detail as { message?: string; msg?: string };
+      return rec.message || rec.msg || JSON.stringify(detail);
+    }
+    return body.message || fallback;
   } catch {
     return fallback;
   }
@@ -200,12 +219,18 @@ export function App() {
   const buildCasePayload = useCallback(
     (sourceForm: Record<string, string> = form): SyntheticCasePayload => {
       const ageRaw = Number(sourceForm.age_years);
+      const rawTitle = (sourceForm.scenario_title || "").trim();
+      const scenarioTitle =
+        rawTitle.length >= 3
+          ? rawTitle.slice(0, 160)
+          : `${rawTitle ? `${rawTitle} — ` : ""}MDT Educational Oncology Consultation`.slice(0, 160);
+      const rawSummary = (sourceForm.case_summary || "").trim();
+      const fallbackSummary = `${sourceForm.primary_site || "Primary oncology"} case (${scenarioTitle}) submitted for multidisciplinary review.`;
+      const caseSummary = rawSummary.length >= 10 ? rawSummary : rawSummary ? `${rawSummary} — ${fallbackSummary}` : fallbackSummary;
       return {
-        scenario_title: (sourceForm.scenario_title || "MDT Educational Oncology Consultation").trim(),
-        case_summary:
-          (sourceForm.case_summary || "").trim() ||
-          `${sourceForm.primary_site || "Primary oncology"} case submitted for multidisciplinary review.`,
-        age_years: Number.isFinite(ageRaw) && ageRaw > 0 ? ageRaw : null,
+        scenario_title: scenarioTitle,
+        case_summary: caseSummary,
+        age_years: Number.isFinite(ageRaw) && ageRaw > 0 ? Math.min(120, Math.round(ageRaw)) : null,
         sex_at_birth: optionalText(sourceForm.sex_at_birth || ""),
         primary_site: optionalText(sourceForm.primary_site || ""),
         histology: optionalText(sourceForm.histology || ""),
