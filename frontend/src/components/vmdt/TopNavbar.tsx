@@ -17,6 +17,7 @@ interface TopNavbarProps {
 }
 
 const NAV_ITEMS: Array<{ id: VmdtPageId; label: string }> = [
+  { id: "hall", label: "Conference Hall" },
   { id: "past-cases", label: "Past Cases" },
   { id: "agents", label: "Manage Agents / Teams" },
   { id: "settings", label: "Settings" },
