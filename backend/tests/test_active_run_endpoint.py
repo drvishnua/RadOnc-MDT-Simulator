@@ -3,6 +3,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
+from app import main as app_main
 from app.main import app
 from app.schemas import SyntheticCase
 from app.services import run_store
@@ -14,6 +15,8 @@ client = TestClient(app)
 def isolated_db(monkeypatch, tmp_path):
     monkeypatch.setattr(run_store, "DB_PATH", tmp_path / "active_runs.sqlite3")
     monkeypatch.setattr(run_store, "LEGACY_DB_PATH", None)
+    monkeypatch.setattr(app_main, "batch_is_running", lambda: True)
+    monkeypatch.setattr(app_main, "round_is_running", lambda: False)
     run_store.initialize_database()
 
 
@@ -92,3 +95,14 @@ def test_active_run_returns_latest_active_run(isolated_db) -> None:
     body = response.json()
     assert body["active"] is True
     assert body["run"]["run_id"] == newer["run_id"]
+
+
+def test_active_run_ignores_stale_db_rows_when_no_live_worker(isolated_db, monkeypatch) -> None:
+    run = run_store.create_run(_make_case("Stale pre-restart queued case"))
+    assert run["status"] == "queued"
+    monkeypatch.setattr(app_main, "batch_is_running", lambda: False)
+    monkeypatch.setattr(app_main, "round_is_running", lambda: False)
+
+    response = client.get("/api/runs/active")
+    assert response.status_code == 200
+    assert response.json() == {"active": False, "run": None}

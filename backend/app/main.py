@@ -259,7 +259,9 @@ async def create_independent_batch(
 
 @app.get("/api/runs/active")
 async def get_active_run() -> dict[str, object]:
-    """Return the latest active or paused simulation run, if any."""
+    """Return the latest active or paused simulation run only when a live worker is active."""
+    if not (batch_is_running() or round_is_running()):
+        return {"active": False, "run": None}
     run_store.initialize_database()
     active_run_id: str | None = None
     with run_store._connect() as db:
