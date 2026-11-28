@@ -1,7 +1,14 @@
 export type VmdtPageId = 'hall' | 'intake' | 'audit' | 'simulation' | 'decision' | 'past-cases' | 'agents' | 'settings';
 export type ThemeMode = 'light' | 'dark' | 'system';
 export type ResolvedTheme = 'light' | 'dark';
-export type TeamId = 'radiation_oncology' | 'medical_oncology' | 'surgical_oncology' | 'radiology' | 'pathology' | 'medical_genetics';
+export type TeamId =
+  | 'radiation_oncology'
+  | 'medical_oncology'
+  | 'surgical_oncology'
+  | 'diagnostics_pathology'
+  | 'patient_perspective'
+  | 'system_governance'
+  | 'family_social_vulnerability';
 
 export interface TeamDefinition {
   id: TeamId;
@@ -107,9 +114,10 @@ export const DEFAULT_TEAMS: TeamId[] = [
   'radiation_oncology',
   'medical_oncology',
   'surgical_oncology',
-  'radiology',
-  'pathology',
-  'medical_genetics'
+  'diagnostics_pathology',
+  'patient_perspective',
+  'system_governance',
+  'family_social_vulnerability',
 ];
 
 export const RESOURCE_CATALOG: string[] = [

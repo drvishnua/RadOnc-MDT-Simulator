@@ -29,53 +29,80 @@ interface PositionedSeat {
   xPercent: number;
   yPercent: number;
   scale: number;
-  rowIndex: number;
+}
+
+interface WedgeMeta {
+  teamId: TeamId;
+  label: string;
+  a0: number;
+  a1: number;
+  aMid: number;
+  labelX: number;
+  labelY: number;
 }
 
 const STATUS_STYLE: Record<
   AgentSeatStatus,
-  { ring: string; beam: string; pillBg: string; label: string }
+  { ring: string; beam: string; label: string }
 > = {
   idle: {
-    ring: "border-emerald-400/75 shadow-[0_0_12px_rgba(16,185,129,0.5)] dark:border-sky-400/70 dark:shadow-[0_0_14px_rgba(56,189,248,0.55)]",
+    ring: "border-emerald-400/75 shadow-[0_0_10px_rgba(16,185,129,0.45)] dark:border-sky-400/70 dark:shadow-[0_0_12px_rgba(56,189,248,0.5)]",
     beam: "from-sky-400/0 via-sky-400/10 to-transparent",
-    pillBg: "bg-slate-700 text-slate-100",
     label: "ready",
   },
   queued: {
-    ring: "border-amber-500 shadow-[0_0_14px_rgba(245,158,11,0.65)]",
+    ring: "border-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.65)]",
     beam: "from-amber-400/35 via-amber-400/12 to-transparent",
-    pillBg: "bg-amber-500 text-slate-950",
     label: "queued",
   },
   running: {
-    ring: "border-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.95)] dark:border-sky-400",
+    ring: "border-blue-500 shadow-[0_0_18px_rgba(59,130,246,0.95)] dark:border-sky-400",
     beam: "from-blue-500/60 via-sky-400/25 to-transparent",
-    pillBg: "bg-blue-600 text-white",
     label: "active speaker",
   },
   completed: {
-    ring: "border-emerald-500 shadow-[0_0_14px_rgba(16,185,129,0.75)]",
+    ring: "border-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.75)]",
     beam: "from-emerald-400/40 via-emerald-400/12 to-transparent",
-    pillBg: "bg-emerald-600 text-white",
     label: "completed",
   },
   failed: {
-    ring: "border-rose-500 shadow-[0_0_16px_rgba(239,68,68,0.85)]",
+    ring: "border-rose-500 shadow-[0_0_14px_rgba(239,68,68,0.85)]",
     beam: "from-rose-500/50 via-rose-500/15 to-transparent",
-    pillBg: "bg-rose-600 text-white",
     label: "failed",
   },
   paused: {
     ring: "border-slate-400 shadow-[0_0_10px_rgba(148,163,184,0.45)]",
     beam: "from-slate-400/25 via-slate-400/10 to-transparent",
-    pillBg: "bg-slate-600 text-white",
     label: "paused",
   },
 };
 
+// Shared SVG + CSS projection (viewBox 1200 x 440) so seats NEVER cross radial divider lines
+const SVG_W = 1200;
+const SVG_H = 440;
+const CX = 600;
+const CY = -40;
+const RX_MAX = 600;
+const RY_MAX = 415;
+
 function degToRad(deg: number): number {
   return (deg * Math.PI) / 180;
+}
+
+function projectSvg(angleDeg: number, rNorm: number): { x: number; y: number } {
+  const rad = degToRad(angleDeg);
+  return {
+    x: CX + Math.sin(rad) * RX_MAX * rNorm,
+    y: CY + Math.cos(rad) * RY_MAX * rNorm,
+  };
+}
+
+function projectPercent(angleDeg: number, rNorm: number): { xPercent: number; yPercent: number } {
+  const { x, y } = projectSvg(angleDeg, rNorm);
+  return {
+    xPercent: (x / SVG_W) * 100,
+    yPercent: (y / SVG_H) * 100,
+  };
 }
 
 export const Auditorium25D: React.FC<Auditorium25DProps> = ({
@@ -108,73 +135,79 @@ export const Auditorium25D: React.FC<Auditorium25DProps> = ({
 
   const activeAgents = useMemo(() => agents.filter((a) => a.active), [agents]);
 
-  const { seats, wedgeMeta } = useMemo(() => {
+  const { seats, wedgeMeta, dividerAngles } = useMemo(() => {
     const teams = DEFAULT_TEAMS;
-    const n = teams.length;
     const minAngle = -78;
     const maxAngle = 78;
     const totalSpan = maxAngle - minAngle;
-    const step = totalSpan / n;
 
-    // Ellipse origin is slightly above the auditorium container so seats curve cleanly downward
-    const originX = 50;
-    const originY = -12;
-    const radiusXBase = 47;
-    const radiusYBase = 88;
+    // Proportional weights (minimum weight 4 so 3-agent DS/SV wedges still have comfortable width & label room)
+    const teamGroups = teams.map((teamId) => ({
+      teamId,
+      members: activeAgents.filter((a) => a.teamId === teamId),
+    }));
+    const weights = teamGroups.map((g) => Math.max(4, g.members.length + 1.5));
+    const totalWeight = weights.reduce((acc, w) => acc + w, 0);
 
     const computedSeats: PositionedSeat[] = [];
-    const meta = teams.map((teamId, wedgeIdx) => {
-      const a0 = minAngle + wedgeIdx * step;
-      const a1 = a0 + step;
-      const aMid = (a0 + a1) / 2;
-      const teamAgents = activeAgents.filter((a) => a.teamId === teamId);
+    const meta: WedgeMeta[] = [];
+    const dividers: number[] = [minAngle];
 
-      // Arrange agents inside wedge cleanly in up to 3 concentric tiers
-      const rowCapacities = teamAgents.length <= 3 ? [teamAgents.length] : teamAgents.length <= 7 ? [3, 4] : [3, 4, Math.max(4, teamAgents.length - 7)];
-      let cursor = 0;
-      rowCapacities.forEach((cap, rowIndex) => {
-        const countInRow = Math.min(cap, Math.max(0, teamAgents.length - cursor));
+    let angleCursor = minAngle;
+    teamGroups.forEach(({ teamId, members }, idx) => {
+      const wedgeSpan = (weights[idx] / totalWeight) * totalSpan;
+      const a0 = angleCursor;
+      const a1 = a0 + wedgeSpan;
+      const aMid = (a0 + a1) / 2;
+      angleCursor = a1;
+      dividers.push(a1);
+
+      // Arrange seats strictly inside [a0 + margin, a1 - margin] and radii [0.36..0.77] (well above 0.94 label arc)
+      const rowCaps =
+        members.length <= 3
+          ? [members.length]
+          : members.length <= 6
+            ? [3, members.length - 3]
+            : [3, 3, members.length - 6];
+
+      let seatCursor = 0;
+      rowCaps.forEach((cap, rowIndex) => {
+        const countInRow = Math.min(cap, Math.max(0, members.length - seatCursor));
         if (countInRow === 0) return;
-        const depthT = rowCapacities.length === 1 ? 0.55 : rowIndex / Math.max(1, rowCapacities.length - 1);
-        const rFactor = 0.42 + depthT * 0.43; // inner row 42%, outer row 85%
-        const innerPad = 3.2;
-        const spanStart = a0 + innerPad;
-        const spanEnd = a1 - innerPad;
+
+        const depthT = rowCaps.length === 1 ? 0.45 : rowIndex / (rowCaps.length - 1);
+        const rNorm = 0.37 + depthT * 0.39; // 0.37..0.76 -> stays well above team labels at 0.94
+        const marginDeg = Math.min(wedgeSpan * 0.22, 3.8);
+        const usableSpan = Math.max(2, wedgeSpan - marginDeg * 2);
 
         for (let i = 0; i < countInRow; i += 1) {
-          const agent = teamAgents[cursor];
-          cursor += 1;
+          const agent = members[seatCursor];
+          seatCursor += 1;
           const frac = countInRow === 1 ? 0.5 : i / (countInRow - 1);
-          const angle = spanStart + frac * (spanEnd - spanStart);
-          const rad = degToRad(angle);
-          const xPercent = originX + Math.sin(rad) * radiusXBase * rFactor * 1.15;
-          const yPercent = originY + Math.cos(rad) * radiusYBase * rFactor;
+          const seatAngle = a0 + marginDeg + frac * usableSpan;
+          const { xPercent, yPercent } = projectPercent(seatAngle, rNorm);
           computedSeats.push({
             agent,
-            xPercent: Math.max(4, Math.min(96, xPercent)),
-            yPercent: Math.max(10, Math.min(82, yPercent)),
-            scale: 0.78 + depthT * 0.22,
-            rowIndex,
+            xPercent,
+            yPercent,
+            scale: 0.72 + depthT * 0.18,
           });
         }
       });
 
-      const midRad = degToRad(aMid);
-      const labelX = originX + Math.sin(midRad) * 49;
-      const labelY = Math.min(93.5, originY + Math.cos(midRad) * 98);
-      return {
+      const labelPos = projectPercent(aMid, 0.935);
+      meta.push({
         teamId,
-        label: TEAM_DEFINITIONS[teamId].label,
+        label: TEAM_DEFINITIONS[teamId].shortLabel,
         a0,
         a1,
         aMid,
-        labelX,
-        labelY,
-        count: teamAgents.length,
-      };
+        labelX: labelPos.xPercent,
+        labelY: Math.min(94.5, labelPos.yPercent),
+      });
     });
 
-    return { seats: computedSeats, wedgeMeta: meta };
+    return { seats: computedSeats, wedgeMeta: meta, dividerAngles: dividers };
   }, [activeAgents]);
 
   const activePopoverId = pinnedAgentId ?? hoveredAgentId;
@@ -182,12 +215,12 @@ export const Auditorium25D: React.FC<Auditorium25DProps> = ({
 
   return (
     <div
-      className="relative flex-1 w-full overflow-hidden select-none"
+      className="relative flex-1 w-full overflow-hidden select-none isolate"
       onClick={() => setPinnedAgentId(null)}
     >
-      {/* Semi-circular SVG Floor, Perspective Tier Arcs & Glowing Radial Aisle Dividers */}
+      {/* Semi-circular SVG Floor, Perspective Tier Arcs & Exact Wedge Divider Lines */}
       <svg
-        viewBox="0 0 1200 440"
+        viewBox={`0 0 ${SVG_W} ${SVG_H}`}
         preserveAspectRatio="none"
         className="pointer-events-none absolute inset-0 h-full w-full"
         aria-hidden="true"
@@ -205,48 +238,40 @@ export const Auditorium25D: React.FC<Auditorium25DProps> = ({
           </radialGradient>
         </defs>
 
-        {/* Auditorium Curved Floor */}
         <path
-          d="M 20 80 Q 600 180 1180 80 L 1195 360 Q 600 475 5 360 Z"
+          d="M 15 65 Q 600 175 1185 65 L 1195 365 Q 600 475 5 365 Z"
           className="fill-[url(#floorLight)] dark:fill-[url(#floorDark)] transition-colors duration-300"
         />
 
         {/* Perspective Tier Rings */}
-        {[0.38, 0.58, 0.78, 0.96].map((r, idx) => {
-          const rx = 620 * r;
-          const ry = 365 * r;
-          return (
-            <ellipse
-              key={idx}
-              cx="600"
-              cy="-35"
-              rx={rx}
-              ry={ry}
-              fill="none"
-              className="stroke-slate-300/80 dark:stroke-indigo-400/20"
-              strokeWidth={idx === 3 ? "2" : "1.2"}
-            />
-          );
-        })}
+        {[0.37, 0.56, 0.76, 0.96].map((r, idx) => (
+          <ellipse
+            key={r}
+            cx={CX}
+            cy={CY}
+            rx={RX_MAX * r}
+            ry={RY_MAX * r}
+            fill="none"
+            className="stroke-slate-300/80 dark:stroke-indigo-400/20"
+            strokeWidth={idx === 3 ? "2" : "1.2"}
+          />
+        ))}
 
-        {/* Radial Wedge Dividers */}
-        {[-78, -52, -26, 0, 26, 52, 78].map((angle, idx) => {
-          const rad = degToRad(angle);
-          const x1 = 600 + Math.sin(rad) * 210;
-          const y1 = -35 + Math.cos(rad) * 140;
-          const x2 = 600 + Math.sin(rad) * 610;
-          const y2 = -35 + Math.cos(rad) * 395;
+        {/* Exact Proportional Radial Wedge Dividers */}
+        {dividerAngles.map((angle, idx) => {
+          const p1 = projectSvg(angle, 0.28);
+          const p2 = projectSvg(angle, 0.98);
           const isHighlighted =
             hoveredTeam !== null &&
             ((idx > 0 && wedgeMeta[idx - 1]?.teamId === hoveredTeam) ||
               (idx < wedgeMeta.length && wedgeMeta[idx]?.teamId === hoveredTeam));
           return (
             <line
-              key={angle}
-              x1={x1}
-              y1={y1}
-              x2={x2}
-              y2={y2}
+              key={`${angle}-${idx}`}
+              x1={p1.x}
+              y1={p1.y}
+              x2={p2.x}
+              y2={p2.y}
               strokeWidth={isHighlighted ? "2.4" : "1.4"}
               className={
                 isHighlighted
@@ -258,10 +283,10 @@ export const Auditorium25D: React.FC<Auditorium25DProps> = ({
         })}
       </svg>
 
-      {/* Overlaid Full Specialty Team Labels Along Outer Arc */}
+      {/* Overlaid Specialty Team Labels Along Dedicated Outer Arc */}
       {wedgeMeta.map((w) => {
         const isHot = hoveredTeam === w.teamId;
-        const rot = -w.aMid * 0.28;
+        const rot = -w.aMid * 0.24;
         return (
           <div
             key={w.teamId}
@@ -272,7 +297,7 @@ export const Auditorium25D: React.FC<Auditorium25DProps> = ({
               top: `${w.labelY}%`,
               transform: `translate(-50%, -50%) rotate(${rot}deg)`,
             }}
-            className={`absolute z-10 cursor-default rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide transition-all duration-200 sm:text-xs ${
+            className={`absolute z-10 cursor-default whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide transition-all duration-200 sm:text-[11px] ${
               isHot
                 ? "bg-blue-600/15 text-blue-700 dark:bg-sky-400/20 dark:text-sky-300 shadow-sm"
                 : "text-slate-700/90 dark:text-indigo-200/85"
@@ -283,7 +308,7 @@ export const Auditorium25D: React.FC<Auditorium25DProps> = ({
         );
       })}
 
-      {/* Seated AI Doctor Avatars in Tiered Chairs */}
+      {/* Seated AI Doctor Avatars (Strictly bounded z-20 so overlay popover z-[999] is ALWAYS in front) */}
       {seats.map(({ agent, xPercent, yPercent, scale }) => {
         const rawStatus: AgentSeatStatus =
           mode === "hall"
@@ -293,12 +318,16 @@ export const Auditorium25D: React.FC<Auditorium25DProps> = ({
               : seatStatuses[agent.id] || "queued";
         const st = STATUS_STYLE[rawStatus];
         const isSelected = selectedAgentId === agent.id || pinnedAgentId === agent.id;
-        const seatPx = Math.round(40 * scale);
+        const seatPx = Math.round(38 * scale);
 
         return (
           <div
             key={agent.id}
-            style={{ left: `${xPercent}%`, top: `${yPercent}%`, zIndex: Math.round(yPercent) }}
+            style={{
+              left: `${xPercent}%`,
+              top: `${yPercent}%`,
+              zIndex: isSelected ? 40 : Math.min(35, Math.max(12, Math.round(yPercent / 3))),
+            }}
             className="absolute -translate-x-1/2 -translate-y-1/2"
             onMouseEnter={() => {
               setHoveredTeam(agent.teamId);
@@ -309,24 +338,22 @@ export const Auditorium25D: React.FC<Auditorium25DProps> = ({
               setHoveredAgentId((prev) => (prev === agent.id ? null : prev));
             }}
           >
-            {/* Live 2.5D Vertical Spotlight Beam */}
             {mode === "live" && (
               <div
                 aria-hidden="true"
-                className={`pointer-events-none absolute -top-24 left-1/2 h-28 w-11 -translate-x-1/2 bg-gradient-to-t ${st.beam} blur-[2px] transition-opacity ${
+                className={`pointer-events-none absolute -top-20 left-1/2 h-24 w-10 -translate-x-1/2 bg-gradient-to-t ${st.beam} blur-[2px] transition-opacity ${
                   rawStatus === "running" ? "opacity-100" : "opacity-75"
                 }`}
               />
             )}
 
-            {/* Live Status Mini Pill or Active Waveform Above Speaker */}
             {mode === "live" && rawStatus === "running" && (
-              <div className="pointer-events-none absolute -top-6 left-1/2 flex -translate-x-1/2 items-end gap-0.5 rounded-full bg-blue-600 px-2 py-0.5 shadow-md dark:bg-sky-500">
+              <div className="pointer-events-none absolute -top-5 left-1/2 flex -translate-x-1/2 items-end gap-0.5 rounded-full bg-blue-600 px-1.5 py-0.5 shadow-md dark:bg-sky-500">
                 {[0, 0.15, 0.3, 0.1, 0.25].map((delay, i) => (
                   <span
                     key={i}
                     style={{ animationDelay: `${delay}s` }}
-                    className="wave-bar h-2.5 w-0.5 rounded-full bg-white"
+                    className="wave-bar h-2 w-0.5 rounded-full bg-white"
                   />
                 ))}
               </div>
@@ -335,7 +362,7 @@ export const Auditorium25D: React.FC<Auditorium25DProps> = ({
             {mode === "live" && rawStatus === "failed" && (
               <span
                 title="Agent execution failed — click to retry"
-                className="pointer-events-none absolute -right-1 -top-2 z-20 flex h-4 w-4 items-center justify-center rounded-full bg-rose-600 text-[10px] font-bold text-white shadow"
+                className="pointer-events-none absolute -right-1 -top-2 flex h-4 w-4 items-center justify-center rounded-full bg-rose-600 text-[10px] font-bold text-white shadow"
               >
                 <AlertCircle className="h-3 w-3" />
               </span>
@@ -361,16 +388,15 @@ export const Auditorium25D: React.FC<Auditorium25DProps> = ({
                 size={seatPx}
                 seated
               />
-              {/* Floor Perspective Glow Ring Under Chair */}
               <span
-                className={`-mt-2 h-2.5 w-9 rounded-full border-2 bg-slate-950/15 transition-all dark:bg-slate-950/40 ${st.ring}`}
+                className={`-mt-2 h-2 w-8 rounded-full border-2 bg-slate-950/15 transition-all dark:bg-slate-950/40 ${st.ring}`}
               />
             </button>
           </div>
         );
       })}
 
-      {/* Edge-Aware Floating Popover Card */}
+      {/* Top-Level Edge-Aware Floating Popover (z-[999] ALWAYS above every seated agent) */}
       <AnimatePresence>
         {activeSeat && (
           <motion.div
@@ -378,19 +404,19 @@ export const Auditorium25D: React.FC<Auditorium25DProps> = ({
             initial={{ opacity: 0, y: 6, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 4, scale: 0.96 }}
-            transition={{ duration: 0.16 }}
+            transition={{ duration: 0.14 }}
             onClick={(e) => e.stopPropagation()}
             style={{
               left: `${activeSeat.xPercent}%`,
               top: `${activeSeat.yPercent}%`,
               transform: `translate(${
-                activeSeat.xPercent < 20 ? "0%" : activeSeat.xPercent > 80 ? "-100%" : "-50%"
-              }, ${activeSeat.yPercent < 42 ? "26px" : "calc(-100% - 22px)"})`,
+                activeSeat.xPercent < 22 ? "0%" : activeSeat.xPercent > 78 ? "-100%" : "-50%"
+              }, ${activeSeat.yPercent < 42 ? "24px" : "calc(-100% - 20px)"})`,
             }}
-            className="absolute z-50 w-72 rounded-2xl border border-slate-200 bg-white/95 p-3.5 text-left text-slate-900 shadow-2xl backdrop-blur-md dark:border-sky-400/30 dark:bg-slate-900/92 dark:text-slate-100"
+            className="pointer-events-auto absolute z-[999] w-80 rounded-2xl border border-slate-200 bg-white/98 p-3.5 text-left text-slate-900 shadow-2xl backdrop-blur-md dark:border-sky-400/35 dark:bg-slate-900/96 dark:text-slate-100"
           >
             <div className="flex items-start justify-between gap-2">
-              <div className="flex items-center gap-2.5 min-w-0">
+              <div className="flex min-w-0 items-center gap-2.5">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800">
                   <DoctorAvatar
                     variant={activeSeat.agent.avatarVariant}
@@ -400,10 +426,10 @@ export const Auditorium25D: React.FC<Auditorium25DProps> = ({
                   />
                 </div>
                 <div className="min-w-0">
-                  <div className="truncate text-sm font-bold leading-tight">
+                  <div className="text-xs font-bold leading-snug">
                     {activeSeat.agent.displayName}
                   </div>
-                  <div className="truncate text-xs font-medium text-blue-600 dark:text-sky-400">
+                  <div className="truncate text-[11px] font-medium text-blue-600 dark:text-sky-400">
                     {activeSeat.agent.specialty}
                   </div>
                 </div>
@@ -422,10 +448,10 @@ export const Auditorium25D: React.FC<Auditorium25DProps> = ({
 
             {mode === "hall" ? (
               <div className="mt-2.5 space-y-1 text-xs">
-                <div className="font-semibold uppercase tracking-wider text-[10px] text-slate-400">
-                  Personality / Stance
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                  Role Mandate &amp; Stance
                 </div>
-                <p className="leading-relaxed text-slate-600 dark:text-slate-300">
+                <p className="line-clamp-3 leading-relaxed text-slate-600 dark:text-slate-300">
                   {activeSeat.agent.personalitySummary}
                 </p>
               </div>
@@ -445,7 +471,6 @@ export const Auditorium25D: React.FC<Auditorium25DProps> = ({
                   </p>
                 </div>
 
-                {/* Per-Agent Direct Controls */}
                 <div className="flex items-center gap-1.5 pt-1">
                   <button
                     type="button"

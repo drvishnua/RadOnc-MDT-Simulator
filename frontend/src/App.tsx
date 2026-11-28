@@ -55,7 +55,7 @@ import {
 const SETTINGS_KEY = "vmdt-settings-v1";
 const PROFILE_KEY = "vmdt-profile-v1";
 const ARCHIVE_KEY = "vmdt-archived-cases-v1";
-const AGENT_OVERRIDES_KEY = "vmdt-agent-overrides-v1";
+const AGENT_OVERRIDES_KEY = "vmdt-agent-overrides-v2";
 
 function loadJson<T>(key: string, fallback: T): T {
   try {

@@ -32,85 +32,41 @@ export const TEAM_DEFINITIONS: Record<TeamId, TeamDefinition> = {
     accentLight: "#059669",
     backendCategories: ["surgical_oncology"],
   },
-  radiology: {
-    id: "radiology",
-    label: "Radiology",
-    shortLabel: "Radiology",
+  diagnostics_pathology: {
+    id: "diagnostics_pathology",
+    label: "Diagnostics & Pathology",
+    shortLabel: "Diagnostics & Pathology",
     accentDark: "#2DD4BF",
     accentLight: "#0D9488",
-    backendCategories: ["diagnostics_pathology", "system_governance"],
+    backendCategories: ["diagnostics_pathology"],
   },
-  pathology: {
-    id: "pathology",
-    label: "Pathology",
-    shortLabel: "Pathology",
+  patient_perspective: {
+    id: "patient_perspective",
+    label: "Patient Perspective Lenses",
+    shortLabel: "Patient Perspective",
     accentDark: "#F472B6",
     accentLight: "#DB2777",
-    backendCategories: ["diagnostics_pathology", "patient_perspective"],
+    backendCategories: ["patient_perspective"],
   },
-  medical_genetics: {
-    id: "medical_genetics",
-    label: "Medical Genetics",
-    shortLabel: "Medical Genetics",
+  system_governance: {
+    id: "system_governance",
+    label: "System, Evidence & Governance",
+    shortLabel: "System & Governance",
+    accentDark: "#FBBF24",
+    accentLight: "#D97706",
+    backendCategories: ["system_governance"],
+  },
+  family_social_vulnerability: {
+    id: "family_social_vulnerability",
+    label: "Family, Social Care & Vulnerability",
+    shortLabel: "Family & Social Care",
     accentDark: "#A78BFA",
     accentLight: "#7C3AED",
-    backendCategories: ["family_social_vulnerability", "system_governance"],
+    backendCategories: ["family_social_vulnerability"],
   },
 };
 
-const CLINICIAN_NAMES: Record<string, string> = {
-  "RO-01": "Dr. Marcus Chen",
-  "RO-02": "Dr. Arthur Pendelton",
-  "RO-03": "Dr. Elena Morales",
-  "RO-04": "Dr. Kenji Sato",
-  "RO-05": "Dr. Nadia Al-Mansoor",
-  "RO-06": "Dr. Henrik Lindqvist",
-  "RO-07": "Dr. Priya Nair",
-  "RO-08": "Dr. Thomas Gallagher",
-  "RO-09": "Dr. Sofia Rossi",
-  "RO-10": "Dr. Claire Beaumont",
-  "MO-01": "Dr. Elena Vance",
-  "MO-02": "Dr. Aaron Patel",
-  "MO-03": "Dr. Hannah Kim",
-  "MO-04": "Dr. Olivier Laurent",
-  "MO-05": "Dr. Maya Deshmukh",
-  "MO-06": "Dr. Daniel Okafor",
-  "MO-07": "Dr. Rachel Goldstein",
-  "MO-08": "Dr. Lucas Almeida",
-  "MO-09": "Dr. Ingrid Solberg",
-  "SO-01": "Dr. James Carter",
-  "SO-02": "Dr. Alex Sian",
-  "SO-03": "Dr. Mei-Ling Zhou",
-  "SO-04": "Dr. Matteo Conti",
-  "SO-05": "Dr. Grace Holloway",
-  "SO-06": "Dr. Viktor Novak",
-  "SO-07": "Dr. Amara Nwosu",
-  "SO-08": "Dr. Rohan Kulkarni",
-  "SO-09": "Dr. David Sinclair",
-  "DS-01": "Dr. Sarah Lin",
-  "DS-02": "Dr. Arjun Menon",
-  "DS-03": "Dr.Marta Canas",
-  "SG-01": "Dr. Victor Kovalenko",
-  "SG-02": "Dr. Sunita Rao",
-  "SG-03": "Dr. Benjamin Brooks",
-  "SG-04": "Dr. Leila Haddad",
-  "SG-05": "Dr. Owen Callahan",
-  "SG-06": "Dr. Chloe Vermeulen",
-  "SG-07": "Dr. Tariq Rahman",
-  "SG-08": "Dr. Naomi Takahashi",
-  "SG-09": "Dr. Samuel Weber",
-  "PP-01": "Dr. Ananya Sharma",
-  "PP-02": "Dr. Jacob Alvarez",
-  "PP-03": "Dr. Fiona MacLeod",
-  "PP-04": "Dr. Gabriel Fernandez",
-  "PP-05": "Dr. Kavita Iyer",
-  "PP-06": "Dr. Noah Bergman",
-  "SV-01": "Dr. Miriam Goldstein",
-  "SV-02": "Dr. Paul Mensah",
-  "SV-03": "Dr. Evelyn Park",
-};
-
-const SCRUB_PALETTE = ["#38BDF8", "#10B981", "#818CF8", "#2DD4BF", "#F472B6", "#A78BFA", "#F59E0B"];
+const SCRUB_PALETTE = ["#38BDF8", "#10B981", "#818CF8", "#2DD4BF", "#F472B6", "#FBBF24", "#A78BFA"];
 const PROPS: Array<"tablet" | "clipboard" | "stethoscope" | "none"> = [
   "tablet",
   "clipboard",
@@ -119,17 +75,16 @@ const PROPS: Array<"tablet" | "clipboard" | "stethoscope" | "none"> = [
 ];
 
 function resolveTeamForAgent(agent: Agent): TeamId {
+  const cat = agent.category as TeamId;
+  if (cat in TEAM_DEFINITIONS) return cat;
   const id = agent.agent_id.toUpperCase();
   if (id.startsWith("RO-")) return "radiation_oncology";
   if (id.startsWith("MO-")) return "medical_oncology";
   if (id.startsWith("SO-")) return "surgical_oncology";
-  if (id === "DS-02" || id === "SG-01" || id === "SG-02" || id === "SG-03" || id === "SG-04") {
-    return "radiology";
-  }
-  if (id === "DS-01" || id === "DS-03" || id.startsWith("PP-")) {
-    return "pathology";
-  }
-  return "medical_genetics";
+  if (id.startsWith("DS-")) return "diagnostics_pathology";
+  if (id.startsWith("PP-")) return "patient_perspective";
+  if (id.startsWith("SG-")) return "system_governance";
+  return "family_social_vulnerability";
 }
 
 function hashId(input: string): number {
@@ -141,26 +96,22 @@ function hashId(input: string): number {
 }
 
 const FALLBACK_BACKEND_AGENTS: Agent[] = [
-  { agent_id: "RO-01", category: "radiation_oncology", category_label: "Radiation Oncology", name: "Guideline-focused Radiation Oncologist", mandate: "Synthesizes ASTRO, ESTRO, NCCN, AROI, JASTRO, and ABS consensus standards.", clinical_philosophy: "Organ-sparing guideline alignment with strict dose-volume bounds." },
-  { agent_id: "RO-02", category: "radiation_oncology", category_label: "Radiation Oncology", name: "Conservative & Time-Tested Radiation Oncologist", mandate: "Champions proven conventional fractionation and critiques unvalidated gradient extremes.", clinical_philosophy: "Time-tested margins & safety." },
-  { agent_id: "RO-03", category: "radiation_oncology", category_label: "Radiation Oncology", name: "Precision IMRT/VMAT Technologist", mandate: "Evaluates VMAT/IMRT, adaptive RT, and particle-beam feasibility.", clinical_philosophy: "Steep dose gradients require strict IGRT QA." },
-  { agent_id: "RO-04", category: "radiation_oncology", category_label: "Radiation Oncology", name: "Brachytherapy & Focal Boost Specialist", mandate: "Evaluates conformal brachytherapy and SBRT focal dose escalation." },
-  { agent_id: "RO-05", category: "radiation_oncology", category_label: "Radiation Oncology", name: "Resource-Stewardship Radiation Oncologist", mandate: "Assesses linac capacity, rural travel barriers, and fractionation schedules." },
-  { agent_id: "MO-01", category: "medical_oncology", category_label: "Medical Oncology", name: "High-Dose Platinum & Trialist Oncologist", mandate: "Prioritizes evidence-first systemic regimens, cisplatin clearance, and trial endpoints.", clinical_philosophy: "Evidence-First Strategist • Targeted Therapy Focus" },
-  { agent_id: "MO-02", category: "medical_oncology", category_label: "Medical Oncology", name: "Pragmatic Weekly Systemic Strategist", mandate: "Balances outpatient tolerability, weekly dosing, and nutritional reserve." },
-  { agent_id: "MO-03", category: "medical_oncology", category_label: "Medical Oncology", name: "Geriatric & Organ-Reserve Oncologist", mandate: "Safeguards renal, auditory, and marrow tolerance in frail patients." },
-  { agent_id: "MO-04", category: "medical_oncology", category_label: "Medical Oncology", name: "Biomarker & Immunotherapy Specialist", mandate: "Interrogates p16/HPV, PD-L1 CPS, MSI-H/dMMR, and targeted therapy pathways." },
-  { agent_id: "MO-05", category: "medical_oncology", category_label: "Medical Oncology", name: "Sequencing & Neoadjuvant Oncologist", mandate: "Evaluates induction vs concurrent chemoradiation sequencing." },
-  { agent_id: "SO-01", category: "surgical_oncology", category_label: "Surgical Oncology", name: "R0 Margin & Resectability Surgeon", mandate: "Evaluates upfront surgical resectability, R0 margins, and neck/nodal clearance." },
-  { agent_id: "SO-02", category: "surgical_oncology", category_label: "Surgical Oncology", name: "Minimally Invasive / TORS Specialist", mandate: "Assesses robotic/transoral resection feasibility vs primary RT functional outcomes." },
-  { agent_id: "SO-03", category: "surgical_oncology", category_label: "Surgical Oncology", name: "Reconstructive & Functional Surgeon", mandate: "Assesses flap reconstruction, swallowing rehabilitation, and wound healing." },
-  { agent_id: "DS-02", category: "diagnostics_pathology", category_label: "Diagnostics & Pathology", name: "Onco-Radiologist & Staging Reviewer", mandate: "Verifies nodal ENE, T-category anatomical invasion, and PET-CT/MRI adequacy." },
-  { agent_id: "SG-01", category: "system_governance", category_label: "System, Evidence and Governance", name: "Medical Physics & Dosimetry Director", mandate: "Audits machine QA, IGRT margins, OAR tolerances, and delivery feasibility." },
-  { agent_id: "DS-01", category: "diagnostics_pathology", category_label: "Diagnostics & Pathology", name: "Molecular & Histopathologist", mandate: "Confirms histologic subtype, margin status, Ki-67, HER2, ER/PR, and p16." },
-  { agent_id: "DS-03", category: "diagnostics_pathology", category_label: "Diagnostics & Pathology", name: "Biomarker Assay & Cytogenetics Reviewer", mandate: "Checks IHC completeness and turnaround time before systemic therapy locks." },
-  { agent_id: "PP-01", category: "patient_perspective", category_label: "Patient Perspective Lenses", name: "Patient Quality-of-Life & Voice Advocate", mandate: "Centers swallowing, voice preservation, and daily functional independence." },
-  { agent_id: "SV-01", category: "family_social_vulnerability", category_label: "Family, Social Care and Vulnerability", name: "Cancer Genetics & Hereditary Counselor", mandate: "Evaluates germline testing, BRCA/Lynch risk, NGS panel availability, and family cascade." },
-  { agent_id: "SG-07", category: "system_governance", category_label: "System, Evidence and Governance", name: "Health Equity & Resource Feasibility Auditor", mandate: "Flags out-of-pocket drug barriers, genomic assay access, and transport constraints." },
+  { agent_id: "RO-01", category: "radiation_oncology", category_label: "Radiation Oncology", name: "Guideline-focused Radiation Oncologist", mandate: "Evaluates case through published society guidelines (ASTRO, ESTRO, NCCN, AROI, JASTRO, ABS)." },
+  { agent_id: "RO-02", category: "radiation_oncology", category_label: "Radiation Oncology", name: "Conservative & Time-Tested Radiation Oncologist", mandate: "Favors proven conventional fractionation and questions unproven high-tech dose extremes." },
+  { agent_id: "RO-03", category: "radiation_oncology", category_label: "Radiation Oncology", name: "Aggressive Local Control Radiation Oncologist", mandate: "Evaluates conformal dose escalation and local control tradeoffs." },
+  { agent_id: "MO-01", category: "medical_oncology", category_label: "Medical Oncology", name: "High-Dose Cisplatin & Guideline Purist", mandate: "Defends standard-of-care systemic regimens and organ-clearance criteria." },
+  { agent_id: "MO-02", category: "medical_oncology", category_label: "Medical Oncology", name: "Pragmatic Weekly-Dosing Medical Oncologist", mandate: "Balances outpatient tolerability and treatment completion." },
+  { agent_id: "SO-01", category: "surgical_oncology", category_label: "Surgical Oncology", name: "Guideline-Focused Surgical Oncologist", mandate: "Evaluates resectability, R0 margins, and selective nodal dissection." },
+  { agent_id: "SO-02", category: "surgical_oncology", category_label: "Surgical Oncology", name: "Transoral & Minimally Invasive Surgeon", mandate: "Assesses robotic/minimally invasive resection vs primary RT tradeoffs." },
+  { agent_id: "DS-01", category: "diagnostics_pathology", category_label: "Diagnostics & Pathology", name: "Histopathologist", mandate: "Confirms histologic subtype, margins, Ki-67, HER2, ER/PR, and p16." },
+  { agent_id: "DS-02", category: "diagnostics_pathology", category_label: "Diagnostics & Pathology", name: "Onco-Radiologist", mandate: "Verifies anatomical invasion, nodal ENE, and staging imaging adequacy." },
+  { agent_id: "DS-03", category: "diagnostics_pathology", category_label: "Diagnostics & Pathology", name: "Molecular & Biomarker Pathologist", mandate: "Audits predictive biomarkers and molecular assay turnaround." },
+  { agent_id: "PP-01", category: "patient_perspective", category_label: "Patient Perspective Lenses", name: "Quality-of-Life & Functional Preservation Lens", mandate: "Centers swallowing, speech, cosmesis, and daily independence." },
+  { agent_id: "PP-02", category: "patient_perspective", category_label: "Patient Perspective Lenses", name: "Treatment Burden & Adherence Lens", mandate: "Evaluates travel frequency, caregiver support, and schedule feasibility." },
+  { agent_id: "SG-01", category: "system_governance", category_label: "System, Evidence & Governance", name: "Medical Physics & Dosimetry Lead", mandate: "Audits OAR constraints, machine QA, and delivery feasibility." },
+  { agent_id: "SG-07", category: "system_governance", category_label: "System, Evidence & Governance", name: "Resource & Health Equity Auditor", mandate: "Flags drug/technology access barriers and out-of-pocket burden." },
+  { agent_id: "SV-01", category: "family_social_vulnerability", category_label: "Family, Social Care & Vulnerability", name: "Family & Caregiver Support Specialist", mandate: "Evaluates caregiver capacity, transport, and home support." },
+  { agent_id: "SV-02", category: "family_social_vulnerability", category_label: "Family, Social Care & Vulnerability", name: "Psychosocial & Financial Vulnerability Advocate", mandate: "Flags financial toxicity and psychosocial distress." },
 ];
 
 export function mapBackendAgentsToVmdtConfigs(
@@ -175,20 +126,16 @@ export function mapBackendAgentsToVmdtConfigs(
     const seed = hashId(agent.agent_id);
     const combinedText = `${agent.mandate} ${agent.clinical_philosophy || ""}`.toLowerCase();
     const isResourceConstrained =
-      ["RO-03", "RO-04", "RO-05", "MO-01", "MO-04", "MO-05", "SO-02", "DS-02", "SG-01", "SG-07", "SV-01"].includes(
+      ["RO-03", "RO-04", "RO-05", "MO-01", "MO-04", "MO-05", "SO-02", "DS-02", "SG-01", "SG-07"].includes(
         agent.agent_id,
       ) ||
       /imrt|proton|cyberknife|cisplatin|pet|ngs|resource|facility|genomic|robotic/.test(combinedText);
 
-    const displayName = CLINICIAN_NAMES[agent.agent_id]
-      ? `${CLINICIAN_NAMES[agent.agent_id]} (${agent.agent_id})`
-      : `${agent.name} (${agent.agent_id})`;
-
     return {
       id: agent.agent_id,
       backendAgentId: agent.agent_id,
-      displayName,
-      specialty: TEAM_DEFINITIONS[teamId].label,
+      displayName: `${agent.agent_id} • ${agent.name}`,
+      specialty: agent.category_label || TEAM_DEFINITIONS[teamId].label,
       subspecialty: agent.name,
       teamId,
       innatePersonality: `${agent.mandate}${agent.clinical_philosophy ? ` Philosophy: ${agent.clinical_philosophy}` : ""}`,
@@ -213,16 +160,15 @@ export function mapBackendAgentsToVmdtConfigs(
 
 export function buildDefaultAuditFindings(
   caseData: SyntheticCasePayload,
-  activeAgents: VmdtAgentConfig[],
+  _activeAgents: VmdtAgentConfig[],
 ): AuditFinding[] {
-  const activeTeams = new Set(activeAgents.filter((a) => a.active).map((a) => a.teamId));
   const findings: AuditFinding[] = [];
 
   if (!caseData.pathology_summary || !caseData.pathology_summary.trim()) {
     findings.push({
       id: "audit-pathology-summary",
       severity: "critical",
-      specialty: activeTeams.has("pathology") ? "Pathology" : "Medical Genetics",
+      specialty: "Diagnostics & Pathology",
       fieldKey: "pathology_summary",
       domain: "pathology",
       title: "Histopathology, receptor / biomarker panel, or Ki-67 status missing",
@@ -250,7 +196,7 @@ export function buildDefaultAuditFindings(
     findings.push({
       id: "audit-imaging-summary",
       severity: "critical",
-      specialty: "Radiology",
+      specialty: "Diagnostics & Pathology",
       fieldKey: "imaging_summary",
       domain: "imaging",
       title: "Cross-sectional staging imaging (CT / MRI / PET-CT) not documented",
@@ -306,7 +252,7 @@ export function buildDefaultAuditFindings(
     findings.push({
       id: "audit-patient-goals",
       severity: "recommended",
-      specialty: "Surgical Oncology",
+      specialty: "Patient Perspective Lenses",
       fieldKey: "patient_goals",
       domain: "patient_goals",
       title: "Documented patient priorities & organ-preservation goals",
@@ -323,7 +269,7 @@ export const SEED_ARCHIVED_CASES: ArchivedCase[] = [
   {
     id: "case-seed-0412",
     caseCode: "MDT-2026-0412",
-    patientName: "Eleanor Brooks",
+    patientName: "Synthetic Case 0412",
     ageSex: "62F",
     primarySite: "Left Breast (Upper Outer Quadrant)",
     diagnosis: "Invasive Ductal Carcinoma",
@@ -335,7 +281,7 @@ export const SEED_ARCHIVED_CASES: ArchivedCase[] = [
       "Neoadjuvant AC-T chemotherapy followed by breast-conserving surgery, sentinel lymph node biopsy / axillary evaluation, and adjuvant whole-breast hypofractionated radiotherapy with tumor bed boost.",
     clinicalRationale: [
       "Receptor profile (ER+/PR+/HER2-) and nodal burden favor downstaging with neoadjuvant systemic therapy to optimize breast conservation.",
-      "Pathology and Radiology confirmed unifocal disease amenable to hypofractionated WBI (40 Gy / 15 fractions + sequential boost) following margin-negative resection.",
+      "Diagnostics & Pathology confirmed unifocal disease amenable to hypofractionated WBI (40 Gy / 15 fractions + sequential boost) following margin-negative resection.",
       "NCCN and ESTRO guidelines support endocrine maintenance post-radiotherapy for durable locoregional and distant control.",
     ],
     followUpPlan: [
@@ -354,13 +300,13 @@ export const SEED_ARCHIVED_CASES: ArchivedCase[] = [
       { team: "Medical Oncology", weight: 35, color: "#818CF8" },
       { team: "Radiation Oncology", weight: 30, color: "#38BDF8" },
       { team: "Surgical Oncology", weight: 20, color: "#34D399" },
-      { team: "Pathology & Radiology", weight: 15, color: "#F472B6" },
+      { team: "Diagnostics & Pathology", weight: 15, color: "#2DD4BF" },
     ],
     participatingAgents: [
-      { id: "MO-01", name: "Dr. Elena Vance", specialty: "Medical Oncology", position: "supports", conclusion: "Endorses neoadjuvant ddAC-T prior to breast conservation.", status: "completed" },
-      { id: "RO-01", name: "Dr. Marcus Chen", specialty: "Radiation Oncology", position: "supports", conclusion: "Recommends DIBH hypofractionated WBI 40.05 Gy / 15 fx.", status: "completed" },
-      { id: "SO-01", name: "Dr. James Carter", specialty: "Surgical Oncology", position: "conditional", conclusion: "Supports BCS + SLNB conditional on post-NAT MRI response.", status: "completed" },
-      { id: "DS-01", name: "Dr. Sarah Lin", specialty: "Pathology", position: "supports", conclusion: "ER+/PR+/HER2- Grade 2 confirmed; Ki-67 28%.", status: "completed" },
+      { id: "MO-01", name: "MO-01 • High-Dose Cisplatin & Guideline Purist", specialty: "Medical Oncology", position: "supports", conclusion: "Endorses neoadjuvant ddAC-T prior to breast conservation.", status: "completed" },
+      { id: "RO-01", name: "RO-01 • Guideline-focused Radiation Oncologist", specialty: "Radiation Oncology", position: "supports", conclusion: "Recommends DIBH hypofractionated WBI 40.05 Gy / 15 fx.", status: "completed" },
+      { id: "SO-01", name: "SO-01 • Guideline-Focused Surgical Oncologist", specialty: "Surgical Oncology", position: "conditional", conclusion: "Supports BCS + SLNB conditional on post-NAT MRI response.", status: "completed" },
+      { id: "DS-01", name: "DS-01 • Histopathologist", specialty: "Diagnostics & Pathology", position: "supports", conclusion: "ER+/PR+/HER2- Grade 2 confirmed; Ki-67 28%.", status: "completed" },
     ],
     caseSnapshot: {
       scenario_title: "Left Breast Invasive Ductal Carcinoma — Stage IIB",
@@ -379,7 +325,7 @@ export const SEED_ARCHIVED_CASES: ArchivedCase[] = [
   {
     id: "case-seed-0411",
     caseCode: "MDT-2026-0411",
-    patientName: "Robert Chen",
+    patientName: "Synthetic Case 0411",
     ageSex: "54M",
     primarySite: "Right Temporal Lobe",
     diagnosis: "Glioblastoma Multiforme, IDH-wildtype",
@@ -394,7 +340,7 @@ export const SEED_ARCHIVED_CASES: ArchivedCase[] = [
       "MGMT promoter methylation status remains pending for elderly/borderline temozolomide benefit stratification.",
     ],
     followUpPlan: [
-      "Expedite MGMT methylation & IDH/1p19q molecular report from Neuropathology.",
+      "Expedite MGMT methylation & IDH/1p19q molecular report from Diagnostics & Pathology.",
       "Re-run simulation once molecular report arrives before locking concurrent TMZ.",
     ],
     dissentingViews: [
@@ -408,12 +354,12 @@ export const SEED_ARCHIVED_CASES: ArchivedCase[] = [
       { team: "Radiation Oncology", weight: 35, color: "#38BDF8" },
       { team: "Medical Oncology", weight: 30, color: "#818CF8" },
       { team: "Surgical Oncology", weight: 20, color: "#34D399" },
-      { team: "Pathology & Genetics", weight: 15, color: "#A78BFA" },
+      { team: "Diagnostics & Pathology", weight: 15, color: "#2DD4BF" },
     ],
     participatingAgents: [
-      { id: "RO-01", name: "Dr. Marcus Chen", specialty: "Radiation Oncology", position: "supports", conclusion: "Stupp 60 Gy/30 fx with tight brainstem/chiasm sparing.", status: "completed" },
-      { id: "MO-03", name: "Dr. Hannah Kim", specialty: "Medical Oncology", position: "conditional", conclusion: "TMZ conditional on MGMT methylation result.", status: "completed" },
-      { id: "DS-01", name: "Dr. Sarah Lin", specialty: "Pathology", position: "insufficient_information", conclusion: "MGMT assay pending.", status: "paused" },
+      { id: "RO-01", name: "RO-01 • Guideline-focused Radiation Oncologist", specialty: "Radiation Oncology", position: "supports", conclusion: "Stupp 60 Gy/30 fx with tight brainstem/chiasm sparing.", status: "completed" },
+      { id: "MO-03", name: "MO-03 • Geriatric & Organ-Reserve Oncologist", specialty: "Medical Oncology", position: "conditional", conclusion: "TMZ conditional on MGMT methylation result.", status: "completed" },
+      { id: "DS-01", name: "DS-01 • Histopathologist", specialty: "Diagnostics & Pathology", position: "insufficient_information", conclusion: "MGMT assay pending.", status: "paused" },
     ],
     caseSnapshot: {
       scenario_title: "Right Temporal Glioblastoma, IDH-wildtype",
@@ -429,7 +375,7 @@ export const SEED_ARCHIVED_CASES: ArchivedCase[] = [
   {
     id: "case-seed-0410",
     caseCode: "MDT-2026-0410",
-    patientName: "Sarah Jenkins",
+    patientName: "Synthetic Case 0410",
     ageSex: "47F",
     primarySite: "Mid-Rectum",
     diagnosis: "Colorectal Adenocarcinoma",
@@ -458,12 +404,12 @@ export const SEED_ARCHIVED_CASES: ArchivedCase[] = [
       { team: "Radiation Oncology", weight: 32, color: "#38BDF8" },
       { team: "Surgical Oncology", weight: 28, color: "#34D399" },
       { team: "Medical Oncology", weight: 25, color: "#818CF8" },
-      { team: "Radiology & Genetics", weight: 15, color: "#2DD4BF" },
+      { team: "Diagnostics & Pathology", weight: 15, color: "#2DD4BF" },
     ],
     participatingAgents: [
-      { id: "RO-02", name: "Dr. Arthur Pendelton", specialty: "Radiation Oncology", position: "supports", conclusion: "Long-course CRT 50.4 Gy preferred for CRM protection.", status: "completed" },
-      { id: "MO-01", name: "Dr. Elena Vance", specialty: "Medical Oncology", position: "supports", conclusion: "Consolidation TNT improves distant control.", status: "completed" },
-      { id: "SO-01", name: "Dr. James Carter", specialty: "Surgical Oncology", position: "supports", conclusion: "Plan TME or watch-and-wait contingent on MRI.", status: "completed" },
+      { id: "RO-02", name: "RO-02 • Conservative & Time-Tested Radiation Oncologist", specialty: "Radiation Oncology", position: "supports", conclusion: "Long-course CRT 50.4 Gy preferred for CRM protection.", status: "completed" },
+      { id: "MO-01", name: "MO-01 • High-Dose Cisplatin & Guideline Purist", specialty: "Medical Oncology", position: "supports", conclusion: "Consolidation TNT improves distant control.", status: "completed" },
+      { id: "SO-01", name: "SO-01 • Guideline-Focused Surgical Oncologist", specialty: "Surgical Oncology", position: "supports", conclusion: "Plan TME or watch-and-wait contingent on MRI.", status: "completed" },
     ],
     caseSnapshot: {
       scenario_title: "Mid-Rectal Adenocarcinoma — Stage IIIB (cT3 N1b M0)",
