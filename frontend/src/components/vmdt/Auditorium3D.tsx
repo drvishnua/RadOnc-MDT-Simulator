@@ -64,8 +64,8 @@ const STATUS_LABEL: Record<AgentSeatStatus, string> = {
 };
 
 const ARC_CENTER_Z = -4.6;
-const MIN_ANGLE_DEG = -62;
-const MAX_ANGLE_DEG = 62;
+const MIN_ANGLE_DEG = -72;
+const MAX_ANGLE_DEG = 72;
 
 function degToRad(deg: number): number {
   return (deg * Math.PI) / 180;
@@ -291,11 +291,11 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
       teamId,
       members: activeAgents.filter((a) => a.teamId === teamId),
     }));
-    const weights = teamGroups.map((g) => Math.max(4.5, g.members.length + 1.8));
+    const weights = teamGroups.map((g) => Math.max(5.2, g.members.length + 1.8));
     const totalWeight = weights.reduce((acc, w) => acc + w, 0);
 
-    const tierRadii = [5.35, 6.95, 8.55];
-    const tierHeights = [0.18, 0.52, 0.88];
+    const tierRadii = [5.6, 7.5, 9.4];
+    const tierHeights = [0.18, 0.55, 0.94];
 
     const computedSeats: SeatPlacement[] = [];
     const computedWedges: WedgePlacement[] = [];
@@ -317,8 +317,10 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
           : len === 3
             ? [1, 2]
             : len <= 6
-              ? [2, len - 2]
-              : [2, 3, len - 5];
+              ? [1, 2, len - 3]
+              : len <= 9
+                ? [2, 3, len - 5]
+                : [2, 4, len - 6];
 
       let seatCursor = 0;
       rowCaps.forEach((cap, rowIndex) => {
@@ -328,8 +330,10 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
         const tierIdx = rowCaps.length === 1 ? 1 : rowCaps.length === 2 ? rowIndex + 1 : rowIndex;
         const radius = tierRadii[tierIdx];
         const y = tierHeights[tierIdx];
-        const marginDeg = Math.min(wedgeSpan * 0.16, 2.6);
-        const usableSpan = Math.max(2, wedgeSpan - marginDeg * 2);
+        // Guarantee >= 0.48 world-unit clearance from every radial divider line
+        const minClearanceDeg = (Math.asin(Math.min(0.85, 0.48 / radius)) * 180) / Math.PI;
+        const marginDeg = Math.min(wedgeSpan * 0.28, minClearanceDeg);
+        const usableSpan = Math.max(1.5, wedgeSpan - marginDeg * 2);
 
         for (let i = 0; i < countInRow; i += 1) {
           const agent = members[seatCursor];
@@ -350,7 +354,7 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
         a0,
         a1,
         aMid,
-        labelWorldPos: polarToWorld(aMid, 9.85, 0.92),
+        labelWorldPos: polarToWorld(aMid, 10.65, 0.96),
       });
     });
 
@@ -380,11 +384,26 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
     container.appendChild(renderer.domElement);
 
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 100);
-    const baseCamPos = new THREE.Vector3(0, 8.2, 14.8);
+    const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 100);
+    const baseCamPos = new THREE.Vector3(0, 8.8, 16.0);
     const lookTarget = new THREE.Vector3(0, 1.15, -1.6);
     camera.position.copy(baseCamPos);
     camera.lookAt(lookTarget);
+
+    // Soft vertical gradient alpha map for volumetric spotlight cones
+    const spotCanvas = document.createElement("canvas");
+    spotCanvas.width = 4;
+    spotCanvas.height = 128;
+    const spotCtx = spotCanvas.getContext("2d");
+    if (spotCtx) {
+      const grad = spotCtx.createLinearGradient(0, 0, 0, 128);
+      grad.addColorStop(0, "#ffffff");
+      grad.addColorStop(0.55, "#888888");
+      grad.addColorStop(1, "#000000");
+      spotCtx.fillStyle = grad;
+      spotCtx.fillRect(0, 0, 4, 128);
+    }
+    const spotAlphaTex = new THREE.CanvasTexture(spotCanvas);
 
     // Theme-aware materials
     const isDarkNow = () => document.documentElement.classList.contains("dark");
@@ -397,7 +416,8 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
     const dividerMat = new THREE.LineBasicMaterial({ transparent: true, opacity: 0.55 });
     const spotlightMat = new THREE.MeshBasicMaterial({
       transparent: true,
-      opacity: 0.12,
+      opacity: 0.16,
+      alphaMap: spotAlphaTex,
       side: THREE.DoubleSide,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
@@ -452,12 +472,12 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
 
     // 3 Stepped Semi-Circular Amphitheater Tiers
     const tierConfigs = [
-      { rIn: 4.5, rOut: 6.1, h: 0.18 },
-      { rIn: 6.1, rOut: 7.75, h: 0.52 },
-      { rIn: 7.75, rOut: 9.5, h: 0.88 },
+      { rIn: 4.6, rOut: 6.55, h: 0.18 },
+      { rIn: 6.55, rOut: 8.45, h: 0.55 },
+      { rIn: 8.45, rOut: 10.4, h: 0.94 },
     ];
     tierConfigs.forEach((tc) => {
-      const geom = buildTierSectorGeometry(tc.rIn, tc.rOut, MIN_ANGLE_DEG - 2, MAX_ANGLE_DEG + 2, tc.h, 40);
+      const geom = buildTierSectorGeometry(tc.rIn, tc.rOut, MIN_ANGLE_DEG - 2, MAX_ANGLE_DEG + 2, tc.h, 44);
       const mesh = new THREE.Mesh(geom, floorMat);
       mesh.receiveShadow = true;
       scene.add(mesh);
@@ -466,10 +486,10 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
     // Radial Wedge Divider Lines
     dividerAngles.forEach((ang) => {
       const pts = [
-        polarToWorld(ang, 4.5, 0.2),
-        polarToWorld(ang, 6.1, 0.54),
-        polarToWorld(ang, 7.75, 0.9),
-        polarToWorld(ang, 9.5, 0.9),
+        polarToWorld(ang, 4.6, 0.2),
+        polarToWorld(ang, 6.55, 0.57),
+        polarToWorld(ang, 8.45, 0.96),
+        polarToWorld(ang, 10.4, 0.96),
       ];
       const lineGeom = new THREE.BufferGeometry().setFromPoints(pts);
       const line = new THREE.Line(lineGeom, dividerMat);
@@ -708,7 +728,7 @@ export const Auditorium3D: React.FC<Auditorium3DProps> = ({
         const targetY = entry.baseY + (isHighlighted ? 0.14 : isSpeaker ? Math.sin(t * 4) * 0.05 + 0.08 : 0);
         entry.group.position.y += (targetY - entry.group.position.y) * 0.14;
 
-        const targetScale = isHighlighted ? 1.12 : isSpeaker ? 1.08 : 1.0;
+        const targetScale = isHighlighted ? 0.96 : isSpeaker ? 0.92 : 0.84;
         entry.group.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.14);
 
         if (curMode === "live") {
