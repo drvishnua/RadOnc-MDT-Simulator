@@ -150,6 +150,7 @@ export function App() {
   const pollTimerRef = useRef<number | null>(null);
   const activeRunIdRef = useRef<string | null>(null);
   const archivedRunIdsRef = useRef<Set<string>>(new Set());
+  const lastAutoRoundRef = useRef<number>(1);
 
   useEffect(() => {
     try {
@@ -492,8 +493,20 @@ export function App() {
           setRoundSeatArguments((prev) => ({ ...prev, 1: arg1 }));
         }
 
+        const roundStatusMap = (
+          r1Summary as BatchRunSummary & { round_status?: Record<string, string> }
+        ).round_status;
+        const hasRound2Plus = Boolean(
+          roundStatusMap && Object.keys(roundStatusMap).some((k) => Number(k) >= 2),
+        );
+        const allR1Finished =
+          r1Summary.total_agents > 0 &&
+          r1Summary.completed_count + r1Summary.failed_count >= r1Summary.total_agents;
         const r1Done =
-          r1Summary.status === "completed" || r1Summary.status === "completed_with_errors";
+          r1Summary.status === "completed" ||
+          r1Summary.status === "completed_with_errors" ||
+          hasRound2Plus ||
+          allR1Finished;
         const doneRounds: number[] = r1Done ? [1] : [];
         let liveRound: 1 | 2 | 3 | 4 = 1;
         let currentSpeaker: string | null = r1Summary.current_agent_id;
@@ -540,7 +553,10 @@ export function App() {
         }
 
         setCompletedRounds(doneRounds);
-        setActiveRound(liveRound);
+        if (liveRound !== lastAutoRoundRef.current) {
+          lastAutoRoundRef.current = liveRound;
+          setActiveRound(liveRound);
+        }
         setActiveSpeakerId(currentSpeaker);
 
         if (latestStatus === "paused") {
@@ -585,6 +601,7 @@ export function App() {
     setRoundSeatConclusions({});
     setRoundSeatArguments({});
     setCompletedRounds([]);
+    lastAutoRoundRef.current = 1;
     setActiveRound(1);
     setPreMdtStaging(null);
     setSimState("running");
